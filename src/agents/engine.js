@@ -195,9 +195,11 @@ const HANDLERS = {
     else if (cfg.response_format) requestData.response_format = cfg.response_format;
 
     ctx.consumeModelCall();
+    let providerStartedAt = Date.now();
     let result = await services.callChatModel(env, requestData);
+    let providerDurationMs = Date.now() - providerStartedAt;
     ctx.addUsage(result.usage, result.cost);
-    logLlmProviderCall(hooks, node, cfg, result, requestData, 0);
+    logLlmProviderCall(hooks, node, cfg, result, requestData, 0, providerDurationMs);
 
     let json = wantsJson ? safeParseJson(result.content) : null;
     if (wantsJson && json == null) {
@@ -207,9 +209,11 @@ const HANDLERS = {
         response_format: { type: 'json_object' }
       };
       ctx.consumeModelCall();
+      providerStartedAt = Date.now();
       result = await services.callChatModel(env, retryRequest);
+      providerDurationMs = Date.now() - providerStartedAt;
       ctx.addUsage(result.usage, result.cost);
-      logLlmProviderCall(hooks, node, cfg, result, retryRequest, 1);
+      logLlmProviderCall(hooks, node, cfg, result, retryRequest, 1, providerDurationMs);
       json = safeParseJson(result.content);
       if (json == null) {
         throw new AgentRunError(`LLM node "${node.id}" returned invalid JSON after retry.`, {
@@ -275,7 +279,9 @@ const HANDLERS = {
     };
 
     ctx.consumeModelCall();
+    const providerStartedAt = Date.now();
     const result = await services.generateImage(env, requestBody, { requestId: ctx.requestId });
+    const providerDurationMs = Date.now() - providerStartedAt;
     ctx.addUsage(null, result.cost);
 
     const urls = (result.publicData?.data || [])
@@ -298,6 +304,7 @@ const HANDLERS = {
       requestedModel: cfg.model,
       usage: { imageCount: result.imageCount },
       cost: result.cost,
+      durationMs: providerDurationMs,
       requestBody,
       responseBody: result.responseData,
       operationMetadata: {
@@ -437,7 +444,7 @@ function buildJsonRetryMessages(messages, priorContent) {
   ];
 }
 
-function logLlmProviderCall(hooks, node, cfg, result, requestBody, retry) {
+function logLlmProviderCall(hooks, node, cfg, result, requestBody, retry, durationMs) {
   hooks.logProviderCall?.({
     operation: retry ? 'chat_json_retry' : 'chat',
     nodeId: node.id,
@@ -446,6 +453,7 @@ function logLlmProviderCall(hooks, node, cfg, result, requestBody, retry) {
     requestedModel: cfg.model,
     usage: result.usage,
     cost: result.cost,
+    durationMs,
     requestBody,
     responseBody: result.response,
     retry
