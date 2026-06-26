@@ -197,7 +197,7 @@ const HANDLERS = {
     ctx.consumeModelCall();
     let result = await services.callChatModel(env, requestData);
     ctx.addUsage(result.usage, result.cost);
-    logLlmProviderCall(hooks, node, cfg, result, 0);
+    logLlmProviderCall(hooks, node, cfg, result, requestData, 0);
 
     let json = wantsJson ? safeParseJson(result.content) : null;
     if (wantsJson && json == null) {
@@ -209,7 +209,7 @@ const HANDLERS = {
       ctx.consumeModelCall();
       result = await services.callChatModel(env, retryRequest);
       ctx.addUsage(result.usage, result.cost);
-      logLlmProviderCall(hooks, node, cfg, result, 1);
+      logLlmProviderCall(hooks, node, cfg, result, retryRequest, 1);
       json = safeParseJson(result.content);
       if (json == null) {
         throw new AgentRunError(`LLM node "${node.id}" returned invalid JSON after retry.`, {
@@ -297,7 +297,13 @@ const HANDLERS = {
       provider: result.resolution?.provider || null,
       requestedModel: cfg.model,
       usage: { imageCount: result.imageCount },
-      cost: result.cost
+      cost: result.cost,
+      requestBody,
+      responseBody: result.responseData,
+      operationMetadata: {
+        assetUrls: urls,
+        assetDelivery: result.responseData?._viablelab?.asset_delivery || null
+      }
     });
 
     return { output, next: node.next };
@@ -431,7 +437,7 @@ function buildJsonRetryMessages(messages, priorContent) {
   ];
 }
 
-function logLlmProviderCall(hooks, node, cfg, result, retry) {
+function logLlmProviderCall(hooks, node, cfg, result, requestBody, retry) {
   hooks.logProviderCall?.({
     operation: retry ? 'chat_json_retry' : 'chat',
     nodeId: node.id,
@@ -440,6 +446,8 @@ function logLlmProviderCall(hooks, node, cfg, result, retry) {
     requestedModel: cfg.model,
     usage: result.usage,
     cost: result.cost,
+    requestBody,
+    responseBody: result.response,
     retry
   });
 }
