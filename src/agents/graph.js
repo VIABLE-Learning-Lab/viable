@@ -22,6 +22,13 @@ export const NODE_TYPES = Object.freeze([
   'subagent'
 ]);
 
+export const DEFAULT_GRAPH_LIMITS = Object.freeze({
+  maxNodes: 100,
+  maxGraphBytes: 262144,
+  maxConfigBytes: 32768,
+  maxStructuredOutputs: 20
+});
+
 export class GraphValidationError extends Error {
   constructor(message, details = []) {
     super(message);
@@ -32,16 +39,24 @@ export class GraphValidationError extends Error {
   }
 }
 
-export function validateGraph(graph) {
+export function validateGraph(graph, options = {}) {
+  const limits = { ...DEFAULT_GRAPH_LIMITS, ...(options.limits || {}) };
   const errors = [];
   if (!graph || typeof graph !== 'object' || Array.isArray(graph)) {
     throw new GraphValidationError('Graph must be a JSON object.');
   }
 
+  const graphBytes = roughJsonSize(graph);
+  if (graphBytes > limits.maxGraphBytes) {
+    errors.push(`Graph is too large (${graphBytes} bytes). Maximum is ${limits.maxGraphBytes} bytes.`);
+  }
+
   const nodes = Array.isArray(graph.nodes) ? graph.nodes : [];
   if (!nodes.length) errors.push('Graph must contain at least one node.');
+  if (nodes.length > limits.maxNodes) errors.push(`Graph has too many nodes (${nodes.length}). Maximum is ${limits.maxNodes}.`);
 
   const ids = new Set();
+  const nodeMap = new Map();
   for (const node of nodes) {
     if (!node || typeof node !== 'object') {
       errors.push('Each node must be an object.');
@@ -53,8 +68,17 @@ export function validateGraph(graph) {
     }
     if (ids.has(node.id)) errors.push(`Duplicate node id "${node.id}".`);
     ids.add(node.id);
+    nodeMap.set(node.id, node);
     if (!NODE_TYPES.includes(node.type)) {
       errors.push(`Node "${node.id}" has unknown type "${node.type}".`);
+    }
+    if (node.type === 'subagent' && options.allowSubagents !== true) {
+      errors.push(`Sub-agent node "${node.id}" is not enabled yet.`);
+    }
+    if (node.config != null && (typeof node.config !== 'object' || Array.isArray(node.config))) {
+      errors.push(`Node "${node.id}" config must be an object.`);
+    } else if (roughJsonSize(node.config || {}) > limits.maxConfigBytes) {
+      errors.push(`Node "${node.id}" config is too large. Maximum is ${limits.maxConfigBytes} bytes.`);
     }
   }
 
@@ -76,13 +100,24 @@ export function validateGraph(graph) {
     if (node.type === 'llm' && !node.config?.model) {
       errors.push(`LLM node "${node.id}" requires config.model.`);
     }
+    if (node.type === 'llm' && Array.isArray(node.config?.outputs) && node.config.outputs.length > limits.maxStructuredOutputs) {
+      errors.push(`LLM node "${node.id}" declares too many structured outputs. Maximum is ${limits.maxStructuredOutputs}.`);
+    }
     if (node.type === 'image' && !node.config?.model) {
       errors.push(`Image node "${node.id}" requires config.model.`);
+    }
+    if (node.type === 'http' && !node.config?.url) {
+      errors.push(`HTTP node "${node.id}" requires config.url.`);
     }
   }
 
   const hasOutput = nodes.some((n) => n?.type === 'output');
   if (!hasOutput) errors.push('Graph must contain at least one "output" node.');
+  if (graph.entry && ids.has(graph.entry)) {
+    const reachable = reachableNodeIds(graph.entry, nodeMap);
+    const reachableOutput = nodes.some((n) => n?.type === 'output' && reachable.has(n.id));
+    if (!reachableOutput) errors.push('Graph entry must be able to reach at least one "output" node.');
+  }
 
   if (errors.length) {
     throw new GraphValidationError('Graph validation failed.', errors);
@@ -107,6 +142,22 @@ function referencedNodeIds(node) {
   return refs;
 }
 
+function reachableNodeIds(entry, nodeMap) {
+  const seen = new Set();
+  const stack = [entry];
+  while (stack.length) {
+    const id = stack.pop();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const node = nodeMap.get(id);
+    if (!node) continue;
+    for (const ref of referencedNodeIds(node)) {
+      if (ref && !seen.has(ref)) stack.push(ref);
+    }
+  }
+  return seen;
+}
+
 /** Model ids referenced by llm/image nodes. */
 export function collectGraphModels(graph) {
   const models = new Set();
@@ -128,29 +179,47 @@ function isListedModel(model) {
  * Ensure every model referenced by the graph is listed in the registry and,
  * when the key restricts models, allowed by that key.
  */
-export function validateGraphModels(graph, { allowedModels = null } = {}) {
+export function validateGraphModels(graph, { allowedModels = null, allowUnlisted = false } = {}) {
   const errors = [];
+  let hasPermissionError = false;
   const allowSet = Array.isArray(allowedModels) && allowedModels.length
-    ? new Set(allowedModels.flatMap((m) => [normalizeModelId(m), resolveAlias(normalizeModelId(m))]))
+    ? new Set(allowedModels.flatMap((m) => {
+      const normalized = normalizeModelId(m);
+      return normalized ? [normalized, resolveAlias(normalized)] : [];
+    }))
     : null;
 
   for (const model of collectGraphModels(graph)) {
-    if (!isListedModel(model)) {
+    if (!allowUnlisted && !isListedModel(model)) {
       errors.push(`Model "${model}" is not available on the VIABLE Lab API.`);
       continue;
     }
     if (allowSet) {
       const normalized = normalizeModelId(model);
       if (!allowSet.has(normalized) && !allowSet.has(resolveAlias(normalized))) {
+        hasPermissionError = true;
         errors.push(`API key is not allowed to use model "${model}".`);
       }
     }
   }
 
   if (errors.length) {
-    throw new GraphValidationError('Graph references unavailable models.', errors);
+    const error = new GraphValidationError('Graph references unavailable models.', errors);
+    if (hasPermissionError) {
+      error.status = 403;
+      error.code = 'api_key_model_not_allowed';
+    }
+    throw error;
   }
   return graph;
+}
+
+function roughJsonSize(value) {
+  try {
+    return new TextEncoder().encode(JSON.stringify(value ?? null)).length;
+  } catch (_) {
+    return Number.MAX_SAFE_INTEGER;
+  }
 }
 
 export function slugify(name) {

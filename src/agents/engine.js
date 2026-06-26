@@ -195,10 +195,30 @@ const HANDLERS = {
     else if (cfg.response_format) requestData.response_format = cfg.response_format;
 
     ctx.consumeModelCall();
-    const result = await services.callChatModel(env, requestData);
+    let result = await services.callChatModel(env, requestData);
     ctx.addUsage(result.usage, result.cost);
+    logLlmProviderCall(hooks, node, cfg, result, 0);
 
-    const json = wantsJson ? safeParseJson(result.content) : null;
+    let json = wantsJson ? safeParseJson(result.content) : null;
+    if (wantsJson && json == null) {
+      const retryRequest = {
+        ...requestData,
+        messages: buildJsonRetryMessages(messages, result.content),
+        response_format: { type: 'json_object' }
+      };
+      ctx.consumeModelCall();
+      result = await services.callChatModel(env, retryRequest);
+      ctx.addUsage(result.usage, result.cost);
+      logLlmProviderCall(hooks, node, cfg, result, 1);
+      json = safeParseJson(result.content);
+      if (json == null) {
+        throw new AgentRunError(`LLM node "${node.id}" returned invalid JSON after retry.`, {
+          status: 422,
+          code: 'llm_json_parse_failed'
+        });
+      }
+    }
+
     const output = {
       content: result.content,
       json,
@@ -208,16 +228,6 @@ const HANDLERS = {
       cost: result.cost,
       finishReason: result.finishReason
     };
-
-    hooks.logProviderCall?.({
-      operation: 'chat',
-      nodeId: node.id,
-      model: output.model,
-      provider: output.provider,
-      requestedModel: cfg.model,
-      usage: result.usage,
-      cost: result.cost
-    });
 
     return { output, next: node.next };
   },
@@ -407,6 +417,33 @@ function buildOutputInstruction(outputs) {
   return `Respond ONLY with a single JSON object containing exactly these keys:\n${lines.join('\n')}\nReturn valid JSON only — no markdown fences, no extra text.`;
 }
 
+function buildJsonRetryMessages(messages, priorContent) {
+  return [
+    ...messages,
+    {
+      role: 'assistant',
+      content: String(priorContent || '').slice(0, 2000)
+    },
+    {
+      role: 'user',
+      content: 'The previous response was not valid JSON. Return only one valid JSON object that follows the requested field contract. No markdown, no prose.'
+    }
+  ];
+}
+
+function logLlmProviderCall(hooks, node, cfg, result, retry) {
+  hooks.logProviderCall?.({
+    operation: retry ? 'chat_json_retry' : 'chat',
+    nodeId: node.id,
+    model: result.resolution?.resolvedModel || cfg.model,
+    provider: result.resolution?.provider || null,
+    requestedModel: cfg.model,
+    usage: result.usage,
+    cost: result.cost,
+    retry
+  });
+}
+
 function safeParseJson(text) {
   if (typeof text !== 'string') return null;
   try {
@@ -442,11 +479,18 @@ function assertAllowedHttpUrl(url, allowlist) {
   if (parsed.protocol !== 'https:') {
     throw new AgentRunError('HTTP nodes may only call https:// URLs.', { status: 400, code: 'http_url_not_allowed' });
   }
-  if (Array.isArray(allowlist) && allowlist.length) {
-    const host = parsed.hostname.toLowerCase();
-    const allowed = allowlist.some((entry) => host === entry || host.endsWith(`.${entry}`));
-    if (!allowed) {
-      throw new AgentRunError(`HTTP node host "${parsed.hostname}" is not allow-listed.`, { status: 400, code: 'http_host_not_allowed' });
-    }
+  if (!Array.isArray(allowlist) || !allowlist.length) {
+    throw new AgentRunError('HTTP nodes are disabled until AGENT_HTTP_ALLOWLIST contains at least one host.', {
+      status: 400,
+      code: 'http_host_not_allowed'
+    });
+  }
+  const host = parsed.hostname.toLowerCase();
+  const allowed = allowlist.some((entry) => {
+    const normalized = String(entry || '').toLowerCase().replace(/^\*\./, '');
+    return host === normalized || host.endsWith(`.${normalized}`);
+  });
+  if (!allowed) {
+    throw new AgentRunError(`HTTP node host "${parsed.hostname}" is not allow-listed.`, { status: 400, code: 'http_host_not_allowed' });
   }
 }
