@@ -14,6 +14,7 @@
 
 import { callChatModel } from '../utils/chatModelClient.js';
 import { generateImageAsset } from '../services/imageGeneration.js';
+import { MODEL_MODES, resolveModelForMode } from '../config/models.js';
 import { evaluateCondition, evaluateExpression, renderTemplate, renderValue } from './expression.js';
 
 export const DEFAULT_BUDGETS = Object.freeze({
@@ -58,10 +59,16 @@ export async function runAgentGraph(env, graph, options = {}) {
 
   const ctx = {
     input: options.input ?? '',
+    inputContent: options.inputContent ?? options.input ?? '',
+    traceInput: sanitizeBinaryValues(options.traceInput ?? options.input ?? ''),
+    traceInputContent: sanitizeBinaryValues(options.traceInputContent ?? options.inputContent ?? options.input ?? ''),
     requestId: options.requestId || null,
     messages: Array.isArray(options.history) ? options.history : [],
+    traceMessages: sanitizeBinaryValues(Array.isArray(options.traceHistory) ? options.traceHistory : (Array.isArray(options.history) ? options.history : [])),
     outputs: {},
+    traceOutputs: {},
     variables: { ...(graph.variables || {}), ...(options.variables || {}) },
+    traceVariables: sanitizeBinaryValues({ ...(graph.variables || {}), ...(options.variables || {}) }),
     loopCounts: {},
     steps: [],
     usage: { prompt: 0, completion: 0, total: 0 },
@@ -69,12 +76,23 @@ export async function runAgentGraph(env, graph, options = {}) {
     modelCalls: 0,
     stepCount: 0,
     result: null,
+    archivedResult: null,
     scope() {
       return {
         ...this.outputs,
         vars: this.variables,
         input: this.input,
+        input_content: this.inputContent,
         history: this.messages
+      };
+    },
+    traceScope() {
+      return {
+        ...this.traceOutputs,
+        vars: this.traceVariables,
+        input: this.traceInput,
+        input_content: this.traceInputContent,
+        history: this.traceMessages
       };
     },
     consumeModelCall() {
@@ -105,23 +123,28 @@ export async function runAgentGraph(env, graph, options = {}) {
     const startedAt = Date.now();
     let next = null;
     let output = null;
+    let traceOutput = null;
     try {
       const result = await handler(node, ctx, env, services, hooks, budgets);
       output = result.output;
+      traceOutput = result.traceOutput ?? sanitizeBinaryValues(output);
       next = result.next ?? null;
     } catch (error) {
       recordStep(ctx, node, { error, startedAt });
       hooks.onStep?.(ctx.steps[ctx.steps.length - 1]);
+      if (error && typeof error === 'object') error.agentSteps = ctx.steps;
       throw error;
     }
 
     ctx.outputs[node.id] = output;
-    recordStep(ctx, node, { output, startedAt });
+    ctx.traceOutputs[node.id] = traceOutput;
+    recordStep(ctx, node, { output: traceOutput, startedAt });
     ctx.stepCount += 1;
     hooks.onStep?.(ctx.steps[ctx.steps.length - 1]);
 
     if (node.type === 'output') {
       ctx.result = output;
+      ctx.archivedResult = traceOutput;
       break;
     }
     currentId = next;
@@ -129,6 +152,7 @@ export async function runAgentGraph(env, graph, options = {}) {
 
   return {
     output: ctx.result || { text: '', attachments: [] },
+    archivedOutput: ctx.archivedResult || { text: '', attachments: [] },
     steps: ctx.steps,
     usage: ctx.usage,
     cost: ctx.cost,
@@ -145,7 +169,7 @@ function recordStep(ctx, node, { output = null, error = null, startedAt }) {
     nodeId: node.id,
     nodeType: node.type,
     status: error ? 'failed' : 'completed',
-    output: error ? null : summarizeOutput(output),
+    output: error ? null : summarizeOutput(node, output, ctx),
     model: output?.model || null,
     tokens: output?.usage?.total ?? null,
     cost: typeof output?.cost === 'number' ? output.cost : null,
@@ -154,14 +178,100 @@ function recordStep(ctx, node, { output = null, error = null, startedAt }) {
   });
 }
 
-function summarizeOutput(output) {
+function summarizeOutput(node, output, ctx) {
   if (output == null) return null;
   try {
-    const json = JSON.stringify(output);
-    return json.length > 8000 ? { truncated: true, preview: json.slice(0, 8000) } : output;
+    const safeOutput = node.type === 'input'
+      ? summarizeInputStepOutput(output, ctx?.traceInputContent)
+      : sanitizeBinaryValues(output);
+    const json = JSON.stringify(safeOutput);
+    return json.length > 8000 ? { truncated: true, preview: json.slice(0, 8000) } : safeOutput;
   } catch (_) {
     return { unserializable: true };
   }
+}
+
+function summarizeInputStepOutput(output, traceInputContent) {
+  if (!output || typeof output !== 'object') return sanitizeBinaryValues(output);
+  return {
+    ...sanitizeBinaryValues(output),
+    content: summarizeInputContent(traceInputContent ?? output.content)
+  };
+}
+
+function summarizeInputContent(content) {
+  if (Array.isArray(content)) return content.map(summarizeInputContentPart);
+  return sanitizeBinaryValues(content);
+}
+
+function summarizeInputContentPart(part) {
+  if (!part || typeof part !== 'object') return sanitizeBinaryValues(part);
+  if (part.type === 'text' || part.type === 'input_text') {
+    return {
+      type: part.type,
+      text: typeof part.text === 'string' ? part.text : ''
+    };
+  }
+  if (part.type === 'image_url' || part.type === 'input_image') {
+    const url = typeof part.image_url === 'object' ? part.image_url?.url : (part.image_url || part.url || '');
+    const detail = typeof part.image_url === 'object' ? part.image_url?.detail : part.detail;
+    return {
+      type: part.type,
+      image_url: {
+        ...summarizeFileReference(url),
+        ...(detail ? { detail } : {})
+      }
+    };
+  }
+  if (part.type === 'file' || part.type === 'input_file') {
+    const file = part.file || part.input_file || part;
+    return {
+      type: part.type,
+      file: {
+        filename: file.filename || file.name || null,
+        mime_type: file.mime_type || file.mimeType || part.mime_type || null,
+        source: summarizeFileReference(file.file_data || file.data || file.content || file.url || file.file_id || '')
+      }
+    };
+  }
+  return sanitizeBinaryValues(part);
+}
+
+function sanitizeBinaryValues(value) {
+  if (value == null) return value;
+  if (typeof value === 'string') return summarizeBinaryLikeString(value);
+  if (Array.isArray(value)) return value.map(sanitizeBinaryValues);
+  if (typeof value !== 'object') return value;
+  const sanitized = {};
+  for (const [key, child] of Object.entries(value)) {
+    sanitized[key] = sanitizeBinaryValues(child);
+  }
+  return sanitized;
+}
+
+function summarizeBinaryLikeString(value) {
+  if (typeof value !== 'string') return value;
+  if (value.startsWith('data:')) return summarizeFileReference(value);
+  return value;
+}
+
+function summarizeFileReference(value) {
+  if (value && typeof value === 'object') return sanitizeBinaryValues(value);
+  if (typeof value !== 'string') return { redacted: true };
+  if (value.startsWith('data:')) {
+    const match = /^data:([^;,]+)(?:;[^,]*)?;base64,(.*)$/i.exec(value);
+    return {
+      redacted: true,
+      kind: 'data_uri',
+      mime_type: match?.[1]?.toLowerCase() || null,
+      bytesApprox: match?.[2] ? Math.floor((match[2].replace(/\s+/g, '').length * 3) / 4) : null
+    };
+  }
+  if (/^https?:\/\//i.test(value)) {
+    return { kind: 'remote_url', url: value };
+  }
+  if (value.startsWith('viablelab-research-asset://')) return { kind: 'research_asset_ref', url: value };
+  return { redacted: true, length: value.length };
 }
 
 // ---------------------------------------------------------------------------
@@ -170,36 +280,33 @@ function summarizeOutput(output) {
 
 const HANDLERS = {
   input(node, ctx) {
-    return { output: { message: ctx.input, history: ctx.messages }, next: node.next };
+    return {
+      output: { message: ctx.input, content: ctx.inputContent, history: ctx.messages },
+      traceOutput: { message: ctx.traceInput, content: ctx.traceInputContent, history: ctx.traceMessages },
+      next: node.next
+    };
   },
 
   async llm(node, ctx, env, services, hooks) {
     const cfg = node.config || {};
     const scope = ctx.scope();
+    const traceScope = ctx.traceScope();
     const outputs = normalizeOutputs(cfg.outputs);
     const wantsJson = outputs.length > 0 || Boolean(cfg.json || cfg.output_schema) || cfg.response_format?.type === 'json_object';
 
-    const messages = [];
-    const systemParts = [];
-    if (cfg.system) systemParts.push(renderTemplate(cfg.system, scope));
-    if (outputs.length) systemParts.push(buildOutputInstruction(outputs));
-    else if (cfg.json) systemParts.push('Respond ONLY with a single valid JSON object — no markdown, no extra text.');
-    if (systemParts.length) messages.push({ role: 'system', content: systemParts.join('\n\n') });
-
-    if (cfg.includeHistory !== false) messages.push(...ctx.messages);
-    const userContent = cfg.user != null ? renderTemplate(cfg.user, scope) : ctx.input;
-    if (userContent) messages.push({ role: 'user', content: userContent });
+    const messages = buildLlmMessages(cfg, scope, ctx.messages, ctx.inputContent, outputs);
+    const traceMessages = buildLlmMessages(cfg, traceScope, ctx.traceMessages, ctx.traceInputContent, outputs);
 
     const requestData = { model: cfg.model, messages, ...mapModelParams(cfg) };
+    const traceRequestData = { model: cfg.model, messages: traceMessages, ...mapModelParams(cfg) };
     if (wantsJson) requestData.response_format = { type: 'json_object' };
     else if (cfg.response_format) requestData.response_format = cfg.response_format;
+    if (wantsJson) traceRequestData.response_format = { type: 'json_object' };
+    else if (cfg.response_format) traceRequestData.response_format = cfg.response_format;
 
     ctx.consumeModelCall();
-    let providerStartedAt = Date.now();
-    let result = await services.callChatModel(env, requestData);
-    let providerDurationMs = Date.now() - providerStartedAt;
+    let result = await callLlmWithTrace(env, services, hooks, node, cfg, requestData, traceRequestData, 0);
     ctx.addUsage(result.usage, result.cost);
-    logLlmProviderCall(hooks, node, cfg, result, requestData, 0, providerDurationMs);
 
     let json = wantsJson ? safeParseJson(result.content) : null;
     if (wantsJson && json == null) {
@@ -208,12 +315,14 @@ const HANDLERS = {
         messages: buildJsonRetryMessages(messages, result.content),
         response_format: { type: 'json_object' }
       };
+      const traceRetryRequest = {
+        ...traceRequestData,
+        messages: buildJsonRetryMessages(traceMessages, result.content),
+        response_format: { type: 'json_object' }
+      };
       ctx.consumeModelCall();
-      providerStartedAt = Date.now();
-      result = await services.callChatModel(env, retryRequest);
-      providerDurationMs = Date.now() - providerStartedAt;
+      result = await callLlmWithTrace(env, services, hooks, node, cfg, retryRequest, traceRetryRequest, 1);
       ctx.addUsage(result.usage, result.cost);
-      logLlmProviderCall(hooks, node, cfg, result, retryRequest, 1, providerDurationMs);
       json = safeParseJson(result.content);
       if (json == null) {
         throw new AgentRunError(`LLM node "${node.id}" returned invalid JSON after retry.`, {
@@ -267,7 +376,9 @@ const HANDLERS = {
   async image(node, ctx, env, services, hooks) {
     const cfg = node.config || {};
     const scope = ctx.scope();
+    const traceScope = ctx.traceScope();
     const prompt = renderTemplate(cfg.prompt ?? '{{input}}', scope);
+    const tracePrompt = renderTemplate(cfg.prompt ?? '{{input}}', traceScope);
 
     const requestBody = {
       model: cfg.model,
@@ -277,10 +388,20 @@ const HANDLERS = {
       ...(cfg.quality ? { quality: cfg.quality } : {}),
       response_format: cfg.response_format || 'url'
     };
+    const traceRequestBody = sanitizeBinaryValues({ ...requestBody, prompt: tracePrompt });
 
     ctx.consumeModelCall();
     const providerStartedAt = Date.now();
-    const result = await services.generateImage(env, requestBody, { requestId: ctx.requestId });
+    let result;
+    try {
+      result = await services.generateImage(env, requestBody, { requestId: ctx.requestId });
+    } catch (error) {
+      hooks.logProviderCall?.(failedProviderCall({
+        operation: 'image_generation', node, cfg, requestBody: traceRequestBody, error,
+        durationMs: Date.now() - providerStartedAt
+      }));
+      throw error;
+    }
     const providerDurationMs = Date.now() - providerStartedAt;
     ctx.addUsage(null, result.cost);
 
@@ -305,7 +426,7 @@ const HANDLERS = {
       usage: { imageCount: result.imageCount },
       cost: result.cost,
       durationMs: providerDurationMs,
-      requestBody,
+      requestBody: traceRequestBody,
       responseBody: result.responseData,
       operationMetadata: {
         assetUrls: urls,
@@ -313,7 +434,11 @@ const HANDLERS = {
       }
     });
 
-    return { output, next: node.next };
+    return {
+      output,
+      traceOutput: sanitizeBinaryValues({ ...output, prompt: tracePrompt }),
+      next: node.next
+    };
   },
 
   async http(node, ctx, env, services) {
@@ -342,6 +467,7 @@ const HANDLERS = {
 
     const varName = cfg.var || `${node.id}_iteration`;
     ctx.variables[varName] = count;
+    ctx.traceVariables[varName] = count;
 
     let shouldContinue;
     if (cfg.count != null) shouldContinue = count <= Number(cfg.count);
@@ -356,7 +482,8 @@ const HANDLERS = {
   transform(node, ctx) {
     const cfg = node.config || {};
     const output = renderValue(cfg.output ?? {}, ctx.scope());
-    return { output, next: node.next };
+    const traceOutput = sanitizeBinaryValues(renderValue(cfg.output ?? {}, ctx.traceScope()));
+    return { output, traceOutput, next: node.next };
   },
 
   output(node, ctx) {
@@ -364,7 +491,14 @@ const HANDLERS = {
     const scope = ctx.scope();
     const text = cfg.text != null ? renderTemplate(cfg.text, scope) : '';
     const attachments = normalizeAttachments(renderValue(cfg.attachments ?? [], scope));
-    return { output: { text, attachments }, next: null };
+    const traceScope = ctx.traceScope();
+    const traceText = cfg.text != null ? renderTemplate(cfg.text, traceScope) : '';
+    const traceAttachments = normalizeAttachments(renderValue(cfg.attachments ?? [], traceScope));
+    return {
+      output: { text, attachments },
+      traceOutput: sanitizeBinaryValues({ text: traceText, attachments: traceAttachments }),
+      next: null
+    };
   },
 
   async subagent(node, ctx, env, services, hooks) {
@@ -387,6 +521,98 @@ const HANDLERS = {
     return { output: nested.output, next: node.next };
   }
 };
+
+function resolveLlmUserContent(cfg, scope, inputContent) {
+  if (cfg.user == null) return inputContent;
+  const rendered = renderValue(cfg.user, scope);
+  const normalized = normalizeLlmUserContent(rendered);
+  if (cfg.includeInputMedia === false) return normalized;
+  const media = Array.isArray(inputContent)
+    ? inputContent.filter((part) => part && typeof part === 'object' && !['text', 'input_text'].includes(part.type))
+    : [];
+  if (media.length === 0) return normalized;
+  const content = Array.isArray(normalized)
+    ? [...normalized]
+    : (typeof normalized === 'string' && normalized ? [{ type: 'text', text: normalized }] : []);
+  const existingMedia = new Set(content.map(mediaSourceKey).filter(Boolean));
+  for (const part of media) {
+    const key = mediaSourceKey(part);
+    if (!key || !existingMedia.has(key)) content.push(part);
+  }
+  return content;
+}
+
+function normalizeLlmUserContent(value) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) {
+    return value.every(isChatContentPart) ? value : JSON.stringify(value);
+  }
+  if (isChatContentPart(value)) return [value];
+  return JSON.stringify(value);
+}
+
+function isChatContentPart(value) {
+  return Boolean(value && typeof value === 'object' && [
+    'text', 'input_text', 'image_url', 'input_image', 'file', 'input_file'
+  ].includes(value.type));
+}
+
+function mediaSourceKey(part) {
+  if (!part || typeof part !== 'object') return null;
+  if (['image_url', 'input_image'].includes(part.type)) {
+    const value = typeof part.image_url === 'object' ? part.image_url?.url : (part.image_url || part.url);
+    return typeof value === 'string' ? `image:${value}` : null;
+  }
+  if (['file', 'input_file'].includes(part.type)) {
+    const file = part.file || part.input_file || part;
+    const value = file.file_data || file.url || file.file_id;
+    return typeof value === 'string' ? `file:${value}` : null;
+  }
+  return null;
+}
+
+function historyForLlmNode(messages, cfg) {
+  if (!Array.isArray(messages) || cfg.includeHistoryMedia === true) return messages || [];
+  let capabilities = {};
+  try {
+    capabilities = resolveModelForMode(cfg.model, MODEL_MODES.CHAT, cfg.provider).metadata?.capabilities || {};
+  } catch (_) {
+    if (cfg.includeHistoryMedia !== false) return messages;
+  }
+  const allowImages = cfg.includeHistoryMedia !== false && Boolean(capabilities.images);
+  const allowFiles = cfg.includeHistoryMedia !== false && Boolean(capabilities.files || capabilities.pdf);
+  return messages.map((message) => ({
+    ...message,
+    content: filterHistoryContent(message.content, { allowImages, allowFiles })
+  }));
+}
+
+function filterHistoryContent(content, policy) {
+  if (!Array.isArray(content)) return content;
+  const filtered = [];
+  for (const part of content) {
+    if (!part || typeof part !== 'object') {
+      filtered.push(part);
+      continue;
+    }
+    if (['image_url', 'input_image'].includes(part.type) && !policy.allowImages) {
+      filtered.push({ type: 'text', text: historyAssetLabel('image', part) });
+    } else if (['file', 'input_file'].includes(part.type) && !policy.allowFiles) {
+      filtered.push({ type: 'text', text: historyAssetLabel('file', part) });
+    } else {
+      filtered.push(part);
+    }
+  }
+  return filtered;
+}
+
+function historyAssetLabel(kind, part) {
+  const id = part.research_asset?.asset_id || null;
+  return id
+    ? `[Prior ${kind} retained as research asset ${id}; this model does not accept that modality.]`
+    : `[Prior ${kind} omitted because this model does not accept that modality.]`;
+}
 
 function mapModelParams(cfg) {
   const params = cfg.params || cfg;
@@ -442,6 +668,62 @@ function buildJsonRetryMessages(messages, priorContent) {
       content: 'The previous response was not valid JSON. Return only one valid JSON object that follows the requested field contract. No markdown, no prose.'
     }
   ];
+}
+
+function buildLlmMessages(cfg, scope, history, inputContent, outputs) {
+  const messages = [];
+  const systemParts = [];
+  if (cfg.system) systemParts.push(renderTemplate(cfg.system, scope));
+  if (outputs.length) systemParts.push(buildOutputInstruction(outputs));
+  else if (cfg.json) systemParts.push('Respond ONLY with a single valid JSON object — no markdown, no extra text.');
+  if (systemParts.length) messages.push({ role: 'system', content: systemParts.join('\n\n') });
+  if (cfg.includeHistory !== false) messages.push(...historyForLlmNode(history, cfg));
+  const userContent = resolveLlmUserContent(cfg, scope, inputContent);
+  if (userContent) messages.push({ role: 'user', content: userContent });
+  return messages;
+}
+
+async function callLlmWithTrace(env, services, hooks, node, cfg, requestBody, archivedRequestBody, retry) {
+  const startedAt = Date.now();
+  // Keep this final boundary even though trace scopes already carry research
+  // refs. It protects custom graphs that embed a literal data URI in config.
+  const traceRequestBody = sanitizeBinaryValues(archivedRequestBody);
+  try {
+    const result = await services.callChatModel(env, requestBody);
+    logLlmProviderCall(hooks, node, cfg, result, traceRequestBody, retry, Date.now() - startedAt);
+    return result;
+  } catch (error) {
+    hooks.logProviderCall?.(failedProviderCall({
+      operation: retry ? 'chat_json_retry' : 'chat',
+      node,
+      cfg,
+      requestBody: traceRequestBody,
+      error,
+      retry,
+      durationMs: Date.now() - startedAt
+    }));
+    throw error;
+  }
+}
+
+function failedProviderCall({ operation, node, cfg, requestBody, error, retry = 0, durationMs }) {
+  const status = Number(error?.upstreamStatus || error?.status || error?.statusCode || 500);
+  return {
+    operation,
+    nodeId: node.id,
+    model: cfg.model || null,
+    provider: error?.provider || null,
+    requestedModel: cfg.model || null,
+    usage: null,
+    cost: 0,
+    durationMs,
+    requestBody,
+    responseBody: null,
+    responseStatus: Number.isFinite(status) ? status : 500,
+    errorMessage: String(error?.message || error || 'Provider call failed.'),
+    errorCode: error?.code || null,
+    retry
+  };
 }
 
 function logLlmProviderCall(hooks, node, cfg, result, requestBody, retry, durationMs) {
