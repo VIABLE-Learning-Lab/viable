@@ -49,6 +49,7 @@ export async function runAgentGraph(env, graph, options = {}) {
     generateImage: (env, request, options) => generateImageAsset(env, request, { ...options, signal: AbortSignal.timeout(Math.max(1, deadline - Date.now())) }),
     httpFetch: (url, init) => fetch(url, init),
     httpDeadline: deadline,
+    toMarkdown: env.AI?.toMarkdown ? (file, options) => env.AI.toMarkdown(file, options) : null,
     resolveSubAgent: null,
     httpAllowlist: options.httpAllowlist || null,
     ...(options.services || {})
@@ -193,6 +194,8 @@ function summarizeOutput(node, output, ctx) {
     const safeOutput = node.type === 'input'
       ? summarizeInputStepOutput(output, ctx?.traceInputContent)
       : sanitizeBinaryValues(output);
+    // Fetch URL already bounds its complete structured source to 256 KiB.
+    if (node.type === 'http') return safeOutput;
     const json = JSON.stringify(safeOutput);
     return json.length > 8000 ? {
       truncated: true, preview: json.slice(0, 8000),

@@ -1,3 +1,5 @@
+import { decodeHTML, decodeHTMLAttribute } from 'entities';
+
 // Fetch only through Workers' public internet transport. Keep
 // global_fetch_strictly_public enabled; never substitute a VPC/origin binding.
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -55,22 +57,78 @@ async function boundedText(response) {
   } finally { reader.releaseLock(); }
 }
 
-export async function htmlToText(html) {
-  // Native parsing handles malformed markup; no browser or JavaScript execution.
-  const cleaned = new HTMLRewriter()
-    .on('script, style, noscript, template, svg, nav, footer, form, [hidden], [aria-hidden="true"]', { element: el => el.remove() })
-    .transform(new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } }));
-  const parts = [];
-  await new HTMLRewriter()
-    .on('p, div, section, article, h1, h2, h3, h4, h5, h6, li, tr, br', {
-      element(el) { parts.push('\n'); if (el.tagName !== 'br') el.onEndTag(() => parts.push('\n')); }
+export async function htmlToSource(html, sourceUrl, toMarkdown, signal) {
+  if (!toMarkdown) throw failure('HTML conversion requires the Workers AI binding.', 'http_markdown_unavailable');
+  let base = sourceUrl;
+  let foundBase = false;
+  let activeLink;
+  const links = [];
+  const images = [];
+  let metadataBytes = 0;
+  let metadataError;
+  const add = (list, item) => {
+    metadataBytes += new TextEncoder().encode(JSON.stringify(item)).byteLength;
+    if (metadataBytes > MAX_TEXT_BYTES) {
+      metadataError = failure('The page contains more than 256 KiB of links and image metadata. Choose a more focused source.', 'http_response_too_large');
+      throw metadataError;
+    }
+    list.push(item);
+  };
+  const absolute = value => {
+    try {
+      const url = new URL(decodeHTMLAttribute(value), base);
+      return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : null;
+    } catch { return null; }
+  };
+  // ponytail: inventory covers anchors and img src/data-src, not CSS backgrounds
+  // or JavaScript-created content; add rendered-page extraction only when needed.
+  // Extract independently of Markdown conversion. These URLs are metadata only:
+  // never fetch linked pages/images or execute page scripts.
+  const cleaned = await new HTMLRewriter()
+    .on('base[href]', { element(el) {
+      if (!foundBase) { base = absolute(el.getAttribute('href')) || base; foundBase = true; }
+      el.remove();
+    } })
+    .on('script, style, template', { element: el => el.remove() })
+    .on('a[href]', {
+      element(el) {
+        const url = absolute(el.getAttribute('href'));
+        activeLink = url ? { url, text: '' } : null;
+        if (activeLink) { add(links, activeLink); el.setAttribute('href', url); }
+        else el.removeAttribute('href');
+        el.onEndTag(() => { activeLink = null; });
+      },
+      text(chunk) { if (activeLink) activeLink.text += chunk.text; }
     })
-    .onDocument({ text: chunk => parts.push(chunk.text) })
-    .transform(cleaned).text();
-  return parts.join('').replace(/[\t ]+/g, ' ').replace(/ *\n\s*/g, '\n').trim();
+    .on('img', { element(el) {
+      const url = absolute(el.getAttribute('data-src') || el.getAttribute('src') || '');
+      if (url && (el.getAttribute('data-src') || el.getAttribute('src'))) {
+        add(images, { url, alt: decodeHTMLAttribute(el.getAttribute('alt') || '') });
+        el.setAttribute('src', url);
+      } else el.removeAttribute('src');
+      el.removeAttribute('srcset');
+      el.removeAttribute('data-src');
+    } })
+    .transform(new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })).text().catch(error => { throw metadataError || error; });
+  let abort;
+  try {
+    signal.throwIfAborted();
+    const result = await Promise.race([
+      toMarkdown({ name: 'source.html', blob: new Blob([cleaned], { type: 'text/html' }) }, { html: { hostname: base, cssSelector: 'body' } }),
+      new Promise((_, reject) => { abort = () => reject(signal.reason); signal.addEventListener('abort', abort, { once: true }); })
+    ]);
+    if (result?.format !== 'markdown' || typeof result.data !== 'string') {
+      throw failure('The webpage could not be converted to Markdown. Try again or choose another source.', 'http_markdown_failed');
+    }
+    return {
+      markdown: result.data,
+      links: [...new Map(links.map(link => [link.url, { ...link, text: decodeHTML(link.text).replace(/\s+/g, ' ').trim() }])).values()],
+      images: [...new Map(images.map(image => [JSON.stringify(image), image])).values()]
+    };
+  } finally { if (abort) signal.removeEventListener('abort', abort); }
 }
 
-export async function fetchAgentUrl(config, { httpFetch, httpAllowlist, httpDeadline }) {
+export async function fetchAgentUrl(config, { httpFetch, httpAllowlist, httpDeadline, toMarkdown }) {
   let url = publicUrl(config.url, httpAllowlist);
   // Preserve the historic runtime default for imported graphs. The editor and
   // templates explicitly use GET for new Fetch URL steps.
@@ -107,11 +165,11 @@ export async function fetchAgentUrl(config, { httpFetch, httpAllowlist, httpDead
       }
       const text = await boundedText(response);
       let data = text;
-      if (contentType === 'text/html' || contentType === 'application/xhtml+xml') data = await htmlToText(text);
-      if (new TextEncoder().encode(data).byteLength > MAX_TEXT_BYTES) {
+      if (contentType === 'text/html' || contentType === 'application/xhtml+xml') data = await htmlToSource(text, url.href, toMarkdown, signal);
+      if (contentType !== 'text/html' && contentType !== 'application/xhtml+xml') { try { data = JSON.parse(text); } catch { /* Plain text remains text. */ } }
+      if (new TextEncoder().encode(JSON.stringify(data)).byteLength > MAX_TEXT_BYTES) {
         throw failure('The readable source is larger than 256 KiB after HTML cleanup. Choose a more focused page or API response.', 'http_response_too_large');
       }
-      if (contentType !== 'text/html' && contentType !== 'application/xhtml+xml') { try { data = JSON.parse(text); } catch { /* Plain text remains text. */ } }
       return { status: response.status, ok: response.ok, data, url: url.href };
     }
   } catch (error) {
