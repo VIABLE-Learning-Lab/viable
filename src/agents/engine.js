@@ -194,7 +194,11 @@ function summarizeOutput(node, output, ctx) {
       ? summarizeInputStepOutput(output, ctx?.traceInputContent)
       : sanitizeBinaryValues(output);
     const json = JSON.stringify(safeOutput);
-    return json.length > 8000 ? { truncated: true, preview: json.slice(0, 8000) } : safeOutput;
+    return json.length > 8000 ? {
+      truncated: true, preview: json.slice(0, 8000),
+      ...(node.type === 'http' ? { url: safeOutput.url, status: safeOutput.status, ok: safeOutput.ok } : {}),
+      ...(node.type === 'output' ? { attachments: safeOutput.attachments } : {})
+    } : safeOutput;
   } catch (_) {
     return { unserializable: true };
   }
