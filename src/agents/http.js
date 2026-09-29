@@ -1,6 +1,7 @@
 // Fetch only through Workers' public internet transport. Keep
 // global_fetch_strictly_public enabled; never substitute a VPC/origin binding.
-const MAX_BYTES = 256 * 1024;
+const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_TEXT_BYTES = 256 * 1024;
 const MAX_REDIRECTS = 3;
 
 function failure(message, code) {
@@ -32,7 +33,7 @@ function publicUrl(value, allowlist) {
 async function boundedText(response) {
   if (Number(response.headers.get('content-length')) > MAX_BYTES) {
     await response.body?.cancel();
-    throw failure('The source is larger than 256 KiB. Choose a smaller page or API response.', 'http_response_too_large');
+    throw failure('The download is larger than 5 MiB. Choose a smaller page or API response.', 'http_response_too_large');
   }
   if (!response.body) return '';
   const reader = response.body.getReader();
@@ -46,7 +47,7 @@ async function boundedText(response) {
       size += value.byteLength;
       if (size > MAX_BYTES) {
         await reader.cancel();
-        throw failure('The source is larger than 256 KiB. Choose a smaller page or API response.', 'http_response_too_large');
+        throw failure('The download is larger than 5 MiB. Choose a smaller page or API response.', 'http_response_too_large');
       }
       text += decoder.decode(value, { stream: true });
     }
@@ -107,7 +108,10 @@ export async function fetchAgentUrl(config, { httpFetch, httpAllowlist, httpDead
       const text = await boundedText(response);
       let data = text;
       if (contentType === 'text/html' || contentType === 'application/xhtml+xml') data = await htmlToText(text);
-      else { try { data = JSON.parse(text); } catch { /* Plain text remains text. */ } }
+      if (new TextEncoder().encode(data).byteLength > MAX_TEXT_BYTES) {
+        throw failure('The readable source is larger than 256 KiB after HTML cleanup. Choose a more focused page or API response.', 'http_response_too_large');
+      }
+      if (contentType !== 'text/html' && contentType !== 'application/xhtml+xml') { try { data = JSON.parse(text); } catch { /* Plain text remains text. */ } }
       return { status: response.status, ok: response.ok, data, url: url.href };
     }
   } catch (error) {
