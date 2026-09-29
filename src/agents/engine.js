@@ -12,6 +12,7 @@
  * returned; the engine never touches the database.
  */
 
+import { fetchAgentUrl } from './http.js';
 import { callChatModel } from '../utils/chatModelClient.js';
 import { generateImageAsset } from '../services/imageGeneration.js';
 import { MODEL_MODES, resolveModelForMode } from '../config/models.js';
@@ -42,10 +43,12 @@ function budgetError(kind) {
 
 export async function runAgentGraph(env, graph, options = {}) {
   const budgets = { ...DEFAULT_BUDGETS, ...(options.budgets || {}) };
+  const deadline = Date.now() + budgets.timeoutMs;
   const services = {
     callChatModel: (env, request, options) => callChatModel(env, request, { ...options, deadline }),
     generateImage: (env, request, options) => generateImageAsset(env, request, { ...options, signal: AbortSignal.timeout(Math.max(1, deadline - Date.now())) }),
-    httpFetch: (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(Math.max(1, deadline - Date.now())) }),
+    httpFetch: (url, init) => fetch(url, init),
+    httpDeadline: deadline,
     resolveSubAgent: null,
     httpAllowlist: options.httpAllowlist || null,
     ...(options.services || {})
@@ -54,8 +57,6 @@ export async function runAgentGraph(env, graph, options = {}) {
 
   const nodeMap = new Map();
   for (const node of graph.nodes || []) nodeMap.set(node.id, node);
-
-  const deadline = Date.now() + budgets.timeoutMs;
 
   const ctx = {
     input: options.input ?? '',
@@ -452,19 +453,8 @@ const HANDLERS = {
   async http(node, ctx, env, services) {
     const cfg = node.config || {};
     const scope = ctx.scope();
-    const url = renderTemplate(cfg.url || '', scope);
-    assertAllowedHttpUrl(url, services.httpAllowlist);
-
-    const method = (cfg.method || 'POST').toUpperCase();
-    const headers = renderValue(cfg.headers || { 'Content-Type': 'application/json' }, scope);
-    const body = cfg.body != null ? JSON.stringify(renderValue(cfg.body, scope)) : undefined;
-
-    const response = await services.httpFetch(url, { method, headers, body });
-    const text = await response.text();
-    let data;
-    try { data = JSON.parse(text); } catch (_) { data = text; }
-
-    return { output: { status: response.status, ok: response.ok, data }, next: node.next };
+    const output = await fetchAgentUrl(renderValue(cfg, scope), services);
+    return { output, next: node.next };
   },
 
   loop(node, ctx, env, services, hooks, budgets) {
@@ -782,30 +772,4 @@ function normalizeAttachments(value) {
       return item;
     })
     .filter(Boolean);
-}
-
-function assertAllowedHttpUrl(url, allowlist) {
-  let parsed;
-  try {
-    parsed = new URL(url);
-  } catch (_) {
-    throw new AgentRunError(`Invalid HTTP node URL "${url}".`, { status: 400, code: 'invalid_http_url' });
-  }
-  if (parsed.protocol !== 'https:') {
-    throw new AgentRunError('HTTP nodes may only call https:// URLs.', { status: 400, code: 'http_url_not_allowed' });
-  }
-  if (!Array.isArray(allowlist) || !allowlist.length) {
-    throw new AgentRunError('HTTP nodes are disabled until AGENT_HTTP_ALLOWLIST contains at least one host.', {
-      status: 400,
-      code: 'http_host_not_allowed'
-    });
-  }
-  const host = parsed.hostname.toLowerCase();
-  const allowed = allowlist.some((entry) => {
-    const normalized = String(entry || '').toLowerCase().replace(/^\*\./, '');
-    return host === normalized || host.endsWith(`.${normalized}`);
-  });
-  if (!allowed) {
-    throw new AgentRunError(`HTTP node host "${parsed.hostname}" is not allow-listed.`, { status: 400, code: 'http_host_not_allowed' });
-  }
 }
