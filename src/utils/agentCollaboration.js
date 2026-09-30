@@ -3,7 +3,13 @@
 import { formatDisplayName } from './displayName.js';
 const forbidden = new Set(['__proto__', 'prototype', 'constructor']);
 const object = value => value && typeof value === 'object' && !Array.isArray(value);
-export const equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+export function equal(a, b) {
+  if (a === b) return true;
+  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((value, index) => equal(value, b[index]));
+  if (!object(a) || !object(b)) return false;
+  const keys = Object.keys(a);
+  return keys.length === Object.keys(b).length && keys.every(key => Object.hasOwn(b, key) && equal(a[key], b[key]));
+}
 
 export function draftDocument(graph) {
   const { nodes = [], ...rest } = graph;
