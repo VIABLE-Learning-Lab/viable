@@ -8,7 +8,7 @@
  * `edges` is visual-only metadata and is ignored by the engine.
  */
 
-import { MODEL_REGISTRY, normalizeModelId, resolveAlias } from '../config/models.js';
+import { MODEL_REGISTRY, assertModelNotRetired, normalizeModelId, resolveAlias } from '../config/models.js';
 
 export const NODE_TYPES = Object.freeze([
   'input',
@@ -190,6 +190,7 @@ export function validateGraphModels(graph, { allowedModels = null, allowUnlisted
     : null;
 
   for (const model of collectGraphModels(graph)) {
+    assertModelNotRetired(model);
     if (!allowUnlisted && !isListedModel(model)) {
       errors.push(`Model "${model}" is not available on the VIABLE Lab API.`);
       continue;
