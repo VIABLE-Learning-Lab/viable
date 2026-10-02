@@ -29,6 +29,60 @@ export const DEFAULT_GRAPH_LIMITS = Object.freeze({
   maxStructuredOutputs: 20
 });
 
+// Node types the validator rejects today. They stay in NODE_TYPES so a graph naming one gets a precise error.
+export const UNAVAILABLE_NODE_TYPES = Object.freeze(['subagent']);
+
+// What validateGraph requires of a node's config, for the published schema: `all` keys must be present and
+// at least one `any` key must be. A test builds configs from this and checks the validator agrees both ways.
+export const NODE_REQUIREMENTS = Object.freeze({
+  llm: Object.freeze({ all: Object.freeze(['model']) }),
+  image: Object.freeze({ all: Object.freeze(['model']) }),
+  http: Object.freeze({ all: Object.freeze(['url']) }),
+  condition: Object.freeze({ any: Object.freeze(['field', 'expr', 'cases']) })
+});
+
+function describeRequirement({ all = [], any = [] } = {}) {
+  return [
+    ...all.map((key) => `config.${key}`),
+    ...(any.length ? [`one of ${any.map((key) => `config.${key}`).join(', ')}`] : [])
+  ];
+}
+
+export function describeGraphSchema(limits = DEFAULT_GRAPH_LIMITS) {
+  return {
+    object: 'agent.graph_schema',
+    version: 1,
+    graph: {
+      required: ['entry', 'nodes'],
+      fields: {
+        version: 'Integer, currently 1.',
+        name: 'Human-readable workflow name.',
+        entry: 'ID of the first node, usually "input".',
+        variables: 'Optional initial values read as {{vars.name}}.',
+        nodes: 'Execution steps.',
+        edges: 'Optional visual metadata; routing comes from node next, branches, and condition cases.'
+      }
+    },
+    node_types: NODE_TYPES.map((type) => ({
+      type,
+      available: !UNAVAILABLE_NODE_TYPES.includes(type),
+      requires: describeRequirement(NODE_REQUIREMENTS[type]),
+      ...(UNAVAILABLE_NODE_TYPES.includes(type) ? { note: 'Reserved. Validation rejects this type until it is enabled.' } : {})
+    })),
+    limits: { ...limits },
+    rules: [
+      `A graph needs at least one node and at most ${limits.maxNodes}.`,
+      `A graph may be at most ${limits.maxGraphBytes} bytes and a node config at most ${limits.maxConfigBytes} bytes.`,
+      'Every node needs a unique string id and a known, available type.',
+      'entry must name an existing node.',
+      'Every next, branches, and condition case target must name an existing node.',
+      'At least one output node must be reachable from entry.',
+      `An llm node may declare at most ${limits.maxStructuredOutputs} structured outputs.`
+    ],
+    documentation: 'https://developers.viablelab.org/agents/viablelab-api.md'
+  };
+}
+
 export class GraphValidationError extends Error {
   constructor(message, details = []) {
     super(message);
