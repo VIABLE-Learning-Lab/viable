@@ -419,7 +419,7 @@ const HANDLERS = {
       throw error;
     }
     const providerDurationMs = Date.now() - providerStartedAt;
-    ctx.addUsage(null, result.cost);
+    ctx.addUsage(result.usage, result.cost);
 
     const urls = (result.publicData?.data || [])
       .map((item) => item.url)
@@ -439,7 +439,7 @@ const HANDLERS = {
       model: output.model,
       provider: result.resolution?.provider || null,
       requestedModel: cfg.model,
-      usage: { imageCount: result.imageCount },
+      usage: result.usage || { imageCount: result.imageCount },
       cost: result.cost,
       durationMs: providerDurationMs,
       requestBody: traceRequestBody,
