@@ -43,7 +43,8 @@ function budgetError(kind) {
 
 export async function runAgentGraph(env, graph, options = {}) {
   const budgets = { ...DEFAULT_BUDGETS, ...(options.budgets || {}) };
-  const deadline = Date.now() + budgets.timeoutMs;
+  const runStartedAt = Date.now();
+  const deadline = runStartedAt + budgets.timeoutMs;
   const services = {
     callChatModel: (env, request, options) => callChatModel(env, request, { ...options, deadline }),
     generateImage: (env, request, options) => generateImageAsset(env, request, { ...options, signal: AbortSignal.timeout(Math.max(1, deadline - Date.now())) }),
@@ -79,6 +80,7 @@ export async function runAgentGraph(env, graph, options = {}) {
     cost: 0,
     modelCalls: 0,
     stepCount: 0,
+    runStartedAt,
     result: null,
     archivedResult: null,
     scope() {
@@ -184,6 +186,9 @@ function recordStep(ctx, node, { output = null, error = null, startedAt }) {
     tokens: output?.usage?.total ?? null,
     cost: typeof output?.cost === 'number' ? output.cost : null,
     error: error ? String(error.message || error).slice(0, 500) : null,
+    // Offsets are relative to the start of graph execution, so a trace can be
+    // drawn as a waterfall without trusting second-resolution timestamps.
+    startedOffsetMs: Math.max(0, startedAt - ctx.runStartedAt),
     durationMs: Date.now() - startedAt
   });
 }
@@ -251,6 +256,15 @@ function summarizeInputContentPart(part) {
     };
   }
   return sanitizeBinaryValues(part);
+}
+
+// Comparison operands can be whole documents; keep the trace small and binary-free.
+function boundedTraceValue(value, limit = 2000) {
+  const safe = sanitizeBinaryValues(value);
+  let json;
+  try { json = JSON.stringify(safe); } catch (_) { return { unserializable: true }; }
+  if (json === undefined) return null;
+  return json.length > limit ? { truncated: true, preview: json.slice(0, limit) } : safe;
 }
 
 function sanitizeBinaryValues(value) {
@@ -375,18 +389,20 @@ const HANDLERS = {
     }
 
     // Structured form (built by the UI): { field, op, value }. Falls back to a
-    // raw expression for advanced users.
-    let result;
+    // raw expression for advanced users. The output records what was compared
+    // so a trace explains the decision without the graph that produced it.
+    let output;
     if (cfg.field) {
       const left = evaluateExpression(cfg.field, scope);
-      result = compareValues(left, cfg.op || '==', cfg.value);
+      const op = cfg.op || '==';
+      output = { result: compareValues(left, op, cfg.value), field: cfg.field, op, left: boundedTraceValue(left), right: cfg.value ?? null };
     } else {
-      result = evaluateCondition(cfg.expr, scope);
+      output = { result: evaluateCondition(cfg.expr, scope), expr: cfg.expr ?? null };
     }
 
     const branches = node.branches || {};
-    const next = result ? branches.true : branches.false;
-    return { output: { result }, next: next ?? node.next ?? null };
+    const next = output.result ? branches.true : branches.false;
+    return { output, next: next ?? node.next ?? null };
   },
 
   async image(node, ctx, env, services, hooks) {
@@ -481,7 +497,8 @@ const HANDLERS = {
 
     const branches = node.branches || {};
     const next = shouldContinue ? branches.continue : branches.done;
-    return { output: { iteration: count, continue: shouldContinue }, next: next ?? node.next ?? null };
+    const rule = cfg.count != null ? { count: Number(cfg.count) } : cfg.while ? { while: cfg.while } : {};
+    return { output: { iteration: count, continue: shouldContinue, var: varName, ...rule }, next: next ?? node.next ?? null };
   },
 
   transform(node, ctx) {

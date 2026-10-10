@@ -246,7 +246,7 @@ export function validateGraphModels(graph, { allowedModels = null, allowUnlisted
   for (const model of collectGraphModels(graph)) {
     assertModelNotRetired(model);
     if (!allowUnlisted && !isListedModel(model)) {
-      errors.push(`Model "${model}" is not available on the VIABLE Lab API.`);
+      errors.push(`Model "${model}" is not available on the VIABLE API.`);
       continue;
     }
     if (allowSet) {
