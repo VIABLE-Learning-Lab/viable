@@ -16,6 +16,7 @@ import { fetchAgentUrl } from './http.js';
 import { callChatModel } from '../utils/chatModelClient.js';
 import { generateImageAsset } from '../services/imageGeneration.js';
 import { MODEL_MODES, resolveModelForMode } from '../config/models.js';
+import { billingFields } from '../utils/providerKeys.js';
 import { evaluateCondition, evaluateExpression, renderTemplate, renderValue } from './expression.js';
 
 export const DEFAULT_BUDGETS = Object.freeze({
@@ -45,9 +46,11 @@ export async function runAgentGraph(env, graph, options = {}) {
   const budgets = { ...DEFAULT_BUDGETS, ...(options.budgets || {}) };
   const runStartedAt = Date.now();
   const deadline = runStartedAt + budgets.timeoutMs;
+  // The caller's paying account decides which provider keys the graph's models use.
+  const providerKeys = options.providerKeys || [];
   const services = {
-    callChatModel: (env, request, options) => callChatModel(env, request, { ...options, deadline }),
-    generateImage: (env, request, options) => generateImageAsset(env, request, { ...options, signal: AbortSignal.timeout(Math.max(1, deadline - Date.now())) }),
+    callChatModel: (env, request, options) => callChatModel(env, request, { ...options, deadline, providerKeys }),
+    generateImage: (env, request, options) => generateImageAsset(env, request, { ...options, providerKeys, signal: AbortSignal.timeout(Math.max(1, deadline - Date.now())) }),
     httpFetch: (url, init) => fetch(url, init),
     httpDeadline: deadline,
     toMarkdown: env.AI?.toMarkdown ? (file, options) => env.AI.toMarkdown(file, options) : null,
@@ -457,6 +460,7 @@ const HANDLERS = {
       requestedModel: cfg.model,
       usage: result.usage || { imageCount: result.imageCount },
       cost: result.cost,
+      ...billingFields(result.resolution),
       durationMs: providerDurationMs,
       requestBody: traceRequestBody,
       responseBody: result.responseData,
@@ -748,6 +752,7 @@ function failedProviderCall({ operation, node, cfg, requestBody, error, retry = 
     responseStatus: Number.isFinite(status) ? status : 500,
     errorMessage: String(error?.message || error || 'Provider call failed.'),
     errorCode: error?.code || null,
+    ...billingFields(error?.resolution),
     retry
   };
 }
@@ -765,6 +770,7 @@ function logLlmProviderCall(hooks, node, cfg, result, requestBody, retry, durati
     requestedModel: cfg.model,
     usage: result.usage,
     cost: result.cost,
+    ...billingFields(result.resolution, result.costSource),
     durationMs,
     requestBody: effectiveRequest,
     operationMetadata: { attempts: result.attempt || 1, truncatedContext: result.truncatedContext === true },

@@ -9,6 +9,7 @@
  */
 
 import { MODEL_REGISTRY, assertModelNotRetired, normalizeModelId, resolveAlias } from '../config/models.js';
+import { isProviderKeyModel, modelAllowedBy } from '../utils/providerKeys.js';
 
 export const NODE_TYPES = Object.freeze([
   'input',
@@ -245,13 +246,12 @@ export function validateGraphModels(graph, { allowedModels = null, allowUnlisted
 
   for (const model of collectGraphModels(graph)) {
     assertModelNotRetired(model);
-    if (!allowUnlisted && !isListedModel(model)) {
+    if (!allowUnlisted && !isProviderKeyModel(model) && !isListedModel(model)) {
       errors.push(`Model "${model}" is not available on the VIABLE API.`);
       continue;
     }
     if (allowSet) {
-      const normalized = normalizeModelId(model);
-      if (!allowSet.has(normalized) && !allowSet.has(resolveAlias(normalized))) {
+      if (!modelAllowedBy(allowSet, model)) {
         hasPermissionError = true;
         errors.push(`API key is not allowed to use model "${model}".`);
       }
