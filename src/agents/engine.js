@@ -13,7 +13,7 @@
  */
 
 import { fetchAgentUrl } from './http.js';
-import { callChatModel } from '../utils/chatModelClient.js';
+import { callChatModel, withPoolWaits } from '../utils/chatModelClient.js';
 import { generateImageAsset } from '../services/imageGeneration.js';
 import { MODEL_MODES, resolveModelForMode } from '../config/models.js';
 import { billingFields } from '../utils/providerKeys.js';
@@ -50,7 +50,10 @@ export async function runAgentGraph(env, graph, options = {}) {
   const providerKeys = options.providerKeys || [];
   const services = {
     callChatModel: (env, request, options) => callChatModel(env, request, { ...options, deadline, providerKeys }),
-    generateImage: (env, request, options) => generateImageAsset(env, request, { ...options, providerKeys, signal: AbortSignal.timeout(Math.max(1, deadline - Date.now())) }),
+    generateImage: (env, request, options) => {
+      const signal = AbortSignal.timeout(Math.max(1, deadline - Date.now()));
+      return withPoolWaits(() => generateImageAsset(env, request, { ...options, providerKeys, signal }), signal);
+    },
     httpFetch: (url, init) => fetch(url, init),
     httpDeadline: deadline,
     toMarkdown: env.AI?.toMarkdown ? (file, options) => env.AI.toMarkdown(file, options) : null,
