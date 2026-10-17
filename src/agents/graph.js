@@ -10,6 +10,7 @@
 
 import { MODEL_REGISTRY, assertModelNotRetired, normalizeModelId, resolveAlias } from '../config/models.js';
 import { isProviderKeyModel, modelAllowedBy } from '../utils/providerKeys.js';
+import { validSketch } from '../utils/agentCollaboration.js';
 
 export const NODE_TYPES = Object.freeze([
   'input',
@@ -20,7 +21,17 @@ export const NODE_TYPES = Object.freeze([
   'loop',
   'transform',
   'output',
-  'subagent'
+  'subagent',
+  'router',
+  'agent',
+  'knowledge',
+  'memory',
+  'state',
+  'guardrail',
+  'parallel',
+  'ask',
+  'note',
+  'vetting'
 ]);
 
 export const DEFAULT_GRAPH_LIMITS = Object.freeze({
@@ -31,7 +42,17 @@ export const DEFAULT_GRAPH_LIMITS = Object.freeze({
 });
 
 // Node types the validator rejects today. They stay in NODE_TYPES so a graph naming one gets a precise error.
-export const UNAVAILABLE_NODE_TYPES = Object.freeze(['subagent']);
+export const UNAVAILABLE_NODE_TYPES = Object.freeze([]);
+
+// Nodes that call a chat model. Memory and guardrail call one only in some modes.
+// The VETTING step's default reviewer. The /v1/vetting endpoints keep their own default
+// (gpt-4o-mini) until that model's retirement is handled for existing callers.
+export const DEFAULT_VETTING_REVIEWER = 'gpt-6-luna';
+
+const MODEL_NODE_TYPES = new Set(['llm', 'image', 'router', 'agent', 'guardrail', 'memory', 'vetting']);
+export const GUARDRAIL_MODEL_CHECKS = Object.freeze(['jailbreak', 'moderation', 'off_topic', 'custom']);
+export const GUARDRAIL_CHECKS = Object.freeze(['pii', ...GUARDRAIL_MODEL_CHECKS]);
+const HANDLE_NAME = /^[a-z][a-z0-9_-]{0,39}$/;
 
 // What validateGraph requires of a node's config, for the published schema: `all` keys must be present and
 // at least one `any` key must be. A test builds configs from this and checks the validator agrees both ways.
@@ -39,8 +60,27 @@ export const NODE_REQUIREMENTS = Object.freeze({
   llm: Object.freeze({ all: Object.freeze(['model']) }),
   image: Object.freeze({ all: Object.freeze(['model']) }),
   http: Object.freeze({ all: Object.freeze(['url']) }),
-  condition: Object.freeze({ any: Object.freeze(['field', 'expr', 'cases']) })
+  condition: Object.freeze({ any: Object.freeze(['field', 'expr', 'cases']) }),
+  subagent: Object.freeze({ all: Object.freeze(['slug']) }),
+  router: Object.freeze({ all: Object.freeze(['model', 'routes']) }),
+  agent: Object.freeze({ all: Object.freeze(['model']) }),
+  knowledge: Object.freeze({ all: Object.freeze(['knowledge_bases']) }),
+  guardrail: Object.freeze({ all: Object.freeze(['checks']) }),
+  parallel: Object.freeze({ all: Object.freeze(['paths']) }),
+  vetting: Object.freeze({ all: Object.freeze(['model']) })
 });
+
+/** Outgoing handle names a node exposes; router and parallel derive theirs from config. */
+export function routerRoutes(config = {}) {
+  return (Array.isArray(config.routes) ? config.routes : [])
+    .filter((route) => route && typeof route.name === 'string' && HANDLE_NAME.test(route.name) && route.name !== 'fallback')
+    .map((route) => ({ name: route.name, description: typeof route.description === 'string' ? route.description : '' }));
+}
+
+export function parallelPaths(config = {}) {
+  return (Array.isArray(config.paths) ? config.paths : [])
+    .filter((name) => typeof name === 'string' && HANDLE_NAME.test(name) && name !== 'join');
+}
 
 function describeRequirement({ all = [], any = [] } = {}) {
   return [
@@ -106,6 +146,9 @@ export function validateGraph(graph, options = {}) {
     errors.push(`Graph is too large (${graphBytes} bytes). Maximum is ${limits.maxGraphBytes} bytes.`);
   }
 
+  // Canvas drawings are kept with the graph for collaborators; runs ignore them.
+  if (!validSketch(graph.sketch)) errors.push('Graph sketch must map stroke ids to { tool, color, width, points } (at most 1,500 strokes).');
+
   const nodes = Array.isArray(graph.nodes) ? graph.nodes : [];
   if (!nodes.length) errors.push('Graph must contain at least one node.');
   if (nodes.length > limits.maxNodes) errors.push(`Graph has too many nodes (${nodes.length}). Maximum is ${limits.maxNodes}.`);
@@ -127,8 +170,8 @@ export function validateGraph(graph, options = {}) {
     if (!NODE_TYPES.includes(node.type)) {
       errors.push(`Node "${node.id}" has unknown type "${node.type}".`);
     }
-    if (node.type === 'subagent' && options.allowSubagents !== true) {
-      errors.push(`Sub-agent node "${node.id}" is not enabled yet.`);
+    if (UNAVAILABLE_NODE_TYPES.includes(node.type)) {
+      errors.push(`Node "${node.id}" uses type "${node.type}", which is not enabled yet.`);
     }
     if (node.config != null && (typeof node.config !== 'object' || Array.isArray(node.config))) {
       errors.push(`Node "${node.id}" config must be an object.`);
@@ -164,6 +207,7 @@ export function validateGraph(graph, options = {}) {
     if (node.type === 'http' && !node.config?.url) {
       errors.push(`HTTP node "${node.id}" requires config.url.`);
     }
+    errors.push(...validateOrchestrationNode(node));
   }
 
   const hasOutput = nodes.some((n) => n?.type === 'output');
@@ -178,6 +222,59 @@ export function validateGraph(graph, options = {}) {
     throw new GraphValidationError('Graph validation failed.', errors);
   }
   return graph;
+}
+
+function validateOrchestrationNode(node) {
+  const cfg = node.config || {};
+  const errors = [];
+  const label = `${node.type[0].toUpperCase()}${node.type.slice(1)} node "${node.id}"`;
+  if (['router', 'agent', 'vetting'].includes(node.type) && !cfg.model) errors.push(`${label} requires config.model.`);
+  if (node.type === 'vetting') {
+    if (cfg.mode != null && !['simple', 'full'].includes(cfg.mode)) errors.push(`${label} mode must be simple or full.`);
+    if (cfg.mode === 'full' && cfg.items == null && (!cfg.question || !cfg.answer_key)) errors.push(`${label} needs config.question and config.answer_key (or config.items) in full mode.`);
+    if (cfg.max_attempts != null && (!Number.isInteger(Number(cfg.max_attempts)) || Number(cfg.max_attempts) < 1 || Number(cfg.max_attempts) > 10)) errors.push(`${label} max_attempts must be between 1 and 10.`);
+  }
+  if (node.type === 'subagent' && !cfg.slug) errors.push(`${label} requires config.slug, the published agent to call.`);
+  if (node.type === 'router') {
+    const routes = routerRoutes(cfg);
+    if (!Array.isArray(cfg.routes) || !cfg.routes.length) errors.push(`${label} requires config.routes.`);
+    else if (routes.length !== cfg.routes.length) errors.push(`${label} route names must be lowercase letters, numbers, - or _, and not "fallback".`);
+    if (new Set(routes.map((route) => route.name)).size !== routes.length) errors.push(`${label} has duplicate route names.`);
+    if (routes.length > 12) errors.push(`${label} supports at most 12 routes.`);
+  }
+  if (node.type === 'parallel') {
+    const paths = parallelPaths(cfg);
+    if (!Array.isArray(cfg.paths)) errors.push(`${label} requires config.paths.`);
+    else if (paths.length !== cfg.paths.length || new Set(paths).size !== paths.length) errors.push(`${label} path names must be unique lowercase handle names, not "join".`);
+    else if (paths.length < 2 || paths.length > 6) errors.push(`${label} needs between 2 and 6 paths.`);
+  }
+  if (node.type === 'knowledge' || (node.type === 'agent' && cfg.tools?.knowledge_bases != null)) {
+    const ids = node.type === 'knowledge' ? cfg.knowledge_bases : cfg.tools.knowledge_bases;
+    if (!Array.isArray(ids) || !ids.length || ids.length > 5 || ids.some((id) => typeof id !== 'string' || !id)) {
+      errors.push(`${label} needs between 1 and 5 knowledge base IDs${node.type === 'agent' ? ' in tools.knowledge_bases' : ' in config.knowledge_bases'}.`);
+    }
+  }
+  if (node.type === 'agent' && cfg.tools?.agents != null && (!Array.isArray(cfg.tools.agents) || cfg.tools.agents.length > 5 || cfg.tools.agents.some((slug) => typeof slug !== 'string' || !slug))) {
+    errors.push(`${label} tools.agents must list at most 5 agent slugs.`);
+  }
+  if (node.type === 'guardrail') {
+    const checks = Array.isArray(cfg.checks) ? cfg.checks : [];
+    if (!checks.length || checks.some((check) => !GUARDRAIL_CHECKS.includes(check))) errors.push(`${label} config.checks must list one or more of ${GUARDRAIL_CHECKS.join(', ')}.`);
+    if (checks.some((check) => GUARDRAIL_MODEL_CHECKS.includes(check)) && !cfg.model) errors.push(`${label} needs config.model for model-based checks.`);
+  }
+  if (node.type === 'memory') {
+    if (cfg.mode != null && !['recall', 'save', 'extract'].includes(cfg.mode)) errors.push(`${label} mode must be recall, save or extract.`);
+    if (cfg.mode === 'extract' && !cfg.model) errors.push(`${label} needs config.model to extract memories.`);
+    if (cfg.mode === 'save' && !cfg.content) errors.push(`${label} needs config.content to save.`);
+  }
+  if (node.type === 'state') {
+    const items = cfg.assignments;
+    if (items != null && (!Array.isArray(items) || items.length > 20 || items.some((item) => !item || !/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(item.name || '')))) {
+      errors.push(`${label} assignments need valid variable names (at most 20).`);
+    }
+    if (cfg.scope != null && !['run', 'conversation'].includes(cfg.scope)) errors.push(`${label} scope must be run or conversation.`);
+  }
+  return errors;
 }
 
 function referencedNodeIds(node) {
@@ -213,12 +310,15 @@ function reachableNodeIds(entry, nodeMap) {
   return seen;
 }
 
-/** Model ids referenced by llm/image nodes. */
+/** Model ids referenced by model-calling nodes. */
 export function collectGraphModels(graph) {
   const models = new Set();
   for (const node of graph?.nodes || []) {
-    if ((node?.type === 'llm' || node?.type === 'image') && node.config?.model) {
+    if (MODEL_NODE_TYPES.has(node?.type) && node.config?.model) {
       models.add(String(node.config.model));
+    }
+    if (node?.type === 'vetting') {
+      models.add(String(node.config?.verification_model || DEFAULT_VETTING_REVIEWER));
     }
   }
   return [...models];

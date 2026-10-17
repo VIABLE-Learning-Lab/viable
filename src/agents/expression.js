@@ -12,6 +12,10 @@
  *   equality:    == != === !==
  *   logical:     && ||
  *   grouping:    ( ... )
+ *   functions:   len(x) lower(s) upper(s) trim(s) contains(a, b) join(list, sep)
+ *                split(s, sep) default(a, b) number(x) string(x) json(x) round(n, d)
+ *                min(a, b) max(a, b) first(list) last(list) slice(x, a, b) keys(obj)
+ *                append(list, item) now()  — a fixed allowlist of pure helpers
  *
  * Templates render `{{ path.or.expression }}` against the same scope.
  */
@@ -20,7 +24,7 @@ const TOKEN_PATTERNS = [
   ['ws', /^\s+/],
   ['number', /^\d+(?:\.\d+)?/],
   ['string', /^'(?:\\.|[^'\\])*'|^"(?:\\.|[^"\\])*"/],
-  ['op', /^(?:===|!==|==|!=|<=|>=|&&|\|\||[!<>+\-*/%().])/],
+  ['op', /^(?:===|!==|==|!=|<=|>=|&&|\|\||[!<>+\-*/%().,])/],
   ['ident', /^[A-Za-z_$][A-Za-z0-9_$]*/]
 ];
 
@@ -98,20 +102,43 @@ class Parser {
     return this.parsePrimary();
   }
 
+  // Member access after a call or group: first(items).title, (a || b).name
   parsePrimary() {
+    let node = this.parseAtom();
+    while (!node.bare && this.peek()?.value === '.') {
+      this.next();
+      const part = this.next();
+      if (!part || part.type !== 'ident') throw new ExpressionError('Expected property name after "."');
+      node = { kind: 'member', object: node, name: part.value };
+    }
+    return node;
+  }
+
+  parseAtom() {
     const tok = this.next();
     if (!tok) throw new ExpressionError('Unexpected end of expression');
 
     if (tok.value === '(') {
       const expr = this.parseLogicalOr();
       this.expect(')');
-      return expr;
+      return { kind: 'group', expr };
     }
     if (tok.type === 'number') return { kind: 'literal', value: Number(tok.value) };
     if (tok.type === 'string') return { kind: 'literal', value: unquote(tok.value) };
     if (tok.type === 'ident') {
       if (Object.prototype.hasOwnProperty.call(KEYWORDS, tok.value)) {
         return { kind: 'literal', value: KEYWORDS[tok.value] };
+      }
+      if (this.peek()?.value === '(') {
+        if (!Object.hasOwn(FUNCTIONS, tok.value)) throw new ExpressionError(`Unknown function "${tok.value}"`);
+        this.next();
+        const args = [];
+        if (this.peek()?.value !== ')') {
+          do args.push(this.parseLogicalOr());
+          while (this.peek()?.value === ',' && this.next());
+        }
+        this.expect(')');
+        return { kind: 'call', name: tok.value, args };
       }
       const path = [tok.value];
       while (this.peek() && this.peek().value === '.') {
@@ -120,7 +147,7 @@ class Parser {
         if (!part || part.type !== 'ident') throw new ExpressionError('Expected property name after "."');
         path.push(part.value);
       }
-      return { kind: 'path', path };
+      return { kind: 'path', path, bare: true };
     }
     throw new ExpressionError(`Unexpected token "${tok.value}"`);
   }
@@ -139,10 +166,44 @@ export function resolvePath(scope, path) {
   return current;
 }
 
+const text = (value) => (value == null ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value));
+const list = (value) => (Array.isArray(value) ? value : value == null ? [] : [value]);
+// Pure, bounded helpers only: no I/O, no callbacks, no access beyond their arguments.
+const FUNCTIONS = Object.freeze({
+  len: (x) => (x == null ? 0 : typeof x === 'object' && !Array.isArray(x) ? Object.keys(x).length : (Array.isArray(x) ? x : String(x)).length),
+  lower: (s) => text(s).toLowerCase(),
+  upper: (s) => text(s).toUpperCase(),
+  trim: (s) => text(s).trim(),
+  contains: (a, b) => (Array.isArray(a) ? a.includes(b) : text(a).toLowerCase().includes(text(b).toLowerCase())),
+  join: (items, sep = ', ') => list(items).map(text).join(text(sep)),
+  split: (s, sep = ',') => text(s).split(text(sep)).map((part) => part.trim()).filter(Boolean).slice(0, 1000),
+  default: (a, b) => (a == null || a === '' ? b : a),
+  number: (x) => { const n = Number(x); return Number.isFinite(n) ? n : 0; },
+  string: (x) => text(x),
+  json: (x) => text(x),
+  round: (n, d = 0) => { const f = 10 ** Math.max(0, Math.min(10, Number(d) || 0)); return Math.round(Number(n) * f) / f; },
+  min: (a, b) => Math.min(Number(a), Number(b)),
+  max: (a, b) => Math.max(Number(a), Number(b)),
+  first: (items) => list(items)[0],
+  last: (items) => list(items).at(-1),
+  slice: (x, a = 0, b) => (Array.isArray(x) ? x : text(x)).slice(Number(a) || 0, b == null ? undefined : Number(b)),
+  keys: (obj) => (obj && typeof obj === 'object' && !Array.isArray(obj) ? Object.keys(obj) : []),
+  append: (items, item) => [...list(items), item].slice(-1000),
+  now: () => new Date().toISOString()
+});
+
 function evalNode(node, scope) {
   switch (node.kind) {
     case 'literal':
       return node.value;
+    case 'call':
+      return FUNCTIONS[node.name](...node.args.map((arg) => evalNode(arg, scope)));
+    case 'group':
+      return evalNode(node.expr, scope);
+    case 'member': {
+      const object = evalNode(node.object, scope);
+      return object == null || !Object.hasOwn(Object(object), node.name) ? undefined : object[node.name];
+    }
     case 'path':
       return resolvePath(scope, node.path);
     case 'unary': {

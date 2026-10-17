@@ -25,7 +25,7 @@ export function applyDraftChanges(document, changes) {
   for (const change of changes) {
     const path = change.path;
     if (!Array.isArray(path) || !path.length || path.length > 16 || path.some(key => typeof key !== 'string' || !key || key.length > 256 || forbidden.has(key))
-      || !['version', 'name', 'entry', 'variables', 'nodes', 'edges'].includes(path[0]) || (path[0] === 'nodes' && path.length < 2)) throw new Error('Invalid field path.');
+      || !['version', 'name', 'entry', 'variables', 'nodes', 'edges', 'sketch'].includes(path[0]) || (path[0] === 'nodes' && path.length < 2)) throw new Error('Invalid field path.');
     let current = document;
     for (const key of path) current = current?.[key];
     if (!equal(current, change.before)) {
@@ -52,8 +52,20 @@ export function applyDraftChanges(document, changes) {
       || (node.config !== undefined && !object(node.config)) || (node.next != null && typeof node.next !== 'string')
       || (node.branches !== undefined && (!object(node.branches) || Object.values(node.branches).some(value => typeof value !== 'string')))
       || ['x', 'y'].some(key => node[key] !== undefined && !Number.isFinite(node[key])))
-    || Object.entries(result.nodes).some(([id, node]) => id !== node.id) || new TextEncoder().encode(JSON.stringify(result)).length > 1024 * 1024) throw new Error('Invalid or oversized draft.');
+    || Object.entries(result.nodes).some(([id, node]) => id !== node.id) || !validSketch(result.sketch)
+    || new TextEncoder().encode(JSON.stringify(result)).length > 1024 * 1024) throw new Error('Invalid or oversized draft.');
   return result;
+}
+
+// Canvas drawings: { strokeId: { tool, color, width, points: [x0, y0, x1, y1, ...] } }, keyed so
+// people drawing at the same time never edit the same field.
+const SKETCH_TOOLS = new Set(['pen', 'highlighter', 'arrow', 'rect']);
+export function validSketch(sketch) {
+  if (sketch === undefined) return true;
+  if (!object(sketch) || Object.keys(sketch).length > 1500) return false;
+  return Object.entries(sketch).every(([id, stroke]) => object(stroke) && /^[\w-]{1,40}$/.test(id) && SKETCH_TOOLS.has(stroke.tool)
+    && typeof stroke.color === 'string' && stroke.color.length <= 32 && Number.isFinite(stroke.width) && stroke.width > 0 && stroke.width <= 40
+    && Array.isArray(stroke.points) && stroke.points.length >= 2 && stroke.points.length <= 4000 && stroke.points.length % 2 === 0 && stroke.points.every(Number.isFinite));
 }
 
 export function publicPresence(session) {

@@ -57,11 +57,23 @@ async function boundedText(response) {
   } finally { reader.releaseLock(); }
 }
 
+// Site chrome that repeats on every page; removed before conversion (its links stay in the inventory).
+const PAGE_CHROME = 'nav, aside, noscript, svg, iframe, form, button, dialog, [role="navigation"], [role="search"], [aria-hidden="true"]';
+
+/**
+ * Readable Markdown for agents and knowledge bases: the page's main region when it
+ * has one (else the converter's default, which drops header and footer), without
+ * navigation or forms; email and phone link targets are written into the text so
+ * "Email me" keeps its address. Links and images are inventoried from the whole page.
+ */
 export async function htmlToSource(html, sourceUrl, toMarkdown, signal) {
   if (!toMarkdown) throw failure('HTML conversion requires the Workers AI binding.', 'http_markdown_unavailable');
   let base = sourceUrl;
   let foundBase = false;
   let activeLink;
+  let contact = null;
+  let title = '';
+  const regions = { main: false, role: false };
   const links = [];
   const images = [];
   let metadataBytes = 0;
@@ -84,7 +96,27 @@ export async function htmlToSource(html, sourceUrl, toMarkdown, signal) {
   // or JavaScript-created content; add rendered-page extraction only when needed.
   // Extract independently of Markdown conversion. These URLs are metadata only:
   // never fetch linked pages/images or execute page scripts.
-  const cleaned = await new HTMLRewriter()
+  const rewriter = new HTMLRewriter()
+      .on('title', { text(chunk) { if (title.length < 300) title += chunk.text; } })
+      .on('main', { element() { regions.main = true; } })
+      .on('[role="main"]', { element() { regions.role = true; } })
+      .on(PAGE_CHROME, { element: el => el.remove() })
+      .on('a[href^="mailto:"], a[href^="MAILTO:"], a[href^="tel:"]', {
+        element(el) {
+          const href = el.getAttribute('href') || '';
+          let address = '';
+          try { address = decodeURIComponent(href.replace(/^(mailto|tel):/i, '').split('?')[0]).trim(); } catch { address = ''; }
+          contact = address ? { address, text: '' } : null;
+          el.removeAttribute('href');
+          const current = contact;
+          el.onEndTag((end) => {
+            if (current && !current.text.replace(/\s+/g, '').includes(current.address.replace(/\s+/g, ''))) end.after(` (${current.address})`);
+            contact = null;
+          });
+        },
+        text(chunk) { if (contact) contact.text += chunk.text; }
+      });
+  const cleaned = await rewriter
     .on('base[href]', { element(el) {
       if (!foundBase) { base = absolute(el.getAttribute('href')) || base; foundBase = true; }
       el.remove();
@@ -92,6 +124,8 @@ export async function htmlToSource(html, sourceUrl, toMarkdown, signal) {
     .on('script, style, template', { element: el => el.remove() })
     .on('a[href]', {
       element(el) {
+        // Contact links were handled above; a second end-tag handler would replace theirs.
+        if (contact) return;
         const url = absolute(el.getAttribute('href'));
         activeLink = url ? { url, text: '' } : null;
         if (activeLink) { add(links, activeLink); el.setAttribute('href', url); }
@@ -114,7 +148,8 @@ export async function htmlToSource(html, sourceUrl, toMarkdown, signal) {
   try {
     signal.throwIfAborted();
     const result = await Promise.race([
-      toMarkdown({ name: 'source.html', blob: new Blob([cleaned], { type: 'text/html' }) }, { html: { hostname: base, cssSelector: 'body' } }),
+      toMarkdown({ name: 'source.html', blob: new Blob([cleaned], { type: 'text/html' }) },
+        { conversionOptions: { html: { hostname: base, ...(regions.main ? { cssSelector: 'main' } : regions.role ? { cssSelector: '[role="main"]' } : {}) } } }),
       new Promise((_, reject) => { abort = () => reject(signal.reason); signal.addEventListener('abort', abort, { once: true }); })
     ]);
     if (result?.format !== 'markdown' || typeof result.data !== 'string') {
@@ -123,12 +158,15 @@ export async function htmlToSource(html, sourceUrl, toMarkdown, signal) {
     return {
       markdown: result.data,
       links: [...new Map(links.map(link => [link.url, { ...link, text: decodeHTML(link.text).replace(/\s+/g, ' ').trim() }])).values()],
-      images: [...new Map(images.map(image => [JSON.stringify(image), image])).values()]
+      images: [...new Map(images.map(image => [JSON.stringify(image), image])).values()],
+      title: decodeHTML(title).replace(/\s+/g, ' ').trim()
     };
   } finally { if (abort) signal.removeEventListener('abort', abort); }
 }
 
-export async function fetchAgentUrl(config, { httpFetch, httpAllowlist, httpDeadline, toMarkdown }) {
+// `knowledge` skips converting error pages; `acceptXml` and `maxTextBytes` let knowledge
+// bases read sitemaps. Agent Fetch URL steps never set them.
+export async function fetchAgentUrl(config, { httpFetch, httpAllowlist, httpDeadline, toMarkdown, knowledge = false, acceptXml = false, maxTextBytes = MAX_TEXT_BYTES, timeoutMs = 10000 }) {
   let url = publicUrl(config.url, httpAllowlist);
   // Preserve the historic runtime default for imported graphs. The editor and
   // templates explicitly use GET for new Fetch URL steps.
@@ -142,7 +180,7 @@ export async function fetchAgentUrl(config, { httpFetch, httpAllowlist, httpDead
   if (['host', 'connection', 'content-length', 'transfer-encoding', 'upgrade', 'proxy-authorization'].some(name => headers.has(name))) {
     throw failure('Fetch URL cannot override transport or proxy headers.', 'invalid_http_headers');
   }
-  const signal = AbortSignal.timeout(Math.max(1, Math.min(10000, (httpDeadline || Infinity) - Date.now())));
+  const signal = AbortSignal.timeout(Math.max(1, Math.min(timeoutMs, (httpDeadline || Infinity) - Date.now())));
   const body = config.body != null ? JSON.stringify(config.body) : undefined;
   try {
     for (let hop = 0; ; hop++) {
@@ -159,15 +197,17 @@ export async function fetchAgentUrl(config, { httpFetch, httpAllowlist, httpDead
         continue;
       }
       const contentType = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-      if (contentType && !contentType.startsWith('text/') && !/^(application\/(json|[\w.+-]+\+json|xhtml\+xml))$/.test(contentType)) {
+      const xml = acceptXml && /^application\/([\w.+-]+\+)?xml$/.test(contentType);
+      if (contentType && !xml && !contentType.startsWith('text/') && !/^(application\/(json|[\w.+-]+\+json|xhtml\+xml))$/.test(contentType)) {
         await response.body?.cancel();
         throw failure('Fetch URL reads text, JSON and HTML. Use a text source instead of a PDF, image or other download.', 'http_content_type_not_supported');
       }
       const text = await boundedText(response);
       let data = text;
-      if (contentType === 'text/html' || contentType === 'application/xhtml+xml') data = await htmlToSource(text, url.href, toMarkdown, signal);
-      if (contentType !== 'text/html' && contentType !== 'application/xhtml+xml') { try { data = JSON.parse(text); } catch { /* Plain text remains text. */ } }
-      if (new TextEncoder().encode(JSON.stringify(data)).byteLength > MAX_TEXT_BYTES) {
+      const html = contentType === 'text/html' || contentType === 'application/xhtml+xml';
+      if (html && (response.ok || !knowledge)) data = await htmlToSource(text, url.href, toMarkdown, signal);
+      if (!html) { try { data = JSON.parse(text); } catch { /* Plain text remains text. */ } }
+      if (new TextEncoder().encode(JSON.stringify(data)).byteLength > maxTextBytes) {
         throw failure('The readable source is larger than 256 KiB after HTML cleanup. Choose a more focused page or API response.', 'http_response_too_large');
       }
       return { status: response.status, ok: response.ok, data, url: url.href };
