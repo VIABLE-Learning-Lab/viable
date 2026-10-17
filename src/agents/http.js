@@ -1,4 +1,4 @@
-import { decodeHTML, decodeHTMLAttribute } from 'entities';
+import { decodeHTML, decodeHTMLAttribute, escapeUTF8 } from 'entities';
 
 // Fetch only through Workers' public internet transport. Keep
 // global_fetch_strictly_public enabled; never substitute a VPC/origin binding.
@@ -58,24 +58,55 @@ async function boundedText(response) {
 }
 
 // Site chrome that repeats on every page; removed before conversion (its links stay in the inventory).
-const PAGE_CHROME = 'nav, aside, noscript, svg, iframe, form, button, dialog, [role="navigation"], [role="search"], [aria-hidden="true"]';
+// LibGuides marks its tabbed content boxes (.s-lib-jqtabs) as navigation, so those stay.
+const PAGE_CHROME = 'nav, aside, noscript, svg, form, button, dialog, [role="navigation"]:not(.s-lib-jqtabs), [role="search"], [aria-hidden="true"]';
+
+/**
+ * A line of text standing in for an embedded player, so a video or podcast on the page stays
+ * findable with a link people can open: known players become their watch or listen pages.
+ */
+export function embedLine(src, title, label) {
+  const url = new URL(src);
+  const host = url.hostname.replace(/^www\./, '');
+  const [, first, second, third] = url.pathname.split('/');
+  let link = url.href;
+  if (/^youtube(-nocookie)?\.com$/.test(host) && first === 'embed' && second) {
+    label = 'Video';
+    const list = url.searchParams.get('list');
+    link = second === 'videoseries' && list ? `https://www.youtube.com/playlist?list=${encodeURIComponent(list)}` : `https://www.youtube.com/watch?v=${second}`;
+  } else if (host === 'player.vimeo.com' && first === 'video' && second) {
+    label = 'Video';
+    link = `https://vimeo.com/${second}`;
+  } else if (host === 'open.spotify.com' && /^embed(-podcast)?$/.test(first) && second && third) {
+    label = 'Audio';
+    link = `https://open.spotify.com/${second}/${third}`;
+  } else if (/^embed\.(podcasts|music)\.apple\.com$/.test(host)) {
+    label = 'Audio';
+    link = `https://${host.slice('embed.'.length)}${url.pathname}${url.search}`;
+  }
+  const name = title.replace(/\s+/g, ' ').trim();
+  return `<p>${escapeUTF8(`${label}: ${name ? `${name} — ` : ''}${link}`)}</p>`;
+}
 
 /**
  * Readable Markdown for agents and knowledge bases: the page's main region when it
  * has one (else the converter's default, which drops header and footer), without
  * navigation or forms; email and phone link targets are written into the text so
- * "Email me" keeps its address. Links and images are inventoried from the whole page.
+ * "Email me" keeps its address. Links and images are inventoried from the whole page;
+ * `guidePages` adds a LibGuides page's own navigation as guide_pages (knowledge bases only).
  */
-export async function htmlToSource(html, sourceUrl, toMarkdown, signal) {
+export async function htmlToSource(html, sourceUrl, toMarkdown, signal, { guidePages = false } = {}) {
   if (!toMarkdown) throw failure('HTML conversion requires the Workers AI binding.', 'http_markdown_unavailable');
   let base = sourceUrl;
   let foundBase = false;
   let activeLink;
+  let media = 'Video';
   let contact = null;
   let title = '';
   const regions = { main: false, role: false };
   const links = [];
   const images = [];
+  const guide = [];
   let metadataBytes = 0;
   let metadataError;
   const add = (list, item) => {
@@ -134,6 +165,27 @@ export async function htmlToSource(html, sourceUrl, toMarkdown, signal) {
       },
       text(chunk) { if (activeLink) activeLink.text += chunk.text; }
     })
+    // LibGuides' own page navigation (side or top tabs), in order; knowledge bases can follow it.
+    .on('#s-lg-guide-tabs ul.nav a[href], #s-lg-tabs-container ul.nav a[href]', { element(el) {
+      const url = absolute(el.getAttribute('href'));
+      if (url) add(guide, url);
+    } })
+    .on('iframe', { element(el) {
+      const url = absolute(el.getAttribute('data-src') || el.getAttribute('src') || '');
+      if (url) el.replace(embedLine(url, decodeHTMLAttribute(el.getAttribute('title') || ''), 'Embedded content'), { html: true });
+      else el.remove();
+    } })
+    .on('video, audio', { element(el) {
+      media = el.tagName === 'audio' ? 'Audio' : 'Video';
+      const url = absolute(el.getAttribute('src') || '');
+      if (url) el.before(embedLine(url, decodeHTMLAttribute(el.getAttribute('title') || ''), media), { html: true });
+      el.removeAndKeepContent();
+    } })
+    .on('video source[src], audio source[src]', { element(el) {
+      const url = absolute(el.getAttribute('src'));
+      if (url) el.replace(embedLine(url, '', media), { html: true });
+      else el.remove();
+    } })
     .on('img', { element(el) {
       const url = absolute(el.getAttribute('data-src') || el.getAttribute('src') || '');
       if (url && (el.getAttribute('data-src') || el.getAttribute('src'))) {
@@ -159,7 +211,8 @@ export async function htmlToSource(html, sourceUrl, toMarkdown, signal) {
       markdown: result.data,
       links: [...new Map(links.map(link => [link.url, { ...link, text: decodeHTML(link.text).replace(/\s+/g, ' ').trim() }])).values()],
       images: [...new Map(images.map(image => [JSON.stringify(image), image])).values()],
-      title: decodeHTML(title).replace(/\s+/g, ' ').trim()
+      title: decodeHTML(title).replace(/\s+/g, ' ').trim(),
+      ...(guidePages && guide.length ? { guide_pages: [...new Set(guide)] } : {})
     };
   } finally { if (abort) signal.removeEventListener('abort', abort); }
 }
@@ -190,7 +243,19 @@ export async function fetchAgentUrl(config, { httpFetch, httpAllowlist, httpDead
         await response.body?.cancel();
         if (!readOnly) throw failure('Redirects for write requests are not followed. Use the final URL directly.', 'http_redirect_not_allowed');
         if (hop >= MAX_REDIRECTS) throw failure('The URL redirects too many times. Use its final address.', 'http_redirect_limit');
-        const next = publicUrl(new URL(location, url).href, httpAllowlist);
+        // Sites often redirect to their own pages over plain http:// (LibGuides does). Like a
+        // browser, follow the HTTPS address instead; the insecure one is never fetched.
+        const target = new URL(location, url);
+        if (target.protocol === 'http:' && (!target.port || target.port === '80')) {
+          target.protocol = 'https:';
+          target.port = '';
+        }
+        let next;
+        try {
+          next = publicUrl(target.href, httpAllowlist);
+        } catch (error) {
+          throw failure(`The page redirects to ${target.href.slice(0, 200)}, which can't be fetched. ${error.message}`, error.code);
+        }
         // No custom headers, cookies or credentials cross an origin boundary.
         if (next.origin !== url.origin) headers = new Headers();
         url = next;
@@ -205,7 +270,7 @@ export async function fetchAgentUrl(config, { httpFetch, httpAllowlist, httpDead
       const text = await boundedText(response);
       let data = text;
       const html = contentType === 'text/html' || contentType === 'application/xhtml+xml';
-      if (html && (response.ok || !knowledge)) data = await htmlToSource(text, url.href, toMarkdown, signal);
+      if (html && (response.ok || !knowledge)) data = await htmlToSource(text, url.href, toMarkdown, signal, { guidePages: knowledge });
       if (!html) { try { data = JSON.parse(text); } catch { /* Plain text remains text. */ } }
       if (new TextEncoder().encode(JSON.stringify(data)).byteLength > maxTextBytes) {
         throw failure('The readable source is larger than 256 KiB after HTML cleanup. Choose a more focused page or API response.', 'http_response_too_large');
