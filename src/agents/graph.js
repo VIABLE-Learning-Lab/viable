@@ -44,11 +44,10 @@ export const DEFAULT_GRAPH_LIMITS = Object.freeze({
 // Node types the validator rejects today. They stay in NODE_TYPES so a graph naming one gets a precise error.
 export const UNAVAILABLE_NODE_TYPES = Object.freeze([]);
 
-// Nodes that call a chat model. Memory and guardrail call one only in some modes.
-// The VETTING step's default reviewer. The /v1/vetting endpoints keep their own default
-// (gpt-4o-mini) until that model's retirement is handled for existing callers.
+// The VETTING step's default reviewer, the same model the /v1/vetting endpoints default to.
 export const DEFAULT_VETTING_REVIEWER = 'gpt-6-luna';
 
+// Nodes that call a chat model. Memory and guardrail call one only in some modes.
 const MODEL_NODE_TYPES = new Set(['llm', 'image', 'router', 'agent', 'guardrail', 'memory', 'vetting']);
 export const GUARDRAIL_MODEL_CHECKS = Object.freeze(['jailbreak', 'moderation', 'off_topic', 'custom']);
 export const GUARDRAIL_CHECKS = Object.freeze(['pii', ...GUARDRAIL_MODEL_CHECKS]);
