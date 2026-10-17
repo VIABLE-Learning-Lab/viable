@@ -58,8 +58,11 @@ async function boundedText(response) {
 }
 
 // Site chrome that repeats on every page; removed before conversion (its links stay in the inventory).
-// LibGuides marks its tabbed content boxes (.s-lib-jqtabs) as navigation, so those stay.
-const PAGE_CHROME = 'nav, aside, noscript, svg, form, button, dialog, [role="navigation"]:not(.s-lib-jqtabs), [role="search"], [aria-hidden="true"]';
+// LibGuides marks its tabbed content boxes (.s-lib-jqtabs) as navigation, so those stay. Screen-reader
+// hints ("This link opens in a new window" after every link) and skip links are noise in passages:
+// the hidden-text classes of Bootstrap and Tailwind, WordPress, and Drupal, and common skip links.
+const SCREEN_READER_ONLY = '.sr-only, .visually-hidden, .visually-hidden-focusable, .screen-reader-text, .element-invisible, .skip-link, #s-lg-public-skiplink';
+const PAGE_CHROME = `nav, aside, noscript, svg, form, button, dialog, [role="navigation"]:not(.s-lib-jqtabs), [role="search"], [aria-hidden="true"], ${SCREEN_READER_ONLY}`;
 
 /**
  * A line of text standing in for an embedded player, so a video or podcast on the page stays
