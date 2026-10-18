@@ -559,9 +559,14 @@ const HANDLERS = {
     const traceAttachments = normalizeAttachments(renderValue(cfg.attachments ?? [], traceScope));
     // Knowledge passages the reply cites as [n], so apps can show and link their sources.
     const citations = replyCitations(String(text ?? ''), ctx.sources);
+    // `sources` also writes them under the reply, for apps that show only the text (a plain chat
+    // client reading choices[0].message.content would otherwise see "[1]" with nowhere to go).
+    const listed = cfg.sources === true && citations.length > 0;
+    const withSources = (value) => (listed ? `${value}\n\n${sourceList(citations)}` : value);
+    const extra = { ...(citations.length ? { citations } : {}), ...(listed ? { sources_in_text: true } : {}) };
     return {
-      output: { text, attachments, ...(citations.length ? { citations } : {}) },
-      traceOutput: sanitizeBinaryValues({ text: traceText, attachments: traceAttachments, ...(citations.length ? { citations } : {}) }),
+      output: { text: withSources(text), attachments, ...extra },
+      traceOutput: sanitizeBinaryValues({ text: withSources(traceText), attachments: traceAttachments, ...extra }),
       next: null
     };
   },
@@ -967,6 +972,11 @@ function citationOf(item) {
     document_id: item.document_id, knowledge_base_id: item.knowledge_base_id || null, kind: item.kind || null,
     heading: item.heading || null, snippet: String(item.text || '').replace(/\s+/g, ' ').trim().slice(0, 240)
   };
+}
+
+/** "Sources:" and one line per cited passage: its number, title and link (files without a link show the title). */
+export function sourceList(citations) {
+  return `Sources:\n${citations.map((item) => `- [${item.index}] ${item.title || 'Untitled'}${item.link ? ` — ${item.link}` : ''}`).join('\n')}`;
 }
 
 /** Sources the reply cites with [n] (or [1, 3]), in order, from this run's retrieved passages. */
