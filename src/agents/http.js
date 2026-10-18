@@ -96,9 +96,11 @@ export function embedLine(src, title, label) {
  * has one (else the converter's default, which drops header and footer), without
  * navigation or forms; email and phone link targets are written into the text so
  * "Email me" keeps its address. Links and images are inventoried from the whole page;
- * `guidePages` adds a LibGuides page's own navigation as guide_pages (knowledge bases only).
+ * `knowledge` adds a LibGuides page's own navigation as guide_pages and, for a page with more
+ * links than the inventory holds, keeps the first ones instead of failing (knowledge bases only
+ * use them to find more pages).
  */
-export async function htmlToSource(html, sourceUrl, toMarkdown, signal, { guidePages = false } = {}) {
+export async function htmlToSource(html, sourceUrl, toMarkdown, signal, { knowledge = false } = {}) {
   if (!toMarkdown) throw failure('HTML conversion requires the Workers AI binding.', 'http_markdown_unavailable');
   let base = sourceUrl;
   let foundBase = false;
@@ -113,8 +115,9 @@ export async function htmlToSource(html, sourceUrl, toMarkdown, signal, { guideP
   let metadataBytes = 0;
   let metadataError;
   const add = (list, item) => {
+    if (metadataBytes > MAX_TEXT_BYTES) return;
     metadataBytes += new TextEncoder().encode(JSON.stringify(item)).byteLength;
-    if (metadataBytes > MAX_TEXT_BYTES) {
+    if (metadataBytes > MAX_TEXT_BYTES && !knowledge) {
       metadataError = failure('The page contains more than 256 KiB of links and image metadata. Choose a more focused source.', 'http_response_too_large');
       throw metadataError;
     }
@@ -215,7 +218,7 @@ export async function htmlToSource(html, sourceUrl, toMarkdown, signal, { guideP
       links: [...new Map(links.map(link => [link.url, { ...link, text: decodeHTML(link.text).replace(/\s+/g, ' ').trim() }])).values()],
       images: [...new Map(images.map(image => [JSON.stringify(image), image])).values()],
       title: decodeHTML(title).replace(/\s+/g, ' ').trim(),
-      ...(guidePages && guide.length ? { guide_pages: [...new Set(guide)] } : {})
+      ...(knowledge && guide.length ? { guide_pages: [...new Set(guide)] } : {})
     };
   } finally { if (abort) signal.removeEventListener('abort', abort); }
 }
@@ -273,10 +276,10 @@ export async function fetchAgentUrl(config, { httpFetch, httpAllowlist, httpDead
       const text = await boundedText(response);
       let data = text;
       const html = contentType === 'text/html' || contentType === 'application/xhtml+xml';
-      if (html && (response.ok || !knowledge)) data = await htmlToSource(text, url.href, toMarkdown, signal, { guidePages: knowledge });
+      if (html && (response.ok || !knowledge)) data = await htmlToSource(text, url.href, toMarkdown, signal, { knowledge });
       if (!html) { try { data = JSON.parse(text); } catch { /* Plain text remains text. */ } }
       if (new TextEncoder().encode(JSON.stringify(data)).byteLength > maxTextBytes) {
-        throw failure('The readable source is larger than 256 KiB after HTML cleanup. Choose a more focused page or API response.', 'http_response_too_large');
+        throw failure(`The readable source is larger than ${maxTextBytes >= 1024 * 1024 ? `${maxTextBytes / 1024 / 1024} MiB` : `${maxTextBytes / 1024} KiB`} after HTML cleanup. Choose a more focused page or API response.`, 'http_response_too_large');
       }
       return { status: response.status, ok: response.ok, data, url: url.href };
     }
