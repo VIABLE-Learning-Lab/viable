@@ -28,7 +28,8 @@ export const DEFAULT_BUDGETS = Object.freeze({
   maxSteps: 50,
   maxModelCalls: 20,
   maxLoopIterations: 25,
-  timeoutMs: 60000
+  timeoutMs: 60000,
+  maxRunTokens: 1500000
 });
 
 export class AgentRunError extends Error {
@@ -42,8 +43,12 @@ export class AgentRunError extends Error {
 
 const BUDGET_HINTS = {
   'model call': (budgets) => `Agent run used all ${budgets.maxModelCalls} of its model calls. Raise the agent's model call limit (run_limits.max_model_calls, up to 60) or allow fewer tool calls per step.`,
-  time: (budgets) => `Agent run passed its ${Math.round(budgets.timeoutMs / 1000)}-second limit. Raise the agent's time limit (run_limits.timeout_seconds, up to 120), or run it as a background job, which gets 5 minutes.`
+  time: (budgets) => `Agent run passed its ${Math.round(budgets.timeoutMs / 1000)}-second limit. Raise the agent's time limit (run_limits.timeout_seconds, up to 120), or run it as a background job, which gets 5 minutes.`,
+  token: (budgets) => `Agent run used its limit of ${budgets.maxRunTokens.toLocaleString('en-US')} tokens across its model calls. Search fewer passages (top_k), allow fewer tool calls per step, or keep less history.`
 };
+
+// Tokens a run has spent so far; some providers report only prompt and completion.
+const tokensUsed = (usage) => Math.max(usage.total || 0, (usage.prompt || 0) + (usage.completion || 0));
 
 function budgetError(kind, budgets) {
   return new AgentRunError(BUDGET_HINTS[kind] && budgets ? BUDGET_HINTS[kind](budgets) : `Agent run exceeded its ${kind} budget.`, {
@@ -146,6 +151,7 @@ export async function runAgentGraph(env, graph, options = {}) {
     // at once share the parent's budget instead of each spending a copy of it.
     consumeModelCall(reserve = 0) {
       if (this.modelCalls + 1 > budgets.maxModelCalls - reserve) throw budgetError('model call', budgets);
+      if (budgets.maxRunTokens && tokensUsed(this.usage) >= budgets.maxRunTokens) throw budgetError('token', budgets);
       options.chargeModelCall?.();
       this.modelCalls += 1;
     },
@@ -914,9 +920,10 @@ const HANDLERS = {
     // (the model can call the tool again), so the question and the latest results always fit.
     const toolRoom = Math.floor(usableWindow(contextWindowOf(cfg.model, cfg.provider)) * 0.8);
     for (let turn = 0; ; turn += 1) {
-      // Near the run's model call or time limit the agent answers with what it has, leaving a call
-      // for a later step (a check), instead of the whole run failing.
-      const runEnding = budgets.maxModelCalls - ctx.modelCalls <= 2 || ctx.runStartedAt + budgets.timeoutMs - Date.now() < Math.min(15000, budgets.timeoutMs / 4);
+      // Near the run's model call, time or token limit the agent answers with what it has, leaving a
+      // call for a later step (a check), instead of the whole run failing.
+      const runEnding = budgets.maxModelCalls - ctx.modelCalls <= 2 || ctx.runStartedAt + budgets.timeoutMs - Date.now() < Math.min(15000, budgets.timeoutMs / 4)
+        || (budgets.maxRunTokens && tokensUsed(ctx.usage) >= budgets.maxRunTokens * 0.8);
       const finalTurn = used >= maxTools || turn >= maxTools || (turn > 0 && runEnding);
       if (finalTurn && !toldToAnswer) toldToAnswer = true, transcript.push({ role: 'user', content: native ? 'Tool budget exhausted. Answer now with what you have, as plain text.' : 'Tool budget exhausted. Respond now with {"final": "..."} using what you have.' });
       if (transcript.length > 4 && build(ctx.scope(), ctx.messages, ctx.inputContent).reduce((sum, message) => sum + messageTokens(message), 0) > toolRoom) cleared += clearOldToolResults(transcript);
@@ -1446,7 +1453,10 @@ async function runSubAgent(env, ctx, services, hooks, budgets, node, slug, input
       maxSteps: Math.max(1, budgets.maxSteps - ctx.stepCount),
       maxModelCalls: Math.max(0, budgets.maxModelCalls - ctx.modelCalls),
       maxLoopIterations: budgets.maxLoopIterations,
-      timeoutMs: Math.max(1, ctx.runStartedAt + budgets.timeoutMs - Date.now())
+      timeoutMs: Math.max(1, ctx.runStartedAt + budgets.timeoutMs - Date.now()),
+      // ponytail: sub-agents running at once each get the parent's remaining tokens; the shared
+      // model call count still bounds them. Charge tokens to the parent live if that ever matters.
+      maxRunTokens: Math.max(1, budgets.maxRunTokens - tokensUsed(ctx.usage))
     },
     services: { ...services, ...(target.services || {}) },
     hooks: { logProviderCall: (call) => hooks.logProviderCall?.({ ...call, nodeId: `${node.id}/${call.nodeId}` }) },
