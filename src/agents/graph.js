@@ -100,7 +100,8 @@ export function describeGraphSchema(limits = DEFAULT_GRAPH_LIMITS) {
         entry: 'ID of the first node, usually "input".',
         variables: 'Optional initial values read as {{vars.name}}.',
         nodes: 'Execution steps.',
-        edges: 'Optional visual metadata; routing comes from node next, branches, and condition cases.'
+        edges: 'Optional visual metadata; routing comes from node next, branches, and condition cases.',
+        run_limits: 'Optional limits for each run: max_model_calls (1–60, default 20) and timeout_seconds (10–120, default 60) for runs a caller waits on. Background jobs get at least 5 minutes.'
       }
     },
     node_types: NODE_TYPES.map((type) => ({
@@ -117,7 +118,8 @@ export function describeGraphSchema(limits = DEFAULT_GRAPH_LIMITS) {
       'entry must name an existing node.',
       'Every next, branches, and condition case target must name an existing node.',
       'At least one output node must be reachable from entry.',
-      `An llm node may declare at most ${limits.maxStructuredOutputs} structured outputs.`
+      `An llm node may declare at most ${limits.maxStructuredOutputs} structured outputs.`,
+      `run_limits may set max_model_calls (${RUN_LIMITS.max_model_calls.join('–')}) and timeout_seconds (${RUN_LIMITS.timeout_seconds.join('–')}).`
     ],
     documentation: 'https://developers.viablelab.org/agents/viablelab-api.md'
   };
@@ -131,6 +133,13 @@ export class GraphValidationError extends Error {
     this.code = 'invalid_graph';
     this.details = details;
   }
+}
+
+export const RUN_LIMITS = Object.freeze({ max_model_calls: [1, 60], timeout_seconds: [10, 120] });
+
+function validRunLimits(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  return Object.entries(value).every(([key, n]) => RUN_LIMITS[key] && Number.isInteger(n) && n >= RUN_LIMITS[key][0] && n <= RUN_LIMITS[key][1]);
 }
 
 export function validateGraph(graph, options = {}) {
@@ -147,6 +156,9 @@ export function validateGraph(graph, options = {}) {
 
   // Canvas drawings are kept with the graph for collaborators; runs ignore them.
   if (!validSketch(graph.sketch)) errors.push('Graph sketch must map stroke ids to { tool, color, width, points } (at most 1,500 strokes).');
+
+  // An agent's own run limits; without them runs get the platform's (20 model calls, 60 seconds).
+  if (graph.run_limits != null && !validRunLimits(graph.run_limits)) errors.push(`Graph run_limits may set max_model_calls (${RUN_LIMITS.max_model_calls.join('–')}) and timeout_seconds (${RUN_LIMITS.timeout_seconds.join('–')}), as whole numbers.`);
 
   const nodes = Array.isArray(graph.nodes) ? graph.nodes : [];
   if (!nodes.length) errors.push('Graph must contain at least one node.');
