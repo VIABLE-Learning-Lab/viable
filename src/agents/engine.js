@@ -22,6 +22,7 @@ import { DEFAULT_VETTING_REVIEWER, GUARDRAIL_MODEL_CHECKS, parallelPaths, router
 import { buildChatVettingSystemPrompt, DEFAULT_VETTING_PROMPT, parseSimpleVerificationResult, prepareChatVettingVerificationPrompt } from '../routes/chatVetting.js';
 import { parseSafetyPrefix, parseVerificationResult, prepareChatPrompt, prepareVerificationPrompt } from '../routes/vettingFull.js';
 import { resolveModel } from '../config/models.js';
+import { citationOf, finalizeCitations, SOURCE_STYLES, stripModelSourceList } from './citations.js';
 
 export const DEFAULT_BUDGETS = Object.freeze({
   maxSteps: 50,
@@ -188,6 +189,7 @@ export async function runAgentGraph(env, graph, options = {}) {
       if (node.type === 'output' || result.terminal) {
         ctx.result = output;
         ctx.archivedResult = traceOutput;
+        ctx.sourceStyle = result.sourceStyle;
         return;
       }
       currentId = result.next ?? null;
@@ -200,6 +202,8 @@ export async function runAgentGraph(env, graph, options = {}) {
   return {
     output: ctx.result || { text: '', attachments: [] },
     archivedOutput: ctx.archivedResult || { text: '', attachments: [] },
+    // How the Reply step lists sources for clients that show only text; channels apply it.
+    sourceStyle: ctx.sourceStyle || 'none',
     steps: ctx.steps,
     usage: ctx.usage,
     cost: ctx.cost,
@@ -245,7 +249,8 @@ function summarizeOutput(node, output, ctx) {
     return json.length > 8000 ? {
       truncated: true, preview: json.slice(0, 8000),
       ...(node.type === 'http' ? { url: safeOutput.url, status: safeOutput.status, ok: safeOutput.ok } : {}),
-      ...(node.type === 'output' ? { attachments: safeOutput.attachments } : {})
+      // A long reply is cut (its text to 4,000 characters), but what an app acts on (citations, result data) stays whole.
+      ...(node.type === 'output' ? { text: String(safeOutput.text ?? '').slice(0, 4000), attachments: safeOutput.attachments, ...(safeOutput.citations ? { citations: safeOutput.citations } : {}), ...(safeOutput.data !== undefined ? { data: safeOutput.data } : {}) } : {})
     } : safeOutput;
   } catch (_) {
     return { unserializable: true };
@@ -552,21 +557,24 @@ const HANDLERS = {
   output(node, ctx) {
     const cfg = node.config || {};
     const scope = ctx.scope();
-    const text = cfg.text != null ? renderTemplate(cfg.text, scope) : '';
-    const attachments = normalizeAttachments(renderValue(cfg.attachments ?? [], scope));
     const traceScope = ctx.traceScope();
-    const traceText = cfg.text != null ? renderTemplate(cfg.text, traceScope) : '';
+    const attachments = normalizeAttachments(renderValue(cfg.attachments ?? [], scope));
     const traceAttachments = normalizeAttachments(renderValue(cfg.attachments ?? [], traceScope));
-    // Knowledge passages the reply cites as [n], so apps can show and link their sources.
-    const citations = replyCitations(String(text ?? ''), ctx.sources);
-    // `sources` also writes them under the reply, for apps that show only the text (a plain chat
-    // client reading choices[0].message.content would otherwise see "[1]" with nowhere to go).
-    const listed = cfg.sources === true && citations.length > 0;
-    const withSources = (value) => (listed ? `${value}\n\n${sourceList(citations)}` : value);
-    const extra = { ...(citations.length ? { citations } : {}), ...(listed ? { sources_in_text: true } : {}) };
+    // The reply's [n] become one citation per page or file, numbered in order of mention. A source
+    // list the model wrote itself goes: each channel shows sources its own way (see citations.js).
+    const finish = (value) => finalizeCitations(stripModelSourceList(String(value ?? ''), ctx.sources), ctx.sources);
+    const { text, citations } = finish(cfg.text != null ? renderTemplate(cfg.text, scope) : '');
+    const traceText = finish(cfg.text != null ? renderTemplate(cfg.text, traceScope) : '').text;
+    // Structured results for whatever called the agent (a label, a score, a handoff and its
+    // reasons): returned beside the reply, never part of what its reader sees.
+    const data = cfg.data != null ? renderValue(cfg.data, scope) : undefined;
+    const traceData = cfg.data != null ? sanitizeBinaryValues(renderValue(cfg.data, traceScope)) : undefined;
+    const cited = citations.length ? { citations } : {};
     return {
-      output: { text: withSources(text), attachments, ...extra },
-      traceOutput: sanitizeBinaryValues({ text: withSources(traceText), attachments: traceAttachments, ...extra }),
+      output: { text, attachments, ...cited, ...(data !== undefined ? { data } : {}) },
+      traceOutput: sanitizeBinaryValues({ text: traceText, attachments: traceAttachments, ...cited, ...(traceData !== undefined ? { data: traceData } : {}) }),
+      // Listing sources in the text, for clients that show only the text: the earlier `true` meant plain text.
+      sourceStyle: cfg.sources === true ? 'text' : SOURCE_STYLES.includes(cfg.sources) ? cfg.sources : 'none',
       next: null
     };
   },
@@ -966,29 +974,7 @@ function formatKnowledgeResults(query, results = [], registry = null) {
   };
 }
 
-function citationOf(item) {
-  return {
-    index: item.index, title: item.title || null, url: item.url || null, link: item.link ?? item.url ?? null,
-    document_id: item.document_id, knowledge_base_id: item.knowledge_base_id || null, kind: item.kind || null,
-    heading: item.heading || null, snippet: String(item.text || '').replace(/\s+/g, ' ').trim().slice(0, 240)
-  };
-}
 
-/** "Sources:" and one line per cited passage: its number, title and link (files without a link show the title). */
-export function sourceList(citations) {
-  return `Sources:\n${citations.map((item) => `- [${item.index}] ${item.title || 'Untitled'}${item.link ? ` — ${item.link}` : ''}`).join('\n')}`;
-}
-
-/** Sources the reply cites with [n] (or [1, 3]), in order, from this run's retrieved passages. */
-export function replyCitations(text, registry) {
-  if (!registry?.size || typeof text !== 'string') return [];
-  const byIndex = new Map([...registry.values()].map((item) => [item.index, item]));
-  const cited = new Set();
-  for (const match of text.matchAll(/\[(\d{1,3}(?:\s*[,，]\s*\d{1,3})*)\]/g)) {
-    for (const number of match[1].split(/[,，]/)) if (byIndex.has(Number(number))) cited.add(Number(number));
-  }
-  return [...cited].sort((a, b) => a - b).map((index) => citationOf(byIndex.get(index)));
-}
 
 const PII_PATTERNS = [
   ['email address', /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g],
@@ -1029,7 +1015,7 @@ function buildAgentTools(cfg, services, ctx) {
   if (Array.isArray(cfg.knowledge_bases) && cfg.knowledge_bases.length && services.searchKnowledge) {
     tools.push({
       name: 'search_knowledge', parameters: { query: 'string' },
-      description: 'Search the attached knowledge bases. Returns numbered passages with sources; cite them as [n].',
+      description: 'Search the attached knowledge bases. Returns numbered passages with sources; cite them as [n]. Readers are shown the cited sources, so do not list them yourself.',
       run: async ({ query }) => formatKnowledgeResults(String(query || ''), await services.searchKnowledge({ knowledgeBaseIds: cfg.knowledge_bases, query: String(query || '').slice(0, 2000), topK: 5 }), ctx.sources)
     });
     // Agentic retrieval: look at the table of contents, then read whole sections.
