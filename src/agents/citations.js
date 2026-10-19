@@ -6,6 +6,13 @@
 
 const MARKER = /\[(\d{1,3}(?:\s*[,，]\s*\d{1,3})*)\]/g;
 export const SOURCE_STYLES = Object.freeze(['none', 'markdown', 'text']);
+// gpt-oss models cite in their browsing format, 【1†L1-L30】; it means [1].
+const HARMONY_MARKER = /【(\d{1,3})(?:†[^】]*)?】/g;
+
+/** A reply's citations written as [n], whatever form the model used. */
+export function normalizeCitationMarks(text) {
+  return String(text ?? '').replace(HARMONY_MARKER, '[$1]');
+}
 
 export function citationOf(item, index = item.index) {
   return {
@@ -20,7 +27,7 @@ export function finalizeCitations(text, registry) {
   const byIndex = new Map([...(registry?.values?.() || [])].map((item) => [item.index, item]));
   const sources = [];
   const byKey = new Map();
-  const rewritten = String(text ?? '').replace(MARKER, (match, group) => {
+  const rewritten = normalizeCitationMarks(text).replace(MARKER, (match, group) => {
     const numbers = [];
     for (const raw of group.split(/[,，]/)) {
       const item = byIndex.get(Number(raw));

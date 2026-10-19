@@ -22,7 +22,7 @@ import { DEFAULT_VETTING_REVIEWER, GUARDRAIL_MODEL_CHECKS, parallelPaths, router
 import { buildChatVettingSystemPrompt, DEFAULT_VETTING_PROMPT, parseSimpleVerificationResult, prepareChatVettingVerificationPrompt } from '../routes/chatVetting.js';
 import { parseSafetyPrefix, parseVerificationResult, prepareChatPrompt, prepareVerificationPrompt } from '../routes/vettingFull.js';
 import { resolveModel } from '../config/models.js';
-import { citationOf, finalizeCitations, SOURCE_STYLES, stripModelSourceList } from './citations.js';
+import { citationOf, finalizeCitations, normalizeCitationMarks, SOURCE_STYLES, stripModelSourceList } from './citations.js';
 
 export const DEFAULT_BUDGETS = Object.freeze({
   maxSteps: 50,
@@ -929,7 +929,7 @@ const HANDLERS = {
         continue;
       }
       if (!requested.length) {
-        const content = typeof json.final === 'string' ? json.final : (typeof json.answer === 'string' ? json.answer : (json.__text ?? result.content ?? ''));
+        const content = normalizeCitationMarks(typeof json.final === 'string' ? json.final : (typeof json.answer === 'string' ? json.answer : (json.__text ?? result.content ?? '')));
         const evidence = citedContext(content, ctx.sources);
         return { output: { content, ...(evidence ? { context: evidence } : {}), tool_calls: toolCalls, turns: turn + 1, model: lastModel, usage, cost, ...(trimmed ? { context_trimmed: true } : {}), ...(cleared ? { tool_results_cleared: cleared } : {}) }, next: node.next };
       }
