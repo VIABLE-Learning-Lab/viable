@@ -18,7 +18,7 @@ import { generateImageAsset } from '../services/imageGeneration.js';
 import { MODEL_MODES, resolveModelForMode } from '../config/models.js';
 import { billingFields } from '../utils/providerKeys.js';
 import { ExpressionError, evaluateCondition, evaluateExpression, renderTemplate, renderValue } from './expression.js';
-import { DEFAULT_VETTING_REVIEWER, GUARDRAIL_MODEL_CHECKS, parallelPaths, routerRoutes } from './graph.js';
+import { DEFAULT_VETTING_REVIEWER, GUARDRAIL_MODEL_CHECKS, parallelPaths, routerRoutes, validateGraphModels } from './graph.js';
 import { buildChatVettingSystemPrompt, DEFAULT_VETTING_PROMPT, parseSimpleVerificationResult, prepareChatVettingVerificationPrompt } from '../routes/chatVetting.js';
 import { parseSafetyPrefix, parseVerificationResult, prepareChatPrompt, prepareVerificationPrompt } from '../routes/vettingFull.js';
 import { resolveModel } from '../config/models.js';
@@ -107,6 +107,8 @@ export async function runAgentGraph(env, graph, options = {}) {
     memorySubject: options.memorySubject || null,
     depth: options.depth || 0,
     agentStack: options.agentStack || [],
+    // The calling key's model limits, for models chosen at run time (the history summary).
+    modelAccess: options.modelAccess || null,
     loopCounts: {},
     // Every passage retrieved in this run, numbered once, so [n] means the same source
     // across Knowledge steps and agent searches; the reply's markers become citations.
@@ -139,9 +141,13 @@ export async function runAgentGraph(env, graph, options = {}) {
         history: this.traceMessages
       };
     },
-    consumeModelCall() {
+    // reserve keeps calls back for this run's own later steps. A sub-agent charges its parent's
+    // count before every call (keeping one call back for the parent's answer), so sub-agents running
+    // at once share the parent's budget instead of each spending a copy of it.
+    consumeModelCall(reserve = 0) {
+      if (this.modelCalls + 1 > budgets.maxModelCalls - reserve) throw budgetError('model call', budgets);
+      options.chargeModelCall?.();
       this.modelCalls += 1;
-      if (this.modelCalls > budgets.maxModelCalls) throw budgetError('model call', budgets);
     },
     addUsage(usage, cost) {
       if (usage) {
@@ -903,33 +909,42 @@ const HANDLERS = {
     let trimmed = false;
     let cleared = 0;
     let reminded = false;
+    let toldToAnswer = false;
     // Past 80% of what the model's window leaves for the request, earlier tool results are cleared
     // (the model can call the tool again), so the question and the latest results always fit.
     const toolRoom = Math.floor(usableWindow(contextWindowOf(cfg.model, cfg.provider)) * 0.8);
     for (let turn = 0; ; turn += 1) {
       // Near the run's model call or time limit the agent answers with what it has, leaving a call
       // for a later step (a check), instead of the whole run failing.
-      const runEnding = budgets.maxModelCalls - ctx.modelCalls <= 2 || ctx.runStartedAt + budgets.timeoutMs - Date.now() < 15000;
+      const runEnding = budgets.maxModelCalls - ctx.modelCalls <= 2 || ctx.runStartedAt + budgets.timeoutMs - Date.now() < Math.min(15000, budgets.timeoutMs / 4);
       const finalTurn = used >= maxTools || turn >= maxTools || (turn > 0 && runEnding);
-      if (finalTurn) transcript.push({ role: 'user', content: native ? 'Tool budget exhausted. Answer now with what you have, as plain text.' : 'Tool budget exhausted. Respond now with {"final": "..."} using what you have.' });
+      if (finalTurn && !toldToAnswer) toldToAnswer = true, transcript.push({ role: 'user', content: native ? 'Tool budget exhausted. Answer now with what you have, as plain text.' : 'Tool budget exhausted. Respond now with {"final": "..."} using what you have.' });
       if (transcript.length > 4 && build(ctx.scope(), ctx.messages, ctx.inputContent).reduce((sum, message) => sum + messageTokens(message), 0) > toolRoom) cleared += clearOldToolResults(transcript);
-      const { json, result } = await callModelJson(env, ctx, services, hooks, node, cfg, build, { allowText: true, nativeTools: native && !finalTurn ? nativeToolDefinitions(tools) : null });
+      const { json, result } = await callModelJson(env, ctx, services, hooks, node, cfg, build, { allowText: true, nativeTools: native && !finalTurn ? nativeToolDefinitions(tools) : null, jsonMode: !native });
       usage = addUsage(usage, result.usage);
       cost += Number(result.cost) || 0;
       lastModel = result.resolution?.resolvedModel || lastModel;
       trimmed ||= result.truncatedContext === true;
       const nativeCalls = nativeToolCalls(result.response);
       const requested = finalTurn ? [] : (nativeCalls.length ? nativeCalls : requestedToolCalls(json)).slice(0, Math.min(AGENT_TOOLS_PER_TURN, maxTools - used));
-      // Some models narrate instead of following the protocol ("We need to search.") or return
-      // nothing. While tools remain, such a reply gets one reminder; a second one is the answer.
-      // With native tools, plain text is the answer and only an empty reply is reminded.
-      if (!requested.length && json.__text !== undefined && tools.length && !finalTurn && !reminded && (!native || !String(json.__text).trim())) {
+      // The answer is {"final": …}; plain text counts for native-tool models and agents without
+      // tools. Anything else (narration such as "We need to search.", other JSON, nothing) gets one
+      // reminder, on the final turn too. After it, the reply's longest text is the answer, and a
+      // reply with none fails the step rather than handing raw JSON or nothing to the reader.
+      const stated = typeof json.final === 'string' ? json.final : (typeof json.answer === 'string' ? json.answer : null);
+      const plain = json.__text !== undefined && (native || !tools.length) ? String(json.__text) : null;
+      const answer = (stated ?? plain ?? '').trim() ? (stated ?? plain) : null;
+      if (!requested.length && answer === null && !reminded) {
         reminded = true;
-        transcript.push({ role: 'assistant', content: String(json.__text).slice(0, 2000) }, { role: 'user', content: native ? 'Call a tool to look something up, or reply with your complete answer as plain text.' : 'Reply with one JSON object only: {"tool": "<tool name>", "arguments": {...}} or {"tools": [...]} to look something up, or {"final": "<your complete answer>"}.' });
+        transcript.push({ role: 'assistant', content: String(json.__text ?? result.content ?? '').slice(0, 2000) }, { role: 'user', content: finalTurn
+          ? (native ? 'Answer now with what you have, as plain text.' : 'Respond now with {"final": "<your complete answer>"} using what you have.')
+          : (native ? 'Call a tool to look something up, or reply with your complete answer as plain text.' : 'Reply with one JSON object only: {"tool": "<tool name>", "arguments": {...}} or {"tools": [...]} to look something up, or {"final": "<your complete answer>"}.') });
         continue;
       }
       if (!requested.length) {
-        const content = normalizeCitationMarks(typeof json.final === 'string' ? json.final : (typeof json.answer === 'string' ? json.answer : (json.__text ?? result.content ?? '')));
+        const fallback = answer ?? longestText(json.__text !== undefined ? json.__text : json);
+        if (!String(fallback || '').trim()) throw new AgentRunError(`Agent step "${node.id}" got no answer from ${cfg.model}. Try again, or choose another model for this step.`, { status: 502, code: 'agent_empty_answer' });
+        const content = normalizeCitationMarks(fallback);
         const evidence = citedContext(content, ctx.sources);
         return { output: { content, ...(evidence ? { context: evidence } : {}), tool_calls: toolCalls, turns: turn + 1, model: lastModel, usage, cost, ...(trimmed ? { context_trimmed: true } : {}), ...(cleared ? { tool_results_cleared: cleared } : {}) }, next: node.next };
       }
@@ -1046,7 +1061,8 @@ async function foldConversation(node, ctx, env, services, hooks, graph) {
       ]
     });
     // viable-3 is quick and cheap; a key that may not use it summarizes with the agent's own model.
-    const candidates = [...new Set([SUMMARY_MODEL, historyReaders(graph)[0]?.config.model].filter(Boolean))];
+    const candidates = [...new Set([SUMMARY_MODEL, historyReaders(graph)[0]?.config.model].filter(Boolean))]
+      .filter((candidate, index, list) => index === list.length - 1 || modelAllowed(candidate, ctx.modelAccess));
     for (const candidate of folded ? candidates : []) {
       try {
         ctx.consumeModelCall();
@@ -1154,6 +1170,24 @@ function nativeToolCalls(response) {
   });
 }
 
+/** Whether a key's model limits allow a model (no limits: yes). */
+function modelAllowed(model, access) {
+  if (!access) return true;
+  try {
+    validateGraphModels({ nodes: [{ id: 'm', type: 'llm', config: { model } }] }, access);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** The longest text in a reply: itself when it is text, else the longest string value inside. */
+function longestText(value, depth = 0) {
+  if (typeof value === 'string') return value;
+  if (!value || typeof value !== 'object' || depth > 3) return '';
+  return Object.values(value).map((item) => longestText(item, depth + 1)).reduce((best, item) => (item.length > best.length ? item : best), '');
+}
+
 /** Every top-level JSON object in a text, in order (strings and nesting respected). */
 export function jsonObjects(text) {
   const found = [];
@@ -1226,10 +1260,11 @@ function addUsage(total, usage) {
  * build(scope, history, inputContent) returns messages; it runs once for the live
  * scope and once for the binary-free trace scope.
  */
-async function callModelJson(env, ctx, services, hooks, node, cfg, build, { allowText = false, nativeTools = null } = {}) {
+async function callModelJson(env, ctx, services, hooks, node, cfg, build, { allowText = false, nativeTools = null, jsonMode = true } = {}) {
   const params = mapModelParams(cfg);
-  // With native tools the reply is a tool call or plain text, so JSON mode is off.
-  const requestBody = { model: cfg.model, messages: build(ctx.scope(), ctx.messages, ctx.inputContent), ...params, ...(nativeTools ? { tools: nativeTools, tool_choice: 'auto' } : { response_format: { type: 'json_object' } }) };
+  // Native-tool models reply with a tool call or plain text, so JSON mode stays off for them, on
+  // their final turn too (in JSON mode gpt-oss returns no content).
+  const requestBody = { model: cfg.model, messages: build(ctx.scope(), ctx.messages, ctx.inputContent), ...params, ...(nativeTools ? { tools: nativeTools, tool_choice: 'auto' } : {}), ...(jsonMode && !nativeTools ? { response_format: { type: 'json_object' } } : {}) };
   const traceBody = { ...requestBody, messages: build(ctx.traceScope(), ctx.traceMessages, ctx.traceInputContent) };
   ctx.consumeModelCall();
   let result = await callLlmWithTrace(env, services, hooks, node, cfg, requestBody, traceBody, 0);
@@ -1414,9 +1449,9 @@ async function runSubAgent(env, ctx, services, hooks, budgets, node, slug, input
       timeoutMs: Math.max(1, ctx.runStartedAt + budgets.timeoutMs - Date.now())
     },
     services: { ...services, ...(target.services || {}) },
-    hooks: { logProviderCall: (call) => hooks.logProviderCall?.({ ...call, nodeId: `${node.id}/${call.nodeId}` }) }
+    hooks: { logProviderCall: (call) => hooks.logProviderCall?.({ ...call, nodeId: `${node.id}/${call.nodeId}` }) },
+    chargeModelCall: () => ctx.consumeModelCall(1)
   });
-  ctx.modelCalls += nested.modelCalls;
   ctx.stepCount += nested.stepCount;
   ctx.addUsage(nested.usage, nested.cost);
   return { agent: slug, text: nested.output.text, attachments: nested.output.attachments || [], steps: nested.stepCount, usage: nested.usage, cost: nested.cost };
