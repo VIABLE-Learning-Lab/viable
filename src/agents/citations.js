@@ -18,7 +18,7 @@ export function citationOf(item, index = item.index) {
   return {
     index, title: item.title || null, ...(item.page_title ? { page_title: item.page_title } : {}), url: item.url || null, link: item.link ?? item.url ?? null,
     document_id: item.document_id, knowledge_base_id: item.knowledge_base_id || null, kind: item.kind || null,
-    heading: item.heading || null, snippet: String(item.text || '').replace(/\s+/g, ' ').trim().slice(0, 240)
+    heading: item.heading || null, ...(item.page ? { page: item.page } : {}), snippet: String(item.text || '').replace(/\s+/g, ' ').trim().slice(0, 240)
   };
 }
 
