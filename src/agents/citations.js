@@ -95,3 +95,33 @@ export function renderSources(text, citations, style) {
   }
   return `${text}\n\nSources:\n${citations.map((item) => `[${item.index}] ${item.title || 'Untitled'}${item.link ? ` — ${item.link}` : ''}`).join('\n')}`;
 }
+
+// Words a model's own source list starts with (see LIST_HEADING), while its heading is still arriving.
+const HEADING_WORDS = ['sources', 'references', 'citations', '来源', '参考资料', '参考文献'];
+const mayBeHeading = (line) => {
+  const rest = line.replace(/^\s*(?:#{1,6}\s*)?(?:\*\*|__)?\s*/, '').replace(/[\s*_:]+$/, '').toLowerCase();
+  return line.length <= 40 && (!rest || HEADING_WORDS.some((word) => word.startsWith(rest)));
+};
+
+/**
+ * A reply as a model writes it, passed on as the Reply step will show it: citations renumbered
+ * (each number depends only on earlier ones, so the text so far is final) and a source list the
+ * model wrote itself held back, as the Reply step may drop it. A citation or a line that could still
+ * become one of those is held until it can't change. Returns push(text) for each new piece.
+ */
+export function answerStream(registry, emit) {
+  let raw = '';
+  let sent = '';
+  return (piece) => {
+    raw += piece;
+    let ready = raw;
+    const lines = ready.split('\n');
+    const heading = lines.findIndex((line, i) => i < lines.length - 1 && LIST_HEADING.test(line));
+    if (heading >= 0) ready = lines.slice(0, heading).join('\n');
+    else if (mayBeHeading(lines.at(-1))) ready = lines.slice(0, -1).join('\n') + (lines.length > 1 ? '\n' : '');
+    const open = Math.max(ready.lastIndexOf('['), ready.lastIndexOf('【'));
+    if (open >= 0 && !/[\]】]/.test(ready.slice(open))) ready = ready.slice(0, open);
+    const text = finalizeCitations(ready, registry).text;
+    if (text.length > sent.length && text.startsWith(sent)) { emit(text.slice(sent.length)); sent = text; }
+  };
+}

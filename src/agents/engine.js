@@ -22,7 +22,7 @@ import { DEFAULT_VETTING_REVIEWER, GUARDRAIL_MODEL_CHECKS, parallelPaths, router
 import { buildChatVettingSystemPrompt, DEFAULT_VETTING_PROMPT, parseSimpleVerificationResult, prepareChatVettingVerificationPrompt } from '../routes/chatVetting.js';
 import { parseSafetyPrefix, parseVerificationResult, prepareChatPrompt, prepareVerificationPrompt } from '../routes/vettingFull.js';
 import { resolveModel } from '../config/models.js';
-import { citationOf, finalizeCitations, normalizeCitationMarks, SOURCE_STYLES, stripModelSourceList } from './citations.js';
+import { answerStream, citationOf, finalizeCitations, normalizeCitationMarks, SOURCE_STYLES, stripModelSourceList } from './citations.js';
 
 export const DEFAULT_BUDGETS = Object.freeze({
   maxSteps: 50,
@@ -85,6 +85,8 @@ export async function runAgentGraph(env, graph, options = {}) {
   const resumeNode = options.resume?.node && nodeMap.get(options.resume.node)?.type === 'ask' ? options.resume.node : null;
 
   const ctx = {
+    // Steps whose reply text streams to the caller as it is written (hooks.onAnswer; see streamableAnswers).
+    answerSteps: typeof hooks.onAnswer === 'function' ? streamableAnswers(graph) : new Set(),
     input: options.input ?? '',
     inputContent: options.inputContent ?? options.input ?? '',
     traceInput: sanitizeBinaryValues(options.traceInput ?? options.input ?? ''),
@@ -411,7 +413,8 @@ const HANDLERS = {
     else if (cfg.response_format) traceRequestData.response_format = cfg.response_format;
 
     ctx.consumeModelCall();
-    let result = await callLlmWithTrace(env, services, hooks, node, cfg, requestData, traceRequestData, 0);
+    const onDelta = !wantsJson && ctx.answerSteps.has(node.id) ? answerStream(ctx.sources, hooks.onAnswer) : null;
+    let result = await callLlmWithTrace(env, services, hooks, node, cfg, requestData, traceRequestData, 0, onDelta);
     ctx.addUsage(result.usage, result.cost);
 
     let json = wantsJson ? safeParseJson(result.content) : null;
@@ -797,7 +800,7 @@ const HANDLERS = {
       }
       const guideline = String(renderTemplate(cfg.guideline ?? '', scope) ?? '').trim() || DEFAULT_VETTING_PROMPT;
       // What the reviewer may check facts against (the passages an earlier step answered from, a
-      // policy, a price list); only the reviewer sees it, like an answer key.
+      // syllabus); only the reviewer sees it, like an answer key.
       const reference = String(renderTemplate(cfg.reference ?? '', scope) ?? '').trim();
       return {
         chat: buildChatVettingSystemPrompt(cfg.chat_prompt ? String(renderTemplate(cfg.chat_prompt, scope)) : guideline),
@@ -923,6 +926,7 @@ const HANDLERS = {
     let cleared = 0;
     let reminded = false;
     let toldToAnswer = false;
+    let answerStreamed = false;
     // Past 80% of what the model's window leaves for the request, earlier tool results are cleared
     // (the model can call the tool again), so the question and the latest results always fit.
     const toolRoom = Math.floor(usableWindow(contextWindowOf(cfg.model, cfg.provider)) * 0.8);
@@ -934,7 +938,12 @@ const HANDLERS = {
       const finalTurn = used >= maxTools || turn >= maxTools || (turn > 0 && runEnding);
       if (finalTurn && !toldToAnswer) toldToAnswer = true, transcript.push({ role: 'user', content: native ? 'Tool budget exhausted. Answer now with what you have, as plain text.' : 'Tool budget exhausted. Respond now with {"final": "..."} using what you have.' });
       if (transcript.length > 4 && build(ctx.scope(), ctx.messages, ctx.inputContent).reduce((sum, message) => sum + messageTokens(message), 0) > toolRoom) cleared += clearOldToolResults(transcript);
-      const { json, result } = await callModelJson(env, ctx, services, hooks, node, cfg, build, { allowText: true, nativeTools: native && !finalTurn ? nativeToolDefinitions(tools) : null, jsonMode: !native });
+      // The answer streams as it is written: from {"final": "…"}, or a native model's last turn (an
+      // earlier turn's text could still turn into tool calls). Only one turn's answer ever streams.
+      const onDelta = ctx.answerSteps.has(node.id) && !answerStreamed && (!native || finalTurn)
+        ? (() => { const push = answerStream(ctx.sources, (text) => { answerStreamed = true; hooks.onAnswer(text); }); return native ? push : finalField(push); })()
+        : null;
+      const { json, result } = await callModelJson(env, ctx, services, hooks, node, cfg, build, { allowText: true, nativeTools: native && !finalTurn ? nativeToolDefinitions(tools) : null, jsonMode: !native, onDelta });
       usage = addUsage(usage, result.usage);
       cost += Number(result.cost) || 0;
       lastModel = result.resolution?.resolvedModel || lastModel;
@@ -1014,6 +1023,77 @@ function contextWindowOf(model, provider) {
 
 /** What a model's window leaves for the request after room for its answer and reasoning. */
 const usableWindow = (window) => window - Math.min(32000, Math.floor(window / 4));
+
+/**
+ * Model steps whose text reaches the reader as written: an llm (without structured output) or agent
+ * whose next step is a Reply that shows just its content. Their text can stream as it is written.
+ * Anything between them and the Reply (a VETTING review, a guardrail, a condition) could still
+ * change or replace the text, so those replies are sent once final.
+ */
+export function streamableAnswers(graph) {
+  const nodes = new Map((graph?.nodes || []).map((node) => [node.id, node]));
+  const ids = new Set();
+  for (const node of nodes.values()) {
+    const cfg = node.config || {};
+    if (!['llm', 'agent'].includes(node.type) || !node.next) continue;
+    if (node.type === 'llm' && (normalizeOutputs(cfg.outputs).length || cfg.json || cfg.output_schema || cfg.response_format)) continue;
+    const reply = nodes.get(node.next);
+    const text = reply?.type === 'output' && typeof reply.config?.text === 'string' ? reply.config.text.trim() : '';
+    const ref = /^\{\{\s*([^.}\s]+)\.(?:content|text)\s*\}\}$/.exec(text);
+    if (ref?.[1] === node.id) ids.add(node.id);
+  }
+  return ids;
+}
+
+// Passes on the string value of a JSON reply's "final" (or "answer") as it streams; a reply that
+// starts with another key (a tool call) passes on nothing.
+export function finalField(emit) {
+  let raw = '';
+  let sent = 0;
+  let start = -1;
+  let done = false;
+  return (piece) => {
+    if (done) return;
+    raw += piece;
+    if (start < 0) {
+      const head = /^\s*\{\s*"([^"]*)"\s*:\s*"/.exec(raw);
+      if (!head) {
+        // Still arriving: give up once it can't become {"final": " or {"answer": ".
+        const partial = /^\s*(?:\{\s*(?:"([^"]*)(?:"\s*(?::\s*)?)?)?)?$/.exec(raw);
+        done = !partial || (partial[1] !== undefined && !['final', 'answer'].some((key) => key.startsWith(partial[1])));
+        return;
+      }
+      if (!['final', 'answer'].includes(head[1])) { done = true; return; }
+      start = head[0].length;
+    }
+    const { value, complete } = partialJsonString(raw.slice(start));
+    if (value.length > sent) { emit(value.slice(sent)); sent = value.length; }
+    if (complete) done = true;
+  };
+}
+
+// A JSON string's value so far, up to a closing quote or an escape still arriving.
+function partialJsonString(text) {
+  const escapes = { '"': '"', '\\': '\\', '/': '/', b: '\b', f: '\f', n: '\n', r: '\r', t: '\t' };
+  let value = '';
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (char === '"') return { value, complete: true };
+    if (char !== '\\') { value += char; continue; }
+    const next = text[i + 1];
+    if (next === undefined) break;
+    if (next === 'u') {
+      const hex = text.slice(i + 2, i + 6);
+      if (hex.length < 4) break;
+      value += String.fromCharCode(parseInt(hex, 16));
+      i += 5;
+    } else {
+      value += escapes[next] ?? next;
+      i += 1;
+    }
+  }
+  return { value, complete: false };
+}
 
 // Steps that send the conversation to a model.
 function historyReaders(graph) {
@@ -1276,14 +1356,14 @@ function addUsage(total, usage) {
  * build(scope, history, inputContent) returns messages; it runs once for the live
  * scope and once for the binary-free trace scope.
  */
-async function callModelJson(env, ctx, services, hooks, node, cfg, build, { allowText = false, nativeTools = null, jsonMode = true } = {}) {
+async function callModelJson(env, ctx, services, hooks, node, cfg, build, { allowText = false, nativeTools = null, jsonMode = true, onDelta = null } = {}) {
   const params = mapModelParams(cfg);
   // Native-tool models reply with a tool call or plain text, so JSON mode stays off for them, on
   // their final turn too (in JSON mode gpt-oss returns no content).
   const requestBody = { model: cfg.model, messages: build(ctx.scope(), ctx.messages, ctx.inputContent), ...params, ...(nativeTools ? { tools: nativeTools, tool_choice: 'auto' } : {}), ...(jsonMode && !nativeTools ? { response_format: { type: 'json_object' } } : {}) };
   const traceBody = { ...requestBody, messages: build(ctx.traceScope(), ctx.traceMessages, ctx.traceInputContent) };
   ctx.consumeModelCall();
-  let result = await callLlmWithTrace(env, services, hooks, node, cfg, requestBody, traceBody, 0);
+  let result = await callLlmWithTrace(env, services, hooks, node, cfg, requestBody, traceBody, 0, onDelta);
   ctx.addUsage(result.usage, result.cost);
   let json = safeParseJson(result.content);
   if (json == null && !allowText) {
@@ -1648,14 +1728,14 @@ function buildLlmMessages(cfg, scope, history, inputContent, outputs) {
   return messages;
 }
 
-async function callLlmWithTrace(env, services, hooks, node, cfg, requestBody, archivedRequestBody, retry) {
+async function callLlmWithTrace(env, services, hooks, node, cfg, requestBody, archivedRequestBody, retry, onDelta = null) {
   const startedAt = Date.now();
   // Keep this final boundary even though trace scopes already carry research
   // refs. It protects custom graphs that embed a literal data URI in config.
   const traceRequestBody = sanitizeBinaryValues(archivedRequestBody);
   let result;
   try {
-    result = await services.callChatModel(env, requestBody, { preserveTailMessages: (cfg.includeContext ? 2 : 1) + (retry ? 2 : 0) });
+    result = await services.callChatModel(env, requestBody, { preserveTailMessages: (cfg.includeContext ? 2 : 1) + (retry ? 2 : 0), ...(onDelta ? { onDelta } : {}) });
   } catch (error) {
     await hooks.logProviderCall?.(failedProviderCall({
       operation: retry ? 'chat_json_retry' : 'chat',
