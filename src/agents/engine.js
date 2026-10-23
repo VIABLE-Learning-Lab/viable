@@ -407,9 +407,10 @@ const HANDLERS = {
 
     const requestData = { model: cfg.model, messages, ...mapModelParams(cfg) };
     const traceRequestData = { model: cfg.model, messages: traceMessages, ...mapModelParams(cfg) };
-    if (wantsJson) requestData.response_format = { type: 'json_object' };
+    const format = outputs.length ? outputFormat(cfg, outputs) : { type: 'json_object' };
+    if (wantsJson) requestData.response_format = format;
     else if (cfg.response_format) requestData.response_format = cfg.response_format;
-    if (wantsJson) traceRequestData.response_format = { type: 'json_object' };
+    if (wantsJson) traceRequestData.response_format = format;
     else if (cfg.response_format) traceRequestData.response_format = cfg.response_format;
 
     ctx.consumeModelCall();
@@ -636,7 +637,9 @@ const HANDLERS = {
       ...(cfg.includeHistory === true ? historyForLlmNode(history, cfg).slice(-8) : []),
       { role: 'user', content: String(renderTemplate(cfg.input ?? '{{input}}', scope) ?? '') }
     ];
-    const { json, result } = await callModelJson(env, ctx, services, hooks, node, cfg, build);
+    // The route can only be one of the names (enforced where the provider supports it).
+    const format = schemaFormat(cfg, 'route_choice', { type: 'object', properties: { route: { type: 'string', enum: [...routes.map((item) => item.name), 'fallback'] }, confidence: { type: 'number' }, reason: { type: 'string' } }, required: ['route', 'confidence', 'reason'], additionalProperties: false });
+    const { json, result } = await callModelJson(env, ctx, services, hooks, node, cfg, build, { format });
     const route = routes.some((item) => item.name === json.route) ? json.route : 'fallback';
     const branches = node.branches || {};
     return {
@@ -744,7 +747,8 @@ const HANDLERS = {
         ...(withHistory ? historyForLlmNode(history, cfg).slice(-8) : []),
         { role: 'user', content: String(renderTemplate(cfg.text ?? '{{input}}', scope) ?? '').slice(0, 20000) }
       ];
-      const { json } = await callModelJson(env, ctx, services, hooks, node, cfg, build);
+      const format = schemaFormat(cfg, 'guardrail_checks', { type: 'object', properties: { violations: { type: 'array', items: { type: 'object', properties: { check: { type: 'string', enum: modelChecks }, reason: { type: 'string' } }, required: ['check', 'reason'], additionalProperties: false } } }, required: ['violations'], additionalProperties: false });
+      const { json } = await callModelJson(env, ctx, services, hooks, node, cfg, build, { format });
       for (const violation of Array.isArray(json.violations) ? json.violations : []) {
         if (modelChecks.includes(violation?.check)) flagged.push({ check: violation.check, reason: String(violation.reason || '').slice(0, 300) });
       }
@@ -1356,11 +1360,11 @@ function addUsage(total, usage) {
  * build(scope, history, inputContent) returns messages; it runs once for the live
  * scope and once for the binary-free trace scope.
  */
-async function callModelJson(env, ctx, services, hooks, node, cfg, build, { allowText = false, nativeTools = null, jsonMode = true, onDelta = null } = {}) {
+async function callModelJson(env, ctx, services, hooks, node, cfg, build, { allowText = false, nativeTools = null, jsonMode = true, onDelta = null, format = null } = {}) {
   const params = mapModelParams(cfg);
   // Native-tool models reply with a tool call or plain text, so JSON mode stays off for them, on
   // their final turn too (in JSON mode gpt-oss returns no content).
-  const requestBody = { model: cfg.model, messages: build(ctx.scope(), ctx.messages, ctx.inputContent), ...params, ...(nativeTools ? { tools: nativeTools, tool_choice: 'auto' } : {}), ...(jsonMode && !nativeTools ? { response_format: { type: 'json_object' } } : {}) };
+  const requestBody = { model: cfg.model, messages: build(ctx.scope(), ctx.messages, ctx.inputContent), ...params, ...(nativeTools ? { tools: nativeTools, tool_choice: 'auto' } : {}), ...(jsonMode && !nativeTools ? { response_format: format || { type: 'json_object' } } : {}) };
   const traceBody = { ...requestBody, messages: build(ctx.traceScope(), ctx.traceMessages, ctx.traceInputContent) };
   ctx.consumeModelCall();
   let result = await callLlmWithTrace(env, services, hooks, node, cfg, requestBody, traceBody, 0, onDelta);
@@ -1691,6 +1695,26 @@ function normalizeOutputs(outputs) {
   return outputs
     .filter((o) => o && typeof o.name === 'string' && o.name.trim())
     .map((o) => ({ name: o.name.trim(), type: o.type || 'string', description: o.description || '' }));
+}
+
+// Declared outputs are enforced as a strict JSON Schema where the provider supports it (OpenAI, which
+// VIABLE aliases such as viable-3 run on): the reply always has exactly these fields and types. Other
+// providers get JSON mode and the instruction, with one retry when the reply isn't JSON.
+function outputFormat(cfg, outputs) {
+  const fields = [...new Map(outputs.map((o) => [o.name, o])).values()];
+  return schemaFormat(cfg, 'step_output', {
+    type: 'object',
+    properties: Object.fromEntries(fields.map((o) => [o.name, { type: ['string', 'number', 'boolean'].includes(o.type) ? o.type : 'string', ...(o.description ? { description: o.description.slice(0, 1000) } : {}) }])),
+    required: fields.map((o) => o.name),
+    additionalProperties: false
+  });
+}
+
+// A strict JSON Schema response format for a model whose provider enforces it, else JSON mode.
+function schemaFormat(cfg, name, schema) {
+  let provider = null;
+  try { provider = resolveModelForMode(cfg.model, MODEL_MODES.CHAT, cfg.provider).provider; } catch { /* unknown model: JSON mode */ }
+  return provider === 'openai' ? { type: 'json_schema', json_schema: { name, strict: true, schema } } : { type: 'json_object' };
 }
 
 function buildOutputInstruction(outputs) {
