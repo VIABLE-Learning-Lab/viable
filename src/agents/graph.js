@@ -115,6 +115,7 @@ export function describeGraphSchema(limits = DEFAULT_GRAPH_LIMITS) {
       type,
       available: !UNAVAILABLE_NODE_TYPES.includes(type),
       requires: describeRequirement(NODE_REQUIREMENTS[type]),
+      ...(MODEL_NODE_TYPES.has(type) ? { model_mode: STEP_MODEL_MODES[type] || MODEL_MODES.CHAT } : {}),
       ...(UNAVAILABLE_NODE_TYPES.includes(type) ? { note: 'Reserved. Validation rejects this type until it is enabled.' } : {})
     })),
     limits: { ...limits },
@@ -125,6 +126,7 @@ export function describeGraphSchema(limits = DEFAULT_GRAPH_LIMITS) {
       'entry must name an existing node.',
       'Every next, branches, and condition case target must name an existing node.',
       'At least one output node must be reachable from entry.',
+      'A step\'s config.model must be a model whose mode in /v1/models is the step\'s model_mode: chat models answer, image steps take image_generation, speech steps audio_speech and transcribe steps audio_transcription.',
       `An llm node may declare at most ${limits.maxStructuredOutputs} structured outputs.`,
       `run_limits may set max_model_calls (${RUN_LIMITS.max_model_calls.join('–')}) and timeout_seconds (${RUN_LIMITS.timeout_seconds.join('–')}).`
     ],
