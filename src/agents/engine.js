@@ -12,9 +12,11 @@
  * returned; the engine never touches the database.
  */
 
-import { fetchAgentUrl } from './http.js';
+import { fetchAgentFile, fetchAgentUrl } from './http.js';
 import { callChatModel, withPoolWaits } from '../utils/chatModelClient.js';
 import { generateImageAsset } from '../services/imageGeneration.js';
+import { generateSpeechAsset, MAX_SPEECH_CHARACTERS, transcribeAudio } from '../services/audio.js';
+import { parseBase64Asset } from '../utils/assets.js';
 import { MODEL_MODES, resolveModelForMode } from '../config/models.js';
 import { billingFields } from '../utils/providerKeys.js';
 import { ExpressionError, evaluateCondition, evaluateExpression, renderTemplate, renderValue } from './expression.js';
@@ -69,6 +71,14 @@ export async function runAgentGraph(env, graph, options = {}) {
       const signal = AbortSignal.timeout(Math.max(1, deadline - Date.now()));
       return withPoolWaits(() => generateImageAsset(env, request, { ...options, providerKeys, signal }), signal);
     },
+    generateSpeech: (env, request, options) => {
+      const signal = AbortSignal.timeout(Math.max(1, deadline - Date.now()));
+      return withPoolWaits(() => generateSpeechAsset(env, request, { ...options, providerKeys, signal }), signal);
+    },
+    transcribeAudio: (env, request, options) => {
+      const signal = AbortSignal.timeout(Math.max(1, deadline - Date.now()));
+      return withPoolWaits(() => transcribeAudio(env, request, { ...options, providerKeys, signal }), signal);
+    },
     httpFetch: (url, init) => fetch(url, init),
     httpDeadline: deadline,
     toMarkdown: env.AI?.toMarkdown ? (file, options) => env.AI.toMarkdown(file, options) : null,
@@ -88,13 +98,16 @@ export async function runAgentGraph(env, graph, options = {}) {
     // Steps whose reply text streams to the caller as it is written (hooks.onAnswer; see streamableAnswers).
     answerSteps: typeof hooks.onAnswer === 'function' ? streamableAnswers(graph) : new Set(),
     input: options.input ?? '',
-    inputContent: options.inputContent ?? options.input ?? '',
+    // No chat model takes audio: recordings sent with the request wait for a Transcribe step, and
+    // model steps see a note in their place (in history too).
+    inputContent: withoutAudio(options.inputContent ?? options.input ?? ''),
+    audioInputs: audioParts(options.inputContent),
     traceInput: sanitizeBinaryValues(options.traceInput ?? options.input ?? ''),
     traceInputContent: sanitizeBinaryValues(options.traceInputContent ?? options.inputContent ?? options.input ?? ''),
     requestId: options.requestId || null,
     context: options.context ?? null,
     traceContext: options.traceContext ?? options.context ?? null,
-    messages: Array.isArray(options.history) ? options.history : [],
+    messages: Array.isArray(options.history) ? options.history.map((message) => ({ ...message, content: withoutAudio(message?.content) })) : [],
     // A server-kept conversation's running summary and where the loaded messages start in it
     // (null for caller-sent history), for the Input step's "summarize" history.
     historySummary: options.historySummary && typeof options.historySummary.text === 'string' ? options.historySummary : null,
@@ -554,6 +567,114 @@ const HANDLERS = {
       traceOutput: sanitizeBinaryValues({ ...output, prompt: tracePrompt }),
       next: node.next
     };
+  },
+
+  // Reads text aloud with a speech model. The audio is stored and its URL returned, for the Reply's
+  // attachments. Markdown, citation marks and links are spoken as plain text.
+  async speech(node, ctx, env, services, hooks) {
+    const cfg = node.config || {};
+    const template = cfg.text ?? '{{input}}';
+    const spoken = speakableText(renderTemplate(template, ctx.scope()));
+    const traceSpoken = speakableText(renderTemplate(template, ctx.traceScope()));
+    if (!spoken.text) {
+      throw new AgentRunError(`Speech step "${node.id}" has no text to read aloud. Check its Text setting.`, { status: 422, code: 'speech_text_empty' });
+    }
+    const options = {
+      ...(cfg.voice ? { voice: cfg.voice } : {}),
+      ...(cfg.format ? { response_format: cfg.format } : {}),
+      ...(cfg.speed != null && cfg.speed !== '' ? { speed: Number(cfg.speed) } : {})
+    };
+    const requestBody = { model: cfg.model, input: spoken.text, ...options };
+    const traceRequestBody = { model: cfg.model, input: traceSpoken.text, ...options };
+
+    ctx.consumeModelCall();
+    const startedAt = Date.now();
+    let result;
+    try {
+      result = await services.generateSpeech(env, requestBody, { requestId: ctx.requestId });
+    } catch (error) {
+      await hooks.logProviderCall?.(failedProviderCall({ operation: 'audio_speech', node, cfg, requestBody: traceRequestBody, error, durationMs: Date.now() - startedAt }));
+      throw error;
+    }
+    ctx.addUsage(null, result.cost);
+    if (!result.asset?.url) {
+      throw new AgentRunError(`Speech step "${node.id}" made audio but could not store it. Try again.`, { status: 502, code: 'speech_storage_failed' });
+    }
+    const output = {
+      url: result.asset.url,
+      format: result.requestPayload.response_format,
+      voice: result.requestPayload.voice || null,
+      duration_seconds: result.asset.duration_seconds ?? result.usage.audioSeconds ?? null,
+      text: spoken.text,
+      truncated: spoken.truncated,
+      model: result.resolution?.resolvedModel || cfg.model,
+      cost: result.cost
+    };
+    await hooks.logProviderCall?.({
+      operation: 'audio_speech',
+      nodeId: node.id,
+      model: output.model,
+      provider: result.resolution?.provider || null,
+      requestedModel: cfg.model,
+      usage: result.usage,
+      cost: result.cost,
+      ...billingFields(result.resolution),
+      durationMs: Date.now() - startedAt,
+      requestBody: traceRequestBody,
+      responseBody: { content_type: result.contentType, bytes: result.audioBuffer.byteLength, url: output.url },
+      operationMetadata: { assetUrls: [output.url] }
+    });
+    return { output, traceOutput: { ...output, text: traceSpoken.text }, next: node.next };
+  },
+
+  // Turns a recording into text: the audio file sent with the request, or one at an HTTPS address.
+  // Without one (someone typed instead) it is skipped, with no model call and an empty transcript.
+  async transcribe(node, ctx, env, services, hooks) {
+    const cfg = node.config || {};
+    const source = cfg.audio ? String(renderTemplate(cfg.audio, ctx.scope()) ?? '').trim() : '';
+    if (source && !/^(https:\/\/|data:)/i.test(source)) {
+      throw new AgentRunError(`Transcribe step "${node.id}" needs Audio to be an HTTPS address or a data URI.`, { status: 422, code: 'transcribe_audio_invalid' });
+    }
+    const audio = await audioFile(source, ctx.audioInputs, services);
+    if (!audio) {
+      const output = { text: '', language: null, duration_seconds: 0, skipped: 'No recording was sent.' };
+      return { output, traceOutput: output, next: node.next };
+    }
+    const prompt = cfg.prompt ? String(renderTemplate(cfg.prompt, ctx.scope()) ?? '').slice(0, 1000) : '';
+    const options = { ...(cfg.language ? { language: String(cfg.language).trim().toLowerCase() } : {}), ...(prompt ? { prompt } : {}) };
+    const traceRequestBody = { model: cfg.model, ...options, file: { name: audio.file.name, type: audio.file.type, size: audio.file.size, source: audio.source } };
+
+    ctx.consumeModelCall();
+    const startedAt = Date.now();
+    let result;
+    try {
+      result = await services.transcribeAudio(env, { model: cfg.model, file: audio.file, ...options }, { requestId: ctx.requestId });
+    } catch (error) {
+      await hooks.logProviderCall?.(failedProviderCall({ operation: 'audio_transcription', node, cfg, requestBody: traceRequestBody, error, durationMs: Date.now() - startedAt }));
+      throw error;
+    }
+    ctx.addUsage(null, result.cost);
+    const output = {
+      text: result.text,
+      language: result.language,
+      duration_seconds: result.durationSeconds,
+      model: result.resolution?.resolvedModel || cfg.model,
+      cost: result.cost
+    };
+    await hooks.logProviderCall?.({
+      operation: 'audio_transcription',
+      nodeId: node.id,
+      model: output.model,
+      provider: result.resolution?.provider || null,
+      requestedModel: cfg.model,
+      usage: result.usage,
+      cost: result.cost,
+      ...billingFields(result.resolution),
+      durationMs: Date.now() - startedAt,
+      requestBody: traceRequestBody,
+      responseBody: { text: result.text, language: result.language, duration_seconds: result.durationSeconds }
+    });
+    return { output, traceOutput: output, next: node.next };
   },
 
   async http(node, ctx, env, services) {
@@ -1041,7 +1162,9 @@ export function streamableAnswers(graph) {
     const cfg = node.config || {};
     if (!['llm', 'agent'].includes(node.type) || !node.next) continue;
     if (node.type === 'llm' && (normalizeOutputs(cfg.outputs).length || cfg.json || cfg.output_schema || cfg.response_format)) continue;
-    const reply = nodes.get(node.next);
+    let reply = nodes.get(node.next);
+    // A Speech step reading the answer aloud leaves it as it is, so the text still streams.
+    for (let hops = 0; reply?.type === 'speech' && hops < 3; hops += 1) reply = nodes.get(reply.next);
     const text = reply?.type === 'output' && typeof reply.config?.text === 'string' ? reply.config.text.trim() : '';
     const ref = /^\{\{\s*([^.}\s]+)\.(?:content|text)\s*\}\}$/.exec(text);
     if (ref?.[1] === node.id) ids.add(node.id);
@@ -1832,13 +1955,95 @@ function safeParseJson(text) {
   }
 }
 
+// Audio a request carries: file parts whose type, data or name says audio.
+const AUDIO_NAME = /\.(mp3|mpga|mpeg|m4a|wav|webm|ogg|oga|opus|flac|aac)(?:[?#]|$)/i;
+function isAudioPart(part) {
+  if (!part || typeof part !== 'object' || !['file', 'input_file'].includes(part.type)) return false;
+  const file = part.file || part.input_file || part;
+  const type = String(file.mime_type || file.mimeType || part.mime_type || '').toLowerCase();
+  const data = String(file.file_data || file.data || '');
+  return type.startsWith('audio/') || /^data:audio\//i.test(data) || AUDIO_NAME.test(String(file.filename || file.name || file.url || ''));
+}
+
+function audioParts(content) {
+  return Array.isArray(content) ? content.filter(isAudioPart) : [];
+}
+
+function withoutAudio(content) {
+  if (!Array.isArray(content) || !content.some(isAudioPart)) return content;
+  return content.map((part) => {
+    if (!isAudioPart(part)) return part;
+    const file = part.file || part.input_file || part;
+    return { type: 'text', text: `[Audio file${file.filename ? ` "${file.filename}"` : ''}: the model can't listen to audio; a Transcribe step turns it into text.]` };
+  });
+}
+
+// The recording a Transcribe step reads: its Audio setting (an HTTPS address or a data URI), else
+// the first audio file sent with the request.
+async function audioFile(source, parts, services) {
+  let value = source;
+  let name = '';
+  let type = '';
+  if (!value) {
+    const part = parts[0];
+    if (!part) return null;
+    const file = part.file || part.input_file || part;
+    value = String(file.file_data || file.data || file.url || '');
+    name = file.filename || file.name || '';
+    type = String(file.mime_type || file.mimeType || '').toLowerCase();
+  }
+  let bytes;
+  let origin = 'request';
+  if (/^https:\/\//i.test(value)) {
+    const fetched = await fetchAgentFile(value, services);
+    bytes = fetched.bytes;
+    type = type || fetched.contentType;
+    name = name || decodeURIComponent(new URL(fetched.url).pathname.split('/').pop() || '');
+    origin = fetched.url;
+  } else if (/^data:/i.test(value) || (value && type)) {
+    try {
+      const parsed = parseBase64Asset(value, type || 'audio/mpeg');
+      bytes = parsed.bytes;
+      type = parsed.contentType;
+    } catch {
+      throw new AgentRunError('The audio file is not valid base64 data.', { status: 400, code: 'transcribe_audio_invalid' });
+    }
+  } else {
+    return null;
+  }
+  const extension = (type.split('/')[1] || 'mpeg').replace('x-', '').replace('mpeg', 'mp3');
+  return { file: new File([bytes], name || `audio.${extension}`, { type: type || 'audio/mpeg' }), source: origin };
+}
+
+// Text a speech model should say: Markdown marks, citation numbers and link targets removed, and
+// at most MAX_SPEECH_CHARACTERS, cut at a sentence end where possible.
+function speakableText(value) {
+  let text = String(value ?? '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/\s*\[\d+(?:[,\s]+\d+)*\]/g, '')
+    .replace(/^\s{0,3}(?:#{1,6}\s+|>\s?|[-*+]\s+|\d+\.\s+)/gm, '')
+    .replace(/[*_~`]+/g, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  const truncated = text.length > MAX_SPEECH_CHARACTERS;
+  if (truncated) {
+    const cut = text.slice(0, MAX_SPEECH_CHARACTERS);
+    const end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('。'), cut.lastIndexOf('! '), cut.lastIndexOf('? '), cut.lastIndexOf('\n'));
+    text = (end > MAX_SPEECH_CHARACTERS * 0.6 ? cut.slice(0, end + 1) : cut).trim();
+  }
+  return { text, truncated };
+}
+
 function normalizeAttachments(value) {
   if (!value) return [];
   const list = Array.isArray(value) ? value : [value];
   return list
     .map((item) => {
       if (!item) return null;
-      if (typeof item === 'string') return { type: 'image', url: item };
+      if (typeof item === 'string') return { type: AUDIO_NAME.test(item) ? 'audio' : 'image', url: item };
       return item;
     })
     .filter(Boolean);

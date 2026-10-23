@@ -8,7 +8,7 @@
  * `edges` is visual-only metadata and is ignored by the engine.
  */
 
-import { MODEL_REGISTRY, assertModelNotRetired, normalizeModelId, resolveAlias } from '../config/models.js';
+import { MODEL_MODES, MODEL_REGISTRY, assertModelNotRetired, normalizeModelId, resolveAlias } from '../config/models.js';
 import { isProviderKeyModel, modelAllowedBy } from '../utils/providerKeys.js';
 import { validSketch } from '../utils/agentCollaboration.js';
 
@@ -17,6 +17,8 @@ export const NODE_TYPES = Object.freeze([
   'llm',
   'condition',
   'image',
+  'speech',
+  'transcribe',
   'http',
   'loop',
   'transform',
@@ -47,8 +49,11 @@ export const UNAVAILABLE_NODE_TYPES = Object.freeze([]);
 // The VETTING step's default reviewer, the same model the /v1/vetting endpoints default to.
 export const DEFAULT_VETTING_REVIEWER = 'gpt-6-luna';
 
-// Nodes that call a chat model. Memory and guardrail call one only in some modes.
-const MODEL_NODE_TYPES = new Set(['llm', 'image', 'router', 'agent', 'guardrail', 'memory', 'vetting']);
+// Nodes that call a model. Memory and guardrail call one only in some modes.
+const MODEL_NODE_TYPES = new Set(['llm', 'image', 'speech', 'transcribe', 'router', 'agent', 'guardrail', 'memory', 'vetting']);
+// The kind of model each step takes; the rest take chat models.
+const STEP_MODEL_MODES = Object.freeze({ image: MODEL_MODES.IMAGE_GENERATION, speech: MODEL_MODES.AUDIO_SPEECH, transcribe: MODEL_MODES.AUDIO_TRANSCRIPTION });
+const MODE_NAMES = Object.freeze({ chat: 'a chat model', image_generation: 'an image model', audio_speech: 'a speech model', audio_transcription: 'a transcription model', embedding: 'an embedding model' });
 export const GUARDRAIL_MODEL_CHECKS = Object.freeze(['jailbreak', 'moderation', 'off_topic', 'custom']);
 export const GUARDRAIL_CHECKS = Object.freeze(['pii', ...GUARDRAIL_MODEL_CHECKS]);
 const HANDLE_NAME = /^[a-z][a-z0-9_-]{0,39}$/;
@@ -58,6 +63,8 @@ const HANDLE_NAME = /^[a-z][a-z0-9_-]{0,39}$/;
 export const NODE_REQUIREMENTS = Object.freeze({
   llm: Object.freeze({ all: Object.freeze(['model']) }),
   image: Object.freeze({ all: Object.freeze(['model']) }),
+  speech: Object.freeze({ all: Object.freeze(['model']) }),
+  transcribe: Object.freeze({ all: Object.freeze(['model']) }),
   http: Object.freeze({ all: Object.freeze(['url']) }),
   condition: Object.freeze({ any: Object.freeze(['field', 'expr', 'cases']) }),
   subagent: Object.freeze({ all: Object.freeze(['slug']) }),
@@ -215,6 +222,12 @@ export function validateGraph(graph, options = {}) {
     if (node.type === 'image' && !node.config?.model) {
       errors.push(`Image node "${node.id}" requires config.model.`);
     }
+    if (node.type === 'speech' && !node.config?.model) {
+      errors.push(`Speech node "${node.id}" requires config.model (a speech model).`);
+    }
+    if (node.type === 'transcribe' && !node.config?.model) {
+      errors.push(`Transcribe node "${node.id}" requires config.model (a transcription model).`);
+    }
     if (node.type === 'http' && !node.config?.url) {
       errors.push(`HTTP node "${node.id}" requires config.url.`);
     }
@@ -354,6 +367,15 @@ export function validateGraphModels(graph, { allowedModels = null, allowUnlisted
       return normalized ? [normalized, resolveAlias(normalized)] : [];
     }))
     : null;
+
+  // Each step needs its kind of model: a chat model can't make images or speech.
+  for (const node of graph?.nodes || []) {
+    const model = MODEL_NODE_TYPES.has(node?.type) && node.config?.model ? String(node.config.model) : '';
+    const listed = model && !isProviderKeyModel(model) ? MODEL_REGISTRY[resolveAlias(normalizeModelId(model))] : null;
+    const wanted = STEP_MODEL_MODES[node.type] || MODEL_MODES.CHAT;
+    const actual = listed?.mode || MODEL_MODES.CHAT;
+    if (listed && actual !== wanted) errors.push(`Step "${node.id}" needs ${MODE_NAMES[wanted]}; "${model}" is ${MODE_NAMES[actual] || actual}.`);
+  }
 
   for (const model of collectGraphModels(graph)) {
     assertModelNotRetired(model);

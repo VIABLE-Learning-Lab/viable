@@ -227,6 +227,54 @@ export async function htmlToSource(html, sourceUrl, toMarkdown, signal, { knowle
 
 // `knowledge` skips converting error pages; `acceptXml` and `maxTextBytes` let knowledge
 // bases read sitemaps. Agent Fetch URL steps never set them.
+/**
+ * Download a public HTTPS file as bytes (a recording for a Transcribe step), with the same address
+ * rules as Fetch URL: no private hosts, at most three redirects, and a size limit.
+ */
+export async function fetchAgentFile(value, { httpFetch, httpAllowlist, httpDeadline, maxBytes = 25 * 1024 * 1024, timeoutMs = 20000 }) {
+  let url = publicUrl(value, httpAllowlist);
+  const signal = AbortSignal.timeout(Math.max(1, Math.min(timeoutMs, (httpDeadline || Infinity) - Date.now())));
+  const tooLarge = () => failure(`The file is larger than ${maxBytes / 1024 / 1024} MiB.`, 'http_response_too_large');
+  try {
+    for (let hop = 0; ; hop++) {
+      const response = await httpFetch(url.href, { method: 'GET', signal, redirect: 'manual' });
+      const location = response.headers.get('location');
+      if ([301, 302, 303, 307, 308].includes(response.status) && location) {
+        await response.body?.cancel();
+        if (hop >= MAX_REDIRECTS) throw failure('The URL redirects too many times. Use its final address.', 'http_redirect_limit');
+        url = publicUrl(new URL(location, url).href, httpAllowlist);
+        continue;
+      }
+      if (!response.ok) {
+        await response.body?.cancel();
+        throw failure(`The file address answered with status ${response.status}.`, 'http_fetch_failed');
+      }
+      if (Number(response.headers.get('content-length')) > maxBytes) {
+        await response.body?.cancel();
+        throw tooLarge();
+      }
+      const chunks = [];
+      let size = 0;
+      const reader = response.body?.getReader();
+      for (let part = await reader?.read(); part && !part.done; part = await reader.read()) {
+        size += part.value.byteLength;
+        if (size > maxBytes) {
+          await reader.cancel();
+          throw tooLarge();
+        }
+        chunks.push(part.value);
+      }
+      const bytes = new Uint8Array(size);
+      let offset = 0;
+      for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+      return { bytes, contentType: (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase(), url: url.href };
+    }
+  } catch (error) {
+    if (error.code && error.status) throw error;
+    throw failure(signal.aborted ? 'Downloading the file timed out. Try a smaller file.' : 'Could not download this file. Check the address and whether the site allows automated requests.', signal.aborted ? 'http_timeout' : 'http_fetch_failed');
+  }
+}
+
 export async function fetchAgentUrl(config, { httpFetch, httpAllowlist, httpDeadline, toMarkdown, knowledge = false, acceptXml = false, maxTextBytes = MAX_TEXT_BYTES, timeoutMs = 10000 }) {
   let url = publicUrl(config.url, httpAllowlist);
   // Preserve the historic runtime default for imported graphs. The editor and
