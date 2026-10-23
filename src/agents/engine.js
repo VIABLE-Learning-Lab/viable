@@ -937,6 +937,9 @@ const HANDLERS = {
       throw new AgentRunError(`VETTING step "${node.id}" needs a question and answer key in full mode.`, { status: 422, code: 'vetting_answer_key_missing' });
     }
     const [live, trace] = await Promise.all([prompts(ctx.scope()), prompts(ctx.traceScope())]);
+    // An earlier step's answer (e.g. {{answer.content}}) is reviewed as written: it is the first
+    // attempt, and the reply model only revises it after a failed review. Empty: the reply model writes.
+    const draft = cfg.draft != null ? String(renderTemplate(cfg.draft, ctx.scope()) ?? '').trim() : '';
     const turn = (scope, history, content) => [
       ...(cfg.includeHistory !== false ? historyForLlmNode(history, cfg) : []),
       { role: 'user', content: cfg.input != null ? String(renderTemplate(cfg.input, scope) ?? '') : content }
@@ -959,24 +962,29 @@ const HANDLERS = {
       return result;
     };
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      let generated;
-      try {
-        generated = await call(cfg.model,
-          { messages: [{ role: 'system', content: live.chat }, ...history], temperature: cfg.temperature ?? 0.7, ...reasoningBudget(cfg.model, cfg.max_tokens ?? 1024) },
-          { messages: [{ role: 'system', content: trace.chat }, ...traceHistory], temperature: cfg.temperature ?? 0.7, ...reasoningBudget(cfg.model, cfg.max_tokens ?? 1024) }, 0);
-      } catch (error) {
-        if (attempt === 1) throw error;
-        stopReason = 'GENERATION_ERROR';
-        break;
-      }
-      const safety = parseSafetyPrefix(generated.content);
-      response = safety.content;
-      if (safety.requiresAttention) {
-        requiresAttention = true;
-        outcome = 'attention';
-        stopReason = 'SAFETY_TRIGGERED';
-        attempts.push({ attempt, passed: false, verification: 'N/A (Safety Triggered)' });
-        break;
+      const fromDraft = attempt === 1 && Boolean(draft);
+      if (fromDraft) {
+        response = draft;
+      } else {
+        let generated;
+        try {
+          generated = await call(cfg.model,
+            { messages: [{ role: 'system', content: live.chat }, ...history], temperature: cfg.temperature ?? 0.7, ...reasoningBudget(cfg.model, cfg.max_tokens ?? 1024) },
+            { messages: [{ role: 'system', content: trace.chat }, ...traceHistory], temperature: cfg.temperature ?? 0.7, ...reasoningBudget(cfg.model, cfg.max_tokens ?? 1024) }, 0);
+        } catch (error) {
+          if (attempt === 1) throw error;
+          stopReason = 'GENERATION_ERROR';
+          break;
+        }
+        const safety = parseSafetyPrefix(generated.content);
+        response = safety.content;
+        if (safety.requiresAttention) {
+          requiresAttention = true;
+          outcome = 'attention';
+          stopReason = 'SAFETY_TRIGGERED';
+          attempts.push({ attempt, passed: false, verification: 'N/A (Safety Triggered)' });
+          break;
+        }
       }
       let verdict;
       try {
@@ -986,11 +994,11 @@ const HANDLERS = {
         const verified = await call(verifier, check(live.verify), check(trace.verify), 0);
         verdict = full ? parseVerificationResult(verified.content) : (() => { const r = parseSimpleVerificationResult(verified.content); return { passed: r.passed, verificationOutput: r.passed ? 'PASS' : r.failureReason }; })();
       } catch (error) {
-        attempts.push({ attempt, passed: false, verification: `Verification Error: ${String(error?.message || error).slice(0, 300)}` });
+        attempts.push({ attempt, passed: false, verification: `Verification Error: ${String(error?.message || error).slice(0, 300)}`, ...(fromDraft ? { draft: true } : {}) });
         stopReason = 'VERIFICATION_ERROR';
         break;
       }
-      attempts.push({ attempt, passed: verdict.passed, verification: verdict.verificationOutput });
+      attempts.push({ attempt, passed: verdict.passed, verification: verdict.verificationOutput, ...(fromDraft ? { draft: true } : {}) });
       if (verdict.passed) {
         outcome = 'passed';
         stopReason = 'VERIFICATION_PASSED';
@@ -1007,6 +1015,7 @@ const HANDLERS = {
       output: {
         content: response, passed: outcome === 'passed', requires_attention: requiresAttention, outcome, stop_reason: stopReason,
         attempts: attempts.length, verification: attempts.at(-1)?.verification ?? null, attempt_details: attempts,
+        ...(draft ? { revised: response !== draft } : {}),
         model: cfg.model, verification_model: verifier, usage, cost
       },
       next: branches[outcome] ?? node.next ?? null
