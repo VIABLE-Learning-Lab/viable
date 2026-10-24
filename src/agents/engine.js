@@ -99,9 +99,12 @@ export async function runAgentGraph(env, graph, options = {}) {
     answerSteps: typeof hooks.onAnswer === 'function' ? streamableAnswers(graph) : new Set(),
     input: options.input ?? '',
     // No chat model takes audio: recordings sent with the request wait for a Transcribe step, and
-    // model steps see a note in their place (in history too).
+    // model steps see a note in their place (in history too), with what was said once it is heard.
     inputContent: withoutAudio(options.inputContent ?? options.input ?? ''),
     audioInputs: audioParts(options.inputContent),
+    requestContent: options.inputContent ?? options.input ?? '',
+    // What the recording sent with this message says, from the first Transcribe step that read it.
+    heard: null,
     traceInput: sanitizeBinaryValues(options.traceInput ?? options.input ?? ''),
     traceInputContent: sanitizeBinaryValues(options.traceInputContent ?? options.inputContent ?? options.input ?? ''),
     requestId: options.requestId || null,
@@ -245,6 +248,8 @@ export async function runAgentGraph(env, graph, options = {}) {
     // How the Reply step lists sources for clients that show only text; channels apply it.
     sourceStyle: ctx.sourceStyle || 'none',
     ...(ctx.historySummaryChanged ? { historySummary: ctx.historySummary } : {}),
+    // Kept with the message in history, so later turns know what was said.
+    transcript: ctx.heard,
     steps: ctx.steps,
     usage: ctx.usage,
     cost: ctx.cost,
@@ -674,6 +679,13 @@ const HANDLERS = {
       requestBody: traceRequestBody,
       responseBody: { text: result.text, language: result.language, duration_seconds: result.durationSeconds }
     });
+    // The person's own recording: later model steps read what they said in its place, the caller
+    // can show it while the agent works, and it stays with their message for later turns.
+    if (audio.fromRequest && !ctx.heard) {
+      ctx.heard = { text: output.text, language: output.language, duration_seconds: output.duration_seconds };
+      ctx.inputContent = withoutAudio(ctx.requestContent, output.text);
+      try { hooks.onTranscript?.(ctx.heard); } catch { /* A listener never stops the run. */ }
+    }
     return { output, traceOutput: output, next: node.next };
   },
 
@@ -1978,13 +1990,44 @@ function audioParts(content) {
   return Array.isArray(content) ? content.filter(isAudioPart) : [];
 }
 
-function withoutAudio(content) {
+/** The message with each recording's bytes left out (its name and type stay), for what is kept of it. */
+export function withoutAudioBytes(content) {
   if (!Array.isArray(content) || !content.some(isAudioPart)) return content;
   return content.map((part) => {
     if (!isAudioPart(part)) return part;
     const file = part.file || part.input_file || part;
+    const type = String(file.mime_type || file.mimeType || '').split(';')[0] || 'audio/webm';
+    return { type: 'file', file: { filename: file.filename || file.name || 'voice-message', mime_type: type, not_kept: true } };
+  });
+}
+
+// `heard` is what the first recording says, once a Transcribe step has read it; a recording kept in
+// history carries its own (`file.transcript`).
+export function withoutAudio(content, heard = null) {
+  if (!Array.isArray(content) || !content.some(isAudioPart)) return content;
+  let first = true;
+  return content.map((part) => {
+    if (!isAudioPart(part)) return part;
+    const file = part.file || part.input_file || part;
+    const transcript = first && typeof heard === 'string' ? heard : file.transcript;
+    first = false;
+    if (typeof transcript === 'string') {
+      return { type: 'text', text: transcript.trim() ? `[Voice message, transcribed: "${transcript.trim()}"]` : '[Voice message: no words could be made out.]' };
+    }
     return { type: 'text', text: `[Audio file${file.filename ? ` "${file.filename}"` : ''}: the model can't listen to audio; a Transcribe step turns it into text.]` };
   });
+}
+
+/** The message as kept in history: its first recording carries what a Transcribe step heard in it. */
+export function withTranscript(content, transcript) {
+  if (!Array.isArray(content) || typeof transcript?.text !== 'string') return content;
+  const index = content.findIndex(isAudioPart);
+  if (index < 0) return content;
+  const part = content[index];
+  const key = part.input_file ? 'input_file' : 'file';
+  const file = part[key] || part;
+  const annotated = part[key] ? { ...part, [key]: { ...file, transcript: transcript.text } } : { ...part, transcript: transcript.text };
+  return content.map((item, i) => (i === index ? annotated : item));
 }
 
 // The recording a Transcribe step reads: its Audio setting (an HTTPS address or a data URI), else
@@ -2001,6 +2044,7 @@ async function audioFile(source, parts, services) {
     name = file.filename || file.name || '';
     type = String(file.mime_type || file.mimeType || '').toLowerCase();
   }
+  const fromRequest = !source;
   let bytes;
   let origin = 'request';
   if (/^https:\/\//i.test(value)) {
@@ -2020,8 +2064,10 @@ async function audioFile(source, parts, services) {
   } else {
     return null;
   }
+  // Recorders name codecs too (audio/webm;codecs=opus); providers want the plain type and extension.
+  type = type.split(';')[0].trim();
   const extension = (type.split('/')[1] || 'mpeg').replace('x-', '').replace('mpeg', 'mp3');
-  return { file: new File([bytes], name || `audio.${extension}`, { type: type || 'audio/mpeg' }), source: origin };
+  return { file: new File([bytes], name || `audio.${extension}`, { type: type || 'audio/mpeg' }), source: origin, fromRequest };
 }
 
 // Text a speech model should say: Markdown marks, citation numbers and link targets removed, and
