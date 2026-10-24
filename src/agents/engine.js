@@ -110,6 +110,8 @@ export async function runAgentGraph(env, graph, options = {}) {
     requestContent: options.inputContent ?? options.input ?? '',
     // What the recording sent with this message says, from the first Transcribe step that read it.
     heard: null,
+    // A spoken message nobody can make out stops the run (nothing_heard) instead of being answered.
+    stopWhenSilent: options.stopWhenSilent === true,
     traceInput: sanitizeBinaryValues(options.traceInput ?? options.input ?? ''),
     traceInputContent: sanitizeBinaryValues(options.traceInputContent ?? options.inputContent ?? options.input ?? ''),
     requestId: options.requestId || null,
@@ -690,6 +692,11 @@ const HANDLERS = {
     // The person's own recording: later model steps read what they said in its place, the caller
     // can show it while the agent works, and it stays with their message for later turns.
     if (audio.fromRequest && !ctx.heard) {
+      // A spoken message with no words in it (a noisy room, a tap by mistake), when the caller asked:
+      // the run stops here, before any model answers nothing (a chat page then listens again).
+      if (ctx.stopWhenSilent && !output.text.trim() && !hasTypedText(ctx.requestContent)) {
+        throw new AgentRunError('No words could be made out in the recording.', { status: 422, code: 'nothing_heard' });
+      }
       ctx.heard = { text: output.text, language: output.language, duration_seconds: output.duration_seconds };
       ctx.inputContent = withoutAudio(ctx.requestContent, output.text);
       try { hooks.onTranscript?.(ctx.heard); } catch { /* A listener never stops the run. */ }
@@ -2099,6 +2106,8 @@ function speakableText(value) {
   }
   return { text, truncated };
 }
+
+const hasTypedText = (content) => typeof content === 'string' ? Boolean(content.trim()) : Array.isArray(content) && content.some((part) => ['text', 'input_text'].includes(part?.type) && String(part.text || '').trim());
 
 // --- Reading an answer aloud while it is written ---------------------------------------------------
 // A Speech step whose text is just a streamed answer ({{answer.content}}) reads it in pieces as it is
