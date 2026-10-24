@@ -15,9 +15,9 @@
 import { fetchAgentFile, fetchAgentUrl } from './http.js';
 import { callChatModel, withPoolWaits } from '../utils/chatModelClient.js';
 import { generateImageAsset } from '../services/imageGeneration.js';
-import { generateSpeechAsset, MAX_SPEECH_CHARACTERS, storeGeneratedAudioAsset, transcribeAudio } from '../services/audio.js';
+import { generateSpeechAsset, MAX_SPEECH_CHARACTERS, speechRuns, storeGeneratedAudioAsset, transcribeAudio } from '../services/audio.js';
 import { parseBase64Asset } from '../utils/assets.js';
-import { MODEL_MODES, resolveModelForMode } from '../config/models.js';
+import { DEFAULT_MODELS_BY_MODE, MODEL_MODES, MODEL_REGISTRY, resolveModelForMode } from '../config/models.js';
 import { billingFields } from '../utils/providerKeys.js';
 import { ExpressionError, evaluateCondition, evaluateExpression, renderTemplate, renderValue } from './expression.js';
 import { DEFAULT_VETTING_REVIEWER, GUARDRAIL_MODEL_CHECKS, parallelPaths, routerRoutes, validateGraphModels } from './graph.js';
@@ -582,7 +582,8 @@ const HANDLERS = {
   },
 
   // Reads text aloud with a speech model. The audio is stored and its URL returned, for the Reply's
-  // attachments. Markdown, citation marks and links are spoken as plain text.
+  // attachments. Markdown, citation marks and links are spoken as plain text, and each language in
+  // the text is read by a voice that speaks it (speakText).
   async speech(node, ctx, env, services, hooks) {
     const cfg = node.config || {};
     const template = cfg.text ?? '{{input}}';
@@ -594,51 +595,26 @@ const HANDLERS = {
     if (!spoken.text) {
       throw new AgentRunError(`Speech step "${node.id}" has no text to read aloud. Check its Text setting.`, { status: 422, code: 'speech_text_empty' });
     }
-    const options = {
-      ...(cfg.voice ? { voice: cfg.voice } : {}),
-      ...(cfg.format ? { response_format: cfg.format } : {}),
-      ...(cfg.speed != null && cfg.speed !== '' ? { speed: Number(cfg.speed) } : {})
-    };
-    const requestBody = { model: cfg.model, input: spoken.text, ...options };
-    const traceRequestBody = { model: cfg.model, input: traceSpoken.text, ...options };
-
     ctx.consumeModelCall();
-    const startedAt = Date.now();
-    let result;
-    try {
-      result = await services.generateSpeech(env, requestBody, { requestId: ctx.requestId });
-    } catch (error) {
-      await hooks.logProviderCall?.(failedProviderCall({ operation: 'audio_speech', node, cfg, requestBody: traceRequestBody, error, durationMs: Date.now() - startedAt }));
-      throw error;
+    const read = await speakText(node, ctx, env, services, hooks, spoken.text, { traceText: traceSpoken.text, format: cfg.format, store: true });
+    if (!read) {
+      const output = { url: null, text: spoken.text, truncated: spoken.truncated, skipped: 'No part of the text is in a language the voices read.' };
+      return { output, traceOutput: { ...output, text: traceSpoken.text }, next: node.next };
     }
-    ctx.addUsage(null, result.cost);
-    if (!result.asset?.url) {
+    if (!read.asset?.url) {
       throw new AgentRunError(`Speech step "${node.id}" made audio but could not store it. Try again.`, { status: 502, code: 'speech_storage_failed' });
     }
     const output = {
-      url: result.asset.url,
-      format: result.requestPayload.response_format,
-      voice: result.requestPayload.voice || null,
-      duration_seconds: result.asset.duration_seconds ?? result.usage.audioSeconds ?? null,
+      url: read.asset.url,
+      format: read.requestPayload.response_format,
+      voice: read.requestPayload.voice || null,
+      ...(read.voices.length > 1 ? { voices: read.voices } : {}),
+      duration_seconds: read.asset.duration_seconds ?? read.usage.audioSeconds ?? null,
       text: spoken.text,
       truncated: spoken.truncated,
-      model: result.resolution?.resolvedModel || cfg.model,
-      cost: result.cost
+      model: read.resolution?.resolvedModel || cfg.model,
+      cost: read.cost
     };
-    await hooks.logProviderCall?.({
-      operation: 'audio_speech',
-      nodeId: node.id,
-      model: output.model,
-      provider: result.resolution?.provider || null,
-      requestedModel: cfg.model,
-      usage: result.usage,
-      cost: result.cost,
-      ...billingFields(result.resolution),
-      durationMs: Date.now() - startedAt,
-      requestBody: traceRequestBody,
-      responseBody: { content_type: result.contentType, bytes: result.audioBuffer.byteLength, url: output.url },
-      operationMetadata: { assetUrls: [output.url] }
-    });
     return { output, traceOutput: { ...output, text: traceSpoken.text }, next: node.next };
   },
 
@@ -2150,8 +2126,6 @@ export function sentenceBreak(text, min) {
 }
 
 function liveReader(node, ctx, env, services, hooks) {
-  const cfg = node.config || {};
-  const options = { ...(cfg.voice ? { voice: cfg.voice } : {}), response_format: 'mp3', ...(cfg.speed != null && cfg.speed !== '' ? { speed: Number(cfg.speed) } : {}) };
   ctx.consumeModelCall();
   const parts = [];
   let rest = '';
@@ -2162,20 +2136,9 @@ function liveReader(node, ctx, env, services, hooks) {
     if (!text) return;
     room -= text.length;
     const index = parts.length;
-    const startedAt = Date.now();
-    const requestBody = { model: cfg.model, input: text, ...options };
-    const job = services.generateSpeech(env, requestBody, { requestId: ctx.requestId, store: false }).then(async (result) => {
-      ctx.addUsage(null, result.cost);
-      await hooks.logProviderCall?.({
-        operation: 'audio_speech', nodeId: node.id, model: result.resolution?.resolvedModel || cfg.model, provider: result.resolution?.provider || null,
-        requestedModel: cfg.model, usage: result.usage, cost: result.cost, ...billingFields(result.resolution), durationMs: Date.now() - startedAt,
-        requestBody, responseBody: { content_type: result.contentType, bytes: result.audioBuffer.byteLength, piece: index }
-      });
-      return { result, text };
-    }, async (error) => {
-      await hooks.logProviderCall?.(failedProviderCall({ operation: 'audio_speech', node, cfg, requestBody, error, durationMs: Date.now() - startedAt }));
-      return { error, text };
-    });
+    // Nothing to read (a sentence in a language no voice reads): no piece.
+    const job = speakText(node, ctx, env, services, hooks, text, { format: 'mp3', store: false, piece: index })
+      .then((result) => (result ? { result, text } : { skipped: true, text }), (error) => ({ error, text }));
     parts.push(job);
     // Each piece reaches the caller as soon as it and every piece before it are read.
     order = order.then(() => job).then((part) => {
@@ -2198,13 +2161,59 @@ function liveReader(node, ctx, env, services, hooks) {
   };
 }
 
+// Text read aloud by a Speech step: each language in it by a voice that speaks it (speechRuns), the
+// runs read at once and, when there are several, joined into one MP3 (the format whose pieces join).
+// Every run is a provider call of its own, billed and logged as it is made. Null when no part of the
+// text is in a language the voices read. Shaped like one speech result, with the voices used.
+async function speakText(node, ctx, env, services, hooks, text, { traceText = text, format, store, piece } = {}) {
+  const cfg = node.config || {};
+  const runs = speechRuns(text, cfg.voice || MODEL_REGISTRY[cfg.model || DEFAULT_MODELS_BY_MODE[MODEL_MODES.AUDIO_SPEECH]]?.defaultVoice);
+  if (!runs.length) return null;
+  const responseFormat = runs.length > 1 ? 'mp3' : format;
+  const speed = cfg.speed != null && cfg.speed !== '' ? { speed: Number(cfg.speed) } : {};
+  const results = await Promise.all(runs.map(async (run) => {
+    const requestBody = { model: cfg.model, input: run.text, ...(run.voice ? { voice: run.voice } : {}), ...(responseFormat ? { response_format: responseFormat } : {}), ...speed };
+    // Logs show the trace text (secrets left out); split, they show each run only when nothing was left out.
+    const logged = { ...requestBody, input: runs.length === 1 ? traceText : traceText === text ? run.text : '[part of the step’s text]' };
+    const startedAt = Date.now();
+    let result;
+    try {
+      result = await services.generateSpeech(env, requestBody, { requestId: ctx.requestId, store: store && runs.length === 1 });
+    } catch (error) {
+      await hooks.logProviderCall?.(failedProviderCall({ operation: 'audio_speech', node, cfg, requestBody: logged, error, durationMs: Date.now() - startedAt }));
+      throw error;
+    }
+    ctx.addUsage(null, result.cost);
+    await hooks.logProviderCall?.({
+      operation: 'audio_speech', nodeId: node.id, model: result.resolution?.resolvedModel || cfg.model, provider: result.resolution?.provider || null,
+      requestedModel: cfg.model, usage: result.usage, cost: result.cost, ...billingFields(result.resolution), durationMs: Date.now() - startedAt,
+      requestBody: logged,
+      responseBody: { content_type: result.contentType, bytes: result.audioBuffer.byteLength, ...(result.asset?.url ? { url: result.asset.url } : {}), ...(piece != null ? { piece } : {}) },
+      ...(result.asset?.url ? { operationMetadata: { assetUrls: [result.asset.url] } } : {})
+    });
+    return result;
+  }));
+  const voices = [...new Set(results.map((result) => result.requestPayload?.voice).filter(Boolean))];
+  if (results.length === 1) return { ...results[0], voices };
+  const audioSeconds = results.reduce((sum, result) => sum + (Number(result.usage?.audioSeconds) || 0), 0);
+  const audioBuffer = joinMp3(results.map((result) => result.audioBuffer));
+  const usage = { audioSeconds, durationSource: 'pieces' };
+  const asset = store ? await storeGeneratedAudioAsset(env, ctx.requestId, audioBuffer, { contentType: 'audio/mpeg', responseFormat: 'mp3', resolution: results[0].resolution, usage }) : null;
+  return {
+    audioBuffer, contentType: 'audio/mpeg', usage, asset, voices, resolution: results[0].resolution,
+    cost: results.reduce((sum, result) => sum + (Number(result.cost) || 0), 0),
+    requestPayload: { response_format: 'mp3', voice: results[0].requestPayload?.voice }
+  };
+}
+
 // The pieces as one recording, stored for the Reply. Null when a piece failed: the step then reads
 // the whole answer again, the way it does without streaming.
 async function joinLiveSpeech(node, ctx, env, spoken, traceSpoken) {
   const cfg = node.config || {};
-  const parts = await ctx.readers.get(node.id).finish();
+  const parts = (await ctx.readers.get(node.id).finish()).filter((part) => !part.skipped);
   ctx.readers.delete(node.id);
   if (!parts.length || parts.some((part) => !part.result)) return null;
+  const voices = [...new Set(parts.flatMap((part) => part.result.voices))];
   const first = parts[0].result;
   const audioSeconds = parts.reduce((sum, part) => sum + (Number(part.result.usage?.audioSeconds) || 0), 0);
   const cost = parts.reduce((sum, part) => sum + (Number(part.result.cost) || 0), 0);
@@ -2215,7 +2224,7 @@ async function joinLiveSpeech(node, ctx, env, spoken, traceSpoken) {
     throw new AgentRunError(`Speech step "${node.id}" made audio but could not store it. Try again.`, { status: 502, code: 'speech_storage_failed' });
   }
   const output = {
-    url: asset.url, format: 'mp3', voice: first.requestPayload?.voice || cfg.voice || null, duration_seconds: audioSeconds || null,
+    url: asset.url, format: 'mp3', voice: first.requestPayload?.voice || cfg.voice || null, ...(voices.length > 1 ? { voices } : {}), duration_seconds: audioSeconds || null,
     text: spoken.text, truncated: spoken.truncated, model: first.resolution?.resolvedModel || cfg.model, cost, pieces: parts.length
   };
   return { output, traceOutput: { ...output, text: traceSpoken.text }, next: node.next };
