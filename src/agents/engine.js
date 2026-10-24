@@ -15,7 +15,7 @@
 import { fetchAgentFile, fetchAgentUrl } from './http.js';
 import { callChatModel, withPoolWaits } from '../utils/chatModelClient.js';
 import { generateImageAsset } from '../services/imageGeneration.js';
-import { generateSpeechAsset, MAX_SPEECH_CHARACTERS, transcribeAudio } from '../services/audio.js';
+import { generateSpeechAsset, MAX_SPEECH_CHARACTERS, storeGeneratedAudioAsset, transcribeAudio } from '../services/audio.js';
 import { parseBase64Asset } from '../utils/assets.js';
 import { MODEL_MODES, resolveModelForMode } from '../config/models.js';
 import { billingFields } from '../utils/providerKeys.js';
@@ -94,9 +94,14 @@ export async function runAgentGraph(env, graph, options = {}) {
   const savedState = options.state && typeof options.state === 'object' && !Array.isArray(options.state) ? options.state : {};
   const resumeNode = options.resume?.node && nodeMap.get(options.resume.node)?.type === 'ask' ? options.resume.node : null;
 
+  const answerSteps = typeof hooks.onAnswer === 'function' ? streamableAnswers(graph) : new Set();
   const ctx = {
     // Steps whose reply text streams to the caller as it is written (hooks.onAnswer; see streamableAnswers).
-    answerSteps: typeof hooks.onAnswer === 'function' ? streamableAnswers(graph) : new Set(),
+    answerSteps,
+    // Speech steps reading one of those answers aloud while it is written (hooks.onSpeech): answer step
+    // id → speech step, and each speech step's reader once the answer starts (see liveReader).
+    liveSpeech: typeof hooks.onSpeech === 'function' ? liveSpeechSteps(graph, answerSteps) : new Map(),
+    readers: new Map(),
     input: options.input ?? '',
     // No chat model takes audio: recordings sent with the request wait for a Transcribe step, and
     // model steps see a note in their place (in history too), with what was said once it is heard.
@@ -432,7 +437,7 @@ const HANDLERS = {
     else if (cfg.response_format) traceRequestData.response_format = cfg.response_format;
 
     ctx.consumeModelCall();
-    const onDelta = !wantsJson && ctx.answerSteps.has(node.id) ? answerStream(ctx.sources, hooks.onAnswer) : null;
+    const onDelta = !wantsJson && ctx.answerSteps.has(node.id) ? answerStream(ctx.sources, readAloud(ctx, node, env, services, hooks)) : null;
     let result = await callLlmWithTrace(env, services, hooks, node, cfg, requestData, traceRequestData, 0, onDelta);
     ctx.addUsage(result.usage, result.cost);
 
@@ -581,6 +586,9 @@ const HANDLERS = {
     const template = cfg.text ?? '{{input}}';
     const spoken = speakableText(renderTemplate(template, ctx.scope()));
     const traceSpoken = speakableText(renderTemplate(template, ctx.traceScope()));
+    // Read aloud while the answer was written: the pieces become one recording.
+    const live = ctx.readers.get(node.id) ? await joinLiveSpeech(node, ctx, env, spoken, traceSpoken) : null;
+    if (live) return live;
     if (!spoken.text) {
       throw new AgentRunError(`Speech step "${node.id}" has no text to read aloud. Check its Text setting.`, { status: 422, code: 'speech_text_empty' });
     }
@@ -1087,7 +1095,7 @@ const HANDLERS = {
       // The answer streams as it is written: from {"final": "…"}, or a native model's last turn (an
       // earlier turn's text could still turn into tool calls). Only one turn's answer ever streams.
       const onDelta = ctx.answerSteps.has(node.id) && !answerStreamed && (!native || finalTurn)
-        ? (() => { const push = answerStream(ctx.sources, (text) => { answerStreamed = true; hooks.onAnswer(text); }); return native ? push : finalField(push); })()
+        ? (() => { const answer = readAloud(ctx, node, env, services, hooks); const push = answerStream(ctx.sources, (text) => { answerStreamed = true; answer(text); }); return native ? push : finalField(push); })()
         : null;
       const { json, result } = await callModelJson(env, ctx, services, hooks, node, cfg, build, { allowText: true, nativeTools: native && !finalTurn ? nativeToolDefinitions(tools) : null, jsonMode: !native, onDelta });
       usage = addUsage(usage, result.usage);
@@ -2090,6 +2098,139 @@ function speakableText(value) {
     text = (end > MAX_SPEECH_CHARACTERS * 0.6 ? cut.slice(0, end + 1) : cut).trim();
   }
   return { text, truncated };
+}
+
+// --- Reading an answer aloud while it is written ---------------------------------------------------
+// A Speech step whose text is just a streamed answer ({{answer.content}}) reads it in pieces as it is
+// written: each piece is read by the step's model as soon as it ends a sentence and sent to the
+// caller in order (hooks.onSpeech), so listening starts while the rest is still being written. The
+// step then joins the pieces into the one recording the Reply attaches; every piece is a provider
+// call of its own, billed and logged as it is made, and the step counts once against the run's
+// model calls. MP3 only, since its frames join cleanly; other formats read the whole answer at the end.
+function liveSpeechSteps(graph, answerSteps) {
+  const steps = new Map();
+  for (const node of graph?.nodes || []) {
+    const cfg = node?.config || {};
+    if (node?.type !== 'speech' || (cfg.format && cfg.format !== 'mp3')) continue;
+    const ref = /^\{\{\s*([^.}\s]+)\.content\s*\}\}$/.exec(String(cfg.text ?? '').trim());
+    if (ref && answerSteps.has(ref[1]) && !steps.has(ref[1])) steps.set(ref[1], node);
+  }
+  return steps;
+}
+
+// The answer's text as it is written goes to the caller, and to the Speech step reading it aloud.
+function readAloud(ctx, node, env, services, hooks) {
+  const speech = ctx.liveSpeech.get(node.id);
+  if (!speech) return hooks.onAnswer;
+  return (text) => {
+    hooks.onAnswer(text);
+    if (!ctx.readers.has(speech.id)) ctx.readers.set(speech.id, liveReader(speech, ctx, env, services, hooks));
+    ctx.readers.get(speech.id).push(text);
+  };
+}
+
+// Where the next piece worth reading ends: after a sentence (its mark, then a space; CJK marks need
+// none) or a paragraph, once it is at least `min` long; 0 when the text so far has no such place.
+export function sentenceBreak(text, min) {
+  const marks = /[.!?…]["'”’)\]]*\s|[。！？][」』”’)）]*|\n\s*\n/g;
+  for (let match; (match = marks.exec(text));) {
+    const end = match.index + match[0].length;
+    if (end >= min) return end;
+  }
+  return 0;
+}
+
+function liveReader(node, ctx, env, services, hooks) {
+  const cfg = node.config || {};
+  const options = { ...(cfg.voice ? { voice: cfg.voice } : {}), response_format: 'mp3', ...(cfg.speed != null && cfg.speed !== '' ? { speed: Number(cfg.speed) } : {}) };
+  ctx.consumeModelCall();
+  const parts = [];
+  let rest = '';
+  let room = MAX_SPEECH_CHARACTERS;
+  let order = Promise.resolve();
+  const read = (raw) => {
+    const text = speakableText(raw).text.slice(0, Math.max(0, room));
+    if (!text) return;
+    room -= text.length;
+    const index = parts.length;
+    const startedAt = Date.now();
+    const requestBody = { model: cfg.model, input: text, ...options };
+    const job = services.generateSpeech(env, requestBody, { requestId: ctx.requestId, store: false }).then(async (result) => {
+      ctx.addUsage(null, result.cost);
+      await hooks.logProviderCall?.({
+        operation: 'audio_speech', nodeId: node.id, model: result.resolution?.resolvedModel || cfg.model, provider: result.resolution?.provider || null,
+        requestedModel: cfg.model, usage: result.usage, cost: result.cost, ...billingFields(result.resolution), durationMs: Date.now() - startedAt,
+        requestBody, responseBody: { content_type: result.contentType, bytes: result.audioBuffer.byteLength, piece: index }
+      });
+      return { result, text };
+    }, async (error) => {
+      await hooks.logProviderCall?.(failedProviderCall({ operation: 'audio_speech', node, cfg, requestBody, error, durationMs: Date.now() - startedAt }));
+      return { error, text };
+    });
+    parts.push(job);
+    // Each piece reaches the caller as soon as it and every piece before it are read.
+    order = order.then(() => job).then((part) => {
+      if (!part.result) return;
+      try { hooks.onSpeech({ step: node.id, index, format: 'mp3', audio: bytesToBase64(part.result.audioBuffer) }); } catch { /* A listener never stops the run. */ }
+    });
+  };
+  return {
+    push(text) {
+      rest += text;
+      for (let end; (end = sentenceBreak(rest, parts.length ? 80 : 12)) > 0;) { read(rest.slice(0, end)); rest = rest.slice(end); }
+    },
+    /** The last words, then every piece once read, in order. */
+    async finish() {
+      if (rest.trim()) read(rest);
+      rest = '';
+      await order;
+      return Promise.all(parts);
+    }
+  };
+}
+
+// The pieces as one recording, stored for the Reply. Null when a piece failed: the step then reads
+// the whole answer again, the way it does without streaming.
+async function joinLiveSpeech(node, ctx, env, spoken, traceSpoken) {
+  const cfg = node.config || {};
+  const parts = await ctx.readers.get(node.id).finish();
+  ctx.readers.delete(node.id);
+  if (!parts.length || parts.some((part) => !part.result)) return null;
+  const first = parts[0].result;
+  const audioSeconds = parts.reduce((sum, part) => sum + (Number(part.result.usage?.audioSeconds) || 0), 0);
+  const cost = parts.reduce((sum, part) => sum + (Number(part.result.cost) || 0), 0);
+  const asset = await storeGeneratedAudioAsset(env, ctx.requestId, joinMp3(parts.map((part) => part.result.audioBuffer)), {
+    contentType: 'audio/mpeg', responseFormat: 'mp3', resolution: first.resolution, usage: { audioSeconds, durationSource: 'pieces' }
+  });
+  if (!asset?.url) {
+    throw new AgentRunError(`Speech step "${node.id}" made audio but could not store it. Try again.`, { status: 502, code: 'speech_storage_failed' });
+  }
+  const output = {
+    url: asset.url, format: 'mp3', voice: first.requestPayload?.voice || cfg.voice || null, duration_seconds: audioSeconds || null,
+    text: spoken.text, truncated: spoken.truncated, model: first.resolution?.resolvedModel || cfg.model, cost, pieces: parts.length
+  };
+  return { output, traceOutput: { ...output, text: traceSpoken.text }, next: node.next };
+}
+
+// MP3 pieces joined into one recording: each piece's ID3 tag is dropped and its frames follow on.
+export function joinMp3(buffers) {
+  const frames = buffers.map((buffer) => {
+    const bytes = new Uint8Array(buffer);
+    if (bytes[0] !== 0x49 || bytes[1] !== 0x44 || bytes[2] !== 0x33) return bytes;
+    const size = ((bytes[6] & 0x7f) << 21) | ((bytes[7] & 0x7f) << 14) | ((bytes[8] & 0x7f) << 7) | (bytes[9] & 0x7f);
+    return bytes.subarray(10 + size + (bytes[5] & 0x10 ? 10 : 0));
+  });
+  const joined = new Uint8Array(frames.reduce((sum, part) => sum + part.length, 0));
+  let at = 0;
+  for (const part of frames) { joined.set(part, at); at += part.length; }
+  return joined.buffer;
+}
+
+function bytesToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
 }
 
 function normalizeAttachments(value) {
