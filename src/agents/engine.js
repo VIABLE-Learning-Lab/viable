@@ -631,6 +631,8 @@ const HANDLERS = {
       const output = { text: '', language: null, duration_seconds: 0, skipped: 'No recording was sent.' };
       return { output, traceOutput: output, next: node.next };
     }
+    // Only now is there something to listen to (a typed message never shows "Listening").
+    hooks.onListening?.(node);
     const prompt = cfg.prompt ? String(renderTemplate(cfg.prompt, ctx.scope()) ?? '').slice(0, 1000) : '';
     const options = { ...(cfg.language ? { language: String(cfg.language).trim().toLowerCase() } : {}), ...(prompt ? { prompt } : {}) };
     const traceRequestBody = { model: cfg.model, ...options, file: { name: audio.file.name, type: audio.file.type, size: audio.file.size, source: audio.source } };
