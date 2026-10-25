@@ -7,7 +7,7 @@
  * Signals are counts and timings only: never keystrokes, drafts or anything typed but not sent.
  */
 
-export const METRICS_VERSION = '2026-10-25';
+export const METRICS_VERSION = '2026-10-26';
 
 export const CITATIONS = {
   kovanovic2015: { text: 'Kovanović, V., Gašević, D., Dawson, S., Joksimović, S., Baker, R. S., & Hatala, M. (2015). Does time-on-task estimation matter? Implications on validity of learning analytics findings. Journal of Learning Analytics, 2(3), 81–110.', url: 'https://doi.org/10.18608/jla.2015.23.6' },
@@ -24,6 +24,12 @@ export const CITATIONS = {
   wengelin2006: { text: 'Wengelin, Å. (2006). Examining pauses in writing: Theory, methods and empirical data. In K. Sullivan & E. Lindgren (Eds.), Computer Key-Stroke Logging and Writing (pp. 107–130). Elsevier.', url: 'https://www.lu.se/lup/publication/4f38448c-1fcd-41d2-9950-1de0bb919483' },
   zhang2015: { text: 'Zhang, M., & Deane, P. (2015). Process features in writing: Internal structure and incremental value over product features (ETS RR-15-27). ETS Research Report Series, 2015(2), 1–12.', url: 'https://doi.org/10.1002/ets2.12075' },
   halfaker2015: { text: 'Halfaker, A., Keyes, O., Kluver, D., Thebault-Spieker, J., Nguyen, T., Shores, K., Uduwage, A., & Warncke-Wang, M. (2015). User session identification based on strong regularities in inter-activity time. Proceedings of WWW 2015, 410–418.', url: 'https://doi.org/10.1145/2736277.2741117' },
+  corbett1995: { text: 'Corbett, A. T., & Anderson, J. R. (1995). Knowledge tracing: Modeling the acquisition of procedural knowledge. User Modeling and User-Adapted Interaction, 4(4), 253–278.', url: 'https://doi.org/10.1007/BF01099821' },
+  baker2008: { text: 'Baker, R. S. J. d., Corbett, A. T., & Aleven, V. (2008). More accurate student modeling through contextual estimation of slip and guess probabilities in Bayesian Knowledge Tracing. In Intelligent Tutoring Systems (ITS 2008), LNCS 5091, 406–415.', url: 'https://doi.org/10.1007/978-3-540-69132-7_44' },
+  badrinath2021: { text: 'Badrinath, A., Wang, F., & Pardos, Z. A. (2021). pyBKT: An accessible Python library of Bayesian Knowledge Tracing models. Proceedings of the 14th International Conference on Educational Data Mining, 468–474.', url: 'https://educationaldatamining.org/EDM2021/virtual/static/pdf/EDM21_paper_237.pdf' },
+  kelly2015: { text: 'Kelly, K., Wang, Y., Thompson, T., & Heffernan, N. (2015). Defining mastery: Knowledge tracing versus N-consecutive correct responses. Proceedings of the 8th International Conference on Educational Data Mining, 630–631.', url: 'https://www.educationaldatamining.org/EDM2015/proceedings/poster630-631.pdf' },
+  beck2013: { text: 'Beck, J. E., & Gong, Y. (2013). Wheel-spinning: Students who fail to master a skill. In Artificial Intelligence in Education (AIED 2013), LNCS 7926, 431–440.', url: 'https://doi.org/10.1007/978-3-642-39112-5_44' },
+  kai2018: { text: 'Kai, S., Almeda, M. V., Baker, R. S., Heffernan, C., & Heffernan, N. (2018). Decision tree modeling of wheel-spinning and productive persistence in Skill Builders. Journal of Educational Data Mining, 10(1), 36–71.', url: 'https://jedm.educationaldatamining.org/index.php/JEDM/article/view/210' },
   kestin2025: { text: 'Kestin, G., Miller, K., Klales, A., Milbourne, T., & Ponti, G. (2025). AI tutoring outperforms in-class active learning: an RCT introducing a novel research-based design in an authentic educational setting. Scientific Reports, 15.', url: 'https://doi.org/10.1038/s41598-025-97652-6' }
 };
 
@@ -101,6 +107,10 @@ export function wordCount(text) {
 }
 
 export const SESSION_GAP_MINUTES = 30;
+// Mastery as N correct in a row (N = 3, as in ASSISTments Skill Builders); wheel-spinning as this
+// many attempts at a skill without mastery.
+export const MASTERY_STREAK = 3;
+export const WHEEL_SPIN_ATTEMPTS = 10;
 const HESITANT_MIN_MS = 10000;
 
 const median = (values) => {
@@ -127,6 +137,11 @@ export const METRICS = [
   { id: 'spoken_share', label: 'Spoken', unit: 'share', definition: 'Share of messages spoken (voice messages and hands-free turns).', computation: 'count(source in voice, talk) / count(turns with a source).' },
   { id: 'starter_share', label: 'Suggested questions', unit: 'share', definition: 'Share of messages that were taps on a suggested question.', computation: 'count(source = starter) / count(turns with a source).', cite: ['oreopoulos2026'] },
   { id: 'median_wait_s', label: 'Wait for answers', unit: 'seconds', definition: 'Median time from sending to the answer starting to appear.', computation: 'Median of first_output_ms, in seconds.' },
+  { id: 'attempts', label: 'Graded attempts', unit: 'count', definition: 'Answers an agent graded: each item of its Reply step’s data.assessment ({skill, correct}).', computation: 'Count of attempts in the period.' },
+  { id: 'accuracy', label: 'Correct', unit: 'share', definition: 'Share of graded attempts that were correct.', computation: 'count(correct) / count(attempts).' },
+  { id: 'skills_mastered', label: 'Skills mastered', unit: 'count', definition: `Skills the learner answered correctly ${MASTERY_STREAK} times in a row.`, computation: `Per skill, attempts in time order; mastered at the first run of ${MASTERY_STREAK} consecutive correct attempts.`, why: 'Three in a row is an adequate mastery rule for predicting the next answer, and is what ASSISTments Skill Builders use.', cite: ['kelly2015', 'kai2018'], caveat: 'Five in a row predicted transfer better in the same study; attempts.csv lets you apply another rule or knowledge tracing.' },
+  { id: 'wheel_spinning', label: 'Wheel-spinning skills', unit: 'count', definition: `Skills with ${WHEEL_SPIN_ATTEMPTS} or more attempts and no mastery yet.`, computation: `Per skill: attempts ≥ ${WHEEL_SPIN_ATTEMPTS} and no run of ${MASTERY_STREAK} consecutive correct attempts.`, why: 'Students who don’t master a skill after many attempts are unlikely to without a change of approach.', cite: ['beck2013', 'kai2018'], caveat: 'Fewer than 10 attempts without mastery is indeterminate, not wheel-spinning.' },
+  { id: 'errors_after_mastery', label: 'Errors after mastery', unit: 'share', definition: 'Share of attempts after mastering a skill that were wrong: a descriptive sign of slips.', computation: 'Over attempts after each skill’s mastery point: count(incorrect) / count(attempts).', cite: ['corbett1995', 'baker2008', 'badrinath2021'], caveat: 'Not BKT’s slip probability, P(wrong | known), which comes from fitting a model to all learners’ attempts: export attempts.csv to pyBKT for slip, guess and learning rates.' },
   { id: 'interrupted_share', label: 'Answers stopped', unit: 'share', definition: 'Share of messages sent after stopping the previous answer before it finished.', computation: 'count(signals.interrupted) / count(turns after the first in a conversation, with signals).' }
 ];
 
@@ -144,8 +159,29 @@ export function deriveTurns(turns) {
   });
 }
 
-/** One learner's metrics from their turns (rows with message, started_at, conversation_id, first_output_ms, signals, after). */
-export function learnerMetrics(turns) {
+/** Per skill, in time order: attempts, correct, where mastery came (N in a row), and errors after it. */
+export function skillProgress(attempts) {
+  const bySkill = new Map();
+  for (const attempt of [...attempts].sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)) || (a.position || 0) - (b.position || 0))) {
+    const skill = bySkill.get(attempt.skill) || { skill: attempt.skill, attempts: 0, correct: 0, streak: 0, mastered_at_attempt: null, mastered_at: null, after: 0, errors_after: 0, last_at: null };
+    skill.attempts += 1;
+    if (attempt.correct) skill.correct += 1;
+    if (skill.mastered_at_attempt != null) { skill.after += 1; if (!attempt.correct) skill.errors_after += 1; }
+    skill.streak = attempt.correct ? skill.streak + 1 : 0;
+    if (skill.mastered_at_attempt == null && skill.streak >= MASTERY_STREAK) { skill.mastered_at_attempt = skill.attempts; skill.mastered_at = attempt.created_at; }
+    skill.last_at = attempt.created_at;
+    bySkill.set(attempt.skill, skill);
+  }
+  return [...bySkill.values()].map(({ streak, ...skill }) => ({
+    ...skill,
+    accuracy: share(skill.correct, skill.attempts),
+    mastered: skill.mastered_at_attempt != null,
+    wheel_spinning: skill.mastered_at_attempt == null && skill.attempts >= WHEEL_SPIN_ATTEMPTS
+  }));
+}
+
+/** One learner's metrics from their turns (rows with message, started_at, conversation_id, first_output_ms, signals, after) and graded attempts. */
+export function learnerMetrics(turns, attempts = []) {
   const derived = deriveTurns(turns);
   const signals = derived.map((turn) => turn.signals || {});
   const withSource = signals.filter((s) => s.source);
@@ -172,11 +208,24 @@ export function learnerMetrics(turns) {
     spoken_share: share(withSource.filter((s) => s.source === 'voice' || s.source === 'talk').length, withSource.length),
     starter_share: share(withSource.filter((s) => s.source === 'starter').length, withSource.length),
     median_wait_s: (() => { const value = median(derived.map((turn) => turn.first_output_ms).filter(Number.isFinite)); return value == null ? null : Math.round(value / 100) / 10; })(),
-    interrupted_share: share(later.filter((turn) => turn.signals.interrupted).length, later.length)
+    interrupted_share: share(later.filter((turn) => turn.signals.interrupted).length, later.length),
+    ...attemptMetrics(attempts)
+  };
+}
+
+function attemptMetrics(attempts) {
+  const skills = skillProgress(attempts);
+  const after = skills.reduce((sum, skill) => sum + skill.after, 0);
+  return {
+    attempts: attempts.length,
+    accuracy: share(attempts.filter((attempt) => attempt.correct).length, attempts.length),
+    skills_mastered: attempts.length ? skills.filter((skill) => skill.mastered).length : null,
+    wheel_spinning: attempts.length ? skills.filter((skill) => skill.wheel_spinning).length : null,
+    errors_after_mastery: share(skills.reduce((sum, skill) => sum + skill.errors_after, 0), after)
   };
 }
 
 /** The definitions, for the dashboard and the export's data dictionary. */
 export function researchDefinitions() {
-  return { object: 'research.definitions', version: METRICS_VERSION, session_gap_minutes: SESSION_GAP_MINUTES, signals: SIGNALS, after: AFTER, metrics: METRICS, citations: CITATIONS };
+  return { object: 'research.definitions', version: METRICS_VERSION, session_gap_minutes: SESSION_GAP_MINUTES, mastery_streak: MASTERY_STREAK, wheel_spin_attempts: WHEEL_SPIN_ATTEMPTS, signals: SIGNALS, after: AFTER, metrics: METRICS, citations: CITATIONS };
 }
