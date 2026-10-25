@@ -259,11 +259,23 @@ export function evaluateCondition(expr, scope = {}) {
   return Boolean(evaluateExpression(expr, scope));
 }
 
+// Context fields a step reads only by naming them, as a VETTING step names a question's answer key
+// ({{context.answer_key}}): left out wherever the whole context is written out ({{context}}, a step's
+// "include context"), so a step that talks to the learner can't be handed the key by accident.
+export const SEALED_CONTEXT = ['answer_key'];
+export function openContext(context) {
+  if (!context || typeof context !== 'object' || Array.isArray(context)) return context;
+  const out = { ...context };
+  for (const key of SEALED_CONTEXT) delete out[key];
+  return out;
+}
+const evaluateOpen = (expr, scope) => (expr === 'context' ? openContext(evaluateExpression(expr, scope)) : evaluateExpression(expr, scope));
+
 /** Render `{{ expr }}` placeholders inside a string. */
 export function renderTemplate(template, scope = {}) {
   if (typeof template !== 'string') return template;
   return template.replace(/\{\{([^}]+)\}\}/g, (_, raw) => {
-    const value = evaluateExpression(raw.trim(), scope);
+    const value = evaluateOpen(raw.trim(), scope);
     if (value == null) return '';
     if (typeof value === 'object') return JSON.stringify(value);
     return String(value);
@@ -275,7 +287,7 @@ export function renderValue(value, scope = {}) {
   if (typeof value === 'string') {
     // A lone `{{ expr }}` returns the raw (possibly non-string) value.
     const whole = /^\{\{([^}]+)\}\}$/.exec(value.trim());
-    if (whole) return evaluateExpression(whole[1].trim(), scope);
+    if (whole) return evaluateOpen(whole[1].trim(), scope);
     return renderTemplate(value, scope);
   }
   if (Array.isArray(value)) return value.map((item) => renderValue(item, scope));
