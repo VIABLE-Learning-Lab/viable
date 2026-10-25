@@ -36,7 +36,17 @@ export const CITATIONS = {
   cohen1960: { text: 'Cohen, J. (1960). A coefficient of agreement for nominal scales. Educational and Psychological Measurement, 20(1), 37–46.', url: 'https://doi.org/10.1177/001316446002000104' },
   landis1977: { text: 'Landis, J. R., & Koch, G. G. (1977). The measurement of observer agreement for categorical data. Biometrics, 33(1), 159–174.', url: 'https://doi.org/10.2307/2529310' },
   mchugh2012: { text: 'McHugh, M. L. (2012). Interrater reliability: The kappa statistic. Biochemia Medica, 22(3), 276–282.', url: 'https://doi.org/10.11613/BM.2012.031' },
-  kestin2025: { text: 'Kestin, G., Miller, K., Klales, A., Milbourne, T., & Ponti, G. (2025). AI tutoring outperforms in-class active learning: an RCT introducing a novel research-based design in an authentic educational setting. Scientific Reports, 15.', url: 'https://doi.org/10.1038/s41598-025-97652-6' }
+  kestin2025: { text: 'Kestin, G., Miller, K., Klales, A., Milbourne, T., & Ponti, G. (2025). AI tutoring outperforms in-class active learning: an RCT introducing a novel research-based design in an authentic educational setting. Scientific Reports, 15.', url: 'https://doi.org/10.1038/s41598-025-97652-6' },
+  chenoweth2001: { text: 'Chenoweth, N. A., & Hayes, J. R. (2001). Fluency in writing: Generating text in L1 and L2. Written Communication, 18(1), 80–98.', url: 'https://doi.org/10.1177/0741088301018001004' },
+  kaufer1986: { text: 'Kaufer, D. S., Hayes, J. R., & Flower, L. (1986). Composing written sentences. Research in the Teaching of English, 20(2), 121–140.', url: 'https://doi.org/10.58680/rte198615612' },
+  baaijen2012: { text: 'Baaijen, V. M., Galbraith, D., & de Glopper, K. (2012). Keystroke analysis: Reflections on procedures and measures. Written Communication, 29(3), 246–277.', url: 'https://doi.org/10.1177/0741088312451108' },
+  leijten2013: { text: 'Leijten, M., & Van Waes, L. (2013). Keystroke logging in writing research: Using Inputlog to analyze and visualize writing processes. Written Communication, 30(3), 358–392.', url: 'https://doi.org/10.1177/0741088313491692' },
+  leijten2014: { text: 'Leijten, M., Van Waes, L., Schriver, K., & Hayes, J. R. (2014). Writing in the workplace: Constructing documents using multiple digital sources. Journal of Writing Research, 5(3), 285–337.', url: 'https://doi.org/10.17239/jowr-2014.05.03.3' },
+  medimorec2017: { text: 'Medimorec, S., & Risko, E. F. (2017). Pauses in written composition: On the importance of where writers pause. Reading and Writing, 30(6), 1267–1285.', url: 'https://doi.org/10.1007/s11145-017-9723-7' },
+  kellogg1987: { text: 'Kellogg, R. T. (1987). Effects of topic knowledge on the allocation of processing time and cognitive effort to writing processes. Memory & Cognition, 15(3), 256–266.', url: 'https://doi.org/10.3758/BF03197724' },
+  panadero2013: { text: 'Panadero, E., & Jonsson, A. (2013). The use of scoring rubrics for formative assessment purposes revisited: A review. Educational Research Review, 9, 129–144.', url: 'https://doi.org/10.1016/j.edurev.2013.01.002' },
+  jiang2024: { text: 'Jiang, Y., Zhang, M., Hao, J., Deane, P., & Li, C. (2024). Using keystroke behavior patterns to detect nonauthentic texts in writing assessments: Evaluating the fairness of predictive models. Journal of Educational Measurement, 61(4), 571–594.', url: 'https://doi.org/10.1111/jedm.12416' },
+  serranolaguna2017: { text: 'Serrano-Laguna, Á., Martínez-Ortiz, I., Haag, J., Regan, D., Johnson, A., & Fernández-Manjón, B. (2017). Applying standards to systematize learning analytics in serious games. Computer Standards & Interfaces, 50, 116–123.', url: 'https://doi.org/10.1016/j.csi.2016.09.014' },
 };
 
 const MAX_MS = 6 * 3600 * 1000;
@@ -232,6 +242,33 @@ function attemptMetrics(attempts) {
 }
 
 /** The definitions, for the dashboard and the export's data dictionary. */
+// How a learner wrote in a learning page's writing panel (workspace.js), one row per learner, panel and
+// field (the plan or the draft), summed from the page's progress events: counts and timings, never
+// the keystrokes themselves. Text typed with an input method (Chinese, Japanese, Korean) counts when
+// it is committed, so pauses and bursts there are between committed pieces, not keys.
+export const WRITING = [
+  { id: 'words', type: 'count', label: 'Words', definition: 'Words in the latest saved text.', computation: 'Word count of the saved plan or draft (runs of letters and digits, in any language).' },
+  { id: 'active_ms', type: 'ms', label: 'Active writing time', definition: 'Time spent changing the text.', computation: 'Sum of the gaps between changes to the text, each gap capped at 2 minutes.', caveat: 'Thinking before the first change, and reading the task or the chat, are not counted here; the panel’s view time is in workspace_events.csv.', cite: ['kovanovic2015', 'leijten2013'] },
+  { id: 'started_after_ms', type: 'ms', label: 'Time before writing', definition: 'Time from first opening the panel to the first change in this field, for the plan, time spent before planning; for the draft, before drafting.', computation: 'The first change’s time minus the panel’s first view, on the learner’s clock.', caveat: 'Writers also plan in the draft; a plan written after drafting began is not up-front planning.', cite: ['kellogg1987'] },
+  { id: 'keys', type: 'count', label: 'Characters typed', definition: 'Characters typed, not pasted (text from an input method counted when committed).', cite: ['leijten2013'] },
+  { id: 'deleted', type: 'count', label: 'Characters deleted', definition: 'Characters removed, by deleting or by typing over a selection.', cite: ['leijten2013'] },
+  { id: 'pasted', type: 'count', label: 'Characters pasted', definition: 'Characters inserted by pasting.', cite: ['leijten2014'] },
+  { id: 'pastes', type: 'count', label: 'Pastes', definition: 'How many times text was pasted.', cite: ['leijten2014'] },
+  { id: 'pasted_from_ai', type: 'count', label: 'Pasted from the AI', definition: 'Characters pasted that appear in one of the AI’s answers on the page (pastes of 20 characters or more).', caveat: 'Retyping an answer is not a paste, and pasting one’s own notes is not AI use. Use as a descriptive signal, never on its own as evidence of misconduct; keystroke-based detection has known fairness problems for some writers.', cite: ['jiang2024'] },
+  { id: 'pauses', type: 'count', label: 'Pauses', definition: 'Gaps of 2 seconds or more between changes to the text.', caveat: 'Any fixed threshold is a convention; 2 s is the classic one for pauses above transcription.', cite: ['chenoweth2001', 'medimorec2017'] },
+  { id: 'pause_ms', type: 'ms', label: 'Pause time', definition: 'Total time in those pauses.', cite: ['medimorec2017'] },
+  { id: 'longest_pause_ms', type: 'ms', label: 'Longest pause', definition: 'The longest of those pauses.' },
+  { id: 'p_bursts', type: 'count', label: 'Bursts', definition: 'Runs of typing between pauses of 2 seconds or more (P-bursts).', cite: ['kaufer1986', 'chenoweth2001'] },
+  { id: 'mean_burst_chars', type: 'number', label: 'Mean burst length', definition: 'Characters typed per burst.', computation: 'Characters typed in bursts ÷ bursts.', caveat: 'Depends on typing skill and the pause threshold.', cite: ['chenoweth2001', 'baaijen2012'] },
+  { id: 'r_bursts', type: 'count', label: 'Bursts with a revision', definition: 'Bursts in which the writer also deleted text (R-bursts).', caveat: 'An approximation: studies define R-bursts as ended by a revision; here a burst counts if it contains a deletion.', cite: ['chenoweth2001', 'baaijen2012'] },
+  { id: 'inside_edits', type: 'count', label: 'Edits inside the text', definition: 'Changes made away from the end of the text, revising what was already written.', caveat: 'Where a change is made says nothing about how big its meaning is.', cite: ['leijten2013'] },
+  { id: 'leading_edits', type: 'count', label: 'Edits at the end', definition: 'Changes made at the end of the text (its leading edge), as it is written.', cite: ['leijten2013'] },
+  { id: 'product_process', type: 'number', label: 'Product/process ratio', definition: 'How much of what was produced is in the final text: 1 means nothing was deleted.', computation: 'Characters in the latest text ÷ characters typed and pasted.', caveat: 'Pasting raises both; compare with pasted.', cite: ['leijten2013'] },
+  { id: 'rubric_views', type: 'count', label: 'Rubric views', definition: 'How often the learner opened the rubric (panel level, on each row of the panel).', cite: ['panadero2013'] },
+  { id: 'rubric_ms', type: 'ms', label: 'Rubric time', definition: 'How long the rubric stayed open.', cite: ['panadero2013'] },
+  { id: 'snapshots', type: 'count', label: 'Snapshots', definition: 'Versions of the text kept when the writer paused (at most one every 20 seconds), in workspace_events.csv, for revision analysis.' }
+];
+
 export function researchDefinitions() {
-  return { object: 'research.definitions', version: METRICS_VERSION, session_gap_minutes: SESSION_GAP_MINUTES, mastery_streak: MASTERY_STREAK, wheel_spin_attempts: WHEEL_SPIN_ATTEMPTS, signals: SIGNALS, after: AFTER, metrics: METRICS, citations: CITATIONS };
+  return { object: 'research.definitions', version: METRICS_VERSION, session_gap_minutes: SESSION_GAP_MINUTES, mastery_streak: MASTERY_STREAK, wheel_spin_attempts: WHEEL_SPIN_ATTEMPTS, signals: SIGNALS, after: AFTER, metrics: METRICS, writing: WRITING, citations: CITATIONS };
 }
