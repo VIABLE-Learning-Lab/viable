@@ -30,6 +30,12 @@ export const CITATIONS = {
   kelly2015: { text: 'Kelly, K., Wang, Y., Thompson, T., & Heffernan, N. (2015). Defining mastery: Knowledge tracing versus N-consecutive correct responses. Proceedings of the 8th International Conference on Educational Data Mining, 630–631.', url: 'https://www.educationaldatamining.org/EDM2015/proceedings/poster630-631.pdf' },
   beck2013: { text: 'Beck, J. E., & Gong, Y. (2013). Wheel-spinning: Students who fail to master a skill. In Artificial Intelligence in Education (AIED 2013), LNCS 7926, 431–440.', url: 'https://doi.org/10.1007/978-3-642-39112-5_44' },
   kai2018: { text: 'Kai, S., Almeda, M. V., Baker, R. S., Heffernan, C., & Heffernan, N. (2018). Decision tree modeling of wheel-spinning and productive persistence in Skill Builders. Journal of Educational Data Mining, 10(1), 36–71.', url: 'https://jedm.educationaldatamining.org/index.php/JEDM/article/view/210' },
+  nelsonlegall1981: { text: 'Nelson-Le Gall, S. (1981). Help-seeking: An understudied problem-solving skill in children. Developmental Review, 1(3), 224–246.', url: 'https://doi.org/10.1016/0273-2297(81)90019-8' },
+  chi2014: { text: 'Chi, M. T. H., & Wylie, R. (2014). The ICAP framework: Linking cognitive engagement to active learning outcomes. Educational Psychologist, 49(4), 219–243.', url: 'https://doi.org/10.1080/00461520.2014.965823' },
+  graesser1994: { text: 'Graesser, A. C., & Person, N. K. (1994). Question asking during tutoring. American Educational Research Journal, 31(1), 104–137.', url: 'https://doi.org/10.3102/00028312031001104' },
+  cohen1960: { text: 'Cohen, J. (1960). A coefficient of agreement for nominal scales. Educational and Psychological Measurement, 20(1), 37–46.', url: 'https://doi.org/10.1177/001316446002000104' },
+  landis1977: { text: 'Landis, J. R., & Koch, G. G. (1977). The measurement of observer agreement for categorical data. Biometrics, 33(1), 159–174.', url: 'https://doi.org/10.2307/2529310' },
+  mchugh2012: { text: 'McHugh, M. L. (2012). Interrater reliability: The kappa statistic. Biochemia Medica, 22(3), 276–282.', url: 'https://doi.org/10.11613/BM.2012.031' },
   kestin2025: { text: 'Kestin, G., Miller, K., Klales, A., Milbourne, T., & Ponti, G. (2025). AI tutoring outperforms in-class active learning: an RCT introducing a novel research-based design in an authentic educational setting. Scientific Reports, 15.', url: 'https://doi.org/10.1038/s41598-025-97652-6' }
 };
 
