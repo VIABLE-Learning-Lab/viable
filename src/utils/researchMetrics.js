@@ -53,6 +53,7 @@ export const CITATIONS = {
   aleven2003: { text: 'Aleven, V., Stahl, E., Schworm, S., Fischer, F., & Wallace, R. (2003). Help seeking and help design in interactive learning environments. Review of Educational Research, 73(3), 277–320.', url: 'https://doi.org/10.3102/00346543073003277' },
   kelley1939: { text: 'Kelley, T. L. (1939). The selection of upper and lower groups for the validation of test items. Journal of Educational Psychology, 30(1), 17–24.', url: 'https://doi.org/10.1037/h0057123' },
   lahner2018: { text: 'Lahner, F.-M., Lörwald, A. C., Bauer, D., Nouns, Z. M., Krebs, R., Guttormsen, S., Fischer, M. R., & Huwendiek, S. (2018). Multiple true–false items: A comparison of scoring algorithms. Advances in Health Sciences Education, 23(3), 455–463.', url: 'https://doi.org/10.1007/s10459-017-9805-y' },
+  wilson1927: { text: 'Wilson, E. B. (1927). Probable inference, the law of succession, and statistical inference. Journal of the American Statistical Association, 22(158), 209–212.', url: 'https://doi.org/10.1080/01621459.1927.10502953' },
   serranolaguna2017: { text: 'Serrano-Laguna, Á., Martínez-Ortiz, I., Haag, J., Regan, D., Johnson, A., & Fernández-Manjón, B. (2017). Applying standards to systematize learning analytics in serious games. Computer Standards & Interfaces, 50, 116–123.', url: 'https://doi.org/10.1016/j.csi.2016.09.014' },
 };
 
