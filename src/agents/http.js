@@ -10,7 +10,7 @@ function failure(message, code) {
   return Object.assign(new Error(message), { status: 400, code });
 }
 
-function publicUrl(value, allowlist) {
+export function publicUrl(value, allowlist) {
   let url;
   try { url = new URL(value); } catch {
     throw failure('Fetch URL needs a complete HTTPS address.', 'invalid_http_url');

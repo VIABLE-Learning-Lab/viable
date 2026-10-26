@@ -529,16 +529,25 @@ const HANDLERS = {
     const traceScope = ctx.traceScope();
     const prompt = renderTemplate(cfg.prompt ?? '{{input}}', scope);
     const tracePrompt = renderTemplate(cfg.prompt ?? '{{input}}', traceScope);
+    const operation = renderTemplate(cfg.operation || 'generate', scope);
+    const imageInputs = (values) => cfg.images != null ? renderValue(cfg.images, values) : [{ image_url: renderTemplate(cfg.image || '', values) }];
 
     const requestBody = {
       model: cfg.model,
       prompt,
+      operation,
+      ...(operation === 'edit' ? { images: imageInputs(scope) } : {}),
+      ...(operation === 'edit' && cfg.mask ? { mask: { image_url: renderTemplate(cfg.mask, scope) } } : {}),
       ...(cfg.n != null ? { n: cfg.n } : {}),
       ...(cfg.size ? { size: cfg.size } : {}),
       ...(cfg.quality ? { quality: cfg.quality } : {}),
+      ...(cfg.aspect_ratio ? { aspect_ratio: cfg.aspect_ratio } : {}),
       response_format: cfg.response_format || 'url'
     };
-    const traceRequestBody = sanitizeBinaryValues({ ...requestBody, prompt: tracePrompt });
+    const traceRequestBody = sanitizeBinaryValues({ ...requestBody, prompt: tracePrompt,
+      ...(operation === 'edit' ? { images: imageInputs(traceScope) } : {}),
+      ...(operation === 'edit' && cfg.mask ? { mask: { image_url: renderTemplate(cfg.mask, traceScope) } } : {})
+    });
 
     ctx.consumeModelCall();
     const providerStartedAt = Date.now();
@@ -562,6 +571,7 @@ const HANDLERS = {
     const output = {
       url: urls[0] || null,
       urls,
+      operation,
       prompt,
       model: result.resolution?.resolvedModel || cfg.model,
       cost: result.cost
@@ -581,6 +591,9 @@ const HANDLERS = {
       responseBody: result.responseData,
       operationMetadata: {
         assetUrls: urls,
+        imageOperation: operation,
+        sourceImageCount: requestBody.images?.length || 0,
+        imageInput: result.resolution?.imageInput || null,
         assetDelivery: result.responseData?._viablelab?.asset_delivery || null
       }
     });
@@ -1724,13 +1737,17 @@ async function runSubAgent(env, ctx, services, hooks, budgets, node, slug, input
 }
 
 function resolveLlmUserContent(cfg, scope, inputContent) {
-  if (cfg.user == null) return inputContent;
-  const rendered = renderValue(cfg.user, scope);
-  const normalized = normalizeLlmUserContent(rendered);
-  if (cfg.includeInputMedia === false) return normalized;
-  const media = Array.isArray(inputContent)
+  const normalized = cfg.user == null ? inputContent : normalizeLlmUserContent(renderValue(cfg.user, scope));
+  const media = cfg.user != null && cfg.includeInputMedia !== false && Array.isArray(inputContent)
     ? inputContent.filter((part) => part && typeof part === 'object' && !['text', 'input_text'].includes(part.type))
     : [];
+  if (cfg.images != null) {
+    const images = renderValue(cfg.images, scope);
+    if (!Array.isArray(images) || images.some(image => typeof image?.image_url !== 'string' || !image.image_url)) {
+      throw new AgentRunError('LLM images must be an array of {image_url} references.', { code: 'invalid_image_source' });
+    }
+    media.push(...images.map(image => ({ type: 'image_url', image_url: { url: image.image_url } })));
+  }
   if (media.length === 0) return normalized;
   const content = Array.isArray(normalized)
     ? [...normalized]
@@ -1739,6 +1756,7 @@ function resolveLlmUserContent(cfg, scope, inputContent) {
   for (const part of media) {
     const key = mediaSourceKey(part);
     if (!key || !existingMedia.has(key)) content.push(part);
+    if (key) existingMedia.add(key);
   }
   return content;
 }
@@ -1972,6 +1990,7 @@ function failedProviderCall({ operation, node, cfg, requestBody, error, retry = 
     responseStatus: Number.isFinite(status) ? status : 500,
     errorMessage: String(error?.message || error || 'Provider call failed.'),
     errorCode: error?.code || null,
+    operationMetadata: { imageInput: error?.resolution?.imageInput || null },
     ...billingFields(error?.resolution),
     retry
   };
@@ -1993,7 +2012,7 @@ function logLlmProviderCall(hooks, node, cfg, result, requestBody, retry, durati
     ...billingFields(result.resolution, result.costSource),
     durationMs,
     requestBody: effectiveRequest,
-    operationMetadata: { attempts: result.attempt || 1, truncatedContext: result.truncatedContext === true },
+    operationMetadata: { attempts: result.attempt || 1, truncatedContext: result.truncatedContext === true, imageInput: result.resolution?.imageInput || null },
     responseBody: result.response,
     retry
   });

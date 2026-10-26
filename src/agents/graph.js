@@ -127,6 +127,8 @@ export function describeGraphSchema(limits = DEFAULT_GRAPH_LIMITS) {
       'Every next, branches, and condition case target must name an existing node.',
       'At least one output node must be reachable from entry.',
       'A step\'s config.model must be a model whose mode in /v1/models is the step\'s model_mode: chat models answer, image steps take image_generation, speech steps audio_speech and transcribe steps audio_transcription.',
+      'Image steps default to operation=generate. operation=edit requires image (one URL) or images ([{image_url}]), and a model connection with image_editing=true. Operation and source values may be templates. Keep the last image URL with a conversation State step for later edits; missing sources never fall back to generation.',
+      'An llm step can attach images from earlier steps with config.images=[{image_url:"{{step.url}}"}]. A URL in prompt text is only text. Typed image inputs are downloaded safely and converted to provider-native image data; the selected chat model must support image input.',
       `An llm node may declare at most ${limits.maxStructuredOutputs} structured outputs.`,
       `run_limits may set max_model_calls (${RUN_LIMITS.max_model_calls.join('–')}) and timeout_seconds (${RUN_LIMITS.timeout_seconds.join('–')}).`
     ],
@@ -378,6 +380,9 @@ export function validateGraphModels(graph, { allowedModels = null, allowUnlisted
     const wanted = STEP_MODEL_MODES[node.type] || MODEL_MODES.CHAT;
     const actual = listed?.mode || MODEL_MODES.CHAT;
     if (listed && actual !== wanted) errors.push(`Step "${node.id}" needs ${MODE_NAMES[wanted]}; "${model}" is ${MODE_NAMES[actual] || actual}.`);
+    if (listed && node.type === 'image' && node.config?.operation === 'edit' && !listed.capabilities?.imageEditing) {
+      errors.push(`Image step "${node.id}" needs a model connection that supports image editing; "${model}" does not.`);
+    }
   }
 
   for (const model of collectGraphModels(graph)) {
