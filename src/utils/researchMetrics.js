@@ -53,6 +53,8 @@ export const CITATIONS = {
   aleven2003: { text: 'Aleven, V., Stahl, E., Schworm, S., Fischer, F., & Wallace, R. (2003). Help seeking and help design in interactive learning environments. Review of Educational Research, 73(3), 277–320.', url: 'https://doi.org/10.3102/00346543073003277' },
   kelley1939: { text: 'Kelley, T. L. (1939). The selection of upper and lower groups for the validation of test items. Journal of Educational Psychology, 30(1), 17–24.', url: 'https://doi.org/10.1037/h0057123' },
   lahner2018: { text: 'Lahner, F.-M., Lörwald, A. C., Bauer, D., Nouns, Z. M., Krebs, R., Guttormsen, S., Fischer, M. R., & Huwendiek, S. (2018). Multiple true–false items: A comparison of scoring algorithms. Advances in Health Sciences Education, 23(3), 455–463.', url: 'https://doi.org/10.1007/s10459-017-9805-y' },
+  wwc2022: { text: 'What Works Clearinghouse. (2022). What Works Clearinghouse procedures and standards handbook, version 5.0. U.S. Department of Education, Institute of Education Sciences.', url: 'https://ies.ed.gov/ncee/wwc/Handbooks' },
+  hedges1981: { text: 'Hedges, L. V. (1981). Distribution theory for Glass’s estimator of effect size and related estimators. Journal of Educational Statistics, 6(2), 107–128.', url: 'https://doi.org/10.3102/10769986006002107' },
   wilson1927: { text: 'Wilson, E. B. (1927). Probable inference, the law of succession, and statistical inference. Journal of the American Statistical Association, 22(158), 209–212.', url: 'https://doi.org/10.1080/01621459.1927.10502953' },
   serranolaguna2017: { text: 'Serrano-Laguna, Á., Martínez-Ortiz, I., Haag, J., Regan, D., Johnson, A., & Fernández-Manjón, B. (2017). Applying standards to systematize learning analytics in serious games. Computer Standards & Interfaces, 50, 116–123.', url: 'https://doi.org/10.1016/j.csi.2016.09.014' },
 };
@@ -277,6 +279,34 @@ export const WRITING = [
   { id: 'snapshots', type: 'count', label: 'Snapshots', definition: 'Versions of the text kept when the writer paused (at most one every 20 seconds), in workspace_events.csv, for revision analysis.' }
 ];
 
+// The other panels' measures, as their events and answers record them (column: where each is in the
+// export). Times are on the learner's clock; active time counts the gaps between activity in the
+// panel (taps, keys, scrolling), each capped at 2 minutes, as everywhere else.
+export const PANELS = {
+  reading: [
+    { id: 'reading_page_ms', type: 'ms', label: 'Time on a page', column: 'workspace_events.csv → reading.page visible_ms', definition: 'Time a page of the reading was at least half in view, with the tab visible, per stay on it.', computation: 'From the page coming at least half into view to its leaving view, the tab hiding or the panel closing; stays under 1.5 seconds (scrolling past) are not recorded.', caveat: 'A page in view is not a page read; read with active time and with what the learner did next.' },
+    { id: 'reading_page_active_ms', type: 'ms', label: 'Active time on a page', column: 'workspace_events.csv → reading.page active_ms', definition: 'The same stay, counting only the gaps between activity on the reading (taps, keys, scrolling), each gap capped at 2 minutes.', caveat: 'Reading without touching anything counts as inactive after 2 minutes; compare with time on the page.', cite: ['kovanovic2015'] },
+    { id: 'reading_highlights', type: 'count', label: 'Highlights', column: 'workspace_events.csv → reading.highlight', definition: 'Passages highlighted, with their page, color and length in characters; removed: true when one is taken away.', computation: 'One event per highlight made or removed; the passages themselves, with where they are, are in annotations.csv.' },
+    { id: 'reading_notes', type: 'count', label: 'Notes', column: 'workspace_events.csv → reading.note', definition: 'Notes written on a highlight, with their page and length.', computation: 'One event per note saved; the text is in annotations.csv.' },
+    { id: 'reading_searches', type: 'count', label: 'Searches', column: 'workspace_events.csv → reading.search', definition: 'Searches in the document, with the length of what was searched for and how many places it found.', caveat: 'Recorded from the process data level up.' }
+  ],
+  questions: [
+    { id: 'question_view_ms', type: 'ms', label: 'Time on a question', column: 'workspace_events.csv → questions.view visible_ms', definition: 'Time a question was on screen, per visit to it, with its active time and how often the answer changed.', computation: 'From showing the question to moving to another, closing the panel or the tab hiding; active_ms counts the gaps between changes to the answer, each capped at 2 minutes.', cite: ['kovanovic2015'] },
+    { id: 'question_hints', type: 'count', label: 'Hints opened', column: 'workspace_events.csv → questions.hint', definition: 'Each hint shown, recorded by the server as it gives it: which one (index), of how many, the set and skill.', cite: ['aleven2003'] },
+    { id: 'rt_ms', type: 'ms', label: 'Response time', column: 'responses.csv → rt_ms', definition: 'Milliseconds from first seeing the question to this answer, on the learner’s clock.', cite: ['vanderlinden2007'] },
+    { id: 'rapid_3s', type: 'bool', label: 'Rapid guess (3 s)', column: 'responses.csv → rapid_3s', definition: '1 when the answer came within 3 seconds of seeing the question: a common fixed threshold for a rapid guess.', cite: ['wise2005'] },
+    { id: 'rapid_nt10', type: 'bool', label: 'Rapid guess (NT10)', column: 'responses.csv → rapid_nt10', definition: '1 when it came within 10% of the question’s mean first-answer time in this export, at most 10 seconds (the normative threshold NT10).', caveat: 'Computed over the learners in the export, so it changes with who is in it.', cite: ['wise2005', 'wise2017'] },
+    { id: 'changes', type: 'count', label: 'Answer changes', column: 'responses.csv → changes', definition: 'How often the answer changed before it was sent (each selection, keystroke burst or move).', cite: ['bridgeman2012'] },
+    { id: 'hints_before', type: 'count', label: 'Hints before answering', column: 'responses.csv → hints_before', definition: 'Hints the learner had opened on this question before this answer.', cite: ['aleven2003'] },
+    { id: 'ai_before', type: 'bool', label: 'Asked the AI first', column: 'responses.csv → ai_before', definition: '1 when the learner asked the AI while on this question before this answer.', cite: ['aleven2003'] }
+  ],
+  embed: [
+    { id: 'embed_reported', type: 'count', label: 'What an embedded page reports', column: 'workspace_events.csv → embed.event', definition: 'What the embedded activity said happened, in its own terms: verb (attempted, answered, completed, passed, failed, progressed, interacted), object, score and max_score, success, completion, response, duration_ms and its own data.', computation: 'Taken as the page sent it through the bridge and kept within each field’s bounds; VIABLE measures none of it.', caveat: 'Only as good as the embedded page: check what it sends, and when, before relying on it.', cite: ['serranolaguna2017'] },
+    { id: 'embed_state', type: 'count', label: 'What an embedded page shows', column: 'workspace_events.csv → embed.state', definition: 'What the embedded activity said it shows now, as its own data, kept at most every 5 seconds.' },
+    { id: 'panel_view_ms', type: 'ms', label: 'Time with a panel open', column: 'workspace_events.csv → panel.view', definition: 'For any panel (an embedded page among them): time it was open with the tab visible, per visit, and active time, each gap capped at 2 minutes.', caveat: 'Activity inside an embedded page’s frame is not seen by the learning page; its active time counts only what happens around it.', cite: ['kovanovic2015'] }
+  ]
+};
+
 export function researchDefinitions() {
-  return { object: 'research.definitions', version: METRICS_VERSION, session_gap_minutes: SESSION_GAP_MINUTES, mastery_streak: MASTERY_STREAK, wheel_spin_attempts: WHEEL_SPIN_ATTEMPTS, signals: SIGNALS, after: AFTER, metrics: METRICS, writing: WRITING, citations: CITATIONS };
+  return { object: 'research.definitions', version: METRICS_VERSION, session_gap_minutes: SESSION_GAP_MINUTES, mastery_streak: MASTERY_STREAK, wheel_spin_attempts: WHEEL_SPIN_ATTEMPTS, signals: SIGNALS, after: AFTER, metrics: METRICS, writing: WRITING, panels: PANELS, citations: CITATIONS };
 }
