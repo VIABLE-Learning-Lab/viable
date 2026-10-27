@@ -11,6 +11,7 @@
 import { MODEL_MODES, MODEL_REGISTRY, assertModelNotRetired, normalizeModelId, resolveAlias } from '../config/models.js';
 import { isProviderKeyModel, modelAllowedBy } from '../utils/providerKeys.js';
 import { validSketch } from '../utils/agentCollaboration.js';
+import { agentVettingControls, vettingControlErrors } from '../utils/vettingControls.js';
 
 export const NODE_TYPES = Object.freeze([
   'input',
@@ -261,6 +262,7 @@ function validateOrchestrationNode(node) {
     if (cfg.mode != null && !['simple', 'full'].includes(cfg.mode)) errors.push(`${label} mode must be simple or full.`);
     if (cfg.mode === 'full' && cfg.items == null && (!cfg.question || !cfg.answer_key)) errors.push(`${label} needs config.question and config.answer_key (or config.items) in full mode.`);
     if (cfg.max_attempts != null && (!Number.isInteger(Number(cfg.max_attempts)) || Number(cfg.max_attempts) < 1 || Number(cfg.max_attempts) > 10)) errors.push(`${label} max_attempts must be between 1 and 10.`);
+    errors.push(...vettingControlErrors(agentVettingControls(cfg), label));
     if (cfg.draft != null && typeof cfg.draft !== 'string') errors.push(`${label} draft must be text, such as {{answer.content}}.`);
   }
   if (node.type === 'subagent' && !cfg.slug) errors.push(`${label} requires config.slug, the published agent to call.`);
