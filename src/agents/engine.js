@@ -44,6 +44,9 @@ export class AgentRunError extends Error {
   }
 }
 
+// These steps can finish a safe reply without starting more model or network work.
+const DEADLINE_FINALIZERS = new Set(['condition', 'transform', 'state', 'vetting', 'output']);
+
 const BUDGET_HINTS = {
   'model call': (budgets) => `Agent run used all ${budgets.maxModelCalls} of its model calls. Raise the agent's model call limit (run_limits.max_model_calls, up to 60) or allow fewer tool calls per step.`,
   time: (budgets) => `Agent run passed its ${Math.round(budgets.timeoutMs / 1000)}-second limit. Raise the agent's time limit (run_limits.timeout_seconds, up to 120), or run it as a background job, which gets 5 minutes.`,
@@ -156,6 +159,7 @@ export async function runAgentGraph(env, graph, options = {}) {
     modelCalls: 0,
     stepCount: 0,
     runStartedAt,
+    deadline,
     result: null,
     archivedResult: null,
     scope() {
@@ -208,9 +212,8 @@ export async function runAgentGraph(env, graph, options = {}) {
     while (currentId != null) {
       if (stopId != null && currentId === stopId) return;
       if (ctx.stepCount >= budgets.maxSteps) throw budgetError('step');
-      if (Date.now() > deadline) throw budgetError('time', budgets);
-
       const node = nodeMap.get(currentId);
+      if (Date.now() >= deadline && !DEADLINE_FINALIZERS.has(node?.type)) throw budgetError('time', budgets);
       if (!node) throw new AgentRunError(`Graph references missing node "${currentId}".`, { status: 422, code: 'invalid_graph' });
 
       const handler = HANDLERS[node.type];
@@ -254,7 +257,13 @@ export async function runAgentGraph(env, graph, options = {}) {
   }
   ctx.walk = walk;
 
-  await walk(resumeNode || graph.entry);
+  try {
+    await walk(resumeNode || graph.entry);
+  } catch (error) {
+    // Budget checks between steps must retain the work and assets already completed.
+    if (error && typeof error === 'object') error.agentSteps = ctx.steps;
+    throw error;
+  }
 
   return {
     output: ctx.result || { text: '', attachments: [] },
@@ -993,6 +1002,7 @@ const HANDLERS = {
     let usage = { prompt: 0, completion: 0, total: 0 };
     let cost = 0;
     const call = async (model, body, traceBody, retry) => {
+      if (Date.now() >= ctx.deadline) throw Object.assign(new Error('Model request exceeded the execution deadline.'), { status: 504, code: 'provider_timeout' });
       ctx.consumeModelCall();
       const result = await callLlmWithTrace(env, services, hooks, node, { ...cfg, model, ...(note ? { workspace_note: true } : {}) }, { model, ...body }, { model, ...traceBody }, retry);
       ctx.addUsage(result.usage, result.cost);
