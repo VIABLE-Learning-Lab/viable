@@ -45,16 +45,20 @@ export function applyDraftChanges(document, changes) {
     if (after === undefined) delete target[path.at(-1)];
     else target[path.at(-1)] = structuredClone(after);
   }
-  const graph = draftGraph(result);
+  validateDraftDocument(result);
+  return result;
+}
+
+export function validateDraftDocument(document) {
+  const graph = draftGraph(document);
   if ((graph.entry !== undefined && typeof graph.entry !== 'string') || (graph.name !== undefined && typeof graph.name !== 'string')
     || (graph.variables !== undefined && !object(graph.variables)) || (graph.edges !== undefined && !Array.isArray(graph.edges)) || (graph.run_limits !== undefined && !object(graph.run_limits))
     || graph.nodes.length > 1000 || graph.nodes.some(node => !node || typeof node.id !== 'string' || !node.id || typeof node.type !== 'string' || !node.type || forbidden.has(node.id)
       || (node.config !== undefined && !object(node.config)) || (node.next != null && typeof node.next !== 'string')
       || (node.branches !== undefined && (!object(node.branches) || Object.values(node.branches).some(value => typeof value !== 'string')))
       || ['x', 'y'].some(key => node[key] !== undefined && !Number.isFinite(node[key])))
-    || Object.entries(result.nodes).some(([id, node]) => id !== node.id) || !validSketch(result.sketch)
-    || new TextEncoder().encode(JSON.stringify(result)).length > 1024 * 1024) throw new Error('Invalid or oversized draft.');
-  return result;
+    || Object.entries(document.nodes).some(([id, node]) => id !== node.id) || !validSketch(document.sketch)
+    || new TextEncoder().encode(JSON.stringify(document)).length > 1024 * 1024) throw new Error('Invalid or oversized draft.');
 }
 
 // Canvas drawings: { strokeId: { tool, color, width, points: [x0, y0, x1, y1, ...] } }, keyed so
