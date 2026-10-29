@@ -17,7 +17,7 @@ import { callChatModel, withPoolWaits } from '../utils/chatModelClient.js';
 import { generateImageAsset } from '../services/imageGeneration.js';
 import { generateSpeechAsset, MAX_SPEECH_CHARACTERS, speechRuns, storeGeneratedAudioAsset, transcribeAudio } from '../services/audio.js';
 import { parseBase64Asset } from '../utils/assets.js';
-import { DEFAULT_MODELS_BY_MODE, MODEL_MODES, MODEL_REGISTRY, resolveModelForMode } from '../config/models.js';
+import { DEFAULT_MODELS_BY_MODE, MODEL_MODES, MODEL_REGISTRY, parameterSupportForModel, resolveModelForMode } from '../config/models.js';
 import { billingFields, billsUsedUpCredits } from '../utils/providerKeys.js';
 import { ExpressionError, evaluateCondition, evaluateExpression, openContext, renderTemplate, renderValue } from './expression.js';
 import { DEFAULT_VETTING_REVIEWER, GUARDRAIL_MODEL_CHECKS, parallelPaths, routerRoutes, validateGraphModels } from './graph.js';
@@ -1855,12 +1855,27 @@ function reasoningBudget(model, maxTokens) {
   return /^gpt-[56]/.test(id) ? { maxTokens: Math.max(maxTokens * 4, 2048), reasoningEffort: 'low' } : { maxTokens };
 }
 
+// Whether the step's model takes max_completion_tokens by that name (its catalog parameter_support).
+function takesCompletionTokens(cfg) {
+  try {
+    const resolved = resolveModel(cfg.model, cfg.provider);
+    return parameterSupportForModel(resolved.resolvedModel, resolved.metadata).max_completion_tokens === true;
+  } catch { return false; }
+}
+
 function mapModelParams(cfg) {
   const params = cfg.params || cfg;
   const out = {};
   if (params.temperature != null) out.temperature = params.temperature;
   if (params.top_p != null || params.topP != null) out.top_p = params.top_p ?? params.topP;
   if (params.max_tokens != null || params.maxTokens != null) out.max_tokens = params.max_tokens ?? params.maxTokens;
+  // As in VETTING, max_completion_tokens takes precedence over max_tokens. Models without it in their
+  // catalog read only max_tokens (gpt-oss, Claude), so they get the same output budget under that name.
+  const completion = params.max_completion_tokens ?? params.maxCompletionTokens;
+  if (completion != null) {
+    delete out.max_tokens;
+    out[takesCompletionTokens(cfg) ? 'max_completion_tokens' : 'max_tokens'] = completion;
+  }
   if (params.reasoning_effort != null || params.reasoningEffort != null) {
     out.reasoning_effort = params.reasoning_effort ?? params.reasoningEffort;
   }
