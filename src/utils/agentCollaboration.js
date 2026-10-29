@@ -80,8 +80,15 @@ export function publicPresence(session) {
 
 export function cleanPresence(value = {}) {
   const text = key => typeof value[key] === 'string' ? value[key].slice(0, 160) : null;
-  return { nodeId: text('nodeId'), field: text('field'), panel: text('panel'),
-    cursor: value.cursor && Number.isFinite(value.cursor.x) && Number.isFinite(value.cursor.y)
-      ? { x: Math.max(-100000, Math.min(100000, value.cursor.x)), y: Math.max(-100000, Math.min(100000, value.cursor.y)), surface: ['panel', 'header'].includes(value.cursor.surface) ? value.cursor.surface : 'canvas' } : null,
+  return { nodeId: text('nodeId'), field: text('field'), panel: text('panel'), cursor: cleanCursor(value.cursor),
     away: value.away === true, seenAt: Date.now() };
+}
+
+// A panel cursor names the place it is in (anchor, label) and sits at fractions of that place's box.
+function cleanCursor(cursor) {
+  if (!cursor || !Number.isFinite(cursor.x) || !Number.isFinite(cursor.y)) return null;
+  const surface = ['panel', 'header'].includes(cursor.surface) ? cursor.surface : 'canvas';
+  const place = surface === 'panel' && typeof cursor.anchor === 'string'
+    ? { anchor: cursor.anchor.slice(0, 160), label: typeof cursor.label === 'string' ? cursor.label.slice(0, 80) : '' } : {};
+  return { x: Math.max(-100000, Math.min(100000, cursor.x)), y: Math.max(-100000, Math.min(100000, cursor.y)), surface, ...place };
 }

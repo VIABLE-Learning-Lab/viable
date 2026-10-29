@@ -19,7 +19,8 @@ import { generateSpeechAsset, MAX_SPEECH_CHARACTERS, speechRuns, storeGeneratedA
 import { parseBase64Asset } from '../utils/assets.js';
 import { DEFAULT_MODELS_BY_MODE, MODEL_MODES, MODEL_REGISTRY, parameterSupportForModel, resolveModelForMode } from '../config/models.js';
 import { billingFields, billsUsedUpCredits } from '../utils/providerKeys.js';
-import { ExpressionError, evaluateCondition, evaluateExpression, openContext, renderTemplate, renderValue } from './expression.js';
+import { ExpressionError, evaluateCondition, evaluateExpression, expressionPaths, openContext, renderTemplate, renderValue, resolvePath } from './expression.js';
+import { sanitizeRequestPayloadForLogging } from '../utils/logging.js';
 import { DEFAULT_VETTING_REVIEWER, GUARDRAIL_MODEL_CHECKS, parallelPaths, routerRoutes, validateGraphModels } from './graph.js';
 import { buildChatVettingSystemPrompt, DEFAULT_VETTING_PROMPT, parseSimpleVerificationResult, prepareChatVettingVerificationPrompt } from '../routes/chatVetting.js';
 import { agentVettingControls, vettingModelOptions } from '../utils/vettingControls.js';
@@ -220,19 +221,21 @@ export async function runAgentGraph(env, graph, options = {}) {
       if (!handler) throw new AgentRunError(`No handler for node type "${node.type}".`, { status: 422, code: 'invalid_graph' });
 
       const startedAt = Date.now();
+      // What the step acted on, set by its handler once resolved (kept when the step then fails).
+      const step = { input: null };
       let result;
       try {
         if (path && (node.type === 'output' || node.type === 'ask')) {
           throw new AgentRunError(`Parallel path "${path}" must reach its join step before replying.`, { status: 422, code: 'invalid_graph' });
         }
         hooks.onStepStart?.(node);
-        result = await handler(node, ctx, env, services, hooks, budgets);
+        result = await handler(node, ctx, env, services, hooks, budgets, step);
       } catch (caught) {
         // A template typo is the author's to fix, not a server failure.
         const error = caught instanceof ExpressionError
           ? new AgentRunError(`Step "${node.id}" has an invalid template or expression: ${caught.message}.`, { status: 422, code: 'agent_expression_error' })
           : caught;
-        recordStep(ctx, node, { error, startedAt, path });
+        recordStep(ctx, node, { error, startedAt, path, input: step.input });
         hooks.onStep?.(ctx.steps[ctx.steps.length - 1]);
         if (error && typeof error === 'object') error.agentSteps = ctx.steps;
         throw error;
@@ -242,7 +245,7 @@ export async function runAgentGraph(env, graph, options = {}) {
 
       ctx.outputs[node.id] = output;
       ctx.traceOutputs[node.id] = traceOutput;
-      recordStep(ctx, node, { output: traceOutput, startedAt, path });
+      recordStep(ctx, node, { output: traceOutput, startedAt, path, input: step.input });
       ctx.stepCount += 1;
       hooks.onStep?.(ctx.steps[ctx.steps.length - 1]);
 
@@ -287,13 +290,15 @@ export async function runAgentGraph(env, graph, options = {}) {
   };
 }
 
-function recordStep(ctx, node, { output = null, error = null, startedAt, path = null }) {
+function recordStep(ctx, node, { output = null, error = null, startedAt, path = null, input = null }) {
   ctx.steps.push({
     stepNumber: ctx.steps.length + 1,
     nodeId: node.id,
     nodeType: node.type,
     ...(path ? { path } : {}),
     status: error ? 'failed' : 'completed',
+    // Its parts are made binary- and credential-free where they are read (stepValue); here it is bounded like a stored output.
+    input: input == null ? null : boundedTraceValue(input, 16000),
     output: error ? null : summarizeOutput(node, output, ctx),
     model: output?.model || null,
     tokens: output?.usage?.total ?? null,
@@ -316,13 +321,14 @@ function summarizeOutput(node, output, ctx) {
     if (node.type === 'http') return safeOutput;
     const json = JSON.stringify(safeOutput);
     return json.length > 8000 ? {
-      truncated: true, preview: json.slice(0, 8000),
+      // A review's rounds take the room its preview gives up.
+      truncated: true, preview: json.slice(0, node.type === 'vetting' ? 2000 : 8000),
       ...(node.type === 'http' ? { url: safeOutput.url, status: safeOutput.status, ok: safeOutput.ok } : {}),
       // A long reply is cut (its text to 4,000 characters), but what an app acts on (citations, result data) stays whole.
       // An agent step keeps what it looked up, so a run can be diagnosed.
       ...(node.type === 'agent' && Array.isArray(safeOutput.tool_calls) ? { tool_calls: safeOutput.tool_calls, turns: safeOutput.turns, model: safeOutput.model } : {}),
-      // A review keeps its verdict (the turn records it: learning_turns.vetting_json).
-      ...(node.type === 'vetting' ? { outcome: safeOutput.outcome, passed: safeOutput.passed, attempts: safeOutput.attempts, stop_reason: safeOutput.stop_reason } : {}),
+      // A review keeps its verdict (the turn records it: learning_turns.vetting_json) and its rounds, replies cut.
+      ...(node.type === 'vetting' ? { outcome: safeOutput.outcome, passed: safeOutput.passed, attempts: safeOutput.attempts, stop_reason: safeOutput.stop_reason, ...(Array.isArray(safeOutput.attempt_details) ? { attempt_details: shortRounds(safeOutput.attempt_details) } : {}) } : {}),
       // A long conversation's Input step keeps its summary report.
       ...(node.type === 'input' && safeOutput.history_summary ? { history_summary: safeOutput.history_summary } : {}),
       ...(node.type === 'output' ? { text: String(safeOutput.text ?? '').slice(0, 4000), attachments: safeOutput.attachments, ...(safeOutput.citations ? { citations: safeOutput.citations } : {}), ...(safeOutput.data !== undefined ? { data: safeOutput.data } : {}) } : {})
@@ -330,6 +336,14 @@ function summarizeOutput(node, output, ctx) {
   } catch (_) {
     return { unserializable: true };
   }
+}
+
+// A review's rounds within about 10,000 characters, so a stored step (16,000) keeps every one: each
+// reply at most 1,500 characters, feedback 1,000 and verification 500, less when there are many rounds.
+function shortRounds(rounds) {
+  const share = Math.floor(10000 / Math.max(1, rounds.length));
+  const cut = (value, limit) => (typeof value === 'string' ? value.slice(0, Math.min(limit, share)) : value);
+  return rounds.map((round) => ({ ...round, verification: cut(round.verification, Math.floor(share * 0.2)), reply: cut(round.reply, Math.min(1500, Math.floor(share * 0.5))), feedback: cut(round.feedback, Math.min(1000, Math.floor(share * 0.3))) }));
 }
 
 function summarizeInputStepOutput(output, traceInputContent) {
@@ -376,6 +390,51 @@ function summarizeInputContentPart(part) {
     };
   }
   return sanitizeBinaryValues(part);
+}
+
+// A value read or set under a credential-like name (api_key, OPENAI_API_KEY, password) stays out of step inputs.
+const CREDENTIAL_NAME = /api.?key|token|secret|password|credential|authorization|private.?key/i;
+const clip = (value, limit) => (typeof value === 'string' ? value.slice(0, limit) : value);
+
+// A value for a step's input as request logs keep it (media as references, credential-named keys
+// redacted), at most `limit` characters.
+function stepValue(value, limit) {
+  const safe = sanitizeRequestPayloadForLogging(value ?? null);
+  return typeof safe === 'string' ? clip(safe, limit) : boundedTraceValue(safe, limit);
+}
+
+// The turn a step sent: its text (at most 8,000 characters) and its media as references, never bytes.
+const turnContent = (content) => stepValue(content, 8000);
+
+// A model step's input: its rendered instructions, the turn it sent, how many earlier messages and
+// whether the request context went with it, and its model parameters.
+function modelInput(messages, cfg, { history = 0, context = false } = {}) {
+  return {
+    system: messages[0]?.role === 'system' ? clip(messageText(messages[0].content), 6000) : null,
+    message: turnContent(messages.findLast((message) => message.role === 'user')?.content),
+    history_messages: history,
+    context_included: context,
+    params: mapModelParams(cfg)
+  };
+}
+
+// The values a condition's expressions read, by path, each at most 500 characters.
+function conditionValues(expressions, scope) {
+  const paths = [...new Set(expressions.flatMap(expressionPaths))].slice(0, 20);
+  return Object.fromEntries(paths.map((path) => [path, CREDENTIAL_NAME.test(path.split('.').at(-1)) ? '[REDACTED]' : stepValue(resolvePath(scope, path.split('.')), 500)]));
+}
+
+// A Fetch URL address as a trace shows it: no user info, credential-like query values redacted.
+function safeUrl(value) {
+  try {
+    const url = new URL(String(value));
+    url.username = '';
+    url.password = '';
+    for (const name of [...url.searchParams.keys()]) if (CREDENTIAL_NAME.test(name)) url.searchParams.set(name, 'REDACTED');
+    return url.href;
+  } catch {
+    return clip(String(value ?? ''), 2000);
+  }
 }
 
 // Comparison operands can be whole documents; keep the trace small and binary-free.
@@ -438,7 +497,7 @@ const HANDLERS = {
     };
   },
 
-  async llm(node, ctx, env, services, hooks) {
+  async llm(node, ctx, env, services, hooks, budgets, step) {
     const cfg = node.config || {};
     const scope = ctx.scope();
     const traceScope = ctx.traceScope();
@@ -456,6 +515,7 @@ const HANDLERS = {
     else if (cfg.response_format) requestData.response_format = cfg.response_format;
     if (wantsJson) traceRequestData.response_format = format;
     else if (cfg.response_format) traceRequestData.response_format = cfg.response_format;
+    step.input = modelInput(traceMessages, cfg, { history: cfg.includeHistory !== false ? ctx.traceMessages.length : 0, context: cfg.includeContext === true && scope.context != null });
 
     ctx.consumeModelCall();
     const onDelta = !wantsJson && ctx.answerSteps.has(node.id) ? answerStream(ctx.sources, readAloud(ctx, node, env, services, hooks)) : null;
@@ -503,17 +563,20 @@ const HANDLERS = {
     return { output, next: node.next };
   },
 
-  condition(node, ctx) {
+  condition(node, ctx, env, services, hooks, budgets, step) {
     const cfg = node.config || {};
     const scope = ctx.scope();
 
     if (Array.isArray(cfg.cases)) {
-      for (const branch of cfg.cases) {
-        if (branch && evaluateCondition(branch.when, scope)) {
-          return { output: { matched: branch.when }, next: branch.to };
-        }
-      }
-      return { output: { matched: null }, next: cfg.default ?? node.next ?? null };
+      const evaluated = [];
+      const hit = cfg.cases.find((branch) => {
+        if (!branch) return false;
+        const matched = evaluateCondition(branch.when, scope);
+        evaluated.push({ when: branch.when ?? null, matched });
+        return matched;
+      });
+      step.input = { evaluated, values: conditionValues(evaluated.map((item) => item.when), ctx.traceScope()) };
+      return hit ? { output: { matched: hit.when }, next: hit.to } : { output: { matched: null }, next: cfg.default ?? node.next ?? null };
     }
 
     // Structured form (built by the UI): { field, op, value }. Falls back to a
@@ -524,8 +587,10 @@ const HANDLERS = {
       const left = evaluateExpression(cfg.field, scope);
       const op = cfg.op || '==';
       output = { result: compareValues(left, op, cfg.value), field: cfg.field, op, left: boundedTraceValue(left), right: cfg.value ?? null };
+      step.input = { field: cfg.field, op, value: output.right, left: CREDENTIAL_NAME.test(String(cfg.field).split('.').at(-1)) ? '[REDACTED]' : stepValue(left, 500) };
     } else {
       output = { result: evaluateCondition(cfg.expr, scope), expr: cfg.expr ?? null };
+      step.input = { evaluated: [{ when: output.expr, matched: output.result }], values: conditionValues([cfg.expr], ctx.traceScope()) };
     }
 
     const branches = node.branches || {};
@@ -533,7 +598,7 @@ const HANDLERS = {
     return { output, next: next ?? node.next ?? null };
   },
 
-  async image(node, ctx, env, services, hooks) {
+  async image(node, ctx, env, services, hooks, budgets, step) {
     const cfg = node.config || {};
     const scope = ctx.scope();
     const traceScope = ctx.traceScope();
@@ -558,6 +623,7 @@ const HANDLERS = {
       ...(operation === 'edit' ? { images: imageInputs(traceScope) } : {}),
       ...(operation === 'edit' && cfg.mask ? { mask: { image_url: renderTemplate(cfg.mask, traceScope) } } : {})
     });
+    step.input = { operation, prompt: clip(tracePrompt, 4000), source_image: traceRequestBody.images?.[0]?.image_url ?? null };
 
     ctx.consumeModelCall();
     const providerStartedAt = Date.now();
@@ -618,11 +684,12 @@ const HANDLERS = {
   // Reads text aloud with a speech model. The audio is stored and its URL returned, for the Reply's
   // attachments. Markdown, citation marks and links are spoken as plain text, and each language in
   // the text is read by a voice that speaks it (speakText).
-  async speech(node, ctx, env, services, hooks) {
+  async speech(node, ctx, env, services, hooks, budgets, step) {
     const cfg = node.config || {};
     const template = cfg.text ?? '{{input}}';
     const spoken = speakableText(renderTemplate(template, ctx.scope()));
     const traceSpoken = speakableText(renderTemplate(template, ctx.traceScope()));
+    step.input = { text: clip(traceSpoken.text, 8000) };
     if (ctx.silent) {
       const output = { url: null, text: spoken.text, truncated: spoken.truncated, skipped: 'Replies aren’t read aloud here.' };
       return { output, traceOutput: { ...output, text: traceSpoken.text }, next: node.next };
@@ -658,9 +725,11 @@ const HANDLERS = {
 
   // Turns a recording into text: the audio file sent with the request, or one at an HTTPS address.
   // Without one (someone typed instead) it is skipped, with no model call and an empty transcript.
-  async transcribe(node, ctx, env, services, hooks) {
+  async transcribe(node, ctx, env, services, hooks, budgets, step) {
     const cfg = node.config || {};
     const source = cfg.audio ? String(renderTemplate(cfg.audio, ctx.scope()) ?? '').trim() : '';
+    // The recording as a reference (its address, or the file sent with the message), never its bytes.
+    step.input = { audio: source ? summarizeFileReference(source) : ctx.audioInputs[0] ? summarizeInputContentPart(ctx.audioInputs[0]) : null };
     if (source && !/^(https:\/\/|data:)/i.test(source)) {
       throw new AgentRunError(`Transcribe step "${node.id}" needs Audio to be an HTTPS address or a data URI.`, { status: 422, code: 'transcribe_audio_invalid' });
     }
@@ -720,10 +789,12 @@ const HANDLERS = {
     return { output, traceOutput: output, next: node.next };
   },
 
-  async http(node, ctx, env, services) {
+  async http(node, ctx, env, services, hooks, budgets, step) {
     const cfg = node.config || {};
-    const scope = ctx.scope();
-    const output = await fetchAgentUrl(renderValue(cfg, scope), services);
+    const request = renderValue(cfg, ctx.scope());
+    // Never its headers or body: they may carry credentials.
+    step.input = { method: String(request.method || 'POST').toUpperCase(), url: safeUrl(request.url) };
+    const output = await fetchAgentUrl(request, services);
     return { output, next: node.next };
   },
 
@@ -789,7 +860,7 @@ const HANDLERS = {
   },
 
   // LLM classification into named routes; an unknown answer takes the fallback branch.
-  async router(node, ctx, env, services, hooks) {
+  async router(node, ctx, env, services, hooks, budgets, step) {
     const cfg = node.config || {};
     const routes = routerRoutes(cfg);
     const build = (scope, history) => [
@@ -802,6 +873,7 @@ const HANDLERS = {
       { role: 'user', content: String(renderTemplate(cfg.input ?? '{{input}}', scope) ?? '') }
     ];
     // The route can only be one of the names (enforced where the provider supports it).
+    step.input = modelInput(build(ctx.traceScope(), ctx.traceMessages), cfg, { history: cfg.includeHistory === true ? Math.min(8, ctx.traceMessages.length) : 0 });
     const format = schemaFormat(cfg, 'route_choice', { type: 'object', properties: { route: { type: 'string', enum: [...routes.map((item) => item.name), 'fallback'] }, confidence: { type: 'number' }, reason: { type: 'string' } }, required: ['route', 'confidence', 'reason'], additionalProperties: false });
     const { json, result } = await callModelJson(env, ctx, services, hooks, node, cfg, build, { format });
     const route = routes.some((item) => item.name === json.route) ? json.route : 'fallback';
@@ -813,12 +885,13 @@ const HANDLERS = {
   },
 
   // Retrieval: hybrid keyword + semantic search over the agent's project knowledge bases.
-  async knowledge(node, ctx, env, services) {
+  async knowledge(node, ctx, env, services, hooks, budgets, step) {
     const cfg = node.config || {};
     if (typeof services.searchKnowledge !== 'function') {
       throw new AgentRunError('Knowledge search is not available in this context.', { status: 422, code: 'knowledge_unavailable' });
     }
     const query = String(renderTemplate(cfg.query ?? '{{input}}', ctx.scope()) ?? '').slice(0, 2000);
+    step.input = { query };
     const results = await services.searchKnowledge({
       knowledgeBaseIds: cfg.knowledge_bases,
       query,
@@ -864,15 +937,17 @@ const HANDLERS = {
   },
 
   // Assign variables; conversation scope persists them for later turns.
-  state(node, ctx) {
+  state(node, ctx, env, services, hooks, budgets, step) {
     const cfg = node.config || {};
     const assigned = {};
+    step.input = { assignments: [] };
     for (const item of Array.isArray(cfg.assignments) ? cfg.assignments : []) {
       if (!item || !/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(item.name || '')) continue;
       const value = renderValue(item.value ?? '', ctx.scope());
       ctx.variables[item.name] = value;
       ctx.traceVariables[item.name] = sanitizeBinaryValues(value);
       assigned[item.name] = value;
+      step.input.assignments.push({ name: item.name, value: CREDENTIAL_NAME.test(item.name) ? '[REDACTED]' : stepValue(value, 1000) });
       if (cfg.scope === 'conversation') {
         ctx.persistedState[item.name] = value;
         ctx.stateChanged = true;
@@ -885,10 +960,12 @@ const HANDLERS = {
   },
 
   // Pattern checks need no model; jailbreak, moderation, topic and custom policy checks use one call.
-  async guardrail(node, ctx, env, services, hooks) {
+  async guardrail(node, ctx, env, services, hooks, budgets, step) {
     const cfg = node.config || {};
     const checks = Array.isArray(cfg.checks) ? cfg.checks : [];
     const text = String(renderTemplate(cfg.text ?? '{{input}}', ctx.scope()) ?? '');
+    // Pattern checks need no model: their input is the text they read.
+    step.input = { system: null, message: turnContent(text), history_messages: 0, context_included: false, params: {} };
     const flagged = [];
     let redacted = text;
     if (checks.includes('pii')) {
@@ -911,6 +988,7 @@ const HANDLERS = {
         ...(withHistory ? historyForLlmNode(history, cfg).slice(-8) : []),
         { role: 'user', content: String(renderTemplate(cfg.text ?? '{{input}}', scope) ?? '').slice(0, 20000) }
       ];
+      step.input = modelInput(build(ctx.traceScope(), ctx.traceMessages), cfg, { history: withHistory ? Math.min(8, ctx.traceMessages.length) : 0 });
       const format = schemaFormat(cfg, 'guardrail_checks', { type: 'object', properties: { violations: { type: 'array', items: { type: 'object', properties: { check: { type: 'string', enum: modelChecks }, reason: { type: 'string' } }, required: ['check', 'reason'], additionalProperties: false } } }, required: ['violations'], additionalProperties: false });
       const { json } = await callModelJson(env, ctx, services, hooks, node, cfg, build, { format });
       for (const violation of Array.isArray(json.violations) ? json.violations : []) {
@@ -953,7 +1031,7 @@ const HANDLERS = {
   // VETTING: generate, verify with a second model, retry with the verifier's feedback.
   // Uses the same prompts and verdict parsing as /v1/chat/vetting (simple) and
   // /v1/vetting/full (full, with answer keys). Outcome branches: passed, unverified, attention.
-  async vetting(node, ctx, env, services, hooks) {
+  async vetting(node, ctx, env, services, hooks, budgets, step) {
     const cfg = node.config || {};
     const full = cfg.mode === 'full';
     const maxAttempts = clampInt(cfg.max_attempts, 1, 10, 3);
@@ -994,6 +1072,7 @@ const HANDLERS = {
     ];
     const history = turn(ctx.scope(), ctx.messages, ctx.inputContent);
     const traceHistory = turn(ctx.traceScope(), ctx.traceMessages, ctx.traceInputContent);
+    step.input = { mode: full ? 'full' : 'simple', message: turnContent(traceHistory.at(-1).content), ...(draft ? { draft: clip(draft, 4000) } : {}) };
     const attempts = [];
     let response = '';
     let outcome = 'unverified';
@@ -1012,6 +1091,8 @@ const HANDLERS = {
     };
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       const fromDraft = attempt === 1 && Boolean(draft);
+      // A round: what was reviewed (the draft or a reply written for it), the verdict and the reviewer's reason.
+      const round = (fields) => ({ attempt, source: fromDraft ? 'draft' : 'generated', ...fields, ...(fromDraft ? { draft: true } : {}) });
       if (fromDraft) {
         response = draft;
       } else {
@@ -1022,6 +1103,8 @@ const HANDLERS = {
             { messages: [{ role: 'system', content: trace.chat }, ...traceHistory], ...chatOptions }, 0);
         } catch (error) {
           if (attempt === 1) throw error;
+          const reason = String(error?.message || error);
+          attempts.push(round({ passed: false, verification: `Generation Error: ${reason.slice(0, 300)}`, reply: null, verdict: 'error', feedback: reason.slice(0, 1000) }));
           stopReason = 'GENERATION_ERROR';
           break;
         }
@@ -1031,7 +1114,7 @@ const HANDLERS = {
           requiresAttention = true;
           outcome = 'attention';
           stopReason = 'SAFETY_TRIGGERED';
-          attempts.push({ attempt, passed: false, verification: 'N/A (Safety Triggered)' });
+          attempts.push(round({ passed: false, verification: 'N/A (Safety Triggered)', reply: clip(response, 4000), verdict: 'safety', feedback: null }));
           break;
         }
       }
@@ -1041,13 +1124,14 @@ const HANDLERS = {
           ? `Please verify this assistant's response based on the criteria and context provided in the system prompt:\n\nAssistant Response:\n"${response}"`
           : `Assistant Response:\n"${response}"` }], ...verificationOptions });
         const verified = await call(verifier, check(live.verify), check(trace.verify), 0);
-        verdict = full ? parseVerificationResult(verified.content) : (() => { const r = parseSimpleVerificationResult(verified.content); return { passed: r.passed, verificationOutput: r.passed ? 'PASS' : r.failureReason }; })();
+        verdict = full ? parseVerificationResult(verified.content) : (() => { const r = parseSimpleVerificationResult(verified.content); return { passed: r.passed, verificationOutput: r.passed ? 'PASS' : r.failureReason, reason: r.reason }; })();
       } catch (error) {
-        attempts.push({ attempt, passed: false, verification: `Verification Error: ${String(error?.message || error).slice(0, 300)}`, ...(fromDraft ? { draft: true } : {}) });
+        const reason = String(error?.message || error);
+        attempts.push(round({ passed: false, verification: `Verification Error: ${reason.slice(0, 300)}`, reply: clip(response, 4000), verdict: 'error', feedback: reason.slice(0, 1000) }));
         stopReason = 'VERIFICATION_ERROR';
         break;
       }
-      attempts.push({ attempt, passed: verdict.passed, verification: verdict.verificationOutput, ...(fromDraft ? { draft: true } : {}) });
+      attempts.push(round({ passed: verdict.passed, verification: verdict.verificationOutput, reply: clip(response, 4000), verdict: verdict.passed ? 'pass' : 'fail', feedback: verdict.passed ? null : verdict.reason ?? verdict.verificationOutput }));
       if (verdict.passed) {
         outcome = 'passed';
         stopReason = 'VERIFICATION_PASSED';
@@ -1060,10 +1144,12 @@ const HANDLERS = {
       }
     }
     const branches = node.branches || {};
+    // A rewrite that failed to generate is a round of its own, but not an attempt anyone reviewed.
+    const reviewed = attempts.filter((item) => item.reply !== null);
     return {
       output: {
         content: response, passed: outcome === 'passed', requires_attention: requiresAttention, outcome, stop_reason: stopReason,
-        attempts: attempts.length, verification: attempts.at(-1)?.verification ?? null, attempt_details: attempts,
+        attempts: reviewed.length, verification: reviewed.at(-1)?.verification ?? null, attempt_details: attempts,
         ...(draft ? { revised: response !== draft } : {}),
         model: cfg.model, verification_model: verifier, usage, cost
       },
@@ -1077,7 +1163,7 @@ const HANDLERS = {
   },
 
   // Autonomous tool loop: the model chooses tools until it gives a final answer.
-  async agent(node, ctx, env, services, hooks, budgets) {
+  async agent(node, ctx, env, services, hooks, budgets, step) {
     const cfg = node.config || {};
     const tools = buildAgentTools(cfg.tools || {}, services, ctx);
     // An upper limit on tool calls, not a target: the model answers when it has enough.
@@ -1106,6 +1192,7 @@ const HANDLERS = {
       { role: 'user', content: cfg.input != null ? normalizeLlmUserContent(renderValue(cfg.input, scope)) : inputContent },
       ...transcript
     ];
+    step.input = modelInput(build(ctx.traceScope(), ctx.traceMessages, ctx.traceInputContent), cfg, { history: cfg.includeHistory !== false ? ctx.traceMessages.length : 0, context: cfg.includeContext === true && ctx.context != null });
     let usage = { prompt: 0, completion: 0, total: 0 };
     let cost = 0;
     let lastModel = cfg.model;

@@ -259,6 +259,19 @@ export function evaluateCondition(expr, scope = {}) {
   return Boolean(evaluateExpression(expr, scope));
 }
 
+/** The paths an expression reads (vars.count, router.json.route), in order, for a step's trace. */
+export function expressionPaths(expr) {
+  if (typeof expr !== 'string' || !expr) return [];
+  const paths = [];
+  const visit = (node) => {
+    if (!node || typeof node !== 'object') return;
+    if (node.kind === 'path') paths.push(node.path.join('.'));
+    for (const child of [node.operand, node.left, node.right, node.expr, node.object, ...(node.args || [])]) visit(child);
+  };
+  visit(compile(expr));
+  return [...new Set(paths)];
+}
+
 // Context fields a step reads only by naming them, as a VETTING step names a question's answer key
 // ({{context.answer_key}}): left out wherever the whole context is written out ({{context}}, a step's
 // "include context"), so a step that talks to the learner can't be handed the key by accident.
