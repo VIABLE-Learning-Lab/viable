@@ -7,8 +7,8 @@ standards and skills data it carries stay under CC BY 4.0 (see `NOTICE`).
 
 Version 0.1.0, not published. It lives in the `viablelab-api` repository and imports VIABLE's own
 modules from `../src`, so a local run and a course run use the same code. `scripts/export.mjs`
-makes the self-contained folder a release would ship (below). Releasing it needs the University of
-Florida's approval ([docs/harness-call.md](../docs/harness-call.md)).
+makes the self-contained folder a release would ship (below). VIABLE Lab releases it as its own
+work ([docs/harness-call.md](../docs/harness-call.md)).
 
 ## Use it without installing anything
 
