@@ -8,8 +8,8 @@ import { NODE_TYPES } from '../../src/agents/graph.js';
 const json = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
 const examples = readdirSync(new URL('../examples/', import.meta.url)).filter((name) => name.endsWith('.json'));
 
-test('the four example course packages and an agent file are valid, as are the schemas’ examples', () => {
-  assert.equal(examples.length, 4);
+test('the six example course packages and an agent file are valid, as are the schemas’ examples', () => {
+  assert.equal(examples.length, 6);
   for (const name of examples) assert.deepEqual(validateDocument(json(`../examples/${name}`)), { kind: 'course-package', errors: [] }, name);
   assert.deepEqual(validateDocument(json('../schemas/examples/agent.example.json')), { kind: 'agent', errors: [] });
   assert.deepEqual(validateDocument(json('../schemas/examples/learning-events.example.json')), { kind: 'learning-events', errors: [] });
@@ -27,6 +27,10 @@ test('what doesn’t fit says where and why', () => {
   const unresolved = json('../examples/fractions-practice.json');
   unresolved.course.activities[0].workspace.panels[0].set_ref = 'gone';
   assert.deepEqual(validateDocument(unresolved).errors, ['$.course.activities[0].workspace.panels[0].set_ref: the package has no question set "gone"'], 'refs are checked once the shape fits');
+  const withFiles = json('../examples/fractions-practice.json');
+  withFiles.files = [{ ref: 'notes', name: 'notes.md', url: 'https://example.org/notes.md' }];
+  withFiles.knowledge_bases = [{ ref: 'kb', name: 'Notes', file_refs: ['notes', 'gone'] }];
+  assert.deepEqual(validateDocument(withFiles).errors, ['$.knowledge_bases[0].file_refs[1]: the package has no file "gone"'], 'files and knowledge bases resolve too');
   const events = { events: [{ type: 'writing.progress', data: { field: 'essay', keys: -1, keystrokes: 'abc' } }, { type: 'mouse.move' }] };
   assert.deepEqual(validateDocument(events).errors.sort(), [
     '$.events[0].data.field: must be one of "plan", "draft"',

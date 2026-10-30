@@ -6,7 +6,7 @@
  * `format` is an annotation, as 2020-12 has it by default.
  */
 import { readFileSync } from 'node:fs';
-import { validateGraph } from '../../src/agents/graph.js';
+import { graphKnowledgeRefs, linkKnowledgeRefs, validateGraph } from '../../src/agents/graph.js';
 
 export const KINDS = ['agent', 'course-package', 'learning-events', 'teaching'];
 const SCHEMAS = Object.fromEntries(KINDS.map((kind) => [`${kind}.schema.json`, JSON.parse(readFileSync(new URL(`../schemas/${kind}.schema.json`, import.meta.url), 'utf8'))]));
@@ -101,12 +101,17 @@ function refErrors(pkg) {
   const agents = refs(pkg.agents);
   const sets = refs(pkg.question_sets);
   const units = refs(pkg.course?.units);
+  const files = refs(pkg.files);
+  const knowledgeBases = refs(pkg.knowledge_bases);
+  (pkg.knowledge_bases || []).forEach((kb, i) => (kb?.file_refs || []).forEach((ref, j) => { if (!files.has(ref)) errors.push(`$.knowledge_bases[${i}].file_refs[${j}]: the package has no file "${ref}"`); }));
+  (pkg.agents || []).forEach((agent, i) => graphKnowledgeRefs(agent?.graph).forEach((ref) => { if (!knowledgeBases.has(ref)) errors.push(`$.agents[${i}].graph: the package has no knowledge base "${ref}"`); }));
   (pkg.course?.activities || []).forEach((activity, i) => {
     const where = `$.course.activities[${i}]`;
     if (activity?.agent_ref != null && !agents.has(activity.agent_ref)) errors.push(`${where}.agent_ref: the package has no agent "${activity.agent_ref}"`);
     if (activity?.unit_ref != null && !units.has(activity.unit_ref)) errors.push(`${where}.unit_ref: the package has no unit "${activity.unit_ref}"`);
     (activity?.workspace?.panels || []).forEach((panel, j) => {
       if (panel?.type === 'questions' && !sets.has(panel.set_ref)) errors.push(`${where}.workspace.panels[${j}].set_ref: the package has no question set "${panel.set_ref}"`);
+      if (panel?.type === 'reading' && panel.file_ref != null && !files.has(panel.file_ref)) errors.push(`${where}.workspace.panels[${j}].file_ref: the package has no file "${panel.file_ref}"`);
     });
   });
   return errors;
@@ -121,7 +126,8 @@ export function validateDocument(doc, kind = kindOf(doc)) {
   const errors = checkSchema(schemaFor(kind), doc);
   if (!errors.length && kind === 'agent') errors.push(...graphErrors(doc.graph, '$.graph'));
   if (!errors.length && kind === 'course-package') {
-    doc.agents?.forEach((agent, i) => errors.push(...graphErrors(agent.graph, `$.agents[${i}].graph`)));
+    // Knowledge bases named by ref stand in for IDs, as on import.
+    doc.agents?.forEach((agent, i) => errors.push(...graphErrors(linkKnowledgeRefs(agent.graph, (ref) => `kb_${ref}`), `$.agents[${i}].graph`)));
     errors.push(...refErrors(doc));
   }
   return { kind, errors };

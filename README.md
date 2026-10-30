@@ -29,9 +29,11 @@ the agent's instructions and any context go to the endpoint you chose, and nowhe
 
 ## Five minutes: an example's agent on your own key
 
-The four examples in `examples/` are the course packages VIABLE's docs offer (argument writing,
-fractions practice, library research, a seminar discussion). Run commands from the `viablelab-api`
-folder.
+The six examples in `examples/` are the course packages VIABLE's docs offer: fractions practice, a
+PDF reading with a Socratic tutor, argument writing, English speaking practice, a density lab on an
+embedded page, and a library research desk. Four run locally as they are; the English partner's
+Speech step and the library desk's Knowledge step need VIABLE (below). Run commands from the
+`viablelab-api` folder.
 
 1. **Point it at a model.** With OpenAI:
 
@@ -82,7 +84,7 @@ folder.
 5. **Check a file and compute measures.**
 
    ```sh
-   node kit/bin/viable-harness.mjs validate kit/examples/seminar-discussion.json
+   node kit/bin/viable-harness.mjs validate kit/examples/library-research-help.json
    node kit/bin/viable-harness.mjs measure kit/schemas/examples/learning-events.example.json
    ```
 

@@ -31,7 +31,8 @@ test('an example agent runs locally on an OpenAI-compatible endpoint, with its a
   assert.deepEqual(result.steps.map((step) => [step.nodeId, step.status]), [['input', 'completed'], ['coach', 'completed'], ['reply', 'completed']]);
   assert.equal(calls[0].url, 'http://localhost:11434/v1/chat/completions');
   assert.equal(calls[0].headers.authorization, 'Bearer sk-test');
-  assert.equal(calls[0].body.model, endpointModel('viable-3'), 'a VIABLE model name becomes its provider model');
+  assert.equal(calls[0].body.model, endpointModel('gpt-oss-120b'), 'the example’s model is sent as its provider names it');
+  assert.equal(endpointModel('viable-3'), 'gpt-6-luna', 'a VIABLE model name becomes its provider model');
   assert.equal(calls[0].body.stream, false);
   const system = calls[0].body.messages[0];
   assert.equal(system.role, 'system');
@@ -106,7 +107,8 @@ test('the CLI runs an example against a local endpoint and prints the reply and 
   await new Promise((done) => server.listen(0, '127.0.0.1', done));
   try {
     const bin = fileURLToPath(new URL('../bin/viable-harness.mjs', import.meta.url));
-    const example = fileURLToPath(new URL('../examples/library-research-help.json', import.meta.url));
+    // The density lab's coach runs locally as it is (the library desk's Knowledge step needs VIABLE).
+    const example = fileURLToPath(new URL('../examples/density-lab.json', import.meta.url));
     const env = { ...process.env, OPENAI_BASE_URL: `http://127.0.0.1:${server.address().port}/v1`, OPENAI_API_KEY: 'local' };
     const child = spawn(process.execPath, [bin, 'run', example, '--input', 'Help me narrow my topic', '--model', 'qwen3'], { env });
     let out = '';
@@ -115,7 +117,7 @@ test('the CLI runs an example against a local endpoint and prints the reply and 
     child.stderr.on('data', (chunk) => { err += chunk; });
     const code = await new Promise((done) => child.on('close', done));
     assert.equal(code, 0, err);
-    assert.match(out, /^Agent: .+ \(with the teaching settings of "Shape a research question"\)/);
+    assert.match(out, /^Agent: .+ \(with the teaching settings of "The density lab"\)/);
     assert.match(out, /\/v1\/chat\/completions qwen3 Bearer local/);
     assert.match(out, /Steps:\n {2}1\. input \(input\) completed/);
     assert.match(out, /1 model calls, 5 tokens\./);

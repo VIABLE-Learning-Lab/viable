@@ -1,10 +1,10 @@
 {
   "format": "viable.course-package",
   "version": 1,
-  "exported_at": "2026-10-29T00:00:00.000Z",
+  "exported_at": "2026-10-30T19:00:00.000Z",
   "title": "Equivalent fractions, grade 5",
   "description": "Practice adding and subtracting fractions with a tutor that gives hints but never the answer, then a short check with the AI gone.",
-  "guide": "For a grade 5 math teacher. It shows a Questions panel beside a VETTING tutor that checks every hint against the question’s answer key before a learner sees it, how the AI helps set to hints only and tied to standard 5.NF.A.1, and a post-test without the AI. Change the practice questions to your own first; the check stays hidden until you open it.",
+  "guide": "For a grade 5 math teacher. A Questions panel sits beside a VETTING tutor that checks every hint against the question’s answer key before a learner sees it. How the AI helps is set to hints only, tied to standard 5.NF.A.1, with four common misconceptions from Eedi for the tutor to listen for. A post-test without the AI follows. Change the practice questions to your own first; the check stays hidden until you open it.",
   "agents": [
     {
       "ref": "tutor",
@@ -46,11 +46,12 @@
             "type": "vetting",
             "config": {
               "mode": "full",
-              "model": "viable-3",
+              "model": "gpt-oss-120b",
               "question": "{{context.question}}",
               "answer_key": "{{context.answer_key}}",
               "max_attempts": 3,
-              "includeHistory": true
+              "includeHistory": true,
+              "verification_model": "gpt-oss-120b"
             },
             "branches": {
               "passed": "reply_question",
@@ -65,10 +66,11 @@
             "type": "vetting",
             "config": {
               "mode": "simple",
-              "model": "viable-3",
+              "model": "gpt-oss-120b",
               "max_attempts": 3,
               "includeHistory": true,
-              "guideline": "You are a patient math tutor for a ten-year-old practicing equivalent fractions and adding and subtracting fractions with unlike denominators. Give one hint or one guiding question at a time, with small numbers and short sentences. Never give the answer to a practice question or do the work for them. If they ask about something other than fractions, kindly bring them back to the practice."
+              "guideline": "You are a patient math tutor for a ten-year-old practicing equivalent fractions and adding and subtracting fractions with unlike denominators. Give one hint or one guiding question at a time, with small numbers and short sentences. Never give the answer to a practice question or do the work for them. If they ask about something other than fractions, kindly bring them back to the practice.",
+              "verification_model": "gpt-oss-120b"
             },
             "branches": {
               "passed": "reply_general",
@@ -558,7 +560,73 @@
               "modified": "2025-02-06",
               "retrieved_at": "2026-10-21T00:00:00.000Z"
             }
-          }
+          },
+          "misconceptions": [
+            {
+              "id": "b59fa4bd-e452-595e-a292-933ed0ddb1ab",
+              "description": "Believes that fractions are added by summing numerators and denominators as if they are separate whole numbers",
+              "construct": {
+                "id": "77e855a4-7e41-56fc-9a0c-c865ce1768c0",
+                "description": "Add proper fractions with different denominators which do not share a common factor"
+              },
+              "source": {
+                "name": "Eedi Misconceptions Graph v1.0",
+                "license": "https://creativecommons.org/licenses/by/4.0/",
+                "attribution": [
+                  "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license, available at https://creativecommons.org/licenses/by/4.0. \"Eedi Misconceptions Graph v1.0\" (c) 2026 Eedi Ltd., licensed under CC BY 4.0 and available at https://www.eedi.com."
+                ],
+                "modified": "2026-06-15"
+              }
+            },
+            {
+              "id": "cd93583c-468a-5da0-a24f-9753f1b2fe1d",
+              "description": "Believes adding the denominators gives a common denominator",
+              "construct": {
+                "id": "7bfdef9d-758a-5650-9581-c2cbf6b79e0c",
+                "description": "Add proper fractions with different denominators where one is a multiple of the other"
+              },
+              "source": {
+                "name": "Eedi Misconceptions Graph v1.0",
+                "license": "https://creativecommons.org/licenses/by/4.0/",
+                "attribution": [
+                  "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license, available at https://creativecommons.org/licenses/by/4.0. \"Eedi Misconceptions Graph v1.0\" (c) 2026 Eedi Ltd., licensed under CC BY 4.0 and available at https://www.eedi.com."
+                ],
+                "modified": "2026-06-15"
+              }
+            },
+            {
+              "id": "cd0a50b7-672b-5a8b-ab98-46a7545e7af0",
+              "description": "Believes numerators stay the same when finding common denominators",
+              "construct": {
+                "id": "77e855a4-7e41-56fc-9a0c-c865ce1768c0",
+                "description": "Add proper fractions with different denominators which do not share a common factor"
+              },
+              "source": {
+                "name": "Eedi Misconceptions Graph v1.0",
+                "license": "https://creativecommons.org/licenses/by/4.0/",
+                "attribution": [
+                  "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license, available at https://creativecommons.org/licenses/by/4.0. \"Eedi Misconceptions Graph v1.0\" (c) 2026 Eedi Ltd., licensed under CC BY 4.0 and available at https://www.eedi.com."
+                ],
+                "modified": "2026-06-15"
+              }
+            },
+            {
+              "id": "173be8a9-26dc-597d-b9d1-6d608fe70e0d",
+              "description": "Believes when making an equivalent fraction you can multiply the numerator and denominator by different values",
+              "construct": {
+                "id": "77e855a4-7e41-56fc-9a0c-c865ce1768c0",
+                "description": "Add proper fractions with different denominators which do not share a common factor"
+              },
+              "source": {
+                "name": "Eedi Misconceptions Graph v1.0",
+                "license": "https://creativecommons.org/licenses/by/4.0/",
+                "attribution": [
+                  "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license, available at https://creativecommons.org/licenses/by/4.0. \"Eedi Misconceptions Graph v1.0\" (c) 2026 Eedi Ltd., licensed under CC BY 4.0 and available at https://www.eedi.com."
+                ],
+                "modified": "2026-06-15"
+              }
+            }
+          ]
         },
         "release": "open",
         "done_when": "auto"
@@ -599,7 +667,8 @@
   "attribution": [
     "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license. Common Core Mathematics standards provided by Common Good Learning Tools available at https://corestandards.org/wp-content/uploads/2023/09/Math_Standards1.pdf.",
     "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license. Learning Commons received learning components under CC BY-4.0 from Achievement Network.",
-    "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license. Learning Commons received learning progressions under CC0 from Student Achievement Partners."
+    "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license. Learning Commons received learning progressions under CC0 from Student Achievement Partners.",
+    "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license, available at https://creativecommons.org/licenses/by/4.0. \"Eedi Misconceptions Graph v1.0\" (c) 2026 Eedi Ltd., licensed under CC BY 4.0 and available at https://www.eedi.com."
   ],
   "notes": []
 }

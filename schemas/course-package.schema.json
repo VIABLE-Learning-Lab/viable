@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "VIABLE course package",
-  "description": "A course with the agents and question sets its activities use, as one JSON file (format viable.course-package, version 1). Parts refer to each other by ref, never by a project's IDs. A package never carries learners, class lists, sections, keys, knowledge bases, logs or study data; what an export left out it says in notes. Fields other than these (such as an example's guide) are ignored on import. `viable-harness validate` also runs VIABLE's graph checks on each agent and checks that every ref resolves.",
+  "description": "A course with the agents and question sets its activities use, as one JSON file (format viable.course-package, version 1), or as a .viable.zip with that file at its root as package.viable.json and the files it names under files/. Parts refer to each other by ref, never by a project's IDs. Files come by https url or by path in the zip; knowledge bases hold files and websites, Reading panels name a PDF by file_ref, and agents' Knowledge and Agent steps name knowledge bases by knowledge_base_refs. A package never carries learners, class lists, sections, keys, logs or study data; what an export left out it says in notes. Fields other than these (such as an example's guide) are ignored on import. `viable-harness validate` also runs VIABLE's graph checks on each agent and checks that every ref resolves.",
   "type": "object",
   "required": ["format", "version", "course"],
   "properties": {
@@ -36,6 +36,57 @@
           "title": { "type": "string", "minLength": 1 },
           "description": { "type": ["string", "null"] },
           "items": { "type": "array", "items": { "$ref": "#/$defs/question" } }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "required": ["ref", "name"],
+        "description": "A file, downloaded from its https url on import or found by its path in the .viable.zip (one of the two). bytes and sha256, when given, must match.",
+        "properties": {
+          "ref": { "$ref": "#/$defs/ref" },
+          "name": { "type": "string", "minLength": 1, "description": "Its file name, with an extension a knowledge base reads." },
+          "type": { "type": ["string", "null"] },
+          "bytes": { "type": "integer", "minimum": 1 },
+          "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+          "url": { "type": "string", "pattern": "^https://" },
+          "path": { "type": "string", "minLength": 1 },
+          "title": { "type": ["string", "null"] },
+          "license": { "type": ["string", "null"] },
+          "attribution": { "type": ["string", "null"] }
+        },
+        "oneOf": [{ "required": ["url"] }, { "required": ["path"] }]
+      }
+    },
+    "knowledge_bases": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "required": ["ref", "name"],
+        "properties": {
+          "ref": { "$ref": "#/$defs/ref" },
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": ["string", "null"] },
+          "file_refs": { "type": "array", "items": { "$ref": "#/$defs/ref" } },
+          "websites": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["url"],
+              "description": "Read and indexed after import: a crawl from url (the default), a sitemap, or a list of pages (urls).",
+              "properties": {
+                "kind": { "enum": ["crawl", "sitemap", "list"] },
+                "url": { "type": "string", "pattern": "^https://" },
+                "urls": { "type": "array", "items": { "type": "string" } },
+                "max_pages": { "type": "integer", "minimum": 1 },
+                "refresh_hours": { "enum": [0, 24, 168, 720, 4380, 8760] }
+              }
+            }
+          }
         }
       }
     },
@@ -100,7 +151,7 @@
     "activity": {
       "type": "object",
       "required": ["title"],
-      "description": "An activity with refs: unit_ref, agent_ref, and set_ref in place of a Questions panel's set_id. A Reading panel carries no document.",
+      "description": "An activity with refs: unit_ref, agent_ref, set_ref in place of a Questions panel's set_id, and file_ref (a PDF) in place of a Reading panel's document. A Reading panel without file_ref is left out on import.",
       "properties": {
         "unit_ref": { "type": ["string", "null"] },
         "title": { "type": "string", "minLength": 1 },
@@ -134,7 +185,8 @@
               "id": { "type": "string", "minLength": 1 },
               "type": { "enum": ["writing", "embed", "questions", "reading"] },
               "title": { "type": ["string", "null"], "maxLength": 60 },
-              "set_ref": { "$ref": "#/$defs/ref" }
+              "set_ref": { "$ref": "#/$defs/ref" },
+              "file_ref": { "$ref": "#/$defs/ref" }
             },
             "if": { "properties": { "type": { "const": "questions" } } },
             "then": { "required": ["set_ref"] }

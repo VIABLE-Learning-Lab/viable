@@ -1,0 +1,116 @@
+{
+  "format": "viable.course-package",
+  "version": 1,
+  "exported_at": "2026-10-30T19:00:00.000Z",
+  "title": "Sink or float: a lab beside an AI",
+  "description": "Try blocks in different liquids, predict, test and find the rule, with a coach that sees your trials.",
+  "guide": "For a grade 6–8 science teacher, and for app developers. An Embedded page panel holds a small density lab that tells VIABLE each prediction and what it shows now, so the coach in the corner can ask about the learner’s actual trials; four right predictions in a row count as done. Put your own page’s address in the panel; Docs → Your page in an activity shows the few lines it takes.",
+  "agents": [
+    {
+      "ref": "coach",
+      "name": "Lab coach",
+      "description": "Asks for predictions and reasons, using the learner’s last trials; never states the rule.",
+      "graph": {
+        "version": 1,
+        "name": "Lab coach",
+        "entry": "input",
+        "variables": {},
+        "nodes": [
+          {
+            "id": "input",
+            "type": "input",
+            "config": {
+              "guidance": "A question about the lab, or what the learner thinks is happening.",
+              "example": "Why did the heavy block float?"
+            },
+            "next": "coach",
+            "x": 30,
+            "y": 200
+          },
+          {
+            "id": "coach",
+            "type": "llm",
+            "config": {
+              "model": "gpt-oss-120b",
+              "includeHistory": true,
+              "system": "You coach a middle school student through a sink-or-float lab. You can see their recent trials and what the lab shows now: the block’s mass, volume and density, the liquid and its density, their prediction and the result.\n\nHelp them find the rule themselves: an object floats when it is less dense than the liquid. Never state the rule. Ask one short question at a time about what they just tried, such as what they predicted and why, what changed between two trials, or what would happen if they changed one thing. When a result surprises them, ask them to compare it with an earlier trial. Two or three sentences, plain words."
+            },
+            "next": "reply",
+            "x": 270,
+            "y": 200
+          },
+          {
+            "id": "reply",
+            "type": "output",
+            "config": {
+              "text": "{{coach.content}}"
+            },
+            "x": 510,
+            "y": 200
+          }
+        ]
+      }
+    }
+  ],
+  "question_sets": [],
+  "course": {
+    "title": "Sink or float",
+    "description": "Find out what decides whether something sinks or floats, in a lab with a coach beside it.",
+    "audience": "teens",
+    "identify": "ask",
+    "identify_ask": "name",
+    "sections_from": "none",
+    "data_level": "process",
+    "keep_recordings": false,
+    "units": [
+      {
+        "ref": "density",
+        "title": "Density"
+      }
+    ],
+    "activities": [
+      {
+        "unit_ref": "density",
+        "title": "The density lab",
+        "summary": "Predict, drop the block in, and find the rule. Get four right in a row.",
+        "role": "instruction",
+        "agent_ref": "coach",
+        "workspace": {
+          "ai": "corner",
+          "title": null,
+          "layout": {
+            "ai_width": 36,
+            "resizable": true,
+            "collapsible": true
+          },
+          "panels": [
+            {
+              "id": "lab",
+              "type": "embed",
+              "title": "Density lab",
+              "url": "https://developers.viablelab.org/docs/examples/lab/density.html",
+              "completes": true,
+              "ai_sees": "events",
+              "starters": [
+                "Why did that one float?",
+                "What should I try next?"
+              ]
+            }
+          ]
+        },
+        "minutes": 15,
+        "voice": null,
+        "attachments": null,
+        "teaching": {
+          "goal": "Learners find, from their own trials, that an object floats when it is less dense than the liquid, and use it to predict new cases.",
+          "help": "ask_first",
+          "watch_for": "Explaining sinking by weight alone (“heavy things sink”)."
+        },
+        "release": "open",
+        "done_when": "auto"
+      }
+    ]
+  },
+  "attribution": [],
+  "notes": []
+}

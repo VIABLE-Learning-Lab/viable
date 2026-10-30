@@ -1,0 +1,307 @@
+{
+  "format": "viable.course-package",
+  "version": 1,
+  "exported_at": "2026-10-30T19:00:00.000Z",
+  "title": "Reading with a Socratic tutor",
+  "description": "Read a short science text with a tutor that asks rather than tells, then answer five questions on your own.",
+  "guide": "For a grade 6–8 science teacher. A Reading panel shows a PDF learners can highlight and annotate, with a tutor on the left that sees the page they’re on and their highlights, asks what the text says and never answers the check’s questions. After at least three minutes of reading, learners move on to five questions with the AI gone. Swap the PDF for your own reading and the questions for yours.",
+  "files": [
+    {
+      "ref": "moon-reading",
+      "name": "moon-phases.pdf",
+      "type": "application/pdf",
+      "bytes": 105479,
+      "sha256": "ec2430901de9385be1e1661187a44c500ae5a14c1fe3643af52ba8f12db3f196",
+      "url": "https://developers.viablelab.org/docs/examples/files/moon-phases.pdf",
+      "title": "Why the Moon Has Phases",
+      "license": "CC BY 4.0",
+      "attribution": "© 2026 VIABLE Lab, licensed under CC BY 4.0."
+    }
+  ],
+  "agents": [
+    {
+      "ref": "tutor",
+      "name": "Reading tutor",
+      "description": "Asks questions about the reading and points back to the text; never gives answers.",
+      "graph": {
+        "version": 1,
+        "name": "Reading tutor",
+        "entry": "input",
+        "variables": {},
+        "nodes": [
+          {
+            "id": "input",
+            "type": "input",
+            "config": {
+              "guidance": "A question about the reading, or what the learner thinks it says.",
+              "example": "Is the dark part of the Moon Earth’s shadow?"
+            },
+            "next": "tutor",
+            "x": 30,
+            "y": 200
+          },
+          {
+            "id": "tutor",
+            "type": "llm",
+            "config": {
+              "model": "gpt-oss-120b",
+              "includeHistory": true,
+              "system": "You are a reading tutor for a middle school student reading a short science text, “Why the Moon Has Phases”. You can see the page they are on and any passages they highlighted.\n\nHelp them understand the text by asking, not telling. Ask one short question at a time that sends them back to a sentence, a figure or their own observation, and build on what they answer. When they have an idea wrong, ask them what the text says about it rather than correcting them yourself. Never give the answers to the questions they will answer after reading, and never explain a whole idea in one go. Keep replies to two or three sentences, in plain words for a 12-year-old."
+            },
+            "next": "reply",
+            "x": 270,
+            "y": 200
+          },
+          {
+            "id": "reply",
+            "type": "output",
+            "config": {
+              "text": "{{tutor.content}}"
+            },
+            "x": 510,
+            "y": 200
+          }
+        ]
+      }
+    }
+  ],
+  "question_sets": [
+    {
+      "ref": "check",
+      "title": "Why the Moon has phases: check",
+      "description": "Five questions on the reading, one try each.",
+      "items": [
+        {
+          "id": "light",
+          "type": "single",
+          "prompt": "Why does the Moon shine?",
+          "answer": {
+            "choice": "b"
+          },
+          "points": 1,
+          "choices": [
+            {
+              "id": "a",
+              "text": "It makes its own light, like the Sun."
+            },
+            {
+              "id": "b",
+              "text": "It reflects sunlight."
+            },
+            {
+              "id": "c",
+              "text": "It reflects light from Earth’s cities."
+            },
+            {
+              "id": "d",
+              "text": "It glows because it is hot."
+            }
+          ],
+          "skill": "reflected light",
+          "explanation": "The Moon is rock. It shines only because sunlight bounces off it."
+        },
+        {
+          "id": "half",
+          "type": "single",
+          "prompt": "How much of the Moon does the Sun light at any moment?",
+          "answer": {
+            "choice": "c"
+          },
+          "points": 1,
+          "choices": [
+            {
+              "id": "a",
+              "text": "Only the part we can see"
+            },
+            {
+              "id": "b",
+              "text": "It depends on the phase"
+            },
+            {
+              "id": "c",
+              "text": "Always half: the half facing the Sun"
+            },
+            {
+              "id": "d",
+              "text": "All of it at full moon, none at new moon"
+            }
+          ],
+          "skill": "half lit",
+          "explanation": "The Sun always lights the half of the Moon that faces it. Phases change how much of that half we see."
+        },
+        {
+          "id": "new",
+          "type": "single",
+          "prompt": "At new moon, where is the Moon?",
+          "answer": {
+            "choice": "a"
+          },
+          "points": 1,
+          "choices": [
+            {
+              "id": "a",
+              "text": "Between Earth and the Sun"
+            },
+            {
+              "id": "b",
+              "text": "Behind Earth, opposite the Sun"
+            },
+            {
+              "id": "c",
+              "text": "Inside Earth’s shadow"
+            },
+            {
+              "id": "d",
+              "text": "Farthest from Earth"
+            }
+          ],
+          "skill": "positions",
+          "explanation": "At new moon the Moon is between Earth and the Sun, so its lit half faces away from us."
+        },
+        {
+          "id": "shadow",
+          "type": "single",
+          "prompt": "A friend says the dark part of a crescent moon is Earth’s shadow. What does the reading say?",
+          "answer": {
+            "choice": "d"
+          },
+          "points": 1,
+          "choices": [
+            {
+              "id": "a",
+              "text": "Right: Earth’s shadow causes every phase."
+            },
+            {
+              "id": "b",
+              "text": "Right, but only for crescents."
+            },
+            {
+              "id": "c",
+              "text": "Wrong: the dark part is the Moon’s far side turning."
+            },
+            {
+              "id": "d",
+              "text": "Wrong: it’s the unlit half we see from the side; Earth’s shadow falls on the Moon only in an eclipse."
+            }
+          ],
+          "skill": "shadow misconception",
+          "explanation": "Phases come from seeing the Moon’s unlit half. Earth’s shadow reaches the Moon only during a lunar eclipse."
+        },
+        {
+          "id": "days",
+          "type": "fill",
+          "prompt": "About how many days does the Moon take to go through all its phases, from one new moon to the next?",
+          "answer": {
+            "accept": [
+              "29.5",
+              "29",
+              "30",
+              "29 1/2"
+            ]
+          },
+          "points": 1,
+          "skill": "cycle",
+          "explanation": "About 29.5 days."
+        }
+      ]
+    }
+  ],
+  "course": {
+    "title": "Why the Moon has phases",
+    "description": "Read a short text about the Moon’s phases with a tutor that asks questions, then show what you understood.",
+    "audience": "teens",
+    "identify": "ask",
+    "identify_ask": "name",
+    "sections_from": "none",
+    "data_level": "process",
+    "keep_recordings": false,
+    "units": [
+      {
+        "ref": "moon",
+        "title": "The Moon’s phases"
+      }
+    ],
+    "activities": [
+      {
+        "unit_ref": "moon",
+        "title": "Read, then answer",
+        "summary": "Read with a tutor beside you, then answer five questions on your own.",
+        "role": "instruction",
+        "agent_ref": "tutor",
+        "workspace": {
+          "ai": "left",
+          "title": null,
+          "layout": {
+            "ai_width": 36,
+            "resizable": true,
+            "collapsible": true
+          },
+          "panels": [
+            {
+              "id": "reading",
+              "type": "reading",
+              "title": "The reading",
+              "file_ref": "moon-reading",
+              "highlights": true,
+              "notes": true,
+              "start_page": 1,
+              "ai_sees": "page",
+              "starters": [
+                "What is this page mostly about?",
+                "I don’t get the diagram",
+                "Is the dark part Earth’s shadow?"
+              ]
+            },
+            {
+              "id": "check",
+              "type": "questions",
+              "title": "Check",
+              "set_ref": "check",
+              "feedback": "end",
+              "tries": 1,
+              "hints": false,
+              "ai_sees": "nothing"
+            }
+          ],
+          "steps": [
+            {
+              "id": "read",
+              "title": "Read",
+              "panels": [
+                "reading"
+              ],
+              "ai": "on",
+              "chat": "continue"
+            },
+            {
+              "id": "answer",
+              "title": "Answer on your own",
+              "panels": [
+                "check"
+              ],
+              "ai": "off",
+              "chat": "continue",
+              "move": "ready",
+              "minutes": 3,
+              "back": true
+            }
+          ]
+        },
+        "minutes": 25,
+        "voice": null,
+        "attachments": null,
+        "teaching": {
+          "goal": "Learners explain that phases come from how much of the Moon’s sunlit half faces Earth, not from Earth’s shadow, and point to the sentence or figure that shows it.",
+          "help": "ask_first",
+          "watch_for": "Saying the dark part is Earth’s shadow, or asking the tutor for the answers to the check."
+        },
+        "release": "open",
+        "done_when": "auto"
+      }
+    ]
+  },
+  "attribution": [
+    "“Why the Moon Has Phases” © 2026 VIABLE Lab, licensed under CC BY 4.0."
+  ],
+  "notes": []
+}

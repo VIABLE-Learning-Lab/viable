@@ -1,0 +1,125 @@
+{
+  "format": "viable.course-package",
+  "version": 1,
+  "exported_at": "2026-10-30T19:00:00.000Z",
+  "title": "Speaking practice in English",
+  "description": "Order at a café in English, out loud, with a partner that answers in speech and corrects gently.",
+  "guide": "For an English language teacher (ESL or EFL, beginner to intermediate). Learners talk instead of type: the agent hears them, answers in English with a natural voice, recasts one mistake at a time and keeps the role-play going. Recordings aren’t kept. Change the scene in the partner’s instructions, and the voice and language in its Speech and Transcribe steps for another language.",
+  "agents": [
+    {
+      "ref": "partner",
+      "name": "Café conversation partner",
+      "description": "A friendly server in a café who listens, answers aloud and corrects gently.",
+      "graph": {
+        "version": 1,
+        "name": "Café conversation partner",
+        "entry": "input",
+        "variables": {},
+        "nodes": [
+          {
+            "id": "input",
+            "type": "input",
+            "config": {
+              "guidance": "Speak (or type) in English, as if ordering at a café.",
+              "example": "Hello, I want a coffee with milk, please."
+            },
+            "next": "hear",
+            "x": 30,
+            "y": 200
+          },
+          {
+            "id": "hear",
+            "type": "transcribe",
+            "config": {
+              "model": "whisper-large-v3",
+              "language": "en"
+            },
+            "next": "partner",
+            "x": 270,
+            "y": 200
+          },
+          {
+            "id": "partner",
+            "type": "llm",
+            "config": {
+              "model": "gpt-oss-120b",
+              "includeHistory": true,
+              "system": "You are a friendly server in a café, talking with an English learner (beginner to intermediate, CEFR A2–B1) who is practicing ordering food and drink.\n\nAlways answer in simple, natural English, in one to three short sentences. Keep the café scene going: greet them, ask what they would like, offer choices, say the price, ask if they want anything else. When they make a mistake, say their sentence back correctly in a natural way inside your reply (for example: \"A coffee with milk? Sure!\"), without explaining grammar unless they ask. If they use another language, help them say it in English and encourage them to try. No Markdown or emojis: your reply is also read aloud.",
+              "user": "What they said (transcript; empty if they typed): {{hear.text}}\nWhat they typed: {{input}}"
+            },
+            "next": "speak",
+            "x": 510,
+            "y": 200
+          },
+          {
+            "id": "speak",
+            "type": "speech",
+            "config": {
+              "model": "kokoro",
+              "text": "{{partner.content}}",
+              "voice": "af_heart",
+              "speed": 0.9
+            },
+            "next": "reply",
+            "x": 750,
+            "y": 200
+          },
+          {
+            "id": "reply",
+            "type": "output",
+            "config": {
+              "text": "{{partner.content}}",
+              "attachments": "{{speak.url}}"
+            },
+            "x": 990,
+            "y": 200
+          }
+        ]
+      }
+    }
+  ],
+  "question_sets": [],
+  "course": {
+    "title": "English: at the café",
+    "description": "Practice ordering at a café, out loud, with a conversation partner that answers in English.",
+    "audience": "adults",
+    "identify": "ask",
+    "identify_ask": "name",
+    "sections_from": "none",
+    "data_level": "minimal",
+    "keep_recordings": false,
+    "units": [
+      {
+        "ref": "cafe",
+        "title": "At the café"
+      }
+    ],
+    "activities": [
+      {
+        "unit_ref": "cafe",
+        "title": "Order at a café",
+        "summary": "Tap the microphone and order something to eat and drink, in English.",
+        "role": "instruction",
+        "agent_ref": "partner",
+        "workspace": null,
+        "minutes": 10,
+        "voice": {
+          "input": true,
+          "autoplay": "always",
+          "hands_free": true,
+          "pause": "normal"
+        },
+        "attachments": null,
+        "teaching": {
+          "goal": "Learners order food and drink in English with “I’d like” or “Can I have”, ask the price and say thank you, and keep a short conversation going.",
+          "help": "explain",
+          "watch_for": "Switching to their first language for whole turns."
+        },
+        "release": "open",
+        "done_when": "auto"
+      }
+    ]
+  },
+  "attribution": [],
+  "notes": []
+}

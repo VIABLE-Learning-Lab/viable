@@ -428,3 +428,18 @@ export function slugify(name) {
     .slice(0, 48);
   return base || 'agent';
 }
+
+// A course package names knowledge bases by ref (packages.js): a Knowledge step's
+// config.knowledge_base_refs and an Agent step's config.tools.knowledge_base_refs.
+export const graphKnowledgeRefs = (graph) => (Array.isArray(graph?.nodes) ? graph.nodes : []).flatMap((node) => [node?.config?.knowledge_base_refs, node?.config?.tools?.knowledge_base_refs].filter(Array.isArray).flat());
+
+/** A package's graph with its knowledge base refs as the IDs the engine reads (idOf: ref → ID). */
+export function linkKnowledgeRefs(graph, idOf) {
+  if (!Array.isArray(graph?.nodes)) return graph;
+  return { ...graph, nodes: graph.nodes.map((node) => {
+    let config = node?.config;
+    if (Array.isArray(config?.knowledge_base_refs)) { const { knowledge_base_refs: refs, ...rest } = config; config = { ...rest, knowledge_bases: refs.map(idOf) }; }
+    if (Array.isArray(config?.tools?.knowledge_base_refs)) { const { knowledge_base_refs: refs, ...tools } = config.tools; config = { ...config, tools: { ...tools, knowledge_bases: refs.map(idOf) } }; }
+    return config === node?.config ? node : { ...node, config };
+  }) };
+}
