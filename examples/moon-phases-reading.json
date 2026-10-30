@@ -209,6 +209,10 @@
   "course": {
     "title": "Why the Moon has phases",
     "description": "Read a short text about the Moon’s phases with a tutor that asks questions, then show what you understood.",
+    "appearance": {
+      "theme": "field",
+      "color": "#8a5a1c"
+    },
     "audience": "teens",
     "identify": "ask",
     "identify_ask": "name",

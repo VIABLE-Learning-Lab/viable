@@ -56,6 +56,10 @@
   "course": {
     "title": "Sink or float",
     "description": "Find out what decides whether something sinks or floats, in a lab with a coach beside it.",
+    "appearance": {
+      "theme": "clear",
+      "color": "#0e7490"
+    },
     "audience": "teens",
     "identify": "ask",
     "identify_ask": "name",

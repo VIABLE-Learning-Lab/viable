@@ -424,6 +424,10 @@
   "course": {
     "title": "Equivalent fractions",
     "description": "Practice adding and subtracting fractions by first making equivalent fractions. A tutor beside the questions gives hints and asks questions, but never gives the answer. Then try a short check on your own.",
+    "appearance": {
+      "theme": "playground",
+      "color": null
+    },
     "audience": "children",
     "identify": "code",
     "sections_from": "none",

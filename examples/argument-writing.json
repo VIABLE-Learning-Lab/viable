@@ -56,6 +56,10 @@
   "course": {
     "title": "Argument writing",
     "description": "Write an argument essay with a writing coach beside your draft. It tells you what is working and what to look at again; the writing stays yours.",
+    "appearance": {
+      "theme": "notebook",
+      "color": null
+    },
     "audience": "teens",
     "identify": "ask",
     "identify_ask": "name",

@@ -82,6 +82,10 @@
   "course": {
     "title": "English: at the café",
     "description": "Practice ordering at a café, out loud, with a conversation partner that answers in English.",
+    "appearance": {
+      "theme": "route",
+      "color": null
+    },
     "audience": "adults",
     "identify": "ask",
     "identify_ask": "name",

@@ -152,6 +152,10 @@
   "course": {
     "title": "Research help desk",
     "description": "Ask about choosing a topic and finding, judging or citing sources. Answers come from the library’s guides.",
+    "appearance": {
+      "theme": "reading",
+      "color": null
+    },
     "audience": "adults",
     "identify": "browser",
     "sections_from": "none",
