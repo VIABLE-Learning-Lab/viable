@@ -1,0 +1,819 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VIABLE learning events and turns",
+  "description": "One learner's record, as the kit's measures read it: events (what POST /v1/learning/events takes and the research export's workspace_events.csv keeps) and, optionally, turns (messages to the AI, with how each was written). Each event kind keeps only its own fields in data; the server drops the rest, and this schema rejects them so typos show. Never keystrokes.",
+  "type": "object",
+  "required": [
+    "events"
+  ],
+  "properties": {
+    "user": {
+      "type": "string",
+      "maxLength": 128,
+      "description": "Your app's stable, opaque ID for the learner. Never a name or an email."
+    },
+    "activity": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "description": "Your app's ID for the task."
+    },
+    "learner_group": {
+      "type": "string",
+      "maxLength": 128
+    },
+    "session": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{8,64}$"
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/event"
+      }
+    },
+    "turns": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/turn"
+      }
+    }
+  },
+  "$defs": {
+    "ms": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Milliseconds (rounded, at most 100,000,000)."
+    },
+    "count": {
+      "type": "number",
+      "minimum": 0,
+      "description": "A count (rounded, at most 10,000,000)."
+    },
+    "flat": {
+      "type": "object",
+      "maxProperties": 20,
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9_.-]{1,40}$"
+      },
+      "additionalProperties": {
+        "type": [
+          "number",
+          "boolean",
+          "string"
+        ],
+        "maxLength": 200
+      },
+      "description": "A flat object of numbers, booleans and strings of up to 200 characters."
+    },
+    "event": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "panel.view",
+            "writing.progress",
+            "writing.start",
+            "writing.snapshot",
+            "writing.rubric",
+            "writing.rubric_check",
+            "page.layout",
+            "writing.submit",
+            "embed.event",
+            "embed.state",
+            "reading.page",
+            "reading.highlight",
+            "reading.note",
+            "reading.search",
+            "questions.view",
+            "questions.hint",
+            "questions.answer",
+            "app.event"
+          ],
+          "description": "A workspace event kind by its full name, or app.event for an app's own."
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When it happened, on the learner's clock."
+        },
+        "seq": {
+          "type": "integer",
+          "description": "Its order in the session."
+        },
+        "item": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "What it concerns, such as a question's ID."
+        },
+        "panel": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The panel it happened in (an app has one, \"app\")."
+        },
+        "data": {
+          "type": "object"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "panel.view"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "visible_ms": {
+                    "$ref": "#/$defs/ms"
+                  },
+                  "active_ms": {
+                    "$ref": "#/$defs/ms"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "writing.progress"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "field": {
+                    "enum": [
+                      "plan",
+                      "draft"
+                    ]
+                  },
+                  "keys": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "deleted": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "pasted": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "pastes": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "pasted_from_ai": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "pauses": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "pause_ms": {
+                    "$ref": "#/$defs/ms"
+                  },
+                  "longest_pause_ms": {
+                    "$ref": "#/$defs/ms"
+                  },
+                  "p_bursts": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "r_bursts": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "burst_chars": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "inside_edits": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "leading_edits": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "active_ms": {
+                    "$ref": "#/$defs/ms"
+                  },
+                  "visible_ms": {
+                    "$ref": "#/$defs/ms"
+                  },
+                  "words": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "chars": {
+                    "$ref": "#/$defs/count"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "writing.start"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "field": {
+                    "enum": [
+                      "plan",
+                      "draft"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "writing.snapshot"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "field": {
+                    "enum": [
+                      "plan",
+                      "draft"
+                    ]
+                  },
+                  "text": {
+                    "type": "string",
+                    "maxLength": 20000
+                  },
+                  "words": {
+                    "$ref": "#/$defs/count"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "writing.rubric"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "visible_ms": {
+                    "$ref": "#/$defs/ms"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "writing.rubric_check"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "criterion": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "checked": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "page.layout"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ai_width": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "collapsed": {
+                    "type": "boolean"
+                  },
+                  "ai_open": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "writing.submit"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "words": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "chars": {
+                    "$ref": "#/$defs/count"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "embed.event"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "verb": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_.:/-]{1,40}$"
+                  },
+                  "object": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "score": {
+                    "type": "number"
+                  },
+                  "max_score": {
+                    "type": "number"
+                  },
+                  "success": {
+                    "type": "boolean"
+                  },
+                  "completion": {
+                    "type": "boolean"
+                  },
+                  "response": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "duration_ms": {
+                    "$ref": "#/$defs/ms"
+                  },
+                  "data": {
+                    "$ref": "#/$defs/flat"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "embed.state"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "data": {
+                    "$ref": "#/$defs/flat"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "reading.page"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "page": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "visible_ms": {
+                    "$ref": "#/$defs/ms"
+                  },
+                  "active_ms": {
+                    "$ref": "#/$defs/ms"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "reading.highlight"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "page": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "color": {
+                    "enum": [
+                      "yellow",
+                      "green",
+                      "blue",
+                      "pink"
+                    ]
+                  },
+                  "chars": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "removed": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "reading.note"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "page": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "chars": {
+                    "$ref": "#/$defs/count"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "reading.search"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "chars": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "results": {
+                    "$ref": "#/$defs/count"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "questions.view"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "visible_ms": {
+                    "$ref": "#/$defs/ms"
+                  },
+                  "active_ms": {
+                    "$ref": "#/$defs/ms"
+                  },
+                  "changes": {
+                    "$ref": "#/$defs/count"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "questions.hint"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "index": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "set": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_.:/-]{1,40}$"
+                  },
+                  "skill": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "hints_available": {
+                    "$ref": "#/$defs/count"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "questions.answer"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "response": {
+                    "type": "string",
+                    "maxLength": 8000
+                  },
+                  "correct": {
+                    "type": "boolean"
+                  },
+                  "score": {
+                    "type": "number"
+                  },
+                  "attempt": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "rt_ms": {
+                    "$ref": "#/$defs/ms"
+                  },
+                  "changes": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "hints": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "ai_before": {
+                    "type": "boolean"
+                  },
+                  "set": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_.:/-]{1,40}$"
+                  },
+                  "version": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "item_type": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_.:/-]{1,20}$"
+                  },
+                  "skill": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "hints_available": {
+                    "$ref": "#/$defs/count"
+                  },
+                  "seconds": {
+                    "type": "number"
+                  },
+                  "asset_id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_.:/-]{1,64}$"
+                  },
+                  "content_type": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_.:/-]{1,40}$"
+                  },
+                  "kept": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "app.event"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/$defs/flat"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "turn": {
+      "type": "object",
+      "required": [
+        "started_at"
+      ],
+      "description": "A message the learner sent and the AI's answer, as the research export's turns.csv keeps it.",
+      "properties": {
+        "message": {
+          "type": "string"
+        },
+        "reply": {
+          "type": "string"
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "conversation_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "turn_index": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Its place in its conversation, from 1."
+        },
+        "first_output_ms": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "From sending to the answer starting to appear."
+        },
+        "signals": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "How the message was written (the export's signals: source, think_ms, keys, deleted, pasted, active_2m_ms, interrupted, ...)."
+        },
+        "after": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "What the learner did with the answer."
+        },
+        "assessment": {
+          "description": "Answers the agent graded (its Reply step's data.assessment).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/graded"
+            },
+            {
+              "type": "array",
+              "maxItems": 10,
+              "items": {
+                "$ref": "#/$defs/graded"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "graded": {
+      "type": "object",
+      "required": [
+        "skill",
+        "correct"
+      ],
+      "properties": {
+        "skill": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "correct": {
+          "type": "boolean"
+        },
+        "item": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 120
+        }
+      }
+    }
+  }
+}

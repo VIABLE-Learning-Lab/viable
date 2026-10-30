@@ -1,0 +1,50 @@
+{
+  "goal": "Come to the seminar having judged how well the reading’s evidence supports its conclusion, not only what it says.",
+  "help": "ask_first",
+  "watch_for": "A memo that summarizes the reading without weighing its evidence, or a learner asking the AI to summarize the reading.",
+  "standard": {
+    "object": "standard",
+    "kind": "skill",
+    "uuid": "dc8b48c2-d2cb-5d66-88d7-381fe9655da6",
+    "code": "CT.2.2",
+    "description": "Critical Thinking: Evaluate the strength of evidence used to form a conclusion",
+    "jurisdiction": "",
+    "subject": "Durable Skills",
+    "grades": [],
+    "level": {
+      "number": 3,
+      "name": "Integrating"
+    },
+    "learning_components": [
+      {
+        "id": "afafe37a-8020-5e00-b90b-0cbfe5f4d3f3",
+        "description": "Distinguishes between weaker and stronger evidence used to form a conclusion."
+      },
+      {
+        "id": "54fca970-77f5-5a90-a5a6-927c89d2a166",
+        "description": "Accurately articulates whether evidence is relevant or irrelevant to a conclusion."
+      }
+    ],
+    "prior": [
+      {
+        "uuid": "9e72a5dc-b46d-525d-9524-66ffcc1ae2af",
+        "code": "CT.2.2A.2",
+        "description": "Recognizes when evidence is relevant to a conclusion."
+      },
+      {
+        "uuid": "b935ea2a-5064-5e36-bdbf-26004a6c15bb",
+        "code": "CT.2.2B.2",
+        "description": "Articulates whether evidence is relevant or irrelevant to a conclusion."
+      }
+    ],
+    "source": {
+      "name": "Carnegie Skills Progressions",
+      "license": "https://creativecommons.org/licenses/by/4.0/",
+      "attribution": [
+        "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license, available at https://creativecommons.org/licenses/by/4.0. Learning Commons received the Carnegie Skills Progressions curriculum under CC BY-4.0 from Carnegie Foundation for the Advancement of Teaching."
+      ],
+      "modified": "2026-07-07",
+      "retrieved_at": null
+    }
+  }
+}

@@ -1,0 +1,225 @@
+{
+  "format": "viable.course-package",
+  "version": 1,
+  "exported_at": "2026-10-29T00:00:00.000Z",
+  "title": "Preparing for a seminar discussion",
+  "description": "An undergraduate or graduate seminar: each learner brings a reading, writes a discussion memo weighing its evidence with a questioning partner beside them, then reflects after the discussion.",
+  "guide": "For an undergraduate or graduate seminar, where each learner brings the reading they want to discuss. It shows a Writing panel for a discussion memo with an AI that asks questions rather than answering, how the AI helps set to a durable skill (evaluating the strength of evidence, Carnegie Skills Progressions, level Integrating) instead of a K-12 standard, and a reflection opened after the seminar. Change the memo’s task to fit your seminar first.",
+  "agents": [
+    {
+      "ref": "partner",
+      "name": "Seminar discussion partner",
+      "description": "Asks probing questions about a reading’s argument and evidence; never summarizes it or writes the memo.",
+      "graph": {
+        "version": 1,
+        "name": "Seminar discussion partner",
+        "entry": "input",
+        "variables": {},
+        "nodes": [
+          {
+            "id": "input",
+            "type": "input",
+            "config": {
+              "guidance": "In a course, the Writing panel gives this partner the memo task and the learner’s notes and memo. Here, describe a reading’s argument and ask for questions.",
+              "example": "The author argues remote work raises productivity, mostly from one company’s data. Is that enough?"
+            },
+            "next": "partner",
+            "x": 40,
+            "y": 200
+          },
+          {
+            "id": "partner",
+            "type": "llm",
+            "config": {
+              "model": "viable-3",
+              "includeHistory": true,
+              "system": "You help a university student prepare to discuss a reading in a seminar. They chose the reading and are writing a short discussion memo about it; you see the memo task and their notes and memo so far. You haven’t read the reading: never summarize it or claim to know what it says, and work only from what the student tells you, quoting their words back. Ask one probing question at a time about the argument and its evidence: what exactly is claimed, what the evidence is, whether it is relevant, how strong it is, and what a skeptical reader would say. Don’t write the memo or its questions for them. Two or three sentences, ending with one question."
+            },
+            "next": "reply",
+            "x": 300,
+            "y": 200
+          },
+          {
+            "id": "reply",
+            "type": "output",
+            "config": {
+              "text": "{{partner.content}}"
+            },
+            "x": 560,
+            "y": 200
+          }
+        ]
+      }
+    }
+  ],
+  "question_sets": [],
+  "course": {
+    "title": "Seminar preparation",
+    "description": "Before each seminar, bring a reading you want to discuss and write a short memo on how well its evidence supports its conclusion. A discussion partner beside your memo asks you questions; it hasn’t read your reading and won’t write for you.",
+    "audience": "adults",
+    "identify": "ask",
+    "identify_ask": "name",
+    "sections_from": "none",
+    "data_level": "minimal",
+    "keep_recordings": false,
+    "units": [
+      {
+        "ref": "before",
+        "title": "Before the seminar"
+      },
+      {
+        "ref": "after",
+        "title": "After the seminar"
+      }
+    ],
+    "activities": [
+      {
+        "unit_ref": "before",
+        "title": "Discussion memo",
+        "summary": "Weigh your reading’s evidence in 300 to 600 words, and bring two questions for the seminar.",
+        "role": "instruction",
+        "agent_ref": "partner",
+        "workspace": {
+          "ai": "right",
+          "title": null,
+          "layout": {
+            "ai_width": 36,
+            "resizable": true,
+            "collapsible": true
+          },
+          "panels": [
+            {
+              "id": "memo",
+              "type": "writing",
+              "title": "Memo",
+              "prompt": "Bring a reading you want the seminar to discuss. In 300 to 600 words:\n\n1. State the author’s central claim in one sentence, in your own words.\n2. Identify the two pieces of evidence the argument leans on most, and judge how relevant and how strong each is, and why.\n3. Name one place where the evidence doesn’t carry the conclusion.\n4. End with two questions you want the seminar to discuss.",
+              "plan": {
+                "label": "Notes on the reading",
+                "template": "Citation:\n\nCentral claim, in my words:\n\nEvidence 1, and how strong:\n\nEvidence 2, and how strong:\n\nWhere it overreaches:"
+              },
+              "rubric": [
+                {
+                  "criterion": "The claim",
+                  "description": "States the author’s central claim accurately and in the learner’s own words."
+                },
+                {
+                  "criterion": "The evidence weighed",
+                  "description": "Judges how relevant and how strong the main evidence is, with reasons, instead of only listing it."
+                },
+                {
+                  "criterion": "Questions for the seminar",
+                  "description": "Asks two questions that open a real disagreement or uncertainty for the group."
+                }
+              ],
+              "self_check": true,
+              "min_words": 300,
+              "max_words": 600,
+              "submit": true,
+              "lock_on_submit": false,
+              "ai_sees": "all",
+              "starters": [
+                "Ask me about the evidence",
+                "Is my summary of the claim fair?",
+                "What would a skeptic say?",
+                "Are my questions worth discussing?"
+              ]
+            }
+          ]
+        },
+        "minutes": 45,
+        "voice": null,
+        "attachments": null,
+        "teaching": {
+          "goal": "Come to the seminar having judged how well the reading’s evidence supports its conclusion, not only what it says.",
+          "help": "ask_first",
+          "watch_for": "A memo that summarizes the reading without weighing its evidence, or a learner asking the AI to summarize the reading.",
+          "standard": {
+            "object": "standard",
+            "kind": "skill",
+            "uuid": "dc8b48c2-d2cb-5d66-88d7-381fe9655da6",
+            "code": "CT.2.2",
+            "description": "Critical Thinking: Evaluate the strength of evidence used to form a conclusion",
+            "jurisdiction": "",
+            "subject": "Durable Skills",
+            "grades": [],
+            "level": {
+              "number": 3,
+              "name": "Integrating"
+            },
+            "learning_components": [
+              {
+                "id": "afafe37a-8020-5e00-b90b-0cbfe5f4d3f3",
+                "description": "Distinguishes between weaker and stronger evidence used to form a conclusion."
+              },
+              {
+                "id": "54fca970-77f5-5a90-a5a6-927c89d2a166",
+                "description": "Accurately articulates whether evidence is relevant or irrelevant to a conclusion."
+              }
+            ],
+            "prior": [
+              {
+                "uuid": "9e72a5dc-b46d-525d-9524-66ffcc1ae2af",
+                "code": "CT.2.2A.2",
+                "description": "Recognizes when evidence is relevant to a conclusion."
+              },
+              {
+                "uuid": "b935ea2a-5064-5e36-bdbf-26004a6c15bb",
+                "code": "CT.2.2B.2",
+                "description": "Articulates whether evidence is relevant or irrelevant to a conclusion."
+              }
+            ],
+            "source": {
+              "name": "Carnegie Skills Progressions",
+              "license": "https://creativecommons.org/licenses/by/4.0/",
+              "attribution": [
+                "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license, available at https://creativecommons.org/licenses/by/4.0. Learning Commons received the Carnegie Skills Progressions curriculum under CC BY-4.0 from Carnegie Foundation for the Advancement of Teaching."
+              ],
+              "modified": "2026-07-07",
+              "retrieved_at": null
+            }
+          }
+        },
+        "release": "open",
+        "done_when": "auto"
+      },
+      {
+        "unit_ref": "after",
+        "title": "After the seminar",
+        "summary": "What the discussion changed, in 150 to 250 words.",
+        "role": "instruction",
+        "agent_ref": null,
+        "workspace": {
+          "ai": "off",
+          "title": null,
+          "layout": {
+            "ai_width": 36,
+            "resizable": true,
+            "collapsible": true
+          },
+          "panels": [
+            {
+              "id": "reflection",
+              "type": "writing",
+              "title": "Reflection",
+              "prompt": "In 150 to 250 words: what did the discussion change about how you judge your reading’s evidence? Name one point a classmate raised that you hadn’t considered, and say whether it changes your view.",
+              "rubric": [],
+              "self_check": false,
+              "min_words": 150,
+              "max_words": 250,
+              "submit": true,
+              "lock_on_submit": false,
+              "ai_sees": "nothing"
+            }
+          ]
+        },
+        "minutes": 15,
+        "release": "hidden",
+        "done_when": "auto"
+      }
+    ]
+  },
+  "attribution": [
+    "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license, available at https://creativecommons.org/licenses/by/4.0. Learning Commons received the Carnegie Skills Progressions curriculum under CC BY-4.0 from Carnegie Foundation for the Advancement of Teaching."
+  ],
+  "notes": []
+}

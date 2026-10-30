@@ -1,0 +1,605 @@
+{
+  "format": "viable.course-package",
+  "version": 1,
+  "exported_at": "2026-10-29T00:00:00.000Z",
+  "title": "Equivalent fractions, grade 5",
+  "description": "Practice adding and subtracting fractions with a tutor that gives hints but never the answer, then a short check with the AI gone.",
+  "guide": "For a grade 5 math teacher. It shows a Questions panel beside a VETTING tutor that checks every hint against the question’s answer key before a learner sees it, how the AI helps set to hints only and tied to standard 5.NF.A.1, and a post-test without the AI. Change the practice questions to your own first; the check stays hidden until you open it.",
+  "agents": [
+    {
+      "ref": "tutor",
+      "name": "Fractions tutor",
+      "description": "Gives hints and guiding questions, checked against the answer key; never the answer.",
+      "graph": {
+        "version": 1,
+        "name": "Fractions tutor",
+        "entry": "input",
+        "variables": {},
+        "nodes": [
+          {
+            "id": "input",
+            "type": "input",
+            "config": {
+              "guidance": "In a course, the Questions panel gives this tutor the question the learner is on and its answer key. To try it here, open Reference data → JSON and enter {\"question\":\"1/2 + 1/3 = ?\",\"answer_key\":\"Accepted answers: 5/6\"}.",
+              "example": "I don’t get how to add these. Can you help?"
+            },
+            "next": "on_question",
+            "x": 40,
+            "y": 220
+          },
+          {
+            "id": "on_question",
+            "type": "condition",
+            "config": {
+              "field": "context.question",
+              "op": "truthy"
+            },
+            "branches": {
+              "true": "vet_question",
+              "false": "vet_general"
+            },
+            "x": 280,
+            "y": 220
+          },
+          {
+            "id": "vet_question",
+            "type": "vetting",
+            "config": {
+              "mode": "full",
+              "model": "viable-3",
+              "question": "{{context.question}}",
+              "answer_key": "{{context.answer_key}}",
+              "max_attempts": 3,
+              "includeHistory": true
+            },
+            "branches": {
+              "passed": "reply_question",
+              "unverified": "unverified",
+              "attention": "attention_question"
+            },
+            "x": 540,
+            "y": 100
+          },
+          {
+            "id": "vet_general",
+            "type": "vetting",
+            "config": {
+              "mode": "simple",
+              "model": "viable-3",
+              "max_attempts": 3,
+              "includeHistory": true,
+              "guideline": "You are a patient math tutor for a ten-year-old practicing equivalent fractions and adding and subtracting fractions with unlike denominators. Give one hint or one guiding question at a time, with small numbers and short sentences. Never give the answer to a practice question or do the work for them. If they ask about something other than fractions, kindly bring them back to the practice."
+            },
+            "branches": {
+              "passed": "reply_general",
+              "unverified": "unverified",
+              "attention": "attention_general"
+            },
+            "x": 540,
+            "y": 360
+          },
+          {
+            "id": "reply_question",
+            "type": "output",
+            "config": {
+              "text": "{{vet_question.content}}"
+            },
+            "x": 820,
+            "y": 40
+          },
+          {
+            "id": "attention_question",
+            "type": "output",
+            "config": {
+              "text": "{{vet_question.content}}"
+            },
+            "x": 820,
+            "y": 160
+          },
+          {
+            "id": "unverified",
+            "type": "output",
+            "config": {
+              "text": "I couldn’t get a hint ready that I was sure about. Try asking in a different way, or ask your teacher."
+            },
+            "x": 820,
+            "y": 280
+          },
+          {
+            "id": "reply_general",
+            "type": "output",
+            "config": {
+              "text": "{{vet_general.content}}"
+            },
+            "x": 820,
+            "y": 400
+          },
+          {
+            "id": "attention_general",
+            "type": "output",
+            "config": {
+              "text": "{{vet_general.content}}"
+            },
+            "x": 820,
+            "y": 520
+          },
+          {
+            "id": "about",
+            "type": "note",
+            "config": {
+              "text": "Each reply is drafted, then checked by a second model: against the answer key when a question is open, and against the guideline otherwise. A reply that gives the answer away is rewritten, up to three times; if none passes, the learner gets the “unverified” message instead."
+            },
+            "x": 280,
+            "y": 440
+          }
+        ]
+      }
+    }
+  ],
+  "question_sets": [
+    {
+      "ref": "practice",
+      "title": "Equivalent fractions: practice",
+      "description": "Eight questions on equivalent fractions and adding and subtracting with unlike denominators, with hints and explanations.",
+      "items": [
+        {
+          "id": "eq-2-3",
+          "type": "single",
+          "prompt": "Which fraction is equivalent to 2/3?",
+          "answer": {
+            "choice": "a"
+          },
+          "points": 1,
+          "choices": [
+            {
+              "id": "a",
+              "text": "4/6"
+            },
+            {
+              "id": "b",
+              "text": "3/4"
+            },
+            {
+              "id": "c",
+              "text": "2/6"
+            },
+            {
+              "id": "d",
+              "text": "4/3"
+            }
+          ],
+          "skill": "equivalent fractions",
+          "hints": [
+            "Multiply the top and the bottom by the same number.",
+            "Try multiplying the top and the bottom of 2/3 by 2."
+          ],
+          "explanation": "Multiply the top and the bottom of 2/3 by 2: 2 × 2 = 4 and 3 × 2 = 6, so 2/3 = 4/6."
+        },
+        {
+          "id": "missing-top",
+          "type": "fill",
+          "prompt": "Fill in the missing number: 3/4 = ?/12",
+          "answer": {
+            "accept": [
+              "9"
+            ]
+          },
+          "points": 1,
+          "skill": "equivalent fractions",
+          "hints": [
+            "What do you multiply 4 by to get 12?",
+            "Multiply the top by that same number."
+          ],
+          "explanation": "4 × 3 = 12, so multiply the top by 3 too: 3 × 3 = 9. So 3/4 = 9/12."
+        },
+        {
+          "id": "common-denominator",
+          "type": "single",
+          "prompt": "Which denominator could you use to add 1/2 and 1/3?",
+          "answer": {
+            "choice": "b"
+          },
+          "points": 1,
+          "choices": [
+            {
+              "id": "a",
+              "text": "5"
+            },
+            {
+              "id": "b",
+              "text": "6"
+            },
+            {
+              "id": "c",
+              "text": "3"
+            },
+            {
+              "id": "d",
+              "text": "2"
+            }
+          ],
+          "skill": "common denominators",
+          "hints": [
+            "Look for a number that both 2 and 3 go into.",
+            "Count by 2s and by 3s. Which number is in both lists first?"
+          ],
+          "explanation": "6 is a multiple of both 2 and 3, so both fractions can be written in sixths: 1/2 = 3/6 and 1/3 = 2/6. (Adding the denominators, 2 + 3 = 5, doesn’t give a common denominator.)"
+        },
+        {
+          "id": "add-halves-thirds",
+          "type": "fill",
+          "prompt": "1/2 + 1/3 = ?",
+          "answer": {
+            "accept": [
+              "5/6"
+            ]
+          },
+          "points": 1,
+          "skill": "adding unlike denominators",
+          "hints": [
+            "Write both fractions in sixths first.",
+            "1/2 = 3/6. What is 1/3 in sixths?"
+          ],
+          "explanation": "1/2 = 3/6 and 1/3 = 2/6, so 3/6 + 2/6 = 5/6."
+        },
+        {
+          "id": "subtract-eighths",
+          "type": "fill",
+          "prompt": "3/4 − 1/8 = ?",
+          "answer": {
+            "accept": [
+              "5/8"
+            ]
+          },
+          "points": 1,
+          "skill": "subtracting unlike denominators",
+          "hints": [
+            "Write 3/4 in eighths.",
+            "3/4 = 6/8. Now take away 1/8."
+          ],
+          "explanation": "3/4 = 6/8, and 6/8 − 1/8 = 5/8."
+        },
+        {
+          "id": "spot-the-mistake",
+          "type": "single",
+          "prompt": "Sam says 1/3 + 1/4 = 2/7. What went wrong?",
+          "answer": {
+            "choice": "a"
+          },
+          "points": 1,
+          "choices": [
+            {
+              "id": "a",
+              "text": "He added the tops and added the bottoms, instead of writing both fractions with the same denominator first."
+            },
+            {
+              "id": "b",
+              "text": "He should have multiplied the tops."
+            },
+            {
+              "id": "c",
+              "text": "Nothing: 2/7 is right."
+            },
+            {
+              "id": "d",
+              "text": "He should have subtracted instead."
+            }
+          ],
+          "skill": "adding unlike denominators",
+          "hints": [
+            "Is 2/7 bigger or smaller than 1/3 on its own? What does that tell you?",
+            "Try writing both fractions in twelfths."
+          ],
+          "explanation": "The denominators can’t just be added. In twelfths, 1/3 = 4/12 and 1/4 = 3/12, so 1/3 + 1/4 = 7/12. Notice 2/7 is even smaller than 1/3, which can’t be right for a sum."
+        },
+        {
+          "id": "mixed-sum",
+          "type": "fill",
+          "prompt": "2 1/2 + 1 1/3 = ? Write it as a mixed number, like 3 1/4.",
+          "answer": {
+            "accept": [
+              "3 5/6",
+              "23/6"
+            ]
+          },
+          "points": 1,
+          "skill": "mixed numbers",
+          "hints": [
+            "Add the whole numbers first.",
+            "Then add 1/2 and 1/3, using sixths."
+          ],
+          "explanation": "Add the whole numbers: 2 + 1 = 3. Add the fractions: 1/2 + 1/3 = 3/6 + 2/6 = 5/6. So the sum is 3 5/6."
+        },
+        {
+          "id": "subtract-twelfths",
+          "type": "fill",
+          "prompt": "5/6 − 1/4 = ?",
+          "answer": {
+            "accept": [
+              "7/12"
+            ]
+          },
+          "points": 1,
+          "skill": "subtracting unlike denominators",
+          "hints": [
+            "Find a number that both 6 and 4 go into.",
+            "Use twelfths: 5/6 = 10/12. What is 1/4 in twelfths?"
+          ],
+          "explanation": "12 is a multiple of both 6 and 4: 5/6 = 10/12 and 1/4 = 3/12, so 10/12 − 3/12 = 7/12."
+        }
+      ]
+    },
+    {
+      "ref": "check",
+      "title": "Equivalent fractions: check",
+      "description": "Five questions for the post-test.",
+      "items": [
+        {
+          "id": "check-equivalent",
+          "type": "single",
+          "prompt": "Which fraction is equivalent to 3/5?",
+          "answer": {
+            "choice": "c"
+          },
+          "points": 1,
+          "choices": [
+            {
+              "id": "a",
+              "text": "3/10"
+            },
+            {
+              "id": "b",
+              "text": "5/3"
+            },
+            {
+              "id": "c",
+              "text": "6/10"
+            },
+            {
+              "id": "d",
+              "text": "6/5"
+            }
+          ],
+          "skill": "equivalent fractions",
+          "explanation": "Multiply the top and the bottom by 2: 3/5 = 6/10."
+        },
+        {
+          "id": "check-missing",
+          "type": "fill",
+          "prompt": "Fill in the missing number: 2/3 = ?/9",
+          "answer": {
+            "accept": [
+              "6"
+            ]
+          },
+          "points": 1,
+          "skill": "equivalent fractions",
+          "explanation": "3 × 3 = 9, so 2 × 3 = 6: 2/3 = 6/9."
+        },
+        {
+          "id": "check-add",
+          "type": "fill",
+          "prompt": "1/4 + 2/3 = ?",
+          "answer": {
+            "accept": [
+              "11/12"
+            ]
+          },
+          "points": 1,
+          "skill": "adding unlike denominators",
+          "explanation": "1/4 = 3/12 and 2/3 = 8/12, so the sum is 11/12."
+        },
+        {
+          "id": "check-subtract",
+          "type": "fill",
+          "prompt": "7/8 − 1/2 = ?",
+          "answer": {
+            "accept": [
+              "3/8"
+            ]
+          },
+          "points": 1,
+          "skill": "subtracting unlike denominators",
+          "explanation": "1/2 = 4/8, and 7/8 − 4/8 = 3/8."
+        },
+        {
+          "id": "check-mixed",
+          "type": "fill",
+          "prompt": "1 1/4 + 2 1/2 = ? Write it as a mixed number.",
+          "answer": {
+            "accept": [
+              "3 3/4",
+              "15/4"
+            ]
+          },
+          "points": 1,
+          "skill": "mixed numbers",
+          "explanation": "1 + 2 = 3, and 1/4 + 1/2 = 1/4 + 2/4 = 3/4, so the sum is 3 3/4."
+        }
+      ]
+    }
+  ],
+  "course": {
+    "title": "Equivalent fractions",
+    "description": "Practice adding and subtracting fractions by first making equivalent fractions. A tutor beside the questions gives hints and asks questions, but never gives the answer. Then try a short check on your own.",
+    "audience": "children",
+    "identify": "code",
+    "sections_from": "none",
+    "data_level": "minimal",
+    "keep_recordings": false,
+    "units": [
+      {
+        "ref": "practice",
+        "title": "Practice with a tutor"
+      },
+      {
+        "ref": "check",
+        "title": "Check on your own"
+      }
+    ],
+    "activities": [
+      {
+        "unit_ref": "practice",
+        "title": "Practice: equivalent fractions",
+        "summary": "Eight questions with a tutor beside you. It gives hints, never the answer.",
+        "role": "instruction",
+        "agent_ref": "tutor",
+        "workspace": {
+          "ai": "right",
+          "title": null,
+          "layout": {
+            "ai_width": 36,
+            "resizable": true,
+            "collapsible": true
+          },
+          "panels": [
+            {
+              "id": "practice",
+              "type": "questions",
+              "title": "Practice",
+              "set_ref": "practice",
+              "feedback": "each",
+              "tries": 3,
+              "hints": true,
+              "ai_sees": "question",
+              "starters": [
+                "Can you give me a hint?",
+                "Why do I need the same denominator?",
+                "How do I find a common denominator?"
+              ]
+            }
+          ]
+        },
+        "minutes": 20,
+        "voice": null,
+        "attachments": null,
+        "teaching": {
+          "goal": "Learners rewrite fractions with a common denominator before adding or subtracting, and can say why the denominators can’t just be added.",
+          "help": "hint",
+          "watch_for": "Adding the denominators (1/2 + 1/3 = 2/5), or asking for the answer again and again.",
+          "standard": {
+            "object": "standard",
+            "uuid": "6b9c1a30-d7cc-11e8-824f-0242ac160002",
+            "code": "5.NF.A.1",
+            "description": "Add and subtract fractions with unlike denominators (including mixed numbers) by replacing given fractions with equivalent fractions in such a way as to produce an equivalent sum or difference of fractions with like denominators.",
+            "jurisdiction": "Multi-State",
+            "subject": "Mathematics",
+            "grades": [
+              "5"
+            ],
+            "learning_components": [
+              {
+                "id": "d022d8d2-37f6-5ce9-bb02-e000d731aba0",
+                "description": "Add fractions with different denominators by using equivalent fractions"
+              },
+              {
+                "id": "089c550e-f3a4-5ea2-959a-34e267c3e374",
+                "description": "Subtract fractions with different denominators by using equivalent fractions"
+              },
+              {
+                "id": "d2565c2d-3930-54d3-864e-e532fd65cf6c",
+                "description": "Add mixed numbers with different denominators by using equivalent fractions"
+              },
+              {
+                "id": "3f8f80e7-a5c3-56e5-bf2d-90c5bb5f4f08",
+                "description": "Subtract mixed numbers with different denominators by using equivalent fractions"
+              }
+            ],
+            "prior": [
+              {
+                "uuid": "6ba1136b-d7cc-11e8-824f-0242ac160002",
+                "code": "4.NF.B.3.a",
+                "description": "Understand addition and subtraction of fractions as joining and separating parts referring to the same whole.",
+                "jurisdiction": "Multi-State",
+                "subject": "Mathematics",
+                "grades": [
+                  "4"
+                ]
+              },
+              {
+                "uuid": "6ba18d83-d7cc-11e8-824f-0242ac160002",
+                "code": "4.NF.B.3.b",
+                "description": "Decompose a fraction into a sum of fractions with the same denominator in more than one way, recording each decomposition by an equation. Justify decompositions, e.g., by using a visual fraction model.",
+                "jurisdiction": "Multi-State",
+                "subject": "Mathematics",
+                "grades": [
+                  "4"
+                ]
+              },
+              {
+                "uuid": "6ba208b6-d7cc-11e8-824f-0242ac160002",
+                "code": "4.NF.B.3.c",
+                "description": "Add and subtract mixed numbers with like denominators, e.g., by replacing each mixed number with an equivalent fraction, and/or by using properties of operations and the relationship between addition and subtraction.",
+                "jurisdiction": "Multi-State",
+                "subject": "Mathematics",
+                "grades": [
+                  "4"
+                ]
+              },
+              {
+                "uuid": "6ba25f3e-d7cc-11e8-824f-0242ac160002",
+                "code": "4.NF.B.3.d",
+                "description": "Solve word problems involving addition and subtraction of fractions referring to the same whole and having like denominators, e.g., by using visual fraction models and equations to represent the problem.",
+                "jurisdiction": "Multi-State",
+                "subject": "Mathematics",
+                "grades": [
+                  "4"
+                ]
+              }
+            ],
+            "source": {
+              "name": "Learning Commons Knowledge Graph",
+              "license": "https://creativecommons.org/licenses/by/4.0/",
+              "attribution": [
+                "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license. Common Core Mathematics standards provided by Common Good Learning Tools available at https://corestandards.org/wp-content/uploads/2023/09/Math_Standards1.pdf.",
+                "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license. Learning Commons received learning components under CC BY-4.0 from Achievement Network.",
+                "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license. Learning Commons received learning progressions under CC0 from Student Achievement Partners."
+              ],
+              "modified": "2025-02-06",
+              "retrieved_at": "2026-10-21T00:00:00.000Z"
+            }
+          }
+        },
+        "release": "open",
+        "done_when": "auto"
+      },
+      {
+        "unit_ref": "check",
+        "title": "Check: equivalent fractions",
+        "summary": "Five questions, one try each, no tutor. You see how you did at the end.",
+        "role": "posttest",
+        "agent_ref": null,
+        "workspace": {
+          "ai": "off",
+          "title": null,
+          "layout": {
+            "ai_width": 36,
+            "resizable": true,
+            "collapsible": true
+          },
+          "panels": [
+            {
+              "id": "check",
+              "type": "questions",
+              "title": "Check",
+              "set_ref": "check",
+              "feedback": "end",
+              "tries": 1,
+              "hints": false,
+              "ai_sees": "nothing"
+            }
+          ]
+        },
+        "minutes": 10,
+        "release": "hidden",
+        "done_when": "auto"
+      }
+    ]
+  },
+  "attribution": [
+    "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license. Common Core Mathematics standards provided by Common Good Learning Tools available at https://corestandards.org/wp-content/uploads/2023/09/Math_Standards1.pdf.",
+    "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license. Learning Commons received learning components under CC BY-4.0 from Achievement Network.",
+    "Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license. Learning Commons received learning progressions under CC0 from Student Achievement Partners."
+  ],
+  "notes": []
+}

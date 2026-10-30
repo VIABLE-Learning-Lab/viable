@@ -1,0 +1,22 @@
+{
+  "user": "writing-app:7f3a9c21",
+  "activity": "argument-essay",
+  "session": "visit_20261029a",
+  "events": [
+    { "type": "panel.view", "panel": "essay", "at": "2026-10-29T14:00:30Z", "seq": 1, "data": { "visible_ms": 30000, "active_ms": 12000 } },
+    { "type": "writing.start", "panel": "essay", "at": "2026-10-29T14:01:00Z", "seq": 2, "data": { "field": "draft" } },
+    { "type": "writing.progress", "panel": "essay", "at": "2026-10-29T14:03:00Z", "seq": 3, "data": { "field": "draft", "keys": 140, "deleted": 22, "pasted": 0, "pastes": 0, "pauses": 3, "pause_ms": 14000, "longest_pause_ms": 7000, "p_bursts": 4, "r_bursts": 1, "burst_chars": 140, "inside_edits": 2, "leading_edits": 30, "active_ms": 95000, "words": 24, "chars": 118 } },
+    { "type": "writing.rubric", "panel": "essay", "at": "2026-10-29T14:04:00Z", "seq": 4, "data": { "visible_ms": 20000 } },
+    { "type": "writing.snapshot", "panel": "essay", "at": "2026-10-29T14:05:00Z", "seq": 5, "data": { "field": "draft", "text": "Schools should start later because teenagers need more sleep to learn well.", "words": 13 } },
+    { "type": "writing.progress", "panel": "essay", "at": "2026-10-29T14:07:00Z", "seq": 6, "data": { "field": "draft", "keys": 60, "deleted": 8, "pasted": 40, "pastes": 1, "pasted_from_ai": 0, "pauses": 1, "pause_ms": 3000, "longest_pause_ms": 3000, "p_bursts": 2, "r_bursts": 0, "burst_chars": 60, "inside_edits": 1, "leading_edits": 12, "active_ms": 40000, "words": 40, "chars": 210 } },
+    { "type": "writing.submit", "panel": "essay", "at": "2026-10-29T14:20:00Z", "seq": 7, "data": { "words": 40, "chars": 210 } },
+    { "type": "questions.answer", "panel": "check", "item": "q1", "at": "2026-10-29T14:22:00Z", "seq": 8, "data": { "response": "B", "correct": false, "attempt": 1, "rt_ms": 8000, "skill": "Claims" } },
+    { "type": "questions.answer", "panel": "check", "item": "q2", "at": "2026-10-29T14:23:00Z", "seq": 9, "data": { "response": "A", "correct": true, "attempt": 1, "rt_ms": 6000, "skill": "Claims" } },
+    { "type": "app.event", "panel": "app", "at": "2026-10-29T14:24:00Z", "seq": 10, "data": { "badge": "first-draft", "points": 10 } }
+  ],
+  "turns": [
+    { "message": "Is my claim clear?", "reply": "Your claim is in your first sentence...", "started_at": "2026-10-29T14:02:00Z", "conversation_id": "c1", "turn_index": 1, "first_output_ms": 900, "signals": { "source": "starter", "think_ms": 4000 } },
+    { "message": "Which reason needs stronger evidence?", "reply": "Look at your second reason...", "started_at": "2026-10-29T14:06:00Z", "conversation_id": "c1", "turn_index": 2, "first_output_ms": 1100, "signals": { "source": "typed", "think_ms": 12000, "keys": 40, "deleted": 4, "pasted": 0, "active_2m_ms": 60000 } },
+    { "message": "Did I answer the other side fairly?", "reply": "You name the other side...", "started_at": "2026-10-29T15:10:00Z", "conversation_id": "c2", "turn_index": 1, "first_output_ms": 1000, "signals": { "source": "typed", "think_ms": 9000, "keys": 36, "deleted": 0, "pasted": 0, "active_2m_ms": 30000 }, "assessment": { "skill": "Counterargument", "correct": true } }
+  ]
+}

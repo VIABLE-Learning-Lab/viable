@@ -1,0 +1,203 @@
+{
+  "format": "viable.course-package",
+  "version": 1,
+  "exported_at": "2026-10-29T00:00:00.000Z",
+  "title": "Research help: a library workshop",
+  "description": "An information-literacy workshop for adult learners: shape a research question and plan searches, then evaluate one source, with a coach that asks before it suggests.",
+  "guide": "For a librarian running a one-off information-literacy workshop or library session with adult learners. It shows two Writing panels, one to shape a research question and its search words and one to evaluate a source, with a research coach that asks what learners have tried before suggesting search strategies and never finds sources for them. Nobody signs in: each device is one learner. Change the tasks to your library’s catalog and databases first.",
+  "agents": [
+    {
+      "ref": "coach",
+      "name": "Research coach",
+      "description": "Coaches research questions and search strategies, and asks about sources; never searches for the learner.",
+      "graph": {
+        "version": 1,
+        "name": "Research coach",
+        "entry": "input",
+        "variables": {},
+        "nodes": [
+          {
+            "id": "input",
+            "type": "input",
+            "config": {
+              "guidance": "In a course, the Writing panel gives the coach the task and what the learner has written. Here, describe a topic you want to research.",
+              "example": "I want to research social media and teenagers but I get millions of results."
+            },
+            "next": "coach",
+            "x": 40,
+            "y": 200
+          },
+          {
+            "id": "coach",
+            "type": "llm",
+            "config": {
+              "model": "viable-3",
+              "includeHistory": true,
+              "system": "You are a reference librarian coaching an adult learner in an information-literacy workshop. Help them narrow a topic into a research question they can answer, and plan searches: the main ideas in their question, synonyms and broader or narrower terms, AND, OR and quotation marks, filters such as date and source type, and where to search (the library catalog and databases, Google Scholar, government and organization websites). When they evaluate a source, ask about who wrote it and why, the evidence it gives, when it was published, and who might disagree. Don’t search for them or recommend particular sources, articles or authors, and never invent a citation. Ask what they have tried before suggesting a next step. Keep replies short and plain, ending with one question."
+            },
+            "next": "reply",
+            "x": 300,
+            "y": 200
+          },
+          {
+            "id": "reply",
+            "type": "output",
+            "config": {
+              "text": "{{coach.content}}"
+            },
+            "x": 560,
+            "y": 200
+          }
+        ]
+      }
+    }
+  ],
+  "question_sets": [],
+  "course": {
+    "title": "Finding and judging sources",
+    "description": "A library workshop: turn a topic into a research question you can answer, plan your searches, and judge a source you find. A research coach beside your work asks questions and suggests strategies; finding the sources is up to you.",
+    "audience": "adults",
+    "identify": "browser",
+    "sections_from": "none",
+    "data_level": "minimal",
+    "keep_recordings": false,
+    "units": [
+      {
+        "ref": "workshop",
+        "title": "Workshop"
+      }
+    ],
+    "activities": [
+      {
+        "unit_ref": "workshop",
+        "title": "Shape a research question",
+        "summary": "From a topic to a question you can answer, and the words you’ll search with.",
+        "role": "instruction",
+        "agent_ref": "coach",
+        "workspace": {
+          "ai": "right",
+          "title": null,
+          "layout": {
+            "ai_width": 36,
+            "resizable": true,
+            "collapsible": true
+          },
+          "panels": [
+            {
+              "id": "question",
+              "type": "writing",
+              "title": "Research question",
+              "prompt": "Pick a topic you care about. Narrow it to a question you could answer with a few good sources in a week.\n\nWrite: your topic; your first question; what is too broad or too narrow about it; your revised question; and the search words you’ll try first, with at least two synonyms or related terms for each main idea.",
+              "plan": {
+                "label": "Search words",
+                "template": "Main idea 1:   synonyms:\n\nMain idea 2:   synonyms:\n\nWhere I’ll search first:"
+              },
+              "rubric": [
+                {
+                  "criterion": "Focused",
+                  "description": "The question can be answered with a few good sources, not a whole book."
+                },
+                {
+                  "criterion": "Researchable",
+                  "description": "Evidence on it is likely to exist, and it isn’t answered by a single fact."
+                },
+                {
+                  "criterion": "Search words",
+                  "description": "Each main idea has search words, with synonyms or related terms."
+                }
+              ],
+              "self_check": true,
+              "min_words": 60,
+              "max_words": null,
+              "submit": true,
+              "lock_on_submit": false,
+              "ai_sees": "all",
+              "starters": [
+                "Is my question too broad?",
+                "What words could I search with?",
+                "Where should I search first?"
+              ]
+            }
+          ]
+        },
+        "minutes": 20,
+        "voice": null,
+        "attachments": null,
+        "teaching": {
+          "goal": "Learners narrow a topic to a question they can research, and plan their searches with main ideas, synonyms and a place to start.",
+          "help": "ask_first",
+          "watch_for": "Someone asking the AI to find sources for them, or to write their question.",
+          "standard": null
+        },
+        "release": "open",
+        "done_when": "auto"
+      },
+      {
+        "unit_ref": "workshop",
+        "title": "Evaluate a source",
+        "summary": "Find one source on your question and judge whether to use it.",
+        "role": "instruction",
+        "agent_ref": "coach",
+        "workspace": {
+          "ai": "right",
+          "title": null,
+          "layout": {
+            "ai_width": 36,
+            "resizable": true,
+            "collapsible": true
+          },
+          "panels": [
+            {
+              "id": "source",
+              "type": "writing",
+              "title": "Your source",
+              "prompt": "Find one source on your question: an article, a report or a web page. Give its title and link, then judge it:\n\n• Who wrote or published it, and what makes them credible on this?\n• What evidence does it give?\n• When was it published, and does that matter for your question?\n• Why does it exist (to inform, persuade, sell?), and who might disagree with it?\n• Would you use it, and for what?",
+              "rubric": [
+                {
+                  "criterion": "Authority",
+                  "description": "Says who is behind the source and why they are, or aren’t, credible on this."
+                },
+                {
+                  "criterion": "Evidence",
+                  "description": "Names the evidence the source gives, and how it could be checked."
+                },
+                {
+                  "criterion": "Currency",
+                  "description": "Says when it was published, and whether that matters for the question."
+                },
+                {
+                  "criterion": "Purpose",
+                  "description": "Says why the source exists and whose point of view it takes."
+                }
+              ],
+              "self_check": true,
+              "min_words": 80,
+              "max_words": null,
+              "submit": true,
+              "lock_on_submit": false,
+              "ai_sees": "all",
+              "starters": [
+                "How can I tell if this author is credible?",
+                "Is this source too old for my question?",
+                "What should I check next?"
+              ]
+            }
+          ]
+        },
+        "minutes": 25,
+        "voice": null,
+        "attachments": null,
+        "teaching": {
+          "goal": "Learners judge a source by who made it, its evidence, when it was published and why it exists, and decide whether and how to use it.",
+          "help": "ask_first",
+          "watch_for": "Someone asking the AI whether a particular source is good, instead of judging it themselves.",
+          "standard": null
+        },
+        "release": "open",
+        "done_when": "auto"
+      }
+    ]
+  },
+  "attribution": [],
+  "notes": []
+}

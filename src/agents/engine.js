@@ -505,8 +505,9 @@ const HANDLERS = {
     const wantsJson = outputs.length > 0 || Boolean(cfg.json || cfg.output_schema) || cfg.response_format?.type === 'json_object';
 
     const note = workspaceNote(ctx, node, scope);
-    const messages = buildLlmMessages(cfg, scope, ctx.messages, ctx.inputContent, outputs, note);
-    const traceMessages = buildLlmMessages(cfg, traceScope, ctx.traceMessages, ctx.traceInputContent, outputs, note);
+    const teaching = teachingNote(ctx, node, scope);
+    const messages = buildLlmMessages(cfg, scope, ctx.messages, ctx.inputContent, outputs, note, teaching);
+    const traceMessages = buildLlmMessages(cfg, traceScope, ctx.traceMessages, ctx.traceInputContent, outputs, note, teaching);
 
     const requestData = { model: cfg.model, messages, ...mapModelParams(cfg) };
     const traceRequestData = { model: cfg.model, messages: traceMessages, ...mapModelParams(cfg) };
@@ -1060,7 +1061,10 @@ const HANDLERS = {
     if (full && !vettingItems(cfg, ctx.scope()).length) {
       throw new AgentRunError(`VETTING step "${node.id}" needs a question and answer key in full mode.`, { status: 422, code: 'vetting_answer_key_missing' });
     }
-    const [live, trace] = await Promise.all([prompts(ctx.scope()), prompts(ctx.traceScope())]);
+    // The activity teacher's instructions go to the reply model, and the reviewer checks them too.
+    const teaching = teachingNote(ctx, node, ctx.scope());
+    const taught = (set) => (teaching ? { ...set, chat: `${set.chat}\n\n${teaching}`, verify: `${set.verify}\n\nAlso judge the response against the activity teacher's instructions below: a response that goes further than they allow fails.\n${teaching}` } : set);
+    const [live, trace] = (await Promise.all([prompts(ctx.scope()), prompts(ctx.traceScope())])).map(taught);
     // An earlier step's answer (e.g. {{answer.content}}) is reviewed as written: it is the first
     // attempt, and the reply model only revises it after a failed review. Empty: the reply model writes.
     const draft = cfg.draft != null ? String(renderTemplate(cfg.draft, ctx.scope()) ?? '').trim() : '';
@@ -1176,9 +1180,11 @@ const HANDLERS = {
     let used = 0;
     // What the learner has open on a learning page, as for an LLM step that writes the reply.
     const note = workspaceNote(ctx, node, ctx.scope());
+    const teaching = teachingNote(ctx, node, ctx.scope());
     const build = (scope, history, inputContent) => [
       { role: 'system', content: [
         cfg.system ? renderTemplate(cfg.system, scope) : 'You are a helpful assistant.',
+        ...(teaching ? [teaching] : []),
         ...(note?.place === 'system' ? [note.content] : []),
         tools.length ? `You can call tools. Tools:\n${tools.map((tool) => `- ${tool.name}(${JSON.stringify(tool.parameters)}): ${tool.description}`).join('\n')}` : 'No tools are available.',
         ...(tools.some((tool) => tool.name === 'read_document') ? ['Search returns excerpts. When an answer needs a whole list, table, set of steps or a count, find the page that lists them and read that section with read_document, then check each item against what the question asks (for example campus libraries versus online collections) before answering. When a passage sends readers to another page for details ("see Libraries and Collections"), search for that page by its name and read it. Every name, number, date and contact in your answer must come from what you read, never from memory. Search in the words and the language the sources are written in, not only the question\'s.'] : []),
@@ -2047,10 +2053,20 @@ function workspaceNote(ctx, node, scope) {
   return node.type !== 'vetting' && scope.context.workspace_place === 'system' ? { role: 'system', content, place: 'system' } : { role: 'user', content };
 }
 
-function buildLlmMessages(cfg, scope, history, inputContent, outputs, note = null) {
+// The activity teacher's instructions (how the AI helps, teaching.js), for the same steps as what the
+// learner has open. Unlike that, they are instructions: they join the step's own, after the builder's.
+function teachingNote(ctx, node, scope) {
+  const text = scope.context?.teaching_view;
+  const every = scope.context?.workspace_reach === 'every' || !ctx.replySteps.size;
+  if (typeof text !== 'string' || !text || !(node.type === 'vetting' || ctx.replySteps.has(node.id) || every)) return null;
+  return `From the teacher of this activity:\n${text}`;
+}
+
+function buildLlmMessages(cfg, scope, history, inputContent, outputs, note = null, teaching = null) {
   const messages = [];
   const systemParts = [];
   if (cfg.system) systemParts.push(renderTemplate(cfg.system, scope));
+  if (teaching) systemParts.push(teaching);
   // A page that puts what the learner has open with the step's instructions (workspace place: system).
   if (note?.place === 'system') { systemParts.push(note.content); note = null; }
   if (outputs.length) systemParts.push(buildOutputInstruction(outputs));

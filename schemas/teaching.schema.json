@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VIABLE teaching settings (How the AI helps)",
+  "description": "An activity's teaching settings: the teacher's goal, a K-12 standard or a durable skill as it was chosen, how far the AI may go, what the teacher wants to hear about, misconceptions to listen for, and a section's own help level and note. The agent is given the goal, the standard and the help level as instructions with its reply steps (VETTING's reviewer checks them too) and as context.workspace.teaching; watch_for stays with the teacher. An instruction, not a guarantee.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "goal": { "type": ["string", "null"], "maxLength": 1000 },
+    "help": {
+      "enum": ["ask_first", "hint", "explain", "check_only", null],
+      "description": "ask_first: ask what the learner thinks first and build on it; hint: hints and guiding questions, no answers; explain: explain and show a worked example when stuck, then let them try; check_only: only check the learner's own work."
+    },
+    "watch_for": { "type": ["string", "null"], "maxLength": 500, "description": "What the teacher wants to hear about. Never sent to the AI." },
+    "standard": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/standard" }] },
+    "misconceptions": {
+      "type": "array",
+      "maxItems": 8,
+      "description": "Misconceptions the teacher chose to listen for (Eedi Misconceptions Graph, CC BY 4.0), each kept as it was chosen with the construct it hinders.",
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "construct"],
+        "properties": {
+          "id": { "$ref": "#/$defs/uuid" },
+          "description": { "type": "string", "minLength": 1, "maxLength": 600 },
+          "construct": { "type": "object", "required": ["id", "description"], "properties": { "id": { "$ref": "#/$defs/uuid" }, "description": { "type": "string", "minLength": 1, "maxLength": 600 } } },
+          "source": { "$ref": "#/$defs/source" }
+        }
+      }
+    },
+    "sections": {
+      "type": ["object", "null"],
+      "maxProperties": 60,
+      "description": "A section's own help level and note, by section ID, applied over the activity's for that section's learners only.",
+      "propertyNames": { "pattern": "^sec_[A-Za-z0-9_-]{1,64}$" },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "help": { "enum": ["ask_first", "hint", "explain", "check_only", null] },
+          "note": { "type": ["string", "null"], "maxLength": 500 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "uuid": { "type": "string", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$" },
+    "standard": {
+      "type": "object",
+      "description": "A standard from Learning Commons' Knowledge Graph, or a durable skill (Carnegie Skills Progressions) at a level, kept as it was chosen with the attribution CC BY 4.0 requires. Runs read this copy and never call Learning Commons.",
+      "required": ["uuid", "description"],
+      "properties": {
+        "kind": { "enum": ["standard", "skill"], "default": "standard" },
+        "level": {
+          "type": ["object", "null"],
+          "description": "For a skill: the level learners work toward.",
+          "properties": { "number": { "type": "integer", "minimum": 1, "maximum": 4 }, "name": { "type": "string", "maxLength": 20 } }
+        },
+        "uuid": { "$ref": "#/$defs/uuid" },
+        "code": { "type": "string", "maxLength": 60 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 1200 },
+        "jurisdiction": { "type": "string", "maxLength": 60 },
+        "subject": { "type": "string", "maxLength": 60 },
+        "grades": { "type": "array", "items": { "enum": ["PK", "K", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"] } },
+        "learning_components": {
+          "type": "array",
+          "maxItems": 40,
+          "items": { "type": "object", "required": ["id", "description"], "properties": { "id": { "type": "string", "maxLength": 64 }, "description": { "type": "string", "maxLength": 600 } } }
+        },
+        "prior": {
+          "type": "array",
+          "maxItems": 12,
+          "description": "The standards before it (for a skill, the level below).",
+          "items": { "type": "object", "required": ["uuid", "description"], "properties": { "uuid": { "$ref": "#/$defs/uuid" }, "code": { "type": "string", "maxLength": 60 }, "description": { "type": "string", "maxLength": 600 } } }
+        },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "description": "Where it came from, with the attribution statements CC BY 4.0 asks to carry along.",
+      "properties": {
+        "name": { "type": "string", "maxLength": 80 },
+        "license": { "type": "string", "maxLength": 120 },
+        "attribution": { "type": "array", "maxItems": 8, "items": { "type": "string", "maxLength": 600 } },
+        "modified": { "type": ["string", "null"], "maxLength": 20 },
+        "retrieved_at": { "type": ["string", "null"], "maxLength": 40 }
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+VIABLE open harness kit (@viable-lab/harness)
+Copyright (c) 2025-2026 Hongming (Chip) Li. The code is under the MIT License (LICENSE).
+
+The kit carries the data below, which keeps its own license: Creative Commons Attribution 4.0
+International (CC BY 4.0), https://creativecommons.org/licenses/by/4.0/. Keep these statements
+with any copy of the data, and with what you build that shows it.
+
+Learning Commons Knowledge Graph
+  Academic standards, their learning components and the standards before them, in the example
+  course package examples/fractions-practice.json (its activity's standard, 5.NF.A.1) and in
+  any teaching settings that keep a standard as it was chosen. Each standard carries its own
+  attribution statements in source.attribution, and a package lists them in "attribution".
+  Source: https://learningcommons.org
+  Attribution, as the example carries it:
+    Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license. Common Core
+    Mathematics standards provided by Common Good Learning Tools available at
+    https://corestandards.org/wp-content/uploads/2023/09/Math_Standards1.pdf.
+    Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license. Learning Commons
+    received learning components under CC BY-4.0 from Achievement Network.
+    Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license. Learning Commons
+    received learning progressions under CC0 from Student Achievement Partners.
+
+Carnegie Skills Progressions (durable skills)
+  Collaboration, communication and critical thinking, with their subskills, indicators and four
+  levels, from a Learning Commons Knowledge Graph release: VIABLE's copy, src/utils/skillsData.js
+  (lib/utils/skillsData.js in an export), exported by the kit as SKILLS, and the skill kept in
+  examples/seminar-discussion.json and schemas/examples/teaching.example.json.
+  Author: Carnegie Foundation for the Advancement of Teaching.
+  Attribution:
+    Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license, available at
+    https://creativecommons.org/licenses/by/4.0. Learning Commons received the Carnegie Skills
+    Progressions curriculum under CC BY-4.0 from Carnegie Foundation for the Advancement of
+    Teaching.
+
+Eedi Misconceptions Graph
+  Misconceptions in mathematics and the constructs they hinder, from a Learning Commons Knowledge
+  Graph release: VIABLE's copy, src/utils/misconceptionsData.js, and its source and attribution in
+  src/utils/misconceptionsSource.js (lib/utils/misconceptionsSource.js in an export, which the
+  teaching layer imports), and any misconceptions a teacher chose and teaching settings keep, each
+  with its own attribution in source.attribution.
+  Author: Eedi Ltd.
+  Attribution:
+    Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license, available at
+    https://creativecommons.org/licenses/by/4.0. "Eedi Misconceptions Graph v1.0" (c) 2026 Eedi
+    Ltd., licensed under CC BY 4.0 and available at https://www.eedi.com.
+
+npm packages an export copies into node_modules/, each with its own license file:
+  hono (MIT) and entities (BSD-2-Clause).
