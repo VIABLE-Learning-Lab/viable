@@ -214,7 +214,7 @@ export async function runAgentGraph(env, graph, options = {}) {
       if (stopId != null && currentId === stopId) return;
       if (ctx.stepCount >= budgets.maxSteps) throw budgetError('step');
       const node = nodeMap.get(currentId);
-      if (Date.now() >= deadline && !DEADLINE_FINALIZERS.has(node?.type)) throw budgetError('time', budgets);
+      if (Date.now() >= deadline && !DEADLINE_FINALIZERS.has(node?.type) && !(node?.type === 'image' && node.config?.on_error === 'continue')) throw budgetError('time', budgets);
       if (!node) throw new AgentRunError(`Graph references missing node "${currentId}".`, { status: 422, code: 'invalid_graph' });
 
       const handler = HANDLERS[node.type];
@@ -245,7 +245,7 @@ export async function runAgentGraph(env, graph, options = {}) {
 
       ctx.outputs[node.id] = output;
       ctx.traceOutputs[node.id] = traceOutput;
-      recordStep(ctx, node, { output: traceOutput, startedAt, path, input: step.input });
+      recordStep(ctx, node, { output: traceOutput, error: result.error, startedAt, path, input: step.input });
       ctx.stepCount += 1;
       hooks.onStep?.(ctx.steps[ctx.steps.length - 1]);
 
@@ -299,7 +299,7 @@ function recordStep(ctx, node, { output = null, error = null, startedAt, path = 
     status: error ? 'failed' : 'completed',
     // Its parts are made binary- and credential-free where they are read (stepValue); here it is bounded like a stored output.
     input: input == null ? null : boundedTraceValue(input, 16000),
-    output: error ? null : summarizeOutput(node, output, ctx),
+    output: output == null ? null : summarizeOutput(node, output, ctx),
     model: output?.model || null,
     tokens: output?.usage?.total ?? null,
     cost: typeof output?.cost === 'number' ? output.cost : null,
@@ -329,8 +329,8 @@ function summarizeOutput(node, output, ctx) {
       ...(node.type === 'agent' && Array.isArray(safeOutput.tool_calls) ? { tool_calls: safeOutput.tool_calls, turns: safeOutput.turns, model: safeOutput.model } : {}),
       // A review keeps its verdict (the turn records it: learning_turns.vetting_json) and its rounds, replies cut.
       ...(node.type === 'vetting' ? { outcome: safeOutput.outcome, passed: safeOutput.passed, attempts: safeOutput.attempts, stop_reason: safeOutput.stop_reason, ...(Array.isArray(safeOutput.attempt_details) ? { attempt_details: shortRounds(safeOutput.attempt_details) } : {}) } : {}),
-      // A long conversation's Input step keeps its summary report.
-      ...(node.type === 'input' && safeOutput.history_summary ? { history_summary: safeOutput.history_summary } : {}),
+      // Run lists need the current message even when the accumulated history fills the trace.
+      ...(node.type === 'input' ? { message: String(safeOutput.message ?? '').slice(0, 4000), ...(typeof safeOutput.content === 'string' ? { content: safeOutput.content.slice(0, 4000) } : {}), ...(safeOutput.history_summary ? { history_summary: safeOutput.history_summary } : {}) } : {}),
       ...(node.type === 'output' ? { text: String(safeOutput.text ?? '').slice(0, 4000), attachments: safeOutput.attachments, ...(safeOutput.citations ? { citations: safeOutput.citations } : {}), ...(safeOutput.data !== undefined ? { data: safeOutput.data } : {}) } : {})
     } : safeOutput;
   } catch (_) {
@@ -626,19 +626,41 @@ const HANDLERS = {
     });
     step.input = { operation, prompt: clip(tracePrompt, 4000), source_image: traceRequestBody.images?.[0]?.image_url ?? null };
 
-    ctx.consumeModelCall();
-    const providerStartedAt = Date.now();
+    const maxAttempts = clampInt(cfg.max_attempts, 1, 2, 1);
+    const attempts = [];
     let result;
-    try {
-      result = await services.generateImage(env, requestBody, { requestId: ctx.requestId });
-    } catch (error) {
-      await hooks.logProviderCall?.(failedProviderCall({
-        operation: 'image_generation', node, cfg, requestBody: traceRequestBody, error,
-        durationMs: Date.now() - providerStartedAt
-      }));
-      throw error;
+    let providerDurationMs = 0;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      let providerStartedAt = null;
+      try {
+        if (Date.now() >= ctx.deadline) throw budgetError('time', budgets);
+        ctx.consumeModelCall();
+        providerStartedAt = Date.now();
+        result = await services.generateImage(env, requestBody, { requestId: ctx.requestId });
+        providerDurationMs = Date.now() - providerStartedAt;
+        attempts.push({ attempt, status: 'completed' });
+        break;
+      } catch (error) {
+        if (providerStartedAt != null) {
+          attempts.push({ attempt, status: 'failed', code: error.code || 'image_generation_failed' });
+          await hooks.logProviderCall?.(failedProviderCall({
+            operation: 'image_generation', node, cfg, requestBody: traceRequestBody, error,
+            durationMs: Date.now() - providerStartedAt, retry: attempt - 1
+          }));
+        }
+        const delay = Math.max(500, Number(error.retryAfterMs) || 0);
+        if (error.imageRetryable === true && !error.imageFailureReason && attempt < maxAttempts && delay <= 2000 && Date.now() + delay < ctx.deadline && ctx.modelCalls < budgets.maxModelCalls) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        if (cfg.on_error !== 'continue') throw error;
+        // The graph decides how to deliver partial work. Diagnostics stay in the trace, not assistant prose.
+        const output = { url: null, urls: [], operation, prompt, model: cfg.model, cost: 0,
+          status: 'failed', attempts: attempts.length, attempt_details: attempts,
+          error: { code: error.code || 'image_generation_failed', status: Number(error.status) || 500, ...(error.imageFailureReason ? { reason: error.imageFailureReason } : {}) } };
+        return { output, traceOutput: sanitizeBinaryValues({ ...output, prompt: tracePrompt }), error, next: node.next };
+      }
     }
-    const providerDurationMs = Date.now() - providerStartedAt;
     ctx.addUsage(result.usage, result.cost);
 
     const urls = (result.publicData?.data || [])
@@ -651,7 +673,8 @@ const HANDLERS = {
       operation,
       prompt,
       model: result.resolution?.resolvedModel || cfg.model,
-      cost: result.cost
+      cost: result.cost,
+      ...(cfg.on_error === 'continue' || cfg.max_attempts != null ? { status: 'completed', attempts: attempts.length, attempt_details: attempts } : {})
     };
 
     await hooks.logProviderCall?.({
@@ -664,6 +687,7 @@ const HANDLERS = {
       cost: result.cost,
       ...billingFields(result.resolution),
       durationMs: providerDurationMs,
+      retry: attempts.length - 1,
       requestBody: traceRequestBody,
       responseBody: result.responseData,
       operationMetadata: {
@@ -2112,13 +2136,15 @@ function failedProviderCall({ operation, node, cfg, requestBody, error, retry = 
     operation,
     nodeId: node.id,
     model: cfg.model || null,
-    provider: error?.provider || null,
+    provider: error?.provider || error?.resolution?.provider || null,
     requestedModel: cfg.model || null,
     usage: null,
     cost: 0,
     durationMs,
     requestBody,
-    responseBody: null,
+    responseBody: operation === 'image_generation' && error?.providerError ? {
+      error: { message: String(error.message || ''), code: error.providerError.raw?.error?.code || null, type: error.providerError.raw?.error?.type || null }
+    } : null,
     responseStatus: Number.isFinite(status) ? status : 500,
     errorMessage: String(error?.message || error || 'Provider call failed.'),
     errorCode: error?.code || null,

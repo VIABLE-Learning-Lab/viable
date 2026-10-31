@@ -129,6 +129,7 @@ export function describeGraphSchema(limits = DEFAULT_GRAPH_LIMITS) {
       'At least one output node must be reachable from entry.',
       'A step\'s config.model must be a model whose mode in /v1/models is the step\'s model_mode: chat models answer, image steps take image_generation, speech steps audio_speech and transcribe steps audio_transcription.',
       'Image steps default to operation=generate. operation=edit requires image (one URL) or images ([{image_url}]), and a model connection with image_editing=true. Operation and source values may be templates. Keep the last image URL with a conversation State step for later edits; missing sources never fall back to generation.',
+      'Image recovery is opt-in: max_attempts=2 permits one bounded retry after an explicit transient rejection; on_error=continue returns status=failed and empty URLs instead of stopping. Defaults are 1 and stop. Preserve completed URLs and frozen unfinished plans in State, and skip completed slots on explicit retries. Do not retry unknown outcomes or expose diagnostics as assistant prose.',
       'An llm step can attach images from earlier steps with config.images=[{image_url:"{{step.url}}"}]. A URL in prompt text is only text. Typed image inputs are downloaded safely and converted to provider-native image data; the selected chat model must support image input.',
       `An llm node may declare at most ${limits.maxStructuredOutputs} structured outputs.`,
       `run_limits may set max_model_calls (${RUN_LIMITS.max_model_calls.join('–')}) and timeout_seconds (${RUN_LIMITS.timeout_seconds.join('–')}).`
@@ -258,6 +259,10 @@ function validateOrchestrationNode(node) {
   const errors = [];
   const label = `${node.type[0].toUpperCase()}${node.type.slice(1)} node "${node.id}"`;
   if (['router', 'agent', 'vetting'].includes(node.type) && !cfg.model) errors.push(`${label} requires config.model.`);
+  if (node.type === 'image') {
+    if (cfg.on_error != null && !['stop', 'continue'].includes(cfg.on_error)) errors.push(`${label} on_error must be stop or continue.`);
+    if (cfg.max_attempts != null && (!Number.isInteger(cfg.max_attempts) || cfg.max_attempts < 1 || cfg.max_attempts > 2)) errors.push(`${label} max_attempts must be 1 or 2.`);
+  }
   if (node.type === 'vetting') {
     if (cfg.mode != null && !['simple', 'full'].includes(cfg.mode)) errors.push(`${label} mode must be simple or full.`);
     if (cfg.mode === 'full' && cfg.items == null && (!cfg.question || !cfg.answer_key)) errors.push(`${label} needs config.question and config.answer_key (or config.items) in full mode.`);
