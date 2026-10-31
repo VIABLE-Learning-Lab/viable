@@ -6,12 +6,19 @@
 
 const MARKER = /\[(\d{1,3}(?:\s*[,，]\s*\d{1,3})*)\]/g;
 export const SOURCE_STYLES = Object.freeze(['none', 'markdown', 'text']);
-// gpt-oss models cite in their browsing format, 【1†L1-L30】; it means [1].
+// gpt-oss models cite in their browsing format, 【1†L1-L30】; it means [1]. Told to "cite as [n]", a
+// model may also write [n1].
 const HARMONY_MARKER = /【(\d{1,3})(?:†[^】]*)?】/g;
+const LETTERED_MARKER = /\[n\s*(\d{1,3})\]/gi;
+// Once two passages of one page share its number, side by side they'd read [1][1] (or [1] [1]): one goes.
+const REPEATED_MARK = /(\[\d{1,3}(?:, \d{1,3})*\])(?:[ \t]*\1)+/g;
+// Code is left as written: a[0][1] is an index, not two citations.
+const CODE = /(```[\s\S]*?```|`[^`\n]*`)/;
 
 /** A reply's citations written as [n], whatever form the model used. */
 export function normalizeCitationMarks(text) {
-  return String(text ?? '').replace(HARMONY_MARKER, '[$1]');
+  return String(text ?? '').split(CODE).map((part, i) => (i % 2 ? part : part
+    .replace(HARMONY_MARKER, '[$1]').replace(LETTERED_MARKER, '[$1]'))).join('');
 }
 
 export function citationOf(item, index = item.index) {
@@ -27,7 +34,7 @@ export function finalizeCitations(text, registry) {
   const byIndex = new Map([...(registry?.values?.() || [])].map((item) => [item.index, item]));
   const sources = [];
   const byKey = new Map();
-  const rewritten = normalizeCitationMarks(text).replace(MARKER, (match, group) => {
+  const rewritten = normalizeCitationMarks(text).split(CODE).map((part, i) => (i % 2 ? part : part.replace(MARKER, (match, group) => {
     const numbers = [];
     for (const raw of group.split(/[,，]/)) {
       const item = byIndex.get(Number(raw));
@@ -39,7 +46,7 @@ export function finalizeCitations(text, registry) {
     }
     // A number that matches no retrieved passage is left as written.
     return numbers.length ? `[${numbers.sort((a, b) => a - b).join(', ')}]` : match;
-  });
+  }).replace(REPEATED_MARK, '$1'))).join('');
   return { text: rewritten, citations: sources.map((source) => citationOf(source.item, source.index)) };
 }
 

@@ -17,6 +17,12 @@ test('a reply renumbers its sources in order of mention, one per page', () => {
   assert.deepEqual(finalizeCitations('No citations here.', registry), { text: 'No citations here.', citations: [] });
 });
 
+test('marks written as [n6] count; the same page twice side by side shows once; code is left alone', () => {
+  // Two passages of one page ([6] and [4] are both Loans) side by side are one [1], not [1][1].
+  assert.equal(finalizeCitations('Renew online [6] [4]. Open 9–5 [n1]. Both [N6][1].', registry).text, 'Renew online [1]. Open 9–5 [2]. Both [1][2].');
+  assert.equal(finalizeCitations('Use `grid[1][6]` here [6].\n```\nm = a[4][6]\n```', registry).text, 'Use `grid[1][6]` here [1].\n```\nm = a[4][6]\n```');
+});
+
 test('a model-written source list of retrieved links goes; other endings stay', () => {
   const reply = 'Open 9–5 [1].\n\n**Sources**\n- [Hours](https://lib.example.edu/hours)\n- [Loans](https://lib.example.edu/loans).';
   assert.equal(stripModelSourceList(reply, registry), 'Open 9–5 [1].');
