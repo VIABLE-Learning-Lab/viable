@@ -126,8 +126,12 @@ test('the next turn edits picture 2 by number and keeps the rest', async () => {
   const result = await runAgentGraph({}, tutor(), { input: 'give the dog a hat', services: svc, pictures: saved });
   assert.equal(svc.calls[0].operation, 'edit');
   assert.deepEqual(svc.calls[0].images, [{ image_url: url('b') }]);
-  // The model was told what the learner can see, by number.
-  assert.match(svc.chats[0].messages[0].content, /1\. Cat: a cat\n2\. Dog: a dog/);
+  // The model was told what the learner can see, by number, right before what the learner asked.
+  const turn = svc.chats[0].messages.at(-1).content;
+  assert.match(turn, /1\. Cat: a cat\n2\. Dog: a dog\n\ngive the dog a hat$/);
+  assert.doesNotMatch(svc.chats[0].messages[0].content, /Pictures in this conversation/);
+  // The trace shows the list the model got.
+  assert.match(result.steps.find((step) => step.nodeId === 'tutor').input.message, /2\. Dog: a dog/);
   assert.deepEqual(result.outputs.draw.pictures[0].slot, 2);
   assert.deepEqual(result.pictures.current.map((p) => [p.number, p.url]), [[1, url('a')], [2, url('b2')]]);
 });
@@ -238,4 +242,50 @@ test('without() keeps the items whose field differs', async () => {
   const scope = { u: [{ n: 1, reason: 'safety' }, { n: 2, reason: 'busy' }, { n: 3 }] };
   assert.deepEqual(evaluateExpression('pluck(without(u, "reason", "safety"), "n")', scope), [2, 3]);
   assert.deepEqual(evaluateExpression('pluck(without(u, "reason"), "n")', scope), [3]);
+});
+
+test('a picture the safety check stops is tried once with the fallback prompt; an edit can opt out', async () => {
+  const saved = { current: [{ number: 1, url: url('a'), prompt: 'a girl on a beam', label: '' }], history: [], turn: 1 };
+  const plan = { reply: 'Here you go.', pictures: [{ prompt: 'a photo of a girl crying', label: '', n: 1, source: 0 }, { prompt: 'make her cry', label: '', n: 1, source: 1 }, { prompt: 'a photo of a lake', label: '', n: 1, source: 0 }] };
+  const prompts = [];
+  const svc = services(plan, (body) => {
+    prompts.push(body.prompt);
+    if (/photo|cry/.test(body.prompt) && !body.prompt.endsWith('as a drawing')) throw failure({ status: 400, code: 'image_provider_error', imageFailureReason: 'safety' });
+    return imageResult([url(`p${prompts.length}`)]);
+  });
+  const graph = tutor({ fallback_prompt: '{{ item.source > 0 ? "" : prompt + " as a drawing" }}' });
+  const result = await runAgentGraph({}, graph, { input: 'go', services: svc, pictures: saved });
+  const draw = result.outputs.draw;
+  assert.deepEqual(draw.pictures.map((p) => [p.status, p.fallback ?? false]), [['ready', true], ['blocked', false], ['ready', true]]);
+  assert.equal(draw.pictures[0].prompt, 'a photo of a girl crying as a drawing');
+  // The edit had no fallback, so it was asked for once and stays blocked with its own prompt.
+  assert.equal(prompts.filter((p) => p === 'make her cry').length, 1);
+  assert.equal(draw.unfinished[0].prompt, 'make her cry');
+  assert.equal(prompts.length, 5);
+});
+
+test('a fallback that is stopped too leaves the picture blocked; single mode falls back the same way', async () => {
+  const svc = services({ reply: 'One.', pictures: [{ prompt: 'a photo', label: '', n: 1, source: 0 }] }, () => { throw failure({ status: 400, code: 'image_provider_error', imageFailureReason: 'safety' }); });
+  const result = await runAgentGraph({}, tutor({ fallback_prompt: '{{prompt}}, drawn' }), { input: 'go', services: svc });
+  assert.equal(svc.calls.length, 2);
+  assert.deepEqual(result.outputs.draw.pictures.map((p) => [p.status, p.prompt]), [['blocked', 'a photo']]);
+
+  const prompts = [];
+  const single = {
+    entry: 'input',
+    nodes: [
+      { id: 'input', type: 'input', next: 'draw' },
+      { id: 'draw', type: 'image', config: { model: 'gpt-image-1', prompt: 'a photo of {{input}}', fallback_prompt: '{{prompt}}, drawn', on_error: 'continue' }, next: 'out' },
+      { id: 'out', type: 'output', config: { text: 'done', attachments: '{{draw.urls}}' } }
+    ]
+  };
+  const drawn = await runAgentGraph({}, single, { input: 'a team', services: { generateImage: async (_env, body) => {
+    prompts.push(body.prompt);
+    if (!body.prompt.endsWith('drawn')) throw failure({ status: 400, code: 'image_provider_error', imageFailureReason: 'safety' });
+    return imageResult([url('team')]);
+  } } });
+  assert.deepEqual(prompts, ['a photo of a team', 'a photo of a team, drawn']);
+  assert.equal(drawn.outputs.draw.fallback, true);
+  assert.equal(drawn.outputs.draw.prompt, 'a photo of a team, drawn');
+  assert.deepEqual(drawn.output.attachments.map((a) => a.url), [url('team')]);
 });

@@ -41,7 +41,8 @@
         },
         "nodes": { "type": "array", "minItems": 1, "maxItems": 100, "items": { "$ref": "#/$defs/node" } },
         "edges": { "type": "array", "items": { "type": "object" } },
-        "sketch": { "type": "object", "description": "Canvas drawings kept for collaborators; runs ignore them." }
+        "sketch": { "type": "object", "description": "Canvas drawings kept for collaborators; runs ignore them." },
+        "groups": { "type": "array", "maxItems": 50, "description": "Canvas groups ({id, label, nodes, collapsed}) kept for collaborators; runs ignore them.", "items": { "type": "object" } }
       }
     },
     "node": {
@@ -49,10 +50,10 @@
       "required": ["id", "type"],
       "properties": {
         "id": { "type": "string", "minLength": 1 },
-        "type": { "enum": ["input", "llm", "condition", "image", "speech", "transcribe", "http", "loop", "transform", "output", "subagent", "router", "agent", "knowledge", "memory", "state", "guardrail", "parallel", "ask", "note", "vetting"] },
+        "type": { "enum": ["input", "llm", "condition", "image", "speech", "transcribe", "http", "loop", "each", "transform", "output", "subagent", "router", "agent", "knowledge", "memory", "state", "guardrail", "parallel", "ask", "note", "vetting"] },
         "config": { "type": "object", "description": "The step's settings; each type's required fields are checked by validateGraph." },
         "next": { "type": ["string", "null"] },
-        "branches": { "type": "object", "description": "Named exits (condition: true/false; router: route names and fallback; vetting: passed/unverified/attention; guardrail: pass/fail)." },
+        "branches": { "type": "object", "description": "Named exits (condition: true/false; router: route names and fallback; vetting: passed/unverified/attention; guardrail: pass/fail; each: each/done)." },
         "x": { "type": "number" },
         "y": { "type": "number" }
       }

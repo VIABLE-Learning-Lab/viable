@@ -134,8 +134,8 @@ export function describeGraphSchema(limits = DEFAULT_GRAPH_LIMITS) {
       'A step\'s config.model must be a model whose mode in /v1/models is the step\'s model_mode: chat models answer, image steps take image_generation, speech steps audio_speech and transcribe steps audio_transcription.',
       'Image steps default to operation=generate. operation=edit requires source (a picture number of this conversation, or an address), image (one URL) or images ([{image_url}]), and a model connection with image_editing=true; operation=auto edits when source names a picture and generates otherwise. Operation and source values may be templates. Missing sources never fall back to generation.',
       'Several pictures: config.items (a list, usually an llm list output such as {{plan.json.pictures}}) makes one request per item, up to max_items (default 4, at most 6) and 8 pictures in all, three at a time. Each item reads as {{item}} and {{item_number}}; prompt defaults to {{item.prompt}} (or the item itself for text), label to item.label, description (what the picture shows, kept for later turns) to item.description or item.scene, source to item.source, n to item.n (pictures from that one prompt, 1–4). One scene several times is one item with n>1; several scenes are several items.',
-      'With items, a picture never stops the run: a safety refusal is status=blocked and never retried, a busy service is retried once (max_attempts, default 2), and anything else is status=failed with a reason (safety, busy, time, limit, source_missing, no_source, no_prompt, missing, error). The result lists pictures [{number, url, prompt, label, status, reason, slot, item}], urls, url, ready_count, blocked_count, failed_count, ready_numbers, blocked_numbers, failed_numbers, partial, unfinished and status (completed, partial, failed or skipped). Single image steps keep opt-in recovery: max_attempts=2 retries one transient rejection and on_error=continue returns status=failed instead of stopping. Never put diagnostics in assistant prose.',
-      'Picture memory: on a server-kept conversation, picture steps (remember, default true) keep the pictures shown by the number the learner sees. Every step reads {{conversation.pictures}} [{number, url, prompt, label, description}], {{conversation.unfinished}} (numbers not drawn; pass as items to finish them in the same numbers) and {{conversation.picture_history}}. One edited picture keeps its number; several pictures (new ones, versions, a mixture) become a new set numbered from 1. Pictures a run draws but its reply does not attach are not remembered. An llm step with pictures=true is told the current pictures by number, the newest marked. Do not copy picture URLs or plans into State.',
+      'With items, a picture never stops the run: a safety refusal is status=blocked and is not retried on its own, a busy service is retried once (max_attempts, default 2), and anything else is status=failed with a reason (safety, busy, time, limit, source_missing, no_source, no_prompt, missing, error). fallback_prompt (a template; {{prompt}} is the first prompt, {{item}} the item) is tried once when the safety check stops a picture, for example "{{prompt}} Show it as a storybook illustration, not a photograph." (image safety checks refuse realistic photos of children and teens far more often than drawings); an empty result skips the retry, so {{ item.source > 0 ? "" : prompt + "…" }} leaves edits alone. A picture drawn this way has fallback=true. The result lists pictures [{number, url, prompt, label, status, reason, fallback, slot, item}], urls, url, ready_count, blocked_count, failed_count, ready_numbers, blocked_numbers, failed_numbers, partial, unfinished and status (completed, partial, failed or skipped). Single image steps keep opt-in recovery: max_attempts=2 retries one transient rejection and on_error=continue returns status=failed instead of stopping. Never put diagnostics in assistant prose.',
+      'Picture memory: on a server-kept conversation, picture steps (remember, default true) keep the pictures shown by the number the learner sees. Every step reads {{conversation.pictures}} [{number, url, prompt, label, description}], {{conversation.unfinished}} (numbers not drawn; pass as items to finish them in the same numbers) and {{conversation.picture_history}}. One edited picture keeps its number; several pictures (new ones, versions, a mixture) become a new set numbered from 1. Pictures a run draws but its reply does not attach are not remembered. An llm step with pictures=true is told the current pictures by number, the newest marked, at the start of its turn message. Do not copy picture URLs or plans into State.',
       'An llm step can attach images from earlier steps with config.images=[{image_url:"{{step.url}}"}]. A URL in prompt text is only text. Typed image inputs are downloaded safely and converted to provider-native image data; the selected chat model must support image input.',
       `An llm node may declare at most ${limits.maxStructuredOutputs} structured outputs: type string, number, boolean or list. A list ({name, type: "list", max_items 1–10, fields: [{name, type, description}]}) returns several items with up to 10 fields each, or text items without fields; use it instead of numbered copies like prompt_1, prompt_2.`,
       `run_limits may set max_model_calls (${RUN_LIMITS.max_model_calls.join('–')}) and timeout_seconds (${RUN_LIMITS.timeout_seconds.join('–')}).`
@@ -321,6 +321,7 @@ function validateOrchestrationNode(node) {
     if (cfg.items != null && typeof cfg.items !== 'string' && !Array.isArray(cfg.items)) errors.push(`${label} items must be a list, or a template that gives one such as {{plan.json.pictures}}.`);
     if (cfg.max_items != null && (!Number.isInteger(cfg.max_items) || cfg.max_items < 1 || cfg.max_items > 6)) errors.push(`${label} max_items must be between 1 and 6.`);
     if (cfg.remember != null && typeof cfg.remember !== 'boolean') errors.push(`${label} remember must be true or false.`);
+    if (cfg.fallback_prompt != null && typeof cfg.fallback_prompt !== 'string') errors.push(`${label} fallback_prompt must be text (a template).`);
   }
   if (node.type === 'vetting') {
     if (cfg.mode != null && !['simple', 'full'].includes(cfg.mode)) errors.push(`${label} mode must be simple or full.`);
@@ -377,7 +378,7 @@ function validateOrchestrationNode(node) {
   return errors;
 }
 
-function referencedNodeIds(node) {
+export function referencedNodeIds(node) {
   const refs = [];
   if (node.next) refs.push(node.next);
   if (node.branches && typeof node.branches === 'object') {
@@ -392,6 +393,26 @@ function referencedNodeIds(node) {
     if (typeof node.config?.default === 'string') refs.push(node.config.default);
   }
   return refs;
+}
+
+// Where steps without saved coordinates go: a column per step from the entry, so a graph made through
+// the API or CLI reads left to right (in its card and when first opened) before anyone lays it out.
+export function layeredPositions(graph) {
+  const nodes = (Array.isArray(graph?.nodes) ? graph.nodes : []).filter((node) => node && typeof node.id === 'string');
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const start = byId.has(graph?.entry) ? graph.entry : nodes[0]?.id;
+  const depth = new Map(start ? [[start, 0]] : []);
+  for (const id of depth.keys()) {
+    for (const target of referencedNodeIds(byId.get(id))) if (byId.has(target) && !depth.has(target)) depth.set(target, depth.get(id) + 1);
+  }
+  const unreached = Math.max(-1, ...depth.values()) + 1;
+  const rows = new Map();
+  return Object.fromEntries(nodes.map((node) => {
+    const column = depth.get(node.id) ?? unreached;
+    const row = rows.get(column) || 0;
+    rows.set(column, row + 1);
+    return [node.id, { x: column * 260, y: row * 130 }];
+  }));
 }
 
 // A For each step's body runs once per item: it starts at branches.each and comes back to the step

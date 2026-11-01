@@ -647,7 +647,7 @@ const HANDLERS = {
       return { output, traceOutput: sanitizeBinaryValues({ ...output, prompt: tracePrompt }), next: node.next };
     }
 
-    const requestBody = {
+    let requestBody = {
       model: cfg.model,
       prompt,
       operation,
@@ -659,7 +659,7 @@ const HANDLERS = {
       ...(cfg.aspect_ratio ? { aspect_ratio: cfg.aspect_ratio } : {}),
       response_format: cfg.response_format || 'url'
     };
-    const traceRequestBody = sanitizeBinaryValues({ ...requestBody, prompt: tracePrompt,
+    let traceRequestBody = sanitizeBinaryValues({ ...requestBody, prompt: tracePrompt,
       ...(operation === 'edit' ? { images: imageInputs(traceScope) } : {}),
       ...(operation === 'edit' && cfg.mask ? { mask: { image_url: renderTemplate(cfg.mask, traceScope) } } : {})
     });
@@ -669,6 +669,8 @@ const HANDLERS = {
     const attempts = [];
     let result;
     let providerDurationMs = 0;
+    const fallback = cfg.fallback_prompt != null ? String(renderTemplate(cfg.fallback_prompt, { ...scope, prompt }) ?? '').trim() : '';
+    let fellBack = false;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       let providerStartedAt = null;
       try {
@@ -692,6 +694,14 @@ const HANDLERS = {
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
+        // The safety check stopped it: one more try with the step's fallback prompt (a drawing instead of a photo, say).
+        if (error.imageFailureReason === 'safety' && fallback && !fellBack && Date.now() < ctx.deadline) {
+          fellBack = true;
+          requestBody = { ...requestBody, prompt: fallback };
+          traceRequestBody = { ...traceRequestBody, prompt: String(renderTemplate(cfg.fallback_prompt, { ...traceScope, prompt: tracePrompt }) ?? '').trim() };
+          attempt = 0;
+          continue;
+        }
         if (cfg.on_error !== 'continue') throw error;
         // The graph decides how to deliver partial work. Diagnostics stay in the trace, not assistant prose.
         request.results = failed(error.imageFailureReason === 'safety' ? 'blocked' : 'failed', pictureFailure(error));
@@ -706,14 +716,16 @@ const HANDLERS = {
     const urls = (result.publicData?.data || [])
       .map((item) => item.url)
       .filter(Boolean);
-    request.results = urls.map((url) => ({ url, status: 'ready' }));
+    request.results = urls.map((url) => ({ url, status: 'ready', ...(fellBack ? { fallback: true } : {}) }));
+    if (fellBack) request.prompt = fallback;
 
     const output = {
       ...finishPictures(ctx, cfg, [request]),
       url: urls[0] || null,
       urls,
       operation,
-      prompt,
+      prompt: requestBody.prompt,
+      ...(fellBack ? { fallback: true } : {}),
       model: result.resolution?.resolvedModel || cfg.model,
       cost: result.cost,
       ...(cfg.on_error === 'continue' || cfg.max_attempts != null ? { status: 'completed', attempts: attempts.length, attempt_details: attempts } : {})
@@ -1747,6 +1759,7 @@ function finishPictures(ctx, cfg, requests) {
         description: request.description ?? request.prompt,
         status: result.url ? 'ready' : result.status,
         ...(result.url ? {} : { reason: result.reason }),
+        ...(result.fallback ? { fallback: true } : {}),
         ...source,
         slot: result.slot ?? null,
         item: index + 1
@@ -1806,7 +1819,10 @@ async function drawPictureList(node, ctx, env, services, hooks, budgets, step) {
     const chosen = String(renderTemplate(cfg.operation || 'auto', local) || 'auto').trim();
     const operation = chosen === 'edit' || (chosen === 'auto' && source) ? 'edit' : 'generate';
     const problem = source?.missing != null ? 'source_missing' : operation === 'edit' && !source?.url ? 'no_source' : !prompt ? 'no_prompt' : null;
-    return { prompt, tracePrompt: String(renderTemplate(promptTemplate, traceLocal) ?? '').trim(), label, description: description || prompt, operation, source: source?.url ? source : null, fill, n, problem, results: [] };
+    const tracePrompt = String(renderTemplate(promptTemplate, traceLocal) ?? '').trim();
+    const fallback = cfg.fallback_prompt != null ? String(renderTemplate(cfg.fallback_prompt, { ...local, prompt }) ?? '').trim() : '';
+    const traceFallback = fallback ? String(renderTemplate(cfg.fallback_prompt, { ...traceLocal, prompt: tracePrompt }) ?? '').trim() : '';
+    return { prompt, tracePrompt, fallback, traceFallback, label, description: description || prompt, operation, source: source?.url ? source : null, fill, n, problem, results: [] };
   }).filter((request) => request.n > 0);
 
   step.input = { pictures: requests.map((request) => ({ operation: request.operation, prompt: clip(request.tracePrompt, 1000), ...(request.label ? { label: request.label } : {}), ...(request.source ? { source: request.source.slot ?? safeUrl(request.source.url) } : {}), ...(request.n > 1 ? { n: request.n } : {}) })) };
@@ -1818,7 +1834,7 @@ async function drawPictureList(node, ctx, env, services, hooks, budgets, step) {
       request.results = Array.from({ length: request.n }, () => ({ url: null, status: 'failed', reason: request.problem }));
       return;
     }
-    const body = {
+    let body = {
       model: cfg.model,
       prompt: request.prompt,
       operation: request.operation,
@@ -1829,7 +1845,8 @@ async function drawPictureList(node, ctx, env, services, hooks, budgets, step) {
       ...(cfg.aspect_ratio ? { aspect_ratio: cfg.aspect_ratio } : {}),
       response_format: 'url'
     };
-    const traceBody = sanitizeBinaryValues({ ...body, prompt: request.tracePrompt });
+    let traceBody = sanitizeBinaryValues({ ...body, prompt: request.tracePrompt });
+    let fellBack = false;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       let startedAt = null;
       try {
@@ -1856,7 +1873,8 @@ async function drawPictureList(node, ctx, env, services, hooks, budgets, step) {
           responseBody: result.responseData,
           operationMetadata: { assetUrls: urls, imageOperation: request.operation, sourceImageCount: body.images?.length || 0, imageInput: result.resolution?.imageInput || null, assetDelivery: result.responseData?._viablelab?.asset_delivery || null }
         });
-        request.results = Array.from({ length: request.n }, (_, i) => (urls[i] ? { url: urls[i], status: 'ready' } : { url: null, status: 'failed', reason: 'missing' }));
+        request.results = Array.from({ length: request.n }, (_, i) => (urls[i] ? { url: urls[i], status: 'ready', ...(fellBack ? { fallback: true } : {}) } : { url: null, status: 'failed', reason: 'missing' }));
+        if (fellBack) Object.assign(request, { prompt: request.fallback, tracePrompt: request.traceFallback });
         return;
       } catch (error) {
         if (startedAt != null) {
@@ -1868,6 +1886,14 @@ async function drawPictureList(node, ctx, env, services, hooks, budgets, step) {
           continue;
         }
         const reason = pictureFailure(error);
+        // The safety check stopped it: one more try with the step's fallback prompt (a drawing instead of a photo, say).
+        if (reason === 'safety' && request.fallback && !fellBack && Date.now() < ctx.deadline) {
+          fellBack = true;
+          body = { ...body, prompt: request.fallback };
+          traceBody = { ...traceBody, prompt: request.traceFallback };
+          attempt = 0;
+          continue;
+        }
         request.results = Array.from({ length: request.n }, () => ({ url: null, status: reason === 'safety' ? 'blocked' : 'failed', reason }));
         return;
       }
@@ -2400,7 +2426,6 @@ function buildLlmMessages(cfg, scope, history, inputContent, outputs, note = nul
   const systemParts = [];
   if (cfg.system) systemParts.push(renderTemplate(cfg.system, scope));
   if (teaching) systemParts.push(teaching);
-  if (pictures) systemParts.push(pictures);
   // A page that puts what the learner has open with the step's instructions (workspace place: system).
   if (note?.place === 'system') { systemParts.push(note.content); note = null; }
   if (outputs.length) systemParts.push(buildOutputInstruction(outputs));
@@ -2412,8 +2437,15 @@ function buildLlmMessages(cfg, scope, history, inputContent, outputs, note = nul
   }
   if (note) messages.push(note);
   const userContent = resolveLlmUserContent(cfg, scope, inputContent);
-  if (userContent) messages.push({ role: 'user', content: userContent });
+  // The picture list leads this turn's message, next to what the learner asked, and keeps the system prompt cacheable.
+  if (pictures) messages.push({ role: 'user', content: withLeadingText(pictures, userContent) });
+  else if (userContent) messages.push({ role: 'user', content: userContent });
   return messages;
+}
+
+function withLeadingText(text, content) {
+  if (Array.isArray(content)) return [{ type: 'text', text }, ...content];
+  return content ? `${text}\n\n${content}` : text;
 }
 
 async function callLlmWithTrace(env, services, hooks, node, cfg, requestBody, archivedRequestBody, retry, onDelta = null) {
