@@ -25,7 +25,7 @@ export function applyDraftChanges(document, changes) {
   for (const change of changes) {
     const path = change.path;
     if (!Array.isArray(path) || !path.length || path.length > 16 || path.some(key => typeof key !== 'string' || !key || key.length > 256 || forbidden.has(key))
-      || !['version', 'name', 'entry', 'variables', 'nodes', 'edges', 'sketch', 'run_limits'].includes(path[0]) || (path[0] === 'nodes' && path.length < 2)) throw new Error('Invalid field path.');
+      || !['version', 'name', 'entry', 'variables', 'nodes', 'edges', 'sketch', 'groups', 'run_limits'].includes(path[0]) || (path[0] === 'nodes' && path.length < 2)) throw new Error('Invalid field path.');
     let current = document;
     for (const key of path) current = current?.[key];
     if (!equal(current, change.before)) {
@@ -52,7 +52,7 @@ export function applyDraftChanges(document, changes) {
 export function validateDraftDocument(document) {
   const graph = draftGraph(document);
   if ((graph.entry !== undefined && typeof graph.entry !== 'string') || (graph.name !== undefined && typeof graph.name !== 'string')
-    || (graph.variables !== undefined && !object(graph.variables)) || (graph.edges !== undefined && !Array.isArray(graph.edges)) || (graph.run_limits !== undefined && !object(graph.run_limits))
+    || (graph.variables !== undefined && !object(graph.variables)) || (graph.edges !== undefined && !Array.isArray(graph.edges)) || (graph.groups !== undefined && !Array.isArray(graph.groups)) || (graph.run_limits !== undefined && !object(graph.run_limits))
     || graph.nodes.length > 1000 || graph.nodes.some(node => !node || typeof node.id !== 'string' || !node.id || typeof node.type !== 'string' || !node.type || forbidden.has(node.id)
       || (node.config !== undefined && !object(node.config)) || (node.next != null && typeof node.next !== 'string')
       || (node.branches !== undefined && (!object(node.branches) || Object.values(node.branches).some(value => typeof value !== 'string')))

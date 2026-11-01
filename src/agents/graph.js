@@ -22,6 +22,7 @@ export const NODE_TYPES = Object.freeze([
   'transcribe',
   'http',
   'loop',
+  'each',
   'transform',
   'output',
   'subagent',
@@ -74,6 +75,7 @@ export const NODE_REQUIREMENTS = Object.freeze({
   knowledge: Object.freeze({ all: Object.freeze(['knowledge_bases']) }),
   guardrail: Object.freeze({ all: Object.freeze(['checks']) }),
   parallel: Object.freeze({ all: Object.freeze(['paths']) }),
+  each: Object.freeze({ all: Object.freeze(['items']) }),
   vetting: Object.freeze({ all: Object.freeze(['model']) })
 });
 
@@ -109,6 +111,7 @@ export function describeGraphSchema(limits = DEFAULT_GRAPH_LIMITS) {
         variables: 'Optional initial values read as {{vars.name}}.',
         nodes: 'Execution steps.',
         edges: 'Optional visual metadata; routing comes from node next, branches, and condition cases.',
+        groups: 'Optional canvas frames: at most 50 { id, label, nodes: [step ids], collapsed }, each step in at most one. Runs ignore them.',
         run_limits: 'Optional limits for each run: max_model_calls (1–60, default 20) and timeout_seconds (10–120, default 60) for runs a caller waits on. Background jobs get at least 5 minutes.'
       }
     },
@@ -126,12 +129,15 @@ export function describeGraphSchema(limits = DEFAULT_GRAPH_LIMITS) {
       'Every node needs a unique string id and a known, available type.',
       'entry must name an existing node.',
       'Every next, branches, and condition case target must name an existing node.',
+      'An each step ("For each") runs its body once per item of config.items (a list, such as an llm list output), one item after another, up to max_items (default 10, at most 25). branches.each is the body\'s first step and the body\'s last step points back to the each step; branches.done (else next) runs after the last item. Body steps read the item as {{item}} and {{item_number}} (or the name in config.as). Its result: count, items, results [{item, number, outputs: {stepId: output}}] and values (config.collect worked out after each item, else the last body step\'s output). Body steps count toward the run\'s step and model call limits and can\'t reply or ask.',
       'At least one output node must be reachable from entry.',
       'A step\'s config.model must be a model whose mode in /v1/models is the step\'s model_mode: chat models answer, image steps take image_generation, speech steps audio_speech and transcribe steps audio_transcription.',
-      'Image steps default to operation=generate. operation=edit requires image (one URL) or images ([{image_url}]), and a model connection with image_editing=true. Operation and source values may be templates. Keep the last image URL with a conversation State step for later edits; missing sources never fall back to generation.',
-      'Image recovery is opt-in: max_attempts=2 permits one bounded retry after an explicit transient rejection; on_error=continue returns status=failed and empty URLs instead of stopping. Defaults are 1 and stop. Preserve completed URLs and frozen unfinished plans in State, and skip completed slots on explicit retries. Do not retry unknown outcomes or expose diagnostics as assistant prose.',
+      'Image steps default to operation=generate. operation=edit requires source (a picture number of this conversation, or an address), image (one URL) or images ([{image_url}]), and a model connection with image_editing=true; operation=auto edits when source names a picture and generates otherwise. Operation and source values may be templates. Missing sources never fall back to generation.',
+      'Several pictures: config.items (a list, usually an llm list output such as {{plan.json.pictures}}) makes one request per item, up to max_items (default 4, at most 6) and 8 pictures in all, three at a time. Each item reads as {{item}} and {{item_number}}; prompt defaults to {{item.prompt}} (or the item itself for text), label to item.label, description (what the picture shows, kept for later turns) to item.description or item.scene, source to item.source, n to item.n (pictures from that one prompt, 1–4). One scene several times is one item with n>1; several scenes are several items.',
+      'With items, a picture never stops the run: a safety refusal is status=blocked and never retried, a busy service is retried once (max_attempts, default 2), and anything else is status=failed with a reason (safety, busy, time, limit, source_missing, no_source, no_prompt, missing, error). The result lists pictures [{number, url, prompt, label, status, reason, slot, item}], urls, url, ready_count, blocked_count, failed_count, ready_numbers, blocked_numbers, failed_numbers, partial, unfinished and status (completed, partial, failed or skipped). Single image steps keep opt-in recovery: max_attempts=2 retries one transient rejection and on_error=continue returns status=failed instead of stopping. Never put diagnostics in assistant prose.',
+      'Picture memory: on a server-kept conversation, picture steps (remember, default true) keep the pictures shown by the number the learner sees. Every step reads {{conversation.pictures}} [{number, url, prompt, label, description}], {{conversation.unfinished}} (numbers not drawn; pass as items to finish them in the same numbers) and {{conversation.picture_history}}. One edited picture keeps its number; several pictures (new ones, versions, a mixture) become a new set numbered from 1. Pictures a run draws but its reply does not attach are not remembered. An llm step with pictures=true is told the current pictures by number, the newest marked. Do not copy picture URLs or plans into State.',
       'An llm step can attach images from earlier steps with config.images=[{image_url:"{{step.url}}"}]. A URL in prompt text is only text. Typed image inputs are downloaded safely and converted to provider-native image data; the selected chat model must support image input.',
-      `An llm node may declare at most ${limits.maxStructuredOutputs} structured outputs.`,
+      `An llm node may declare at most ${limits.maxStructuredOutputs} structured outputs: type string, number, boolean or list. A list ({name, type: "list", max_items 1–10, fields: [{name, type, description}]}) returns several items with up to 10 fields each, or text items without fields; use it instead of numbered copies like prompt_1, prompt_2.`,
       `run_limits may set max_model_calls (${RUN_LIMITS.max_model_calls.join('–')}) and timeout_seconds (${RUN_LIMITS.timeout_seconds.join('–')}).`
     ],
     documentation: 'https://developers.viablelab.org/agents/viablelab-api.md'
@@ -153,6 +159,21 @@ export const RUN_LIMITS = Object.freeze({ max_model_calls: [1, 60], timeout_seco
 function validRunLimits(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   return Object.entries(value).every(([key, n]) => RUN_LIMITS[key] && Number.isInteger(n) && n >= RUN_LIMITS[key][0] && n <= RUN_LIMITS[key][1]);
+}
+
+function validGroups(groups, ids) {
+  if (!Array.isArray(groups) || groups.length > 50) return false;
+  const grouped = new Set();
+  const groupIds = new Set();
+  for (const group of groups) {
+    if (!group || typeof group !== 'object' || typeof group.id !== 'string' || !group.id || group.id.length > 64 || groupIds.has(group.id)) return false;
+    if (group.label != null && (typeof group.label !== 'string' || group.label.length > 80)) return false;
+    if (group.collapsed != null && typeof group.collapsed !== 'boolean') return false;
+    if (!Array.isArray(group.nodes) || group.nodes.some((id) => !ids.has(id) || grouped.has(id))) return false;
+    groupIds.add(group.id);
+    group.nodes.forEach((id) => grouped.add(id));
+  }
+  return true;
 }
 
 export function validateGraph(graph, options = {}) {
@@ -208,6 +229,9 @@ export function validateGraph(graph, options = {}) {
     errors.push('Graph "entry" must reference an existing node id.');
   }
 
+  // Canvas groups: a frame around steps that belong together, for the editor only; runs ignore them.
+  if (graph.groups != null && !validGroups(graph.groups, ids)) errors.push('Graph groups must be a list of at most 50 { id, label, nodes: [step ids], collapsed }, with each step in at most one group.');
+
   // Reference integrity for next / branches.
   for (const node of nodes) {
     if (!node || typeof node !== 'object') continue;
@@ -225,6 +249,7 @@ export function validateGraph(graph, options = {}) {
     if (node.type === 'llm' && Array.isArray(node.config?.outputs) && node.config.outputs.length > limits.maxStructuredOutputs) {
       errors.push(`LLM node "${node.id}" declares too many structured outputs. Maximum is ${limits.maxStructuredOutputs}.`);
     }
+    if (node.type === 'llm') errors.push(...outputErrors(node));
     if (node.type === 'image' && !node.config?.model) {
       errors.push(`Image node "${node.id}" requires config.model.`);
     }
@@ -238,6 +263,10 @@ export function validateGraph(graph, options = {}) {
       errors.push(`HTTP node "${node.id}" requires config.url.`);
     }
     errors.push(...validateOrchestrationNode(node));
+  }
+
+  for (const node of nodes) {
+    if (node?.type === 'each' && node.branches?.each && ids.has(node.branches.each)) errors.push(...eachBodyErrors(node, nodeMap));
   }
 
   const hasOutput = nodes.some((n) => n?.type === 'output');
@@ -254,6 +283,32 @@ export function validateGraph(graph, options = {}) {
   return graph;
 }
 
+const FIELD_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
+// A list output ({ type: 'list', max_items, fields }) holds text, or items with up to 10 text, number or
+// true/false fields. Other outputs are checked as they always were, so older graphs keep saving.
+function outputErrors(node) {
+  const outputs = node.config?.outputs;
+  if (outputs == null) return [];
+  const label = `LLM node "${node.id}"`;
+  if (!Array.isArray(outputs)) return [`${label} outputs must be a list of { name, type, description }.`];
+  const errors = [];
+  for (const o of outputs) {
+    if (o?.type !== 'list') continue;
+    const list = `${label} list "${o.name}"`;
+    if (o.max_items != null && (!Number.isInteger(o.max_items) || o.max_items < 1 || o.max_items > 10)) errors.push(`${list} max_items must be between 1 and 10.`);
+    if (o.fields == null) continue;
+    if (!Array.isArray(o.fields) || o.fields.length > 10) {
+      errors.push(`${list} may have at most 10 fields.`);
+      continue;
+    }
+    const names = o.fields.map((f) => f?.name);
+    if (o.fields.some((f) => !f || !FIELD_NAME.test(f.name || ''))) errors.push(`${list} field names must be letters, numbers or _, starting with a letter or _.`);
+    else if (new Set(names).size !== names.length) errors.push(`${list} field names must be unique.`);
+    if (o.fields.some((f) => f?.type != null && !['string', 'number', 'boolean'].includes(f.type))) errors.push(`${list} fields must be string, number or boolean.`);
+  }
+  return errors;
+}
+
 function validateOrchestrationNode(node) {
   const cfg = node.config || {};
   const errors = [];
@@ -262,6 +317,10 @@ function validateOrchestrationNode(node) {
   if (node.type === 'image') {
     if (cfg.on_error != null && !['stop', 'continue'].includes(cfg.on_error)) errors.push(`${label} on_error must be stop or continue.`);
     if (cfg.max_attempts != null && (!Number.isInteger(cfg.max_attempts) || cfg.max_attempts < 1 || cfg.max_attempts > 2)) errors.push(`${label} max_attempts must be 1 or 2.`);
+    if (typeof cfg.operation === 'string' && cfg.operation && !cfg.operation.includes('{{') && !['generate', 'edit', 'auto'].includes(cfg.operation)) errors.push(`${label} operation must be generate, edit or auto (or a template).`);
+    if (cfg.items != null && typeof cfg.items !== 'string' && !Array.isArray(cfg.items)) errors.push(`${label} items must be a list, or a template that gives one such as {{plan.json.pictures}}.`);
+    if (cfg.max_items != null && (!Number.isInteger(cfg.max_items) || cfg.max_items < 1 || cfg.max_items > 6)) errors.push(`${label} max_items must be between 1 and 6.`);
+    if (cfg.remember != null && typeof cfg.remember !== 'boolean') errors.push(`${label} remember must be true or false.`);
   }
   if (node.type === 'vetting') {
     if (cfg.mode != null && !['simple', 'full'].includes(cfg.mode)) errors.push(`${label} mode must be simple or full.`);
@@ -277,6 +336,11 @@ function validateOrchestrationNode(node) {
     else if (routes.length !== cfg.routes.length) errors.push(`${label} route names must be lowercase letters, numbers, - or _, and not "fallback".`);
     if (new Set(routes.map((route) => route.name)).size !== routes.length) errors.push(`${label} has duplicate route names.`);
     if (routes.length > 12) errors.push(`${label} supports at most 12 routes.`);
+  }
+  if (node.type === 'each') {
+    if (cfg.items == null || cfg.items === '') errors.push(`${label} requires config.items, the list to go through, such as {{plan.json.questions}}.`);
+    if (cfg.max_items != null && (!Number.isInteger(cfg.max_items) || cfg.max_items < 1 || cfg.max_items > 25)) errors.push(`${label} max_items must be between 1 and 25.`);
+    if (cfg.as != null && !/^[A-Za-z_][A-Za-z0-9_]{0,31}$/.test(cfg.as)) errors.push(`${label} as must be a name of letters, numbers or _, such as question.`);
   }
   if (node.type === 'parallel') {
     const paths = parallelPaths(cfg);
@@ -328,6 +392,29 @@ function referencedNodeIds(node) {
     if (typeof node.config?.default === 'string') refs.push(node.config.default);
   }
   return refs;
+}
+
+// A For each step's body runs once per item: it starts at branches.each and comes back to the step
+// (a body step's next is the For each step). It can't reply or ask, and can't run on past the loop.
+function eachBodyErrors(node, nodeMap) {
+  const label = `Each node "${node.id}"`;
+  const seen = new Set();
+  const stack = [node.branches.each];
+  let returns = false;
+  const errors = new Set();
+  while (stack.length) {
+    const id = stack.pop();
+    if (id === node.id) { returns = true; continue; }
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const step = nodeMap.get(id);
+    if (!step) continue;
+    if (step.type === 'output' || step.type === 'ask') errors.add(`${label}: step "${id}" is inside the loop, so it can't reply or ask. Reply after the loop, from branches.done.`);
+    if (id === node.branches.done) errors.add(`${label}: the loop body reaches "${id}", the step after the loop. Point the body's last step back to "${node.id}".`);
+    stack.push(...referencedNodeIds(step));
+  }
+  if (!returns) errors.add(`${label}: no step in the loop body goes back to "${node.id}". Set the last body step's next to "${node.id}".`);
+  return [...errors];
 }
 
 function reachableNodeIds(entry, nodeMap) {

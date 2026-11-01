@@ -27,6 +27,7 @@ import { agentVettingControls, vettingModelOptions } from '../utils/vettingContr
 import { parseSafetyPrefix, parseVerificationResult, prepareChatPrompt, prepareVerificationPrompt } from '../routes/vettingFull.js';
 import { resolveModel } from '../config/models.js';
 import { answerStream, citationOf, finalizeCitations, normalizeCitationMarks, SOURCE_STYLES, stripModelSourceList } from './citations.js';
+import { describePictures, loadPictureMemory, pictureScope, rememberPictures, resolvePictureSource } from './pictures.js';
 
 export const DEFAULT_BUDGETS = Object.freeze({
   maxSteps: 50,
@@ -143,6 +144,13 @@ export async function runAgentGraph(env, graph, options = {}) {
     traceVariables: sanitizeBinaryValues({ ...(graph.variables || {}), ...savedState, ...(options.variables || {}) }),
     persistedState: { ...savedState },
     stateChanged: false,
+    // The pictures this conversation has shown, by number (pictures.js), for edits in later turns.
+    pictures: loadPictureMemory(options.pictures),
+    picturesChanged: false,
+    // Addresses of pictures this run drew; the memory keeps them only if the reply shows one.
+    drawnPictures: new Set(),
+    // The item a For each step is on ({ item, item_number }, or its own names), read by its body's steps.
+    iteration: {},
     resuming: resumeNode ? { node: resumeNode, question: options.resume.question ?? '' } : null,
     pendingResume: null,
     memorySubject: options.memorySubject || null,
@@ -165,6 +173,9 @@ export async function runAgentGraph(env, graph, options = {}) {
     archivedResult: null,
     scope() {
       return {
+        // First, so a step that happens to be called "conversation" still reads as itself.
+        conversation: pictureScope(this.pictures),
+        ...this.iteration,
         ...this.outputs,
         vars: this.variables,
         input: this.input,
@@ -175,6 +186,8 @@ export async function runAgentGraph(env, graph, options = {}) {
     },
     traceScope() {
       return {
+        conversation: pictureScope(this.pictures),
+        ...sanitizeBinaryValues(this.iteration),
         ...this.traceOutputs,
         vars: this.traceVariables,
         input: this.traceInput,
@@ -214,7 +227,7 @@ export async function runAgentGraph(env, graph, options = {}) {
       if (stopId != null && currentId === stopId) return;
       if (ctx.stepCount >= budgets.maxSteps) throw budgetError('step');
       const node = nodeMap.get(currentId);
-      if (Date.now() >= deadline && !DEADLINE_FINALIZERS.has(node?.type) && !(node?.type === 'image' && node.config?.on_error === 'continue')) throw budgetError('time', budgets);
+      if (Date.now() >= deadline && !DEADLINE_FINALIZERS.has(node?.type) && !(node?.type === 'image' && (node.config?.on_error === 'continue' || node.config?.items != null))) throw budgetError('time', budgets);
       if (!node) throw new AgentRunError(`Graph references missing node "${currentId}".`, { status: 422, code: 'invalid_graph' });
 
       const handler = HANDLERS[node.type];
@@ -226,7 +239,7 @@ export async function runAgentGraph(env, graph, options = {}) {
       let result;
       try {
         if (path && (node.type === 'output' || node.type === 'ask')) {
-          throw new AgentRunError(`Parallel path "${path}" must reach its join step before replying.`, { status: 422, code: 'invalid_graph' });
+          throw new AgentRunError(path.startsWith('each:') ? `Step "${node.id}" is inside a For each loop, so it can't reply or ask.` : `Parallel path "${path}" must reach its join step before replying.`, { status: 422, code: 'invalid_graph' });
         }
         hooks.onStepStart?.(node);
         result = await handler(node, ctx, env, services, hooks, budgets, step);
@@ -286,8 +299,17 @@ export async function runAgentGraph(env, graph, options = {}) {
     // The caller persists these on server conversations: state for later turns and
     // the Ask step to resume with the next message (null clears a previous one).
     state: ctx.stateChanged ? ctx.persistedState : null,
+    pictures: ctx.picturesChanged && delivered(ctx) ? ctx.pictures : null,
     resume: ctx.pendingResume
   };
+}
+
+// A conversation remembers the pictures it showed: when a run drew pictures but its reply attaches
+// none of them (a review that didn't pass, a fallback reply), the memory stays as it was.
+function delivered(ctx) {
+  if (!ctx.drawnPictures.size) return true;
+  const attached = (ctx.result?.attachments || []).map((item) => (typeof item === 'string' ? item : item?.url));
+  return attached.some((url) => ctx.drawnPictures.has(url));
 }
 
 function recordStep(ctx, node, { output = null, error = null, startedAt, path = null, input = null }) {
@@ -506,8 +528,10 @@ const HANDLERS = {
 
     const note = workspaceNote(ctx, node, scope);
     const teaching = teachingNote(ctx, node, scope);
-    const messages = buildLlmMessages(cfg, scope, ctx.messages, ctx.inputContent, outputs, note, teaching);
-    const traceMessages = buildLlmMessages(cfg, traceScope, ctx.traceMessages, ctx.traceInputContent, outputs, note, teaching);
+    // "Tell the model about this conversation's pictures": the numbers the learner sees, to change one by number.
+    const pictures = cfg.pictures === true ? describePictures(ctx.pictures) : null;
+    const messages = buildLlmMessages(cfg, scope, ctx.messages, ctx.inputContent, outputs, note, teaching, pictures);
+    const traceMessages = buildLlmMessages(cfg, traceScope, ctx.traceMessages, ctx.traceInputContent, outputs, note, teaching, pictures);
 
     const requestData = { model: cfg.model, messages, ...mapModelParams(cfg) };
     const traceRequestData = { model: cfg.model, messages: traceMessages, ...mapModelParams(cfg) };
@@ -548,6 +572,7 @@ const HANDLERS = {
         });
       }
     }
+    if (outputs.length) json = coerceOutputs(json, outputs);
 
     const output = {
       content: result.content,
@@ -601,12 +626,26 @@ const HANDLERS = {
 
   async image(node, ctx, env, services, hooks, budgets, step) {
     const cfg = node.config || {};
+    if (cfg.items != null) return drawPictureList(node, ctx, env, services, hooks, budgets, step);
     const scope = ctx.scope();
     const traceScope = ctx.traceScope();
     const prompt = renderTemplate(cfg.prompt ?? '{{input}}', scope);
     const tracePrompt = renderTemplate(cfg.prompt ?? '{{input}}', traceScope);
-    const operation = renderTemplate(cfg.operation || 'generate', scope);
-    const imageInputs = (values) => cfg.images != null ? renderValue(cfg.images, values) : [{ image_url: renderTemplate(cfg.image || '', values) }];
+    const label = cfg.label != null ? String(renderTemplate(cfg.label, scope) ?? '') : '';
+    // config.source: a picture number of this conversation or an address; "auto" edits when there is one.
+    const source = cfg.source != null ? resolvePictureSource(renderValue(cfg.source, scope), ctx.pictures) : null;
+    let operation = renderTemplate(cfg.operation || 'generate', scope);
+    if (operation === 'auto') operation = source ? 'edit' : 'generate';
+    const imageInputs = (values) => source?.url ? [{ image_url: source.url }] : cfg.images != null ? renderValue(cfg.images, values) : [{ image_url: renderTemplate(cfg.image || '', values) }];
+    const request = { prompt, label, description: cfg.description != null ? String(renderTemplate(cfg.description, scope) ?? '') : prompt, source: source?.url ? source : null, fill: null, results: [] };
+    const failed = (status, reason) => Array.from({ length: clampInt(cfg.n, 1, 4, 1) }, () => ({ url: null, status, reason }));
+    if (source?.missing != null) {
+      // A named picture that isn't there never quietly becomes a new one.
+      if (cfg.on_error !== 'continue') throw new AgentRunError(`Image step "${node.id}" changes picture "${source.missing}", which this conversation doesn't have.`, { status: 422, code: 'image_source_missing' });
+      request.results = failed('failed', 'source_missing');
+      const output = { ...finishPictures(ctx, cfg, [request]), operation, prompt, model: cfg.model, cost: 0, attempts: 0, error: { code: 'image_source_missing', status: 422, reason: 'source_missing' } };
+      return { output, traceOutput: sanitizeBinaryValues({ ...output, prompt: tracePrompt }), next: node.next };
+    }
 
     const requestBody = {
       model: cfg.model,
@@ -655,7 +694,8 @@ const HANDLERS = {
         }
         if (cfg.on_error !== 'continue') throw error;
         // The graph decides how to deliver partial work. Diagnostics stay in the trace, not assistant prose.
-        const output = { url: null, urls: [], operation, prompt, model: cfg.model, cost: 0,
+        request.results = failed(error.imageFailureReason === 'safety' ? 'blocked' : 'failed', pictureFailure(error));
+        const output = { ...finishPictures(ctx, cfg, [request]), url: null, urls: [], operation, prompt, model: cfg.model, cost: 0,
           status: 'failed', attempts: attempts.length, attempt_details: attempts,
           error: { code: error.code || 'image_generation_failed', status: Number(error.status) || 500, ...(error.imageFailureReason ? { reason: error.imageFailureReason } : {}) } };
         return { output, traceOutput: sanitizeBinaryValues({ ...output, prompt: tracePrompt }), error, next: node.next };
@@ -666,8 +706,10 @@ const HANDLERS = {
     const urls = (result.publicData?.data || [])
       .map((item) => item.url)
       .filter(Boolean);
+    request.results = urls.map((url) => ({ url, status: 'ready' }));
 
     const output = {
+      ...finishPictures(ctx, cfg, [request]),
       url: urls[0] || null,
       urls,
       operation,
@@ -844,10 +886,43 @@ const HANDLERS = {
     return { output: { iteration: count, continue: shouldContinue, var: varName, ...rule }, next: next ?? node.next ?? null };
   },
 
+  // For each: the body (branches.each, back to this step) runs once per item, one after another.
+  async each(node, ctx, env, services, hooks, budgets, step) {
+    const cfg = node.config || {};
+    const listed = renderValue(cfg.items, ctx.scope());
+    const all = Array.isArray(listed) ? listed : listed == null || listed === '' ? [] : [listed];
+    const items = all.slice(0, clampInt(cfg.max_items, 1, 25, 10));
+    const as = /^[A-Za-z_][A-Za-z0-9_]{0,31}$/.test(cfg.as || '') ? cfg.as : 'item';
+    step.input = { items: items.length, ...(all.length > items.length ? { left_out: all.length - items.length } : {}) };
+    const outer = ctx.iteration;
+    const results = [];
+    const traceResults = [];
+    const values = [];
+    try {
+      for (const [index, item] of items.entries()) {
+        ctx.iteration = { ...outer, [as]: item, [`${as}_number`]: index + 1 };
+        const from = ctx.steps.length;
+        // A Loop inside the body counts from 1 again for every item.
+        const counts = { ...ctx.loopCounts };
+        await ctx.walk(node.branches?.each, node.id, `each:${node.id}#${index + 1}`);
+        ctx.loopCounts = counts;
+        const ran = [...new Set(ctx.steps.slice(from).map((s) => s.nodeId))];
+        results.push({ item, number: index + 1, outputs: Object.fromEntries(ran.map((id) => [id, ctx.outputs[id]])) });
+        traceResults.push({ item: sanitizeBinaryValues(item), number: index + 1, outputs: Object.fromEntries(ran.map((id) => [id, ctx.traceOutputs[id]])) });
+        values.push(cfg.collect != null ? renderValue(cfg.collect, ctx.scope()) : ran.length ? ctx.outputs[ran.at(-1)] : null);
+      }
+    } finally {
+      ctx.iteration = outer;
+    }
+    const output = { count: items.length, items, results, values };
+    return { output, traceOutput: sanitizeBinaryValues({ ...output, results: traceResults }), next: node.branches?.done ?? node.next ?? null };
+  },
+
   transform(node, ctx) {
     const cfg = node.config || {};
-    const output = renderValue(cfg.output ?? {}, ctx.scope());
-    const traceOutput = sanitizeBinaryValues(renderValue(cfg.output ?? {}, ctx.traceScope()));
+    const fields = cfg.output && typeof cfg.output === 'object' && !Array.isArray(cfg.output);
+    const output = fields ? namedValues(cfg.output, ctx.scope(), node.id, ctx.outputs[node.id]) : renderValue(cfg.output ?? {}, ctx.scope());
+    const traceOutput = sanitizeBinaryValues(fields ? namedValues(cfg.output, ctx.traceScope(), node.id, ctx.traceOutputs[node.id]) : renderValue(cfg.output ?? {}, ctx.traceScope()));
     return { output, traceOutput, next: node.next };
   },
 
@@ -1642,6 +1717,174 @@ function withSummary(messages, text) {
   return [{ ...first, content }, ...rest];
 }
 
+// Why a picture wasn't drawn, as a short code the graph can branch on and pictures.js can say in words.
+function pictureFailure(error) {
+  if (error?.imageFailureReason === 'safety') return 'safety';
+  if (error?.code === 'agent_budget_exceeded') return /model call/.test(error.message) ? 'limit' : 'time';
+  if (error?.name === 'TimeoutError' || error?.name === 'AbortError' || error?.code === 'provider_timeout' || Number(error?.status) === 504) return 'time';
+  if (error?.imageRetryable === true) return 'busy';
+  return 'error';
+}
+
+// A picture step's result: one entry per picture asked for, ready or not, with counts and numbers,
+// and the conversation's pictures updated unless config.remember is false.
+function finishPictures(ctx, cfg, requests) {
+  if (cfg.remember !== false && requests.some((request) => request.results.length)) {
+    ctx.pictures = rememberPictures(ctx.pictures, requests);
+    ctx.picturesChanged = true;
+    for (const request of requests) for (const result of request.results) if (result.url) ctx.drawnPictures.add(result.url);
+  }
+  const pictures = [];
+  const unfinished = [];
+  requests.forEach((request, index) => {
+    const source = request.source ? { source: request.source.slot ?? request.source.url } : {};
+    for (const result of request.results) {
+      pictures.push({
+        number: pictures.length + 1,
+        url: result.url || null,
+        prompt: request.prompt,
+        label: request.label,
+        description: request.description ?? request.prompt,
+        status: result.url ? 'ready' : result.status,
+        ...(result.url ? {} : { reason: result.reason }),
+        ...source,
+        slot: result.slot ?? null,
+        item: index + 1
+      });
+      // Passed back as items, each is drawn again into its own number (an edit from the same picture).
+      if (!result.url) unfinished.push({ prompt: request.prompt, label: request.label, description: request.description ?? request.prompt, ...source, ...(result.slot != null ? { slot: result.slot } : {}) });
+    }
+  });
+  const numbers = (status) => pictures.filter((picture) => picture.status === status).map((picture) => picture.number);
+  const ready = pictures.filter((picture) => picture.url);
+  return {
+    pictures,
+    urls: ready.map((picture) => picture.url),
+    url: ready[0]?.url ?? null,
+    requested_count: pictures.length,
+    ready_count: ready.length,
+    blocked_count: numbers('blocked').length,
+    failed_count: numbers('failed').length,
+    partial: ready.length > 0 && ready.length < pictures.length,
+    ready_numbers: numbers('ready'),
+    blocked_numbers: numbers('blocked'),
+    failed_numbers: numbers('failed'),
+    unfinished,
+    status: !pictures.length ? 'skipped' : ready.length === pictures.length ? 'completed' : ready.length ? 'partial' : 'failed'
+  };
+}
+
+const PICTURE_ITEMS = { max: 6, default: 4, pictures: 8, together: 3 };
+
+// A picture step with config.items: one request per item (its own prompt, label, source and number of
+// pictures), up to three drawn at once. Nothing here stops the run: a safety refusal is "blocked" and
+// never retried, a busy service is retried once (max_attempts), and anything else is "failed", with
+// its reason, for the graph to tell the learner and to finish later from conversation.unfinished.
+async function drawPictureList(node, ctx, env, services, hooks, budgets, step) {
+  const cfg = node.config || {};
+  const scope = ctx.scope();
+  const traceScope = ctx.traceScope();
+  const listed = renderValue(cfg.items, scope);
+  const items = (Array.isArray(listed) ? listed : listed == null || listed === '' ? [] : [listed]).slice(0, clampInt(cfg.max_items, 1, PICTURE_ITEMS.max, PICTURE_ITEMS.default));
+  const maxAttempts = clampInt(cfg.max_attempts, 1, 2, 2);
+  const field = (item, ...names) => (item && typeof item === 'object' && !Array.isArray(item) ? names.map((name) => item[name]).find((value) => value != null && value !== '') : undefined);
+  let budget = PICTURE_ITEMS.pictures;
+  const requests = items.map((item, index) => {
+    const local = { ...scope, item, item_number: index + 1 };
+    const traceLocal = { ...traceScope, item: sanitizeBinaryValues(item), item_number: index + 1 };
+    const promptTemplate = cfg.prompt ?? (item && typeof item === 'object' ? '{{item.prompt}}' : '{{item}}');
+    const prompt = String(renderTemplate(promptTemplate, local) ?? '').trim();
+    const label = String((cfg.label != null ? renderTemplate(cfg.label, local) : field(item, 'label', 'title')) ?? '').trim();
+    // What the picture shows, kept for later turns: for an edit the whole resulting scene, not the change.
+    const description = String((cfg.description != null ? renderTemplate(cfg.description, local) : field(item, 'description', 'scene')) ?? '').trim();
+    const named = cfg.source != null ? renderValue(cfg.source, local) : field(item, 'source', 'picture');
+    const source = resolvePictureSource(named, ctx.pictures);
+    const fill = Number.isInteger(Number(field(item, 'slot'))) && Number(field(item, 'slot')) > 0 ? Number(field(item, 'slot')) : null;
+    const asked = clampInt(cfg.n != null ? renderValue(cfg.n, local) : field(item, 'n', 'count'), 1, 4, 1);
+    const n = Math.max(0, Math.min(asked, budget));
+    budget -= n;
+    const chosen = String(renderTemplate(cfg.operation || 'auto', local) || 'auto').trim();
+    const operation = chosen === 'edit' || (chosen === 'auto' && source) ? 'edit' : 'generate';
+    const problem = source?.missing != null ? 'source_missing' : operation === 'edit' && !source?.url ? 'no_source' : !prompt ? 'no_prompt' : null;
+    return { prompt, tracePrompt: String(renderTemplate(promptTemplate, traceLocal) ?? '').trim(), label, description: description || prompt, operation, source: source?.url ? source : null, fill, n, problem, results: [] };
+  }).filter((request) => request.n > 0);
+
+  step.input = { pictures: requests.map((request) => ({ operation: request.operation, prompt: clip(request.tracePrompt, 1000), ...(request.label ? { label: request.label } : {}), ...(request.source ? { source: request.source.slot ?? safeUrl(request.source.url) } : {}), ...(request.n > 1 ? { n: request.n } : {}) })) };
+
+  let cost = 0;
+  let model = cfg.model;
+  const draw = async (request) => {
+    if (request.problem) {
+      request.results = Array.from({ length: request.n }, () => ({ url: null, status: 'failed', reason: request.problem }));
+      return;
+    }
+    const body = {
+      model: cfg.model,
+      prompt: request.prompt,
+      operation: request.operation,
+      ...(request.operation === 'edit' ? { images: [{ image_url: request.source.url }] } : {}),
+      ...(request.n > 1 ? { n: request.n } : {}),
+      ...(cfg.size ? { size: cfg.size } : {}),
+      ...(cfg.quality ? { quality: cfg.quality } : {}),
+      ...(cfg.aspect_ratio ? { aspect_ratio: cfg.aspect_ratio } : {}),
+      response_format: 'url'
+    };
+    const traceBody = sanitizeBinaryValues({ ...body, prompt: request.tracePrompt });
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      let startedAt = null;
+      try {
+        if (Date.now() >= ctx.deadline) throw budgetError('time', budgets);
+        ctx.consumeModelCall();
+        startedAt = Date.now();
+        const result = await services.generateImage(env, body, { requestId: ctx.requestId });
+        const urls = (result.publicData?.data || []).map((item) => item.url).filter(Boolean).slice(0, request.n);
+        ctx.addUsage(result.usage, result.cost);
+        cost += Number(result.cost) || 0;
+        model = result.resolution?.resolvedModel || model;
+        await hooks.logProviderCall?.({
+          operation: 'image_generation',
+          nodeId: node.id,
+          model: result.resolution?.resolvedModel || cfg.model,
+          provider: result.resolution?.provider || null,
+          requestedModel: cfg.model,
+          usage: result.usage || { imageCount: result.imageCount },
+          cost: result.cost,
+          ...billingFields(result.resolution),
+          durationMs: Date.now() - startedAt,
+          retry: attempt - 1,
+          requestBody: traceBody,
+          responseBody: result.responseData,
+          operationMetadata: { assetUrls: urls, imageOperation: request.operation, sourceImageCount: body.images?.length || 0, imageInput: result.resolution?.imageInput || null, assetDelivery: result.responseData?._viablelab?.asset_delivery || null }
+        });
+        request.results = Array.from({ length: request.n }, (_, i) => (urls[i] ? { url: urls[i], status: 'ready' } : { url: null, status: 'failed', reason: 'missing' }));
+        return;
+      } catch (error) {
+        if (startedAt != null) {
+          await hooks.logProviderCall?.(failedProviderCall({ operation: 'image_generation', node, cfg, requestBody: traceBody, error, durationMs: Date.now() - startedAt, retry: attempt - 1 }));
+        }
+        const delay = Math.max(500, Number(error.retryAfterMs) || 0);
+        if (startedAt != null && error.imageRetryable === true && !error.imageFailureReason && attempt < maxAttempts && delay <= 2000 && Date.now() + delay < ctx.deadline) {
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        const reason = pictureFailure(error);
+        request.results = Array.from({ length: request.n }, () => ({ url: null, status: reason === 'safety' ? 'blocked' : 'failed', reason }));
+        return;
+      }
+    }
+  };
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(PICTURE_ITEMS.together, requests.length) }, async () => {
+    while (next < requests.length) await draw(requests[next++]);
+  }));
+
+  const operations = [...new Set(requests.map((request) => request.operation))];
+  const finished = finishPictures(ctx, cfg, requests);
+  const output = { ...finished, operation: operations.length > 1 ? 'mixed' : operations[0] || null, prompt: requests[0]?.prompt ?? '', model, cost };
+  const traced = finished.pictures.map((picture) => ({ ...picture, prompt: requests[picture.item - 1].tracePrompt }));
+  return { output, traceOutput: sanitizeBinaryValues({ ...output, pictures: traced, prompt: requests[0]?.tracePrompt ?? '' }), next: node.next };
+}
+
 const MAX_STATE_BYTES = 16 * 1024;
 
 function clampInt(value, min, max, fallback) {
@@ -2017,11 +2260,42 @@ function compareValues(left, op, right) {
   }
 }
 
+// A Transform's fields are worked out in order, and each can read the ones above it as {{step.field}}:
+// named values, so a long expression is written once and read by name. Before a field is set, the name
+// still reads what the step returned last time (a Transform in a loop counting up keeps working).
+function namedValues(fields, scope, id, previous) {
+  const out = {};
+  const base = previous && typeof previous === 'object' && !Array.isArray(previous) ? previous : {};
+  const local = { ...scope };
+  for (const [key, value] of Object.entries(fields)) {
+    local[id] = { ...base, ...out };
+    out[key] = renderValue(value, local);
+  }
+  return out;
+}
+
+const SCALAR_TYPES = ['string', 'number', 'boolean'];
+const named = (o) => o && typeof o.name === 'string' && o.name.trim();
+const scalarOutput = (o) => ({ name: o.name.trim(), type: SCALAR_TYPES.includes(o.type) ? o.type : 'string', description: o.description || '' });
+
+// A list output ({ type: 'list', max_items, fields }) is a list of items with their own named fields, or
+// of plain text when it has no fields: several pictures, steps or questions from one model call.
 function normalizeOutputs(outputs) {
   if (!Array.isArray(outputs)) return [];
-  return outputs
-    .filter((o) => o && typeof o.name === 'string' && o.name.trim())
-    .map((o) => ({ name: o.name.trim(), type: o.type || 'string', description: o.description || '' }));
+  return outputs.filter(named).map((o) => (o.type === 'list'
+    ? { name: o.name.trim(), type: 'list', description: o.description || '', max_items: Math.min(10, Math.max(1, Math.trunc(Number(o.max_items)) || 5)), fields: (Array.isArray(o.fields) ? o.fields : []).filter(named).slice(0, 10).map(scalarOutput) }
+    : { name: o.name.trim(), type: o.type || 'string', description: o.description || '' }));
+}
+
+const described = (schema, description) => (description ? { ...schema, description: description.slice(0, 1000) } : schema);
+function outputSchema(o) {
+  if (o.type !== 'list') return described({ type: SCALAR_TYPES.includes(o.type) ? o.type : 'string' }, o.description);
+  const fields = [...new Map(o.fields.map((f) => [f.name, f])).values()];
+  const items = fields.length
+    ? { type: 'object', properties: Object.fromEntries(fields.map((f) => [f.name, outputSchema(f)])), required: fields.map((f) => f.name), additionalProperties: false }
+    : { type: 'string' };
+  // The limit is said in words, not maxItems, which strict schemas don't all accept; the reply is capped after.
+  return { type: 'array', items, description: `${o.description ? `${o.description.slice(0, 900)} ` : ''}At most ${o.max_items} items.` };
 }
 
 // Declared outputs are enforced as a strict JSON Schema where the provider supports it (OpenAI, which
@@ -2031,10 +2305,39 @@ function outputFormat(cfg, outputs) {
   const fields = [...new Map(outputs.map((o) => [o.name, o])).values()];
   return schemaFormat(cfg, 'step_output', {
     type: 'object',
-    properties: Object.fromEntries(fields.map((o) => [o.name, { type: ['string', 'number', 'boolean'].includes(o.type) ? o.type : 'string', ...(o.description ? { description: o.description.slice(0, 1000) } : {}) }])),
+    properties: Object.fromEntries(fields.map((o) => [o.name, outputSchema(o)])),
     required: fields.map((o) => o.name),
     additionalProperties: false
   });
+}
+
+const EMPTY_VALUE = { string: '', number: 0, boolean: false };
+function coerceScalar(value, type) {
+  if (type === 'number' && typeof value === 'string' && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  if (type === 'boolean' && typeof value === 'string' && /^(true|false)$/i.test(value.trim())) return value.trim().toLowerCase() === 'true';
+  return value;
+}
+
+// Models outside strict schemas write "2" for 2 and "false" for false, or a list's items loosely: declared
+// fields are brought to their types and lists to their shape and size. Fields a model left out stay out
+// (as they always have), except lists, which are always lists.
+function coerceOutputs(json, outputs) {
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return json;
+  const out = { ...json };
+  for (const o of outputs) {
+    if (o.type !== 'list') {
+      if (Object.hasOwn(out, o.name)) out[o.name] = coerceScalar(out[o.name], o.type);
+      continue;
+    }
+    const value = out[o.name];
+    const items = Array.isArray(value) ? value : value == null || value === '' ? [] : [value];
+    out[o.name] = items.slice(0, o.max_items).map((item) => {
+      if (!o.fields.length) return item == null ? '' : typeof item === 'object' ? JSON.stringify(item) : String(item);
+      const source = item && typeof item === 'object' && !Array.isArray(item) ? item : { [o.fields[0].name]: item };
+      return Object.fromEntries(o.fields.map((f) => [f.name, Object.hasOwn(source, f.name) && source[f.name] != null ? coerceScalar(source[f.name], f.type) : EMPTY_VALUE[f.type]]));
+    });
+  }
+  return out;
 }
 
 // A strict JSON Schema response format for a model whose provider enforces it, else JSON mode.
@@ -2044,8 +2347,14 @@ function schemaFormat(cfg, name, schema) {
   return provider === 'openai' ? { type: 'json_schema', json_schema: { name, strict: true, schema } } : { type: 'json_object' };
 }
 
+function describeOutput(o) {
+  if (o.type !== 'list') return `"${o.name}" (${o.type})${o.description ? `: ${o.description}` : ''}`;
+  const items = o.fields.length ? `objects, each with ${o.fields.map((f) => describeOutput(f)).join('; ')}` : 'strings';
+  return `"${o.name}" (a JSON array of at most ${o.max_items} ${items})${o.description ? `: ${o.description}` : ''}`;
+}
+
 function buildOutputInstruction(outputs) {
-  const lines = outputs.map((o) => `- "${o.name}" (${o.type})${o.description ? `: ${o.description}` : ''}`);
+  const lines = outputs.map((o) => `- ${describeOutput(o)}`);
   return `Respond ONLY with a single JSON object containing exactly these keys:\n${lines.join('\n')}\nReturn valid JSON only — no markdown fences, no extra text.`;
 }
 
@@ -2086,11 +2395,12 @@ function teachingNote(ctx, node, scope) {
   return `From the teacher of this activity:\n${text}`;
 }
 
-function buildLlmMessages(cfg, scope, history, inputContent, outputs, note = null, teaching = null) {
+function buildLlmMessages(cfg, scope, history, inputContent, outputs, note = null, teaching = null, pictures = null) {
   const messages = [];
   const systemParts = [];
   if (cfg.system) systemParts.push(renderTemplate(cfg.system, scope));
   if (teaching) systemParts.push(teaching);
+  if (pictures) systemParts.push(pictures);
   // A page that puts what the learner has open with the step's instructions (workspace place: system).
   if (note?.place === 'system') { systemParts.push(note.content); note = null; }
   if (outputs.length) systemParts.push(buildOutputInstruction(outputs));
