@@ -1,3 +1,5 @@
+import { resolveModel } from '../config/models.js';
+
 // Shared request controls for both VETTING routes and native Agent steps.
 export function agentVettingControls(config) {
   return {
@@ -5,6 +7,14 @@ export function agentVettingControls(config) {
     chatModel: { modelId: config.model, maxTokens: config.max_tokens, maxCompletionTokens: config.max_completion_tokens, temperature: config.temperature, topP: config.top_p, reasoningEffort: config.reasoning_effort },
     verificationModel: { modelId: config.verification_model, maxTokens: config.verification_max_tokens, maxCompletionTokens: config.verification_max_completion_tokens, temperature: config.verification_temperature, topP: config.verification_top_p, reasoningEffort: config.verification_reasoning_effort }
   };
+}
+
+// Gemini thinking models count their thinking against the token limit and, left to choose, can spend
+// a VETTING default limit before writing (a cut-off or empty reply). They get low effort and room for both.
+export function thinkingBudget(model, maxTokens) {
+  let id = String(model || '');
+  try { id = resolveModel(id)?.resolvedModel || id; } catch { /* Unknown models are validated elsewhere. */ }
+  return /^gemini-(2\.5-(flash|pro)$|3)/.test(id) ? { maxTokens: Math.max(maxTokens * 4, 2048), reasoningEffort: 'low' } : { maxTokens };
 }
 
 export function vettingModelOptions(options = {}, defaults = {}) {

@@ -22,8 +22,8 @@ import { billingFields, billsUsedUpCredits } from '../utils/providerKeys.js';
 import { ExpressionError, evaluateCondition, evaluateExpression, expressionPaths, openContext, renderTemplate, renderValue, resolvePath } from './expression.js';
 import { sanitizeRequestPayloadForLogging } from '../utils/logging.js';
 import { DEFAULT_VETTING_REVIEWER, GUARDRAIL_MODEL_CHECKS, parallelPaths, routerRoutes, validateGraphModels } from './graph.js';
-import { buildChatVettingSystemPrompt, DEFAULT_VETTING_PROMPT, parseSimpleVerificationResult, prepareChatVettingVerificationPrompt } from '../routes/chatVetting.js';
-import { agentVettingControls, vettingModelOptions } from '../utils/vettingControls.js';
+import { buildChatVettingSystemPrompt, DEFAULT_VETTING_PROMPT, parseSimpleVerificationResult, prepareChatVettingVerificationPrompt, redraftTurns, replyText } from '../routes/chatVetting.js';
+import { agentVettingControls, thinkingBudget, vettingModelOptions } from '../utils/vettingControls.js';
 import { parseSafetyPrefix, parseVerificationResult, prepareChatPrompt, prepareVerificationPrompt } from '../routes/vettingFull.js';
 import { resolveModel } from '../config/models.js';
 import { answerStream, citationOf, finalizeCitations, normalizeCitationMarks, SOURCE_STYLES, stripModelSourceList } from './citations.js';
@@ -1231,9 +1231,9 @@ const HANDLERS = {
       } else {
         let generated;
         try {
-          generated = await call(cfg.model,
+          generated = replyText(await call(cfg.model,
             { messages: [{ role: 'system', content: live.chat }, ...history], ...chatOptions },
-            { messages: [{ role: 'system', content: trace.chat }, ...traceHistory], ...chatOptions }, 0);
+            { messages: [{ role: 'system', content: trace.chat }, ...traceHistory], ...chatOptions }, 0));
         } catch (error) {
           if (attempt === 1) throw error;
           const reason = String(error?.message || error);
@@ -1241,7 +1241,7 @@ const HANDLERS = {
           stopReason = 'GENERATION_ERROR';
           break;
         }
-        const safety = parseSafetyPrefix(generated.content);
+        const safety = parseSafetyPrefix(generated);
         response = safety.content;
         if (safety.requiresAttention) {
           requiresAttention = true;
@@ -1272,7 +1272,7 @@ const HANDLERS = {
       }
       if (attempt < maxAttempts) {
         for (const list of [history, traceHistory]) {
-          list.push({ role: 'assistant', content: response }, { role: 'system', content: live.feedback(verdict.verificationOutput) });
+          list.push(...redraftTurns(response, live.feedback(verdict.verificationOutput)));
         }
       }
     }
@@ -2269,11 +2269,11 @@ function historyAssetLabel(kind, part) {
 }
 
 // GPT-5/6 models reason before answering and count those tokens against the limit, so the
-// VETTING step asks them for low effort and leaves room for the answer.
+// VETTING step asks them for low effort and leaves room for the answer, as it does Gemini thinking models.
 function reasoningBudget(model, maxTokens) {
   let id = String(model || '');
   try { id = resolveModel(id)?.resolvedModel || id; } catch { /* Unknown models are validated elsewhere. */ }
-  return /^gpt-[56]/.test(id) ? { maxTokens: Math.max(maxTokens * 4, 2048), reasoningEffort: 'low' } : { maxTokens };
+  return /^gpt-[56]/.test(id) ? { maxTokens: Math.max(maxTokens * 4, 2048), reasoningEffort: 'low' } : thinkingBudget(id, maxTokens);
 }
 
 // Whether the step's model takes max_completion_tokens by that name (its catalog parameter_support).
