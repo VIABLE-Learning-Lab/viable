@@ -262,6 +262,36 @@ test('a picture the safety check stops is tried once with the fallback prompt; a
   assert.equal(prompts.filter((p) => p === 'make her cry').length, 1);
   assert.equal(draw.unfinished[0].prompt, 'make her cry');
   assert.equal(prompts.length, 5);
+  assert.deepEqual(draw.fallback_numbers, [1, 3], 'the ready pictures drawn with the fallback prompt');
+  assert.equal(draw.summary, 'Pictures 1 and 3 are ready. Picture 2 couldn’t be changed. Try describing the change differently.');
+});
+
+test('a list of pictures says what came of it in plain words, by the numbers the learner sees', async () => {
+  const graph = { entry: 'input', nodes: [
+    { id: 'input', type: 'input', next: 'draw' },
+    { id: 'draw', type: 'image', config: { model: 'gpt-image-1', items: '{{vars.pictures}}', max_items: 6 }, next: 'out' },
+    { id: 'out', type: 'output', config: { text: '{{draw.summary}}', attachments: '{{draw.urls}}' } }
+  ] };
+  const saved = { current: [{ number: 1, url: url('a'), prompt: 'a cat', label: '' }, { number: 2, url: url('b'), prompt: 'a dog', label: '' }], history: [], turn: 1 };
+  const draw = async (pictures, memory) => (await runAgentGraph({}, graph, { input: 'go', variables: { pictures }, pictures: memory, services: { generateImage: async (_env, body) => {
+    if (/refused/.test(body.prompt)) throw failure({ status: 400, code: 'image_provider_error', imageFailureReason: 'safety' });
+    if (/slow/.test(body.prompt)) throw failure({ name: 'TimeoutError', message: 'The operation timed out.' });
+    return imageResult(Array.from({ length: body.n || 1 }, (_, i) => url(`${body.prompt}${i}`)));
+  } } })).outputs.draw;
+  assert.equal((await draw([{ prompt: 'a lake', n: 3 }])).summary, 'Pictures 1, 2 and 3 are ready.');
+  const mixed = await draw([{ prompt: 'a lake' }, { prompt: 'refused one' }, { prompt: 'refused two' }, { prompt: 'slow one' }]);
+  assert.equal(mixed.summary, 'Picture 1 is ready. Pictures 2 and 3 couldn’t be drawn. Try describing them differently. Picture 4 couldn’t be drawn this time. Ask me to try again.');
+  assert.deepEqual(mixed.fallback_numbers, []);
+  assert.equal((await draw([{ prompt: 'a lake' }, { prompt: 'slow one' }, { prompt: 'slow two' }])).summary, 'Picture 1 is ready. Pictures 2 and 3 couldn’t be drawn this time. Ask me to try again.');
+  // A refused change names the picture the learner asked to change, not its place in this result.
+  assert.equal((await draw([{ prompt: 'refused night', source: 2 }], saved)).summary, 'Picture 2 couldn’t be changed. Try describing the change differently.');
+  assert.equal((await draw([{ prompt: 'refused night', source: 1 }, { prompt: 'refused rain', source: 2 }], saved)).summary, 'Pictures 1 and 2 couldn’t be changed. Try describing the change differently.');
+  assert.equal((await draw([{ prompt: 'a hat', source: 2 }], saved)).summary, 'Picture 2 is ready.');
+  const none = await draw([]);
+  assert.deepEqual([none.status, none.summary], ['skipped', '']);
+  assert.ok(![mixed.summary].some((text) => /safety|error|refus|blocked/i.test(text)), 'never internals');
+  const single = await runAgentGraph({}, { entry: 'draw', nodes: [{ id: 'draw', type: 'image', config: { model: 'gpt-image-1', prompt: 'a lake' }, next: 'out' }, { id: 'out', type: 'output', config: { text: 'x' } }] }, { input: 'go', services: { generateImage: async () => imageResult([url('lake')]) } });
+  assert.equal(single.outputs.draw.summary, undefined, 'one picture without a list keeps its usual result');
 });
 
 test('a fallback that is stopped too leaves the picture blocked; single mode falls back the same way', async () => {

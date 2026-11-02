@@ -12,6 +12,7 @@ import { MODEL_MODES, MODEL_REGISTRY, assertModelNotRetired, normalizeModelId, r
 import { isProviderKeyModel, modelAllowedBy } from '../utils/providerKeys.js';
 import { validSketch } from '../utils/agentCollaboration.js';
 import { agentVettingControls, vettingControlErrors } from '../utils/vettingControls.js';
+import { describeSteps } from './steps/index.js';
 
 export const NODE_TYPES = Object.freeze([
   'input',
@@ -111,7 +112,7 @@ export function describeGraphSchema(limits = DEFAULT_GRAPH_LIMITS) {
         variables: 'Optional initial values read as {{vars.name}}.',
         nodes: 'Execution steps.',
         edges: 'Optional visual metadata; routing comes from node next, branches, and condition cases.',
-        groups: 'Optional canvas frames: at most 50 { id, label, nodes: [step ids], collapsed }, each step in at most one. Runs ignore them.',
+        groups: 'Optional canvas frames: at most 50 { id, label, description, nodes: [step ids], collapsed, settings }, each step in at most one. description (at most 280 characters) says what the block does. settings (at most 8 { step, key, label }) are settings shown on the block: step is one of its steps, key a dot path in that step\'s config such as params.temperature, label at most 40 characters. Runs ignore groups.',
         run_limits: 'Optional limits for each run: max_model_calls (1–60, default 20) and timeout_seconds (10–120, default 60) for runs a caller waits on. Background jobs get at least 5 minutes.'
       }
     },
@@ -129,17 +130,20 @@ export function describeGraphSchema(limits = DEFAULT_GRAPH_LIMITS) {
       'Every node needs a unique string id and a known, available type.',
       'entry must name an existing node.',
       'Every next, branches, and condition case target must name an existing node.',
+      'A condition step checks config.cases [{when, to, label}] in order: the first case that holds decides, else config.default. label (1–60 characters) names a case on its connection; routing ignores it, and the step\'s result adds the matched case\'s case_number and label.',
       'An each step ("For each") runs its body once per item of config.items (a list, such as an llm list output), one item after another, up to max_items (default 10, at most 25). branches.each is the body\'s first step and the body\'s last step points back to the each step; branches.done (else next) runs after the last item. Body steps read the item as {{item}} and {{item_number}} (or the name in config.as). Its result: count, items, results [{item, number, outputs: {stepId: output}}] and values (config.collect worked out after each item, else the last body step\'s output). Body steps count toward the run\'s step and model call limits and can\'t reply or ask.',
       'At least one output node must be reachable from entry.',
       'A step\'s config.model must be a model whose mode in /v1/models is the step\'s model_mode: chat models answer, image steps take image_generation, speech steps audio_speech and transcribe steps audio_transcription.',
       'Image steps default to operation=generate. operation=edit requires source (a picture number of this conversation, or an address), image (one URL) or images ([{image_url}]), and a model connection with image_editing=true; operation=auto edits when source names a picture and generates otherwise. Operation and source values may be templates. Missing sources never fall back to generation.',
       'Several pictures: config.items (a list, usually an llm list output such as {{plan.json.pictures}}) makes one request per item, up to max_items (default 4, at most 6) and 8 pictures in all, three at a time. Each item reads as {{item}} and {{item_number}}; prompt defaults to {{item.prompt}} (or the item itself for text), label to item.label, description (what the picture shows, kept for later turns) to item.description or item.scene, source to item.source, n to item.n (pictures from that one prompt, 1–4). One scene several times is one item with n>1; several scenes are several items.',
-      'With items, a picture never stops the run: a safety refusal is status=blocked and is not retried on its own, a busy service is retried once (max_attempts, default 2), and anything else is status=failed with a reason (safety, busy, time, limit, source_missing, no_source, no_prompt, missing, error). fallback_prompt (a template; {{prompt}} is the first prompt, {{item}} the item) is tried once when the safety check stops a picture, for example "{{prompt}} Show it as a storybook illustration, not a photograph." (image safety checks refuse realistic photos of children and teens far more often than drawings); an empty result skips the retry, so {{ item.source > 0 ? "" : prompt + "…" }} leaves edits alone. A picture drawn this way has fallback=true. The result lists pictures [{number, url, prompt, label, status, reason, fallback, slot, item}], urls, url, ready_count, blocked_count, failed_count, ready_numbers, blocked_numbers, failed_numbers, partial, unfinished and status (completed, partial, failed or skipped). Single image steps keep opt-in recovery: max_attempts=2 retries one transient rejection and on_error=continue returns status=failed instead of stopping. Never put diagnostics in assistant prose.',
+      'With items, a picture never stops the run: a safety refusal is status=blocked and is not retried on its own, a busy service is retried once (max_attempts, default 2), and anything else is status=failed with a reason (safety, busy, time, limit, source_missing, no_source, no_prompt, missing, error). fallback_prompt (a template; {{prompt}} is the first prompt, {{item}} the item) is tried once when the safety check stops a picture, for example "{{prompt}} Show it as a storybook illustration, not a photograph." (image safety checks refuse realistic photos of children and teens far more often than drawings); an empty result skips the retry, so {{ item.source > 0 ? "" : prompt + "…" }} leaves edits alone. A picture drawn this way has fallback=true. The result lists pictures [{number, url, prompt, label, status, reason, fallback, slot, item}], urls, url, ready_count, blocked_count, failed_count, ready_numbers, blocked_numbers, failed_numbers, fallback_numbers (ready pictures drawn with fallback_prompt), partial, unfinished, status (completed, partial, failed or skipped) and summary: sentences for the learner by the numbers they see, such as "Pictures 1 and 2 are ready. Picture 3 couldn’t be drawn. Try describing it differently." (empty when nothing was asked for), which a reply can show as it is. Single image steps keep opt-in recovery: max_attempts=2 retries one transient rejection and on_error=continue returns status=failed instead of stopping. Never put diagnostics in assistant prose.',
       'Picture memory: on a server-kept conversation, picture steps (remember, default true) keep the pictures shown by the number the learner sees. Every step reads {{conversation.pictures}} [{number, url, prompt, label, description}], {{conversation.unfinished}} (numbers not drawn; pass as items to finish them in the same numbers) and {{conversation.picture_history}}. One edited picture keeps its number; several pictures (new ones, versions, a mixture) become a new set numbered from 1. Pictures a run draws but its reply does not attach are not remembered. An llm step with pictures=true is told the current pictures by number, the newest marked, at the start of its turn message. Do not copy picture URLs or plans into State.',
       'An llm step can attach images from earlier steps with config.images=[{image_url:"{{step.url}}"}]. A URL in prompt text is only text. Typed image inputs are downloaded safely and converted to provider-native image data; the selected chat model must support image input.',
       `An llm node may declare at most ${limits.maxStructuredOutputs} structured outputs: type string, number, boolean or list. A list ({name, type: "list", max_items 1–10, fields: [{name, type, description}]}) returns several items with up to 10 fields each, or text items without fields; use it instead of numbered copies like prompt_1, prompt_2.`,
       `run_limits may set max_model_calls (${RUN_LIMITS.max_model_calls.join('–')}) and timeout_seconds (${RUN_LIMITS.timeout_seconds.join('–')}).`
     ],
+    // Each step type's settings, outputs and plain-language sentence, as the portal's step panel shows them.
+    steps: describeSteps(),
     documentation: 'https://developers.viablelab.org/agents/viablelab-api.md'
   };
 }
@@ -161,15 +165,24 @@ function validRunLimits(value) {
   return Object.entries(value).every(([key, n]) => RUN_LIMITS[key] && Number.isInteger(n) && n >= RUN_LIMITS[key][0] && n <= RUN_LIMITS[key][1]);
 }
 
+const SETTING_PATH = /^[A-Za-z_][\w]*(\.[A-Za-z_][\w]*)*$/;
+const shortText = (value, max) => typeof value === 'string' && value.length <= max;
+
+// Settings shown on a group's block: { step, key, label? }, a dot path in one of the group's own steps.
+const validGroupSettings = (settings, nodes) => Array.isArray(settings) && settings.length <= 8
+  && settings.every((item) => item && typeof item === 'object' && nodes.includes(item.step) && typeof item.key === 'string' && SETTING_PATH.test(item.key) && (item.label == null || shortText(item.label, 40)));
+
 function validGroups(groups, ids) {
   if (!Array.isArray(groups) || groups.length > 50) return false;
   const grouped = new Set();
   const groupIds = new Set();
   for (const group of groups) {
     if (!group || typeof group !== 'object' || typeof group.id !== 'string' || !group.id || group.id.length > 64 || groupIds.has(group.id)) return false;
-    if (group.label != null && (typeof group.label !== 'string' || group.label.length > 80)) return false;
+    if (group.label != null && !shortText(group.label, 80)) return false;
+    if (group.description != null && !shortText(group.description, 280)) return false;
     if (group.collapsed != null && typeof group.collapsed !== 'boolean') return false;
     if (!Array.isArray(group.nodes) || group.nodes.some((id) => !ids.has(id) || grouped.has(id))) return false;
+    if (group.settings != null && !validGroupSettings(group.settings, group.nodes)) return false;
     groupIds.add(group.id);
     group.nodes.forEach((id) => grouped.add(id));
   }
@@ -230,7 +243,7 @@ export function validateGraph(graph, options = {}) {
   }
 
   // Canvas groups: a frame around steps that belong together, for the editor only; runs ignore them.
-  if (graph.groups != null && !validGroups(graph.groups, ids)) errors.push('Graph groups must be a list of at most 50 { id, label, nodes: [step ids], collapsed }, with each step in at most one group.');
+  if (graph.groups != null && !validGroups(graph.groups, ids)) errors.push('Graph groups must be a list of at most 50 { id, label (at most 80 characters), description (at most 280), nodes: [step ids], collapsed, settings }, with each step in at most one group. settings lists at most 8 { step, key, label } shown on the block: step is one of the group\'s steps, key a setting path such as params.temperature, label at most 40 characters.');
 
   // Reference integrity for next / branches.
   for (const node of nodes) {
@@ -329,6 +342,10 @@ function validateOrchestrationNode(node) {
     if (cfg.max_attempts != null && (!Number.isInteger(Number(cfg.max_attempts)) || Number(cfg.max_attempts) < 1 || Number(cfg.max_attempts) > 10)) errors.push(`${label} max_attempts must be between 1 and 10.`);
     errors.push(...vettingControlErrors(agentVettingControls(cfg), label));
     if (cfg.draft != null && typeof cfg.draft !== 'string') errors.push(`${label} draft must be text, such as {{answer.content}}.`);
+  }
+  // A case's name, shown on its connection and in the trace; routing never reads it.
+  if (node.type === 'condition' && Array.isArray(cfg.cases) && cfg.cases.some((item) => item?.label != null && (typeof item.label !== 'string' || !item.label.trim() || item.label.trim().length > 60))) {
+    errors.push(`${label} case labels must be text of 1 to 60 characters, such as "A picture plan is incomplete".`);
   }
   if (node.type === 'subagent' && !cfg.slug) errors.push(`${label} requires config.slug, the published agent to call.`);
   if (node.type === 'router') {

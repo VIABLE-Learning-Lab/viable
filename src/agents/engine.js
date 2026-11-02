@@ -138,8 +138,9 @@ export async function runAgentGraph(env, graph, options = {}) {
     historyBudget: historyBudget(graph),
     graph,
     traceMessages: sanitizeBinaryValues(Array.isArray(options.traceHistory) ? options.traceHistory : (Array.isArray(options.history) ? options.history : [])),
-    outputs: {},
-    traceOutputs: {},
+    // Empty, except for Run step (runAgentStep): what earlier steps of a saved run gave the step.
+    outputs: { ...options.outputs },
+    traceOutputs: { ...(options.traceOutputs ?? options.outputs) },
     variables: { ...(graph.variables || {}), ...savedState, ...(options.variables || {}) },
     traceVariables: sanitizeBinaryValues({ ...(graph.variables || {}), ...savedState, ...(options.variables || {}) }),
     persistedState: { ...savedState },
@@ -150,7 +151,7 @@ export async function runAgentGraph(env, graph, options = {}) {
     // Addresses of pictures this run drew; the memory keeps them only if the reply shows one.
     drawnPictures: new Set(),
     // The item a For each step is on ({ item, item_number }, or its own names), read by its body's steps.
-    iteration: {},
+    iteration: { ...options.iteration },
     resuming: resumeNode ? { node: resumeNode, question: options.resume.question ?? '' } : null,
     pendingResume: null,
     memorySubject: options.memorySubject || null,
@@ -268,13 +269,14 @@ export async function runAgentGraph(env, graph, options = {}) {
         ctx.sourceStyle = result.sourceStyle;
         return;
       }
+      if (options.step) return;
       currentId = result.next ?? null;
     }
   }
   ctx.walk = walk;
 
   try {
-    await walk(resumeNode || graph.entry);
+    await walk(options.step || resumeNode || graph.entry);
   } catch (error) {
     // Budget checks between steps must retain the work and assets already completed.
     if (error && typeof error === 'object') error.agentSteps = ctx.steps;
@@ -295,6 +297,7 @@ export async function runAgentGraph(env, graph, options = {}) {
     modelCalls: ctx.modelCalls,
     stepCount: ctx.stepCount,
     outputs: ctx.outputs,
+    traceOutputs: ctx.traceOutputs,
     variables: ctx.variables,
     // The caller persists these on server conversations: state for later turns and
     // the Ask step to resume with the next message (null clears a previous one).
@@ -302,6 +305,17 @@ export async function runAgentGraph(env, graph, options = {}) {
     pictures: ctx.picturesChanged && delivered(ctx) ? ctx.pictures : null,
     resume: ctx.pendingResume
   };
+}
+
+/**
+ * Run step (the editor's): one step of the graph, once, without going on to the next. options.outputs
+ * (traceOutputs), iteration, variables, input, history, context and pictures are what earlier steps
+ * left; nothing the step changes is kept (the caller ignores state, pictures and resume). Returns the
+ * run's result with the step's output (as a trace keeps it) and its step record.
+ */
+export async function runAgentStep(env, graph, stepId, options = {}) {
+  const result = await runAgentGraph(env, graph, { ...options, step: stepId });
+  return { ...result, output: result.traceOutputs[stepId] ?? null, step: result.steps.at(-1) };
 }
 
 // A conversation remembers the pictures it showed: when a run drew pictures but its reply attaches
@@ -595,14 +609,16 @@ const HANDLERS = {
 
     if (Array.isArray(cfg.cases)) {
       const evaluated = [];
+      // A case's label names it in the trace and on the canvas; routing never reads it.
+      const named = (branch) => (typeof branch.label === 'string' && branch.label.trim() ? { label: branch.label.trim() } : {});
       const hit = cfg.cases.find((branch) => {
         if (!branch) return false;
         const matched = evaluateCondition(branch.when, scope);
-        evaluated.push({ when: branch.when ?? null, matched });
+        evaluated.push({ when: branch.when ?? null, matched, ...named(branch) });
         return matched;
       });
       step.input = { evaluated, values: conditionValues(evaluated.map((item) => item.when), ctx.traceScope()) };
-      return hit ? { output: { matched: hit.when }, next: hit.to } : { output: { matched: null }, next: cfg.default ?? node.next ?? null };
+      return hit ? { output: { matched: hit.when, case_number: cfg.cases.indexOf(hit) + 1, ...named(hit) }, next: hit.to } : { output: { matched: null }, next: cfg.default ?? node.next ?? null };
     }
 
     // Structured form (built by the UI): { field, op, value }. Falls back to a
@@ -887,14 +903,16 @@ const HANDLERS = {
     ctx.variables[varName] = count;
     ctx.traceVariables[varName] = count;
 
+    // An empty count ('' or spaces, as the editor leaves it) is no count, so while decides.
+    const counted = cfg.count != null && String(cfg.count).trim() !== '';
     let shouldContinue;
-    if (cfg.count != null) shouldContinue = count <= Number(cfg.count);
+    if (counted) shouldContinue = count <= Number(cfg.count);
     else if (cfg.while) shouldContinue = evaluateCondition(cfg.while, ctx.scope());
     else shouldContinue = false;
 
     const branches = node.branches || {};
     const next = shouldContinue ? branches.continue : branches.done;
-    const rule = cfg.count != null ? { count: Number(cfg.count) } : cfg.while ? { while: cfg.while } : {};
+    const rule = counted ? { count: Number(cfg.count) } : cfg.while ? { while: cfg.while } : {};
     return { output: { iteration: count, continue: shouldContinue, var: varName, ...rule }, next: next ?? node.next ?? null };
   },
 
@@ -1783,8 +1801,25 @@ function finishPictures(ctx, cfg, requests) {
     blocked_numbers: numbers('blocked'),
     failed_numbers: numbers('failed'),
     unfinished,
-    status: !pictures.length ? 'skipped' : ready.length === pictures.length ? 'completed' : ready.length ? 'partial' : 'failed'
+    status: !pictures.length ? 'skipped' : ready.length === pictures.length ? 'completed' : ready.length ? 'partial' : 'failed',
+    ...(cfg.items != null ? { fallback_numbers: ready.filter((picture) => picture.fallback).map((picture) => picture.number), summary: pictureSummary(pictures) } : {})
   };
+}
+
+// "1", "1 and 2", "1, 2 and 3".
+const numberList = (numbers) => (numbers.length > 1 ? `${numbers.slice(0, -1).join(', ')} and ${numbers.at(-1)}` : String(numbers[0]));
+
+// What a list of pictures came to, for the learner: by the numbers they see, never naming a safety
+// check, an error or another internal reason.
+function pictureSummary(pictures) {
+  const say = (some, one, many) => (some.length ? (some.length > 1 ? many : one).replace('#', numberList(some.map((picture) => picture.slot ?? picture.number).sort((a, b) => a - b))) : '');
+  const refused = pictures.filter((picture) => picture.status === 'blocked');
+  return [
+    say(pictures.filter((picture) => picture.status === 'ready'), 'Picture # is ready.', 'Pictures # are ready.'),
+    say(refused.filter((picture) => picture.source == null), 'Picture # couldn’t be drawn. Try describing it differently.', 'Pictures # couldn’t be drawn. Try describing them differently.'),
+    say(refused.filter((picture) => picture.source != null), 'Picture # couldn’t be changed. Try describing the change differently.', 'Pictures # couldn’t be changed. Try describing the change differently.'),
+    say(pictures.filter((picture) => !['ready', 'blocked'].includes(picture.status)), 'Picture # couldn’t be drawn this time. Ask me to try again.', 'Pictures # couldn’t be drawn this time. Ask me to try again.')
+  ].filter(Boolean).join(' ');
 }
 
 const PICTURE_ITEMS = { max: 6, default: 4, pictures: 8, together: 3 };

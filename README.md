@@ -128,6 +128,14 @@ JSON Schema (draft 2020-12) in `schemas/`, each with an example:
 | `learning-events.schema.json` | One learner's events (what `POST /v1/learning/events` takes) and turns | `schemas/examples/learning-events.example.json` |
 | `teaching.schema.json` | An activity's teaching settings, with its standard or skill, misconceptions and sections | `schemas/examples/teaching.example.json` |
 
+Beside them, `schemas/steps.json` describes each step type an agent graph can use: its settings
+(with their tips, defaults and bounds), outputs, flow and the plain-language sentence VIABLE's editor
+shows. It is data, not a schema, written from `src/agents/steps/` by `npm run steps:build` (never by
+hand), and the same as `GET /v1/developer/agents/graph-schema` returns as `steps`. An agent's graph
+may also carry canvas `groups`, each with an optional `description` and up to 8 `settings` shown on
+the block, and a condition's cases may carry a `label`, which the trace names when that case
+matches. None of them changes how a run goes.
+
 `validate` checks the schema with a small built-in checker (no dependency), then, for agents and
 packages, VIABLE's own graph checks (`validateGraph`) and that a package's refs resolve. Model names
 aren't checked: a local run sends them to your endpoint.
