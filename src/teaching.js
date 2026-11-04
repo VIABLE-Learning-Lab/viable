@@ -3,10 +3,10 @@
  * what the agent is told, from VIABLE's own src/utils/teaching.js, plus the durable skills VIABLE
  * carries (Carnegie Skills Progressions via Learning Commons, CC BY 4.0; SKILLS.framework.attribution).
  */
-import { teachingContext } from '../../src/utils/teaching.js';
+import { teachingContext } from './utils/teaching.js';
 
-export { HELP_LEVELS, TEACHING_LIMITS, teachingContext, teachingSettings } from '../../src/utils/teaching.js';
-export { SKILLS } from '../../src/utils/skillsData.js';
+export { HELP_LEVELS, TEACHING_LIMITS, teachingContext, teachingSettings } from './utils/teaching.js';
+export { SKILLS } from './utils/skillsData.js';
 
 /**
  * A run's context with the teacher's instructions in it, as a course activity's run gets them

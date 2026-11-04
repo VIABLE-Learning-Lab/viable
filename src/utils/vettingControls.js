@@ -1,5 +1,3 @@
-import { resolveModel } from '../config/models.js';
-
 // Shared request controls for both VETTING routes and native Agent steps.
 export function agentVettingControls(config) {
   return {
@@ -11,9 +9,9 @@ export function agentVettingControls(config) {
 
 // Gemini thinking models count their thinking against the token limit and, left to choose, can spend
 // a VETTING default limit before writing (a cut-off or empty reply). They get low effort and room for both.
+// model: the resolved model ID (resolvedModelId in config/models.js), not an alias.
 export function thinkingBudget(model, maxTokens) {
-  let id = String(model || '');
-  try { id = resolveModel(id)?.resolvedModel || id; } catch { /* Unknown models are validated elsewhere. */ }
+  const id = String(model || '');
   return /^gemini-(2\.5-(flash|pro)$|3)/.test(id) ? { maxTokens: Math.max(maxTokens * 4, 2048), reasoningEffort: 'low' } : { maxTokens };
 }
 

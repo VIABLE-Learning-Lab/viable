@@ -5,9 +5,8 @@
  * bases, memory, images, speech, sub-agents) absent or failing with a clear
  * message. Pass `services` to plug in your own.
  */
-import { runAgentGraph } from '../../src/agents/engine.js';
-import { validateGraph } from '../../src/agents/graph.js';
-import { resolveModel } from '../../src/config/models.js';
+import { runAgentGraph } from './agents/engine.js';
+import { validateGraph } from './agents/graph.js';
 import { teachingRunContext } from './teaching.js';
 
 // What each step type does in a local run (the README's table is this list).
@@ -24,19 +23,16 @@ const needsViable = (what) => async () => {
   throw Object.assign(new Error(`${what} need VIABLE's hosted service, which a local run doesn't have. Remove the step, pass your own service to runAgent, or run the agent on VIABLE.`), { status: 422, code: 'needs_viable' });
 };
 
-/** The model ID an OpenAI-compatible endpoint knows for a VIABLE model name (viable-3 → its provider model), else the name as given. */
-export function endpointModel(model) {
-  try { return resolveModel(model).providerModel || model; } catch { return model; }
-}
-
 /**
  * callChatModel for any OpenAI-compatible /chat/completions endpoint (OpenAI, or an open-weight
- * model behind vLLM, Ollama, llama.cpp, LM Studio...). `model` replaces every model the graph names.
+ * model behind vLLM, Ollama, llama.cpp, LM Studio...). `model` replaces every model the graph names;
+ * without it each step's model is sent as the graph names it (a VIABLE alias such as viable-3 means
+ * nothing to another endpoint, so pass `model` for an agent that uses one).
  */
 export function openAICompatible({ baseUrl = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1', apiKey = process.env.OPENAI_API_KEY, model = null, fetch = globalThis.fetch } = {}) {
   const url = `${String(baseUrl).replace(/\/+$/, '')}/chat/completions`;
   return async (_env, request, options = {}) => {
-    const id = model || endpointModel(request.model);
+    const id = model || request.model;
     // shortcut: no token streaming; an answer arrives whole (as VIABLE does for providers that don't stream).
     const response = await fetch(url, {
       method: 'POST',
@@ -56,7 +52,7 @@ export function openAICompatible({ baseUrl = process.env.OPENAI_BASE_URL || 'htt
     return {
       content,
       usage: { prompt, completion, total: usage.total_tokens || prompt + completion },
-      // Your endpoint, your bill: the kit doesn't price calls.
+      // Your endpoint, your bill: the harness doesn't price calls.
       cost: 0,
       response: data,
       resolution: { resolvedModel: id, provider: 'openai-compatible' },
@@ -117,7 +113,7 @@ export async function runAgent(doc, { input = '', history = [], context = null, 
     });
     return { agent: picked.name, activity: settings ? picked.activity : null, teaching: settings, ...result };
   } catch (error) {
-    if (NEEDS_VIABLE.has(error?.code) && !/VIABLE/.test(error.message)) error.message += ' This step needs VIABLE\'s hosted service; see the kit README, "What runs locally".';
+    if (NEEDS_VIABLE.has(error?.code) && !/VIABLE/.test(error.message)) error.message += ' This step needs VIABLE\'s hosted service; see the harness README, "What runs locally".';
     throw error;
   }
 }

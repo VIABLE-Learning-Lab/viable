@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { checkSchema, kindOf, schemaFor, validateDocument } from '../src/index.js';
-import { NODE_TYPES } from '../../src/agents/graph.js';
+import { NODE_TYPES } from '../src/agents/graph.js';
 
 const json = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
 const examples = readdirSync(new URL('../examples/', import.meta.url)).filter((name) => name.endsWith('.json'));
@@ -55,14 +55,8 @@ test('the agent schema lists the engine’s step types', () => {
   assert.deepEqual(schemaFor('agent').$defs.node.properties.type.enum, [...NODE_TYPES]);
 });
 
-// Checks against the repository the kit comes from; an export has neither, so they skip there.
-const workspace = new URL('../../src/utils/workspace.js', import.meta.url);
-test('the learning event kinds are the ones VIABLE records', { skip: !existsSync(workspace) && 'not in the repository' }, async () => {
-  const { WORKSPACE_EVENTS } = await import(workspace.href);
-  assert.deepEqual(schemaFor('learning-events').$defs.event.properties.type.enum, [...WORKSPACE_EVENTS, 'app.event']);
-});
-
-const portal = new URL('../../../viablelab-developers/public/docs/examples/', import.meta.url);
+// The portal publishes the same examples; checked when its checkout is beside this one.
+const portal = new URL('../../viablelab-developers/public/docs/examples/', import.meta.url);
 test('the examples are the portal’s', { skip: !existsSync(portal) && 'the portal checkout is not beside this one' }, () => {
   for (const name of examples) assert.equal(readFileSync(new URL(`../examples/${name}`, import.meta.url), 'utf8'), readFileSync(fileURLToPath(new URL(name, portal)), 'utf8'), `${name} differs from the portal's public/docs/examples copy`);
 });

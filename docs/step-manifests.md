@@ -4,11 +4,11 @@ Each step type an agent graph can use has one manifest in `src/agents/steps/<typ
 plain data (a default export with no functions), so it serializes to JSON unchanged. One manifest
 drives the step settings panel and canvas card in the Developer Portal, the step library, the AI
 builder's notes, `GET /v1/developer/agents/graph-schema` (and so `viable developer agents schema`),
-the harness kit and the step docs. Runtime validation stays in `src/agents/graph.js`;
-`tests/stepManifests.test.js` keeps the two in agreement.
+this harness's `schemas/steps.json` and the step docs. Runtime validation stays in
+`src/agents/graph.js`; `test/stepManifests.test.js` keeps the two in agreement.
 
-`npm run steps:build` writes the portal's copy (`../viablelab-developers/app/data/stepManifests.generated.json`)
-and the kit's (`kit/schemas/steps.json`). Never edit either copy by hand.
+`npm run steps:build` writes `schemas/steps.json`; VIABLE's API writes the portal's copy from the
+same manifests. Never edit either copy by hand.
 
 ## A manifest
 
@@ -156,4 +156,4 @@ type either way.
 - Every placeholder in a sentence names a setting or a known `{@name}`.
 - Tips are at most 160 characters; labels at most 40.
 - Numeric bounds agree with `graph.js` where it checks them.
-- The portal and kit copies equal what `npm run steps:build` writes.
+- `schemas/steps.json` equals what `npm run steps:build` writes.

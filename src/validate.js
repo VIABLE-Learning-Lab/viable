@@ -1,12 +1,12 @@
 /**
- * Checks a file against the kit's open formats (schemas/*.schema.json, JSON Schema 2020-12) and,
+ * Checks a file against the harness's open formats (schemas/*.schema.json, JSON Schema 2020-12) and,
  * for agents, VIABLE's own graph checks. No dependency: checkSchema covers the keywords these
  * schemas use (type, enum, const, required, properties, additionalProperties, propertyNames, items,
  * min/max Items/Length/Properties, pattern, minimum, maximum, $ref, allOf, anyOf, oneOf, if/then/else).
  * `format` is an annotation, as 2020-12 has it by default.
  */
 import { readFileSync } from 'node:fs';
-import { graphKnowledgeRefs, linkKnowledgeRefs, validateGraph } from '../../src/agents/graph.js';
+import { graphKnowledgeRefs, linkKnowledgeRefs, validateGraph } from './agents/graph.js';
 
 export const KINDS = ['agent', 'course-package', 'learning-events', 'teaching'];
 const SCHEMAS = Object.fromEntries(KINDS.map((kind) => [`${kind}.schema.json`, JSON.parse(readFileSync(new URL(`../schemas/${kind}.schema.json`, import.meta.url), 'utf8'))]));
@@ -82,7 +82,7 @@ export function checkSchema(schema, value, root = schema, path = '$') {
   return errors;
 }
 
-/** Which of the kit's formats a document is in. */
+/** Which of the harness's formats a document is in. */
 export function kindOf(doc) {
   if (doc?.format === 'viable.agent') return 'agent';
   if (doc?.format === 'viable.course-package') return 'course-package';

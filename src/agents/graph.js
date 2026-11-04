@@ -8,8 +8,7 @@
  * `edges` is visual-only metadata and is ignored by the engine.
  */
 
-import { MODEL_MODES, MODEL_REGISTRY, assertModelNotRetired, normalizeModelId, resolveAlias } from '../config/models.js';
-import { isProviderKeyModel, modelAllowedBy } from '../utils/providerKeys.js';
+import { MODEL_MODES } from '../config/modelModes.js';
 import { validSketch } from '../utils/agentCollaboration.js';
 import { agentVettingControls, vettingControlErrors } from '../utils/vettingControls.js';
 import { describeSteps } from './steps/index.js';
@@ -53,10 +52,10 @@ export const UNAVAILABLE_NODE_TYPES = Object.freeze([]);
 export const DEFAULT_VETTING_REVIEWER = 'gpt-6-luna';
 
 // Nodes that call a model. Memory and guardrail call one only in some modes.
-const MODEL_NODE_TYPES = new Set(['llm', 'image', 'speech', 'transcribe', 'router', 'agent', 'guardrail', 'memory', 'vetting']);
+export const MODEL_NODE_TYPES = new Set(['llm', 'image', 'speech', 'transcribe', 'router', 'agent', 'guardrail', 'memory', 'vetting']);
 // The kind of model each step takes; the rest take chat models.
-const STEP_MODEL_MODES = Object.freeze({ image: MODEL_MODES.IMAGE_GENERATION, speech: MODEL_MODES.AUDIO_SPEECH, transcribe: MODEL_MODES.AUDIO_TRANSCRIPTION });
-const MODE_NAMES = Object.freeze({ chat: 'a chat model', image_generation: 'an image model', audio_speech: 'a speech model', audio_transcription: 'a transcription model', embedding: 'an embedding model' });
+export const STEP_MODEL_MODES = Object.freeze({ image: MODEL_MODES.IMAGE_GENERATION, speech: MODEL_MODES.AUDIO_SPEECH, transcribe: MODEL_MODES.AUDIO_TRANSCRIPTION });
+export const MODE_NAMES = Object.freeze({ chat: 'a chat model', image_generation: 'an image model', audio_speech: 'a speech model', audio_transcription: 'a transcription model', embedding: 'an embedding model' });
 export const GUARDRAIL_MODEL_CHECKS = Object.freeze(['jailbreak', 'moderation', 'off_topic', 'custom']);
 export const GUARDRAIL_CHECKS = Object.freeze(['pii', ...GUARDRAIL_MODEL_CHECKS]);
 const HANDLE_NAME = /^[a-z][a-z0-9_-]{0,39}$/;
@@ -483,63 +482,6 @@ export function collectGraphModels(graph) {
     }
   }
   return [...models];
-}
-
-function isListedModel(model) {
-  const normalized = normalizeModelId(model);
-  if (!normalized) return false;
-  return Boolean(MODEL_REGISTRY[resolveAlias(normalized)]);
-}
-
-/**
- * Ensure every model referenced by the graph is listed in the registry and,
- * when the key restricts models, allowed by that key.
- */
-export function validateGraphModels(graph, { allowedModels = null, allowUnlisted = false } = {}) {
-  const errors = [];
-  let hasPermissionError = false;
-  const allowSet = Array.isArray(allowedModels) && allowedModels.length
-    ? new Set(allowedModels.flatMap((m) => {
-      const normalized = normalizeModelId(m);
-      return normalized ? [normalized, resolveAlias(normalized)] : [];
-    }))
-    : null;
-
-  // Each step needs its kind of model: a chat model can't make images or speech.
-  for (const node of graph?.nodes || []) {
-    const model = MODEL_NODE_TYPES.has(node?.type) && node.config?.model ? String(node.config.model) : '';
-    const listed = model && !isProviderKeyModel(model) ? MODEL_REGISTRY[resolveAlias(normalizeModelId(model))] : null;
-    const wanted = STEP_MODEL_MODES[node.type] || MODEL_MODES.CHAT;
-    const actual = listed?.mode || MODEL_MODES.CHAT;
-    if (listed && actual !== wanted) errors.push(`Step "${node.id}" needs ${MODE_NAMES[wanted]}; "${model}" is ${MODE_NAMES[actual] || actual}.`);
-    if (listed && node.type === 'image' && node.config?.operation === 'edit' && !listed.capabilities?.imageEditing) {
-      errors.push(`Image step "${node.id}" needs a model connection that supports image editing; "${model}" does not.`);
-    }
-  }
-
-  for (const model of collectGraphModels(graph)) {
-    assertModelNotRetired(model);
-    if (!allowUnlisted && !isProviderKeyModel(model) && !isListedModel(model)) {
-      errors.push(`Model "${model}" is not available on the VIABLE API.`);
-      continue;
-    }
-    if (allowSet) {
-      if (!modelAllowedBy(allowSet, model)) {
-        hasPermissionError = true;
-        errors.push(`API key is not allowed to use model "${model}".`);
-      }
-    }
-  }
-
-  if (errors.length) {
-    const error = new GraphValidationError('Graph references unavailable models.', errors);
-    if (hasPermissionError) {
-      error.status = 403;
-      error.code = 'api_key_model_not_allowed';
-    }
-    throw error;
-  }
-  return graph;
 }
 
 function roughJsonSize(value) {

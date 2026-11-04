@@ -1,13 +1,12 @@
 import { strict as assert } from 'node:assert';
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { NODE_TYPES, validateGraph } from '../src/agents/graph.js';
 import {
   CONDITION_FORMS, SENTENCE_PHRASES, SETTING_LEVELS, SETTING_WIDGETS, STEP_CATEGORIES, STEP_MANIFESTS, STEP_PARTS,
   matchesWhen, settingDefault, stepManifest
 } from '../src/agents/steps/index.js';
-import { kitPath, kitText, portalPath, portalText } from '../scripts/build-steps.mjs';
+import { stepsPath, stepsText } from '../scripts/build-steps.mjs';
 
 const FLOW_KINDS = ['next', 'terminal', 'none', 'branches', 'routes', 'paths', 'cases'];
 const LOADERS = ['voices', 'reasoning_efforts'];
@@ -274,14 +273,12 @@ test('numeric bounds agree with graph.js where it checks them', () => {
   }
 });
 
-test('the kit and portal copies equal what npm run steps:build writes', (t) => {
-  assert.equal(readFileSync(kitPath, 'utf8'), kitText(), 'Run npm run steps:build.');
-  const kit = JSON.parse(kitText());
-  assert.equal(kit.object, 'agent.step_manifests');
-  assert.equal(kit.version, 1);
-  assert.deepEqual(kit.steps, JSON.parse(JSON.stringify(STEP_MANIFESTS)));
-  if (!existsSync(dirname(portalPath))) return t.skip('the viablelab-developers checkout is missing');
-  assert.equal(readFileSync(portalPath, 'utf8'), portalText(), 'Run npm run steps:build.');
+test('schemas/steps.json equals what npm run steps:build writes', () => {
+  assert.equal(readFileSync(stepsPath, 'utf8'), stepsText(), 'Run npm run steps:build.');
+  const steps = JSON.parse(stepsText());
+  assert.equal(steps.object, 'agent.step_manifests');
+  assert.equal(steps.version, 1);
+  assert.deepEqual(steps.steps, JSON.parse(JSON.stringify(STEP_MANIFESTS)));
 });
 
 test('Run step refuses exactly the types whose manifests say why, and recorded_as names a trace key', () => {

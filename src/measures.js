@@ -3,9 +3,9 @@
  * computed, why, caveats and sources), computed from one learner's learning events and turns
  * (schemas/learning-events.schema.json) instead of VIABLE's database.
  */
-import { METRICS_VERSION, learnerMetrics, skillProgress } from '../../src/utils/researchMetrics.js';
+import { METRICS_VERSION, learnerMetrics, skillProgress } from './utils/researchMetrics.js';
 
-export { AFTER, CITATIONS, MASTERY_STREAK, METRICS, METRICS_VERSION, PANELS, SESSION_GAP_MINUTES, SIGNALS, WHEEL_SPIN_ATTEMPTS, WRITING, deriveTurns, learnerMetrics, researchDefinitions, skillProgress } from '../../src/utils/researchMetrics.js';
+export { AFTER, CITATIONS, MASTERY_STREAK, METRICS, METRICS_VERSION, PANELS, SESSION_GAP_MINUTES, SIGNALS, WHEEL_SPIN_ATTEMPTS, WRITING, deriveTurns, learnerMetrics, researchDefinitions, skillProgress } from './utils/researchMetrics.js';
 
 const CORRECT = new Map([[true, true], [false, false], [1, true], [0, false]]);
 const time = (value) => (typeof value === 'string' && !Number.isNaN(Date.parse(value)) ? Date.parse(value) : null);

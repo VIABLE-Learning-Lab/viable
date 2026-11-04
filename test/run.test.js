@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { HELP_LEVELS, endpointModel, runAgent } from '../src/index.js';
+import { HELP_LEVELS, runAgent } from '../src/index.js';
 
 const json = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
 const argument = json('../examples/argument-writing.json');
@@ -31,8 +31,7 @@ test('an example agent runs locally on an OpenAI-compatible endpoint, with its a
   assert.deepEqual(result.steps.map((step) => [step.nodeId, step.status]), [['input', 'completed'], ['coach', 'completed'], ['reply', 'completed']]);
   assert.equal(calls[0].url, 'http://localhost:11434/v1/chat/completions');
   assert.equal(calls[0].headers.authorization, 'Bearer sk-test');
-  assert.equal(calls[0].body.model, endpointModel('gpt-oss-120b'), 'the example’s model is sent as its provider names it');
-  assert.equal(endpointModel('viable-3'), 'gpt-6-luna', 'a VIABLE model name becomes its provider model');
+  assert.equal(calls[0].body.model, 'gpt-oss-120b', 'the example’s model is sent as the graph names it');
   assert.equal(calls[0].body.stream, false);
   const system = calls[0].body.messages[0];
   assert.equal(system.role, 'system');

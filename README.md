@@ -1,121 +1,102 @@
-# VIABLE harness kit
+# VIABLE harness
 
-VIABLE's teaching harness without VIABLE's hosted service, on your own model keys: the agent engine
-with VETTING, How the AI helps (the teacher's goal, a K-12 standard or durable skill, how far the AI
-may go), the open formats as JSON Schema, and the research export's measures. MIT-licensed code; the
-standards and skills data it carries stay under CC BY 4.0 (see `NOTICE`).
+The open core of [VIABLE](https://viablelab.org): the layer between AI models and learners that turns
+what a teacher intends into what the AI does with each learner, and keeps the evidence.
 
-Version 0.1.0, not published. It lives in the `viablelab-api` repository and imports VIABLE's own
-modules from `../src`, so a local run and a course run use the same code. `scripts/export.mjs`
-makes the self-contained folder a release would ship (below). VIABLE Lab releases it as its own
-work ([docs/harness-call.md](../docs/harness-call.md)).
+- **The teacher's intent reaches the AI on every turn.** How the AI helps (a goal, a K-12 standard or
+  durable skill, how far the AI may go, misconceptions to listen for, a section's own level and note)
+  becomes part of the instructions of every step that writes a reply.
+- **A second model checks each reply before the learner sees it.** VETTING (Li, Zhang & Botelho,
+  2026) keeps the reviewer's rules apart from the reply model, so a learner can't talk the reviewer
+  out of them; a failed review rewrites the draft, and a reply that can't be verified is flagged.
+- **The evidence is tied to the version that produced it**, and the research measures over it are
+  defined in the open, with their caveats and sources.
 
-## Use it without installing anything
+It runs agent files and course packages on your own model keys or an open-weight model. VIABLE's
+hosted platform runs the same code for teachers and researchers who don't write code, and is never a
+dependency.
 
-Node 22 or later. There is no `npm install`: from a `viablelab-api` checkout (which has its
-dependencies installed), run the CLI with `node` (in an exported folder, drop the `kit/` prefix):
+**Status: 0.2.0, private.** The code is MIT-licensed and will be public once the University of
+Florida approves its release; until then this repository is the lab's.
+
+## Quick start
+
+Node 22 or later.
 
 ```sh
-node kit/bin/viable-harness.mjs run <agent.json | package.json> --input "..." [--teaching teaching.json] [--section id] [--context context.json] [--model id] [--agent ref] [--no-teaching] [--json]
-node kit/bin/viable-harness.mjs validate <file> [--kind agent|course-package|learning-events|teaching]
-node kit/bin/viable-harness.mjs measure <events.json>
+git clone https://github.com/VIABLE-Learning-Lab/viable-harness.git
+cd viable-harness
+npm install
+export OPENAI_API_KEY=sk-...
+node bin/viable-harness.mjs run examples/fractions-practice.json --input "What is 1/2 + 1/3?"
 ```
 
-`run` calls any OpenAI-compatible `/chat/completions` endpoint: `OPENAI_BASE_URL` (default
-`https://api.openai.com/v1`) and `OPENAI_API_KEY`. Without `--model`, VIABLE's model names are sent as
-their provider's model (`viable-3` becomes `gpt-6-luna`), which suits OpenAI; anywhere else, `--model`
-names the model to use for every step. A local run sends nothing to VIABLE: the learner's message,
-the agent's instructions and any context go to the endpoint you chose, and nowhere else.
+The fractions tutor drafts a reply and a second model reviews it; under the VETTING step the trace
+shows each round's verdict and the reviewer's reason. With an open-weight model instead, for example
+Ollama (`ollama pull llama3.1`):
 
-## Five minutes: an example's agent on your own key
+```sh
+export OPENAI_BASE_URL=http://localhost:11434/v1
+node bin/viable-harness.mjs run examples/argument-writing.json --model llama3.1 \
+  --input "Is my claim clear? Schools should start later because teenagers need sleep."
+```
 
-The six examples in `examples/` are the course packages VIABLE's docs offer: fractions practice, a
-PDF reading with a Socratic tutor, argument writing, English speaking practice, a density lab on an
-embedded page, and a library research desk. Four run locally as they are; the English partner's
-Speech step and the library desk's Knowledge step need VIABLE (below). Run commands from the
-`viablelab-api` folder.
+`run` calls any OpenAI-compatible `/chat/completions` endpoint (`OPENAI_BASE_URL`, default
+`https://api.openai.com/v1`, and `OPENAI_API_KEY`). `--model` replaces every model the agent names. A
+local run sends nothing to VIABLE: the learner's message, the agent's instructions and any context
+go to the endpoint you chose, and nowhere else.
 
-1. **Point it at a model.** With OpenAI:
+## The command line
 
-   ```sh
-   export OPENAI_API_KEY=sk-...
-   ```
+```sh
+viable-harness run <agent.json | package.json> --input "..." [--teaching teaching.json] [--section id]
+                   [--context context.json] [--model id] [--agent ref] [--no-teaching] [--json]
+viable-harness validate <file> [--kind agent|course-package|learning-events|teaching]
+viable-harness measure <events.json>
+```
 
-   Or an open-weight model on your machine, for example with Ollama (`ollama pull llama3.1`):
+(`node bin/viable-harness.mjs` until the package is published; `npm link` puts `viable-harness` on
+your path.)
 
-   ```sh
-   export OPENAI_BASE_URL=http://localhost:11434/v1   # and add --model llama3.1 to the commands below
-   ```
+- **run**: from a course package, the first agent (or `--agent <ref>`) with the teaching settings of
+  the first activity that uses it. `--teaching` replaces them with a file
+  (`schemas/teaching.schema.json`), `--section` applies a section's own help level and note,
+  `--no-teaching` runs without any. With `--context` holding `{ "question": "...", "answer_key": "..." }`,
+  VETTING reviews against the answer key.
+- **validate**: the open formats' schemas, then the engine's own graph checks and that a package's
+  refs resolve. Model names aren't checked: a local run sends them to your endpoint.
+- **measure**: the research export's learner measures from a list of learning events and turns.
 
-2. **Run the argument-writing coach.**
-
-   ```sh
-   node kit/bin/viable-harness.mjs run kit/examples/argument-writing.json \
-     --input "Is my claim clear? Schools should start later because teenagers need sleep."
-   ```
-
-   From a package, the kit runs its first agent (or `--agent <ref>`) with the teaching settings of the
-   first activity that uses it: here, the teacher's goal and "only check the learner's own work". It
-   prints the reply, then each step with its status, time, model and tokens.
-
-3. **Change how the AI helps.** Write a `teaching.json` (format: `schemas/teaching.schema.json`):
-
-   ```json
-   { "goal": "Students make their claim specific and arguable.", "help": "hint" }
-   ```
-
-   and run again with `--teaching teaching.json`. The goal, standard, misconceptions to listen for
-   and help level join the reply step's instructions, as in a course; `watch_for` never reaches the
-   AI. A section's own help level and note (`sections`) apply with `--section <id>`. `--no-teaching`
-   runs the agent without any. `schemas/examples/teaching.example.json` keeps a durable skill (Carnegie Skills
-   Progressions) as an activity keeps it.
-
-4. **See VETTING at work.** The fractions tutor drafts each reply and has a second model review it,
-   retrying when the review fails:
-
-   ```sh
-   node kit/bin/viable-harness.mjs run kit/examples/fractions-practice.json --input "What is 1/2 + 1/3?"
-   ```
-
-   Under the VETTING step, each round shows its verdict and the reviewer's reason. With
-   `--context context.json` holding `{ "question": "What is 1/2 + 1/3?", "answer_key": "5/6" }`, the
-   tutor reviews against the answer key instead, as when a Questions panel is open.
-
-5. **Check a file and compute measures.**
-
-   ```sh
-   node kit/bin/viable-harness.mjs validate kit/examples/library-research-help.json
-   node kit/bin/viable-harness.mjs measure kit/schemas/examples/learning-events.example.json
-   ```
-
-## What runs locally, and what needs VIABLE
+## What runs locally
 
 | Steps | In a local run |
 | --- | --- |
 | Input, LLM, Condition, Router, Agent, VETTING, Guardrail, Transform, State, Loop, Parallel, Ask, Reply (output), Note | Run as on VIABLE. An Agent step loses its tools for knowledge bases, memory and sub-agents; its Fetch URL tool works as the step below. |
-| Fetch URL (http) | Reads JSON and plain text. An HTML page fails: VIABLE turns pages into Markdown with Workers AI, which a local run doesn't have (pass a `toMarkdown` service to add it). |
+| Fetch URL (http) | Reads JSON and plain text. An HTML page needs a `toMarkdown` service. |
 | Memory | Skipped, with its reason in the trace: there is no memory store. |
 | Transcribe | Skipped: a local run sends no recording. |
-| Knowledge, Sub-agent, Image, Speech | Fail with a message saying the step needs VIABLE: knowledge bases, published agents, image and speech generation live there. |
-
-The engine takes its services as arguments, so code can supply the missing ones: `runAgent(doc, {
-services: { searchKnowledge, memory, resolveSubAgent, generateImage, toMarkdown } })` with the shapes
-`src/agents/engine.js` calls. Budgets follow the agent's own `run_limits`; without them a local run
-gets 20 model calls and 5 minutes (VIABLE gives a turn 60 seconds), since local models are often
-slower. The kit doesn't price calls: cost is always 0.
+| Knowledge, Sub-agent, Image, Speech | Fail with a message saying the step needs a service a local run doesn't have. |
 
 ## From code
 
 ```js
-import { runAgent, validateDocument, measureLearner, teachingContext, SKILLS } from './kit/src/index.js';
+import { runAgent, validateDocument, measureLearner, teachingContext, SKILLS } from '@viable-lab/harness';
 
 const result = await runAgent(agentFile, { input: 'Help me start', teaching, model: 'llama3.1', baseUrl: 'http://localhost:11434/v1' });
 result.output.text;   // the reply
 result.steps;         // the trace, VETTING rounds in each review step's output.attempt_details
 ```
 
-`openAICompatible({ baseUrl, apiKey, model, fetch })` is the model service on its own; pass your own
-`callChatModel` in `services` to use any other client.
+### Services
+
+The engine takes whatever only a host has as services, so a host decides where models, knowledge,
+memory and media come from: `runAgent(doc, { services: { callChatModel, searchKnowledge, memory,
+resolveSubAgent, generateImage, generateSpeech, transcribeAudio, toMarkdown, models } })`, with the
+shapes `src/agents/engine.js` calls. `openAICompatible({ baseUrl, apiKey, model, fetch })` is the
+model service on its own. Without `models` (a model catalog), every model gets a 128,000-token
+window, `max_tokens` and JSON mode. A step whose service is missing fails with a message saying so.
+Budgets follow the agent's own `run_limits`; without them a local run gets 20 model calls and 5
+minutes. The harness doesn't price calls: cost is always 0.
 
 ## The open formats
 
@@ -124,53 +105,51 @@ JSON Schema (draft 2020-12) in `schemas/`, each with an example:
 | Schema | What | Example |
 | --- | --- | --- |
 | `agent.schema.json` | An exported agent (`.agent.json`, format `viable.agent`): its graph, profile and what it requires | `schemas/examples/agent.example.json` |
-| `course-package.schema.json` | A course with its agents and question sets (`viable.course-package`) | the four files in `examples/` |
-| `learning-events.schema.json` | One learner's events (what `POST /v1/learning/events` takes) and turns | `schemas/examples/learning-events.example.json` |
+| `course-package.schema.json` | A course with its agents and question sets (`viable.course-package`) | the six files in `examples/` |
+| `learning-events.schema.json` | One learner's events and turns | `schemas/examples/learning-events.example.json` |
 | `teaching.schema.json` | An activity's teaching settings, with its standard or skill, misconceptions and sections | `schemas/examples/teaching.example.json` |
 
-Beside them, `schemas/steps.json` describes each step type an agent graph can use: its settings
-(with their tips, defaults and bounds), outputs, flow and the plain-language sentence VIABLE's editor
-shows. It is data, not a schema, written from `src/agents/steps/` by `npm run steps:build` (never by
-hand), and the same as `GET /v1/developer/agents/graph-schema` returns as `steps`. An agent's graph
-may also carry canvas `groups`, each with an optional `description` and up to 8 `settings` shown on
-the block, and a condition's cases may carry a `label`, which the trace names when that case
-matches. None of them changes how a run goes.
-
-`validate` checks the schema with a small built-in checker (no dependency), then, for agents and
-packages, VIABLE's own graph checks (`validateGraph`) and that a package's refs resolve. Model names
-aren't checked: a local run sends them to your endpoint.
+`schemas/steps.json` describes each step type an agent graph can use: its settings (with their
+tips, defaults and bounds), outputs, flow and the plain-language sentence VIABLE's editor shows. It is
+written from the step manifests in `src/agents/steps/` by `npm run steps:build`, never by hand
+([docs/step-manifests.md](docs/step-manifests.md)).
 
 ## The measures
 
 `measureLearner({ events, turns })` returns the research export's learner metrics (messages,
 sessions, think time, revision, pasting, accuracy, mastery, wheel-spinning, ...), mastery per skill,
 and how the learner wrote in each writing panel. Each metric's definition, computation, rationale,
-caveats and sources are exported as `METRICS`, `WRITING`, `PANELS` and `CITATIONS`, from the same file
-VIABLE's export and dashboard use (`src/utils/researchMetrics.js`). Graded attempts are graded
-Questions answers and the answers an agent graded (a turn's `assessment`); unlike VIABLE, the kit
-can't tell a pre- or post-test's answers apart, so leave them out yourself.
+caveats and sources are exported as `METRICS`, `WRITING`, `PANELS` and `CITATIONS`, from the same
+file VIABLE's export and dashboard use (`src/utils/researchMetrics.js`).
+
+## The examples
+
+`examples/` holds six course packages: fractions practice, a PDF reading with a Socratic tutor,
+argument writing, English speaking practice, a density lab on an embedded page, and a library
+research desk. Four run locally as they are; the English partner's Speech step and the library
+desk's Knowledge step need services a local run doesn't have yet.
 
 ## How it relates to the hosted VIABLE
 
-The hosted VIABLE (viablelab.org) runs this same engine, teaching layer and measures, and adds what
-a classroom needs on a server: accounts, courses, class lists, sections, knowledge bases, studies with
-consent, coding and the research export. The plan is for it to be the teacher-facing demo app and one
-user of the kit, with the kit the harness that other apps build on. Today the dependency runs the
-other way: the kit imports VIABLE's modules.
+The hosted VIABLE runs this same engine, teaching layer and measures, and adds what a classroom needs
+on a server: accounts, courses, class lists, sections, knowledge bases, studies with consent, coding
+and the research export. It passes its own services (model calls on its provider keys, media,
+billing fields, its model catalog), and takes each release of this repository as it is: it never
+changes the core in place.
 
-## Getting it out
+## Developing
 
 ```sh
-node kit/scripts/export.mjs [out-dir]   # default kit/kit-dist (gitignored)
+npm test              # the tests, including the boundary test
+npm run steps:build   # after changing a step manifest
 ```
 
-copies the kit, exactly the `src/` modules its imports reach (into `lib/`, imports rewritten) and the
-npm packages they need (hono, MIT; entities, BSD-2-Clause) into a folder that runs and passes its
-tests on its own. It lists each module and flags those that touch D1, secrets, billing or
-Worker-only APIs. Those flags are the work left before a release: the engine reaches VIABLE's model
-router, provider keys and billing, request logging and the VETTING routes, and should take them as
-injected services instead of importing them.
+`test/boundary.test.js` keeps the harness standing alone: its code imports only Node's built-ins,
+its own files and the npm packages it lists, each under MIT or Apache-2.0 (with `entities`,
+BSD-2-Clause, the one exception), and touches no database, secret or Worker-only API.
 
 ## License
 
-MIT (`LICENSE`). Data under CC BY 4.0, with the attribution statements to keep with it: `NOTICE`.
+Code under MIT (`LICENSE`). The data it carries (Learning Commons Knowledge Graph standards, the
+Carnegie Skills Progressions and Eedi's Misconceptions Graph) stays under CC BY 4.0, with the
+attribution statements to keep with it in `NOTICE`.
