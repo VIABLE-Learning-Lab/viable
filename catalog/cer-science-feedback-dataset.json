@@ -1,0 +1,40 @@
+{
+  "id": "cer-science-feedback-dataset",
+  "name": "CER science writing feedback dataset (Playlab)",
+  "kind": "dataset",
+  "summary": "A planned de-identified dataset of 2,000 to 3,000 multi-turn AI feedback conversations on students' claim, evidence and reasoning writing in science, with an annotation rubric.",
+  "subjects": [
+    "science",
+    "writing"
+  ],
+  "grades": "6-12 (the Program's call says 8-12)",
+  "url": "https://k12-ai-infrastructure.org/playlab/",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-4.0",
+      "Apache-2.0"
+    ],
+    "note": "Stated intent: the dataset under CC BY 4.0 and the de-identification and preparation scripts under Apache 2.0; no license is named for the rubric.",
+    "source": "https://k12-ai-infrastructure.org/playlab/"
+  },
+  "access": "not yet released",
+  "formats": [
+    "JSON",
+    "CSV"
+  ],
+  "made_by": [
+    "Playlab"
+  ],
+  "cite": "Playlab. Building a Proof-of-Concept Dataset for AI-Enabled Formative Writing Feedback in Science: Validating Critical Thinking Through Claims, Evidence, and Reasoning. K-12 AI Infrastructure Program project, https://k12-ai-infrastructure.org/playlab/",
+  "status": "expected",
+  "expected": "The project page gives no date; the Program expects its new public goods to be released in summer 2027.",
+  "fits": {
+    "slots": [
+      "judge"
+    ],
+    "how": "Its rubric could rate feedback replies on science writing in agent tests, checked against its annotations."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

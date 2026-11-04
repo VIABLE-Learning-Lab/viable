@@ -1,0 +1,194 @@
+{
+  "user": "fractions-app:19d4e7",
+  "learner_group": "sec_p2",
+  "activity": "fractions-practice",
+  "events": [
+    {
+      "type": "questions.answer",
+      "panel": "practice",
+      "item": "q1",
+      "at": "2026-10-20T14:05:00Z",
+      "seq": 1,
+      "data": {
+        "response": "right",
+        "correct": true,
+        "attempt": 1,
+        "rt_ms": 20000,
+        "skill": "Add fractions with unlike denominators"
+      }
+    },
+    {
+      "type": "questions.answer",
+      "panel": "practice",
+      "item": "q2",
+      "at": "2026-10-20T14:08:00Z",
+      "seq": 2,
+      "data": {
+        "response": "wrong",
+        "correct": false,
+        "attempt": 1,
+        "rt_ms": 21000,
+        "skill": "Add fractions with unlike denominators"
+      }
+    },
+    {
+      "type": "questions.answer",
+      "panel": "practice",
+      "item": "q3",
+      "at": "2026-10-20T14:11:00Z",
+      "seq": 3,
+      "data": {
+        "response": "wrong",
+        "correct": false,
+        "attempt": 1,
+        "rt_ms": 22000,
+        "skill": "Add fractions with unlike denominators"
+      }
+    },
+    {
+      "type": "questions.answer",
+      "panel": "practice",
+      "item": "q4",
+      "at": "2026-10-20T14:14:00Z",
+      "seq": 4,
+      "data": {
+        "response": "wrong",
+        "correct": false,
+        "attempt": 1,
+        "rt_ms": 23000,
+        "skill": "Add fractions with unlike denominators"
+      }
+    },
+    {
+      "type": "questions.answer",
+      "panel": "practice",
+      "item": "q5",
+      "at": "2026-10-20T14:17:00Z",
+      "seq": 5,
+      "data": {
+        "response": "right",
+        "correct": true,
+        "attempt": 1,
+        "rt_ms": 24000,
+        "skill": "Add fractions with unlike denominators"
+      }
+    },
+    {
+      "type": "questions.answer",
+      "panel": "practice",
+      "item": "q6",
+      "at": "2026-10-20T14:20:00Z",
+      "seq": 6,
+      "data": {
+        "response": "wrong",
+        "correct": false,
+        "attempt": 1,
+        "rt_ms": 25000,
+        "skill": "Add fractions with unlike denominators"
+      }
+    },
+    {
+      "type": "questions.answer",
+      "panel": "practice",
+      "item": "q7",
+      "at": "2026-10-21T14:23:00Z",
+      "seq": 7,
+      "data": {
+        "response": "wrong",
+        "correct": false,
+        "attempt": 1,
+        "rt_ms": 26000,
+        "skill": "Add fractions with unlike denominators"
+      }
+    },
+    {
+      "type": "questions.answer",
+      "panel": "practice",
+      "item": "q8",
+      "at": "2026-10-21T14:26:00Z",
+      "seq": 8,
+      "data": {
+        "response": "wrong",
+        "correct": false,
+        "attempt": 1,
+        "rt_ms": 27000,
+        "skill": "Add fractions with unlike denominators"
+      }
+    },
+    {
+      "type": "questions.answer",
+      "panel": "practice",
+      "item": "q9",
+      "at": "2026-10-21T14:29:00Z",
+      "seq": 9,
+      "data": {
+        "response": "wrong",
+        "correct": false,
+        "attempt": 1,
+        "rt_ms": 28000,
+        "skill": "Add fractions with unlike denominators"
+      }
+    },
+    {
+      "type": "questions.answer",
+      "panel": "practice",
+      "item": "q10",
+      "at": "2026-10-21T14:32:00Z",
+      "seq": 10,
+      "data": {
+        "response": "right",
+        "correct": true,
+        "attempt": 1,
+        "rt_ms": 29000,
+        "skill": "Add fractions with unlike denominators"
+      }
+    },
+    {
+      "type": "questions.answer",
+      "panel": "practice",
+      "item": "q11",
+      "at": "2026-10-21T14:35:00Z",
+      "seq": 11,
+      "data": {
+        "response": "wrong",
+        "correct": false,
+        "attempt": 1,
+        "rt_ms": 30000,
+        "skill": "Add fractions with unlike denominators"
+      }
+    },
+    {
+      "type": "questions.answer",
+      "panel": "practice",
+      "item": "q12",
+      "at": "2026-10-21T14:38:00Z",
+      "seq": 12,
+      "data": {
+        "response": "wrong",
+        "correct": false,
+        "attempt": 1,
+        "rt_ms": 31000,
+        "skill": "Add fractions with unlike denominators"
+      }
+    },
+    {
+      "type": "app.event",
+      "panel": "practice",
+      "at": "2026-10-20T14:50:00Z",
+      "seq": 13,
+      "data": {
+        "misconception": "a8f41abf-895d-55fd-8138-d781d205c487"
+      }
+    }
+  ],
+  "turns": [
+    {
+      "message": "2/4 and 2/8 are equal right",
+      "reply": "What happens to the size of each piece when you cut it into 8 instead of 4?",
+      "started_at": "2026-10-20T14:01:00Z",
+      "misconceptions": [
+        "a8f41abf-895d-55fd-8138-d781d205c487"
+      ]
+    }
+  ]
+}

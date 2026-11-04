@@ -1,0 +1,35 @@
+{
+  "id": "science-misconceptions-benchmark",
+  "name": "Science misconceptions benchmark (Learning Equality)",
+  "kind": "benchmark",
+  "summary": "A planned benchmark, dataset of assessment packages and small on-device classifiers for spotting science misconceptions in students' free-form answers.",
+  "subjects": [
+    "science"
+  ],
+  "grades": "6-12",
+  "url": "https://k12-ai-infrastructure.org/learning-equality/",
+  "repository": null,
+  "license": {
+    "spdx": [],
+    "note": "The project page says its public goods are \"all openly licensed\" and names CC BY 4.0 only for the assessment packages.",
+    "source": "https://k12-ai-infrastructure.org/learning-equality/"
+  },
+  "access": "not yet released",
+  "access_note": "The benchmark is to be released on Hugging Face.",
+  "formats": [],
+  "made_by": [
+    "Learning Equality"
+  ],
+  "cite": "Learning Equality. A Benchmark for AI Identification of Science Misconceptions in Free-Form Student Responses. K-12 AI Infrastructure Program project, https://k12-ai-infrastructure.org/learning-equality/",
+  "status": "expected",
+  "expected": "The project page gives no date; the Program expects its new public goods to be released in summer 2027.",
+  "fits": {
+    "slots": [
+      "context",
+      "detector"
+    ],
+    "how": "Its misconceptions could be context the AI listens for, and its classifiers could mark misconceptions in learners' answers for the teacher."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

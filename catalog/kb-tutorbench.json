@@ -1,0 +1,40 @@
+{
+  "id": "kb-tutorbench",
+  "name": "KB-TutorBench",
+  "kind": "benchmark",
+  "summary": "A planned dataset of about 6,000 annotated tutoring dialogues from simulated and real classrooms in science, ELA and history, with fine-tuned tutoring models.",
+  "subjects": [
+    "science",
+    "reading",
+    "writing",
+    "social-studies"
+  ],
+  "grades": "K-12",
+  "url": "https://k12-ai-infrastructure.org/stanford-university/",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-4.0",
+      "Apache-2.0"
+    ],
+    "note": "Stated intent: the dataset under CC BY 4.0 and the code under Apache 2.0; no license is named for the model weights.",
+    "source": "https://k12-ai-infrastructure.org/stanford-university/"
+  },
+  "access": "not yet released",
+  "access_note": "Planned on Hugging Face and GitHub.",
+  "formats": [],
+  "made_by": [
+    "Stanford University"
+  ],
+  "cite": "Stanford University. KB-TutorBench: A Multimodal Knowledge-Building Dataset for AI-Enabled Formative Assessment. K-12 AI Infrastructure Program project, https://k12-ai-infrastructure.org/stanford-university/",
+  "status": "expected",
+  "expected": "The project page gives no date; the Program expects its new public goods to be released in summer 2027.",
+  "fits": {
+    "slots": [
+      "judge"
+    ],
+    "how": "Its annotated dialogues could become agent test cases and check a judge against people's ratings."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

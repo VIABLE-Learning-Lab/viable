@@ -1,0 +1,38 @@
+{
+  "id": "ncte-transcripts",
+  "name": "NCTE classroom transcripts",
+  "kind": "dataset",
+  "summary": "1,660 anonymized transcripts of U.S. 4th and 5th grade math lessons, with turn-level discourse annotations on a subset.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "4-5",
+  "url": "https://github.com/ddemszky/classroom-transcript-analysis",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "MIT"
+    ],
+    "note": "MIT covers the repository's code. The transcripts have no open license: their terms of use limit them to research and forbid sharing them.",
+    "source": "https://github.com/ddemszky/classroom-transcript-analysis"
+  },
+  "access": "request",
+  "access_note": "Each user agrees to the terms of use in a form; the data folder is then shared with them.",
+  "formats": [
+    "CSV"
+  ],
+  "made_by": [
+    "Stanford University",
+    "Harvard University"
+  ],
+  "cite": "Demszky, D., & Hill, H. (2023). The NCTE Transcripts: A Dataset of Elementary Math Classroom Transcripts. BEA 2023. https://doi.org/10.18653/v1/2023.bea-1.44",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "detector"
+    ],
+    "how": "Its discourse annotations could check a detector that marks moments in classroom or tutoring talk, for research."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

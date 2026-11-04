@@ -1,0 +1,40 @@
+{
+  "id": "openstax",
+  "name": "OpenStax",
+  "kind": "content",
+  "summary": "Free textbooks online and as PDFs, with titles for high school and AP courses in math, science and social studies on its K12 pages.",
+  "subjects": [
+    "math",
+    "science",
+    "social-studies"
+  ],
+  "grades": "high school (many titles are introductory college texts)",
+  "url": "https://openstax.org/k12",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-NC-SA-4.0",
+      "CC-BY-4.0"
+    ],
+    "note": "Since April 2026, new and updated editions are CC BY-NC-SA 4.0 (non-commercial). A few current titles (Physics, Statistics) and retired editions remain CC BY 4.0; check each book.",
+    "source": "https://openstax.org/openstax-news/openstax-licensing"
+  },
+  "access": "open download",
+  "formats": [
+    "web",
+    "PDF"
+  ],
+  "made_by": [
+    "OpenStax"
+  ],
+  "cite": "OpenStax, https://openstax.org (cite the book and edition used).",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "context"
+    ],
+    "how": "Its chapters could be an activity's readings or a Knowledge step's sources; most current editions only for non-commercial use."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

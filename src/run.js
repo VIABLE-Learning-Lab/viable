@@ -2,27 +2,30 @@
  * Runs a VIABLE agent graph on your own machine and model keys: VIABLE's engine
  * (src/agents/engine.js) with its services replaced by an OpenAI-compatible
  * endpoint (chat, speech and images), a course package's own files and agents (its
- * knowledge bases and sub-agents), a local HTML-to-Markdown reader and, when asked
- * for, memory kept in a folder. What only VIABLE's hosted platform has (published
+ * knowledge bases and sub-agents), folders standing in for an agent file's knowledge bases, a local
+ * HTML-to-Markdown reader, components called over HTTP or as MCP servers started here and, when
+ * asked for, memory kept in a folder. What only VIABLE's hosted platform has (published
  * agents and knowledge bases elsewhere, transcription) is absent or fails with a
  * clear message. Pass `services` to plug in your own.
  */
 import { randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { runAgentGraph } from './agents/engine.js';
+import { callComponent } from './components/call.js';
 import { linkKnowledgeRefs, slugify, validateGraph } from './agents/graph.js';
-import { packageKnowledge } from './knowledge.js';
+import { knowledgeFolders, packageKnowledge } from './knowledge.js';
 import { toMarkdown } from './markdown.js';
 import { checkLearner, memoryFiles } from './memory.js';
 import { teachingRunContext } from './teaching.js';
+import { readZip } from './utils/zip.js';
 
 // What each step type does in a local run (the README's table is this list).
 export const LOCAL_STEPS = {
-  works: ['input', 'llm', 'condition', 'router', 'agent', 'vetting', 'guardrail', 'transform', 'state', 'loop', 'each', 'parallel', 'ask', 'output', 'note', 'http'],
+  works: ['input', 'llm', 'condition', 'router', 'agent', 'vetting', 'guardrail', 'transform', 'state', 'loop', 'each', 'parallel', 'ask', 'output', 'note', 'http', 'component'],
   partly: {
-    knowledge: 'in a course package: its own text, Markdown, CSV, JSON and HTML files, by keywords (no PDFs, Office files or websites)',
+    knowledge: 'in a course package (or its .viable.zip), and in the folders you map an agent file\'s knowledge bases to: text, Markdown, CSV, JSON and HTML files, and a PDF or Office file through the text copy VIABLE packages with it, by keywords (no websites)',
     subagent: 'in a course package: its own agents',
     speech: 'on your endpoint\'s /audio/speech, saved to audio files',
     image: 'on your endpoint\'s /images/generations and /images/edits, saved to picture files (not kept by number for later turns)',
@@ -207,6 +210,31 @@ export function packageAgents(pkg) {
   };
 }
 
+// A .viable.zip as VIABLE's course page downloads it with its files, held to the limits of VIABLE's import.
+const ZIP_LIMITS = { archive: 50 * 1024 * 1024, package: 2 * 1024 * 1024 };
+
+function parsed(text, what) {
+  try { return JSON.parse(text); } catch (error) { throw new Error(`Couldn't read ${what} as JSON: ${error.message}`); }
+}
+
+/**
+ * An agent file, a course package or a graph from disk: { doc, dir, zip }. A .viable.zip (known by its
+ * first bytes, PK\x03\x04, as VIABLE's import knows it) gives the package.viable.json at its root, and
+ * its bytes as zip, where the files the package names by path are read; any other file is JSON, and dir
+ * the folder it is in.
+ */
+export async function readAgentFile(path) {
+  const bytes = await readFile(path);
+  if (bytes[0] !== 0x50 || bytes[1] !== 0x4b || bytes[2] !== 0x03 || bytes[3] !== 0x04) return { doc: parsed(bytes.toString('utf8'), path), dir: dirname(resolve(path)), zip: null };
+  if (bytes.length > ZIP_LIMITS.archive) throw new Error(`${path} is larger than 50 MB, more than a course package with its files can be.`);
+  let json;
+  try { json = (await readZip(bytes, (name) => name === 'package.viable.json', { binary: true, maxBytes: ZIP_LIMITS.package })).get('package.viable.json'); } catch (error) {
+    throw new Error(error.code === 'zip_entry_too_large' ? `${path}: its package.viable.json is larger than 2 MB.` : `${path} can't be read: it isn't a whole zip file.`);
+  }
+  if (!json) throw new Error(`${path} has no package.viable.json at its root.`);
+  return { doc: parsed(new TextDecoder().decode(json), `${path}'s package.viable.json`), dir: null, zip: bytes };
+}
+
 /**
  * The agent a file holds: an .agent.json, a bare graph, or one of a course package's agents (by ref,
  * else the first) with the teaching settings of the first activity that uses it.
@@ -236,14 +264,17 @@ function budgetsOf(graph) {
  * (output, steps with VETTING rounds, usage, ...) and which agent ran with which teaching settings.
  * teaching: an activity's teaching settings (null keeps a package activity's; false runs without);
  * section: the learner's section ID, for a section's own help level and note. dir: the folder a
- * package's files named by path are in; fetch also downloads its files named by url. speechModel and
- * imageModel replace every speech and image model; mediaDir (or its older name, audioDir) keeps the
+ * package's files named by path are in (zip: the bytes of the .viable.zip they are in instead); fetch
+ * also downloads its files named by url. knowledge ({ id: folder }) searches each folder's text files
+ * as the knowledge base of that ID: VIABLE's IDs in an agent file, refs in a package (knowledgeFolders).
+ * speechModel and imageModel replace every speech and image model; mediaDir (or its older name, audioDir) keeps the
  * audio and pictures (default: a new temp folder); silent: Speech steps pass on without reading aloud.
+ * Component steps call their component with fetch, an MCP server starting in dir (default: here).
  * memoryDir with learner (a pseudonymous ID, never a name) keeps that learner's memory in
  * memoryDir/<learner>.json; without them Memory steps are skipped. A service set to null in
  * `services` is turned off.
  */
-export async function runAgent(doc, { input = '', history = [], context = null, pictures = undefined, teaching = null, section = null, agent = null, model = null, speechModel = null, imageModel = null, baseUrl, apiKey, fetch, dir = null, mediaDir = null, audioDir = null, memoryDir = null, learner = null, silent = false, services = {}, hooks = {} } = {}) {
+export async function runAgent(doc, { input = '', history = [], context = null, pictures = undefined, teaching = null, section = null, agent = null, model = null, speechModel = null, imageModel = null, baseUrl, apiKey, fetch, dir = null, zip = null, knowledge = null, mediaDir = null, audioDir = null, memoryDir = null, learner = null, silent = false, services = {}, hooks = {} } = {}) {
   const picked = pickAgent(doc, agent);
   const isPackage = doc?.format === 'viable.course-package';
   // A package names its knowledge bases by ref; a local run searches them under those refs.
@@ -252,14 +283,17 @@ export async function runAgent(doc, { input = '', history = [], context = null, 
   const settings = teaching === false ? null : teaching ?? picked.teaching;
   if (memoryDir) checkLearner(learner);
   const save = mediaFiles(mediaDir ?? audioDir);
+  const folders = knowledge ? await knowledgeFolders(knowledge) : null;
   const own = {
     callChatModel: openAICompatible({ baseUrl, apiKey, model, fetch }),
-    ...(isPackage ? { searchKnowledge: packageKnowledge(doc, { dir, fetch }), resolveSubAgent: packageAgents(doc) } : {}),
+    ...(isPackage || folders ? { searchKnowledge: packageKnowledge(isPackage ? doc : null, { dir, fetch, zip, folders }) } : {}),
+    ...(isPackage ? { resolveSubAgent: packageAgents(doc) } : {}),
     generateSpeech: openAISpeech({ baseUrl, apiKey, model: speechModel, fetch, save }),
     storeAudio: async (_env, _requestId, buffer, { responseFormat } = {}) => save(buffer, responseFormat),
     generateImage: openAIImages({ baseUrl, apiKey, model: imageModel, fetch, save }),
     ...(memoryDir ? { memory: memoryFiles(memoryDir) } : {}),
     toMarkdown,
+    callComponent: (manifest, payload, options) => callComponent(manifest, payload, { ...options, fetch, dir: dir ?? undefined }),
     transcribeAudio: needsViable('Transcribe steps'),
     billsUsedUpCredits: () => false,
     ...services
@@ -282,6 +316,7 @@ export async function runAgent(doc, { input = '', history = [], context = null, 
     });
     return { agent: picked.name, activity: settings ? picked.activity : null, teaching: settings, ...result };
   } catch (error) {
+    if (error?.code === 'knowledge_unavailable' && !own.searchKnowledge) error.message += ' Map each knowledge base the agent names to a folder of its files with --knowledge <id>=<folder> (knowledge in runAgent), or run the agent on VIABLE\'s hosted service.';
     if (NEEDS_VIABLE.has(error?.code) && !/VIABLE/.test(error.message)) error.message += ' This step needs VIABLE\'s hosted service; see the harness README, "What runs locally".';
     throw error;
   }

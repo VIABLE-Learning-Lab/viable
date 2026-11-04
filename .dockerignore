@@ -1,0 +1,10 @@
+# Only what the image copies: the code, the formats and the examples.
+**/node_modules
+**/.DS_Store
+.git
+.github
+test
+docs
+skills
+integrations
+scripts

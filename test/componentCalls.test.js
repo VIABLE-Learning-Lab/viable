@@ -25,7 +25,7 @@ async function listen(t, server) {
 async function component(t) {
   const bodies = [];
   const ANSWERS = {
-    '/echo': (body) => body,
+    '/echo': (body) => ({ output: body }),
     '/rubric': (body) => (/7\/8/.test(body.reply) ? { verdict: 'fail', reason: 'It gives the answer.' } : { verdict: 'pass', reason: 'It asks what they tried.' }),
     '/judge': () => ({ verdict: 'PASS', reason: 'Fine.', note: 'kept out' }),
     '/maybe': () => ({ verdict: 'maybe' }),
@@ -34,7 +34,10 @@ async function component(t) {
     '/measures': () => ({ measures: [{ id: 'asks', value: 2, why: 'kept out' }, { id: 'level', value: null }] }),
     '/bad-measure': () => ({ measures: [{ id: 'asks', value: { n: 2 } }] }),
     '/items': (body) => ({ items: [{ text: `About ${body.teacher_text}`, source: 'https://example.org/a' }, { text: 'Two', attribution: 'Their own.' }] }),
-    '/big': () => ({ text: 'x'.repeat(2000) })
+    '/big': () => ({ text: 'x'.repeat(2000) }),
+    '/step': () => ({ output: 'x'.repeat(25000), flags: [{ label: ' Gives the answer ', reason: 'It says 7/8.', score: 1 }], note: 'kept out' }),
+    '/no-output': () => ({ flags: [] }),
+    '/bad-flags': () => ({ output: 'Fine.', flags: ['Leak'] })
   };
   const server = createServer(async (request, response) => {
     let body = '';
@@ -68,7 +71,7 @@ test('the template runs end to end through callComponent on 127.0.0.1', async (t
 test('the payload is cut to what the manifest receives; a field outside the vocabulary is refused before anything is sent', async (t) => {
   const { base, bodies } = await component(t);
   const echo = manifest(`${base}/echo`);
-  assert.deepEqual(await callComponent(echo, { reply: 'Hi', conversation: [{ role: 'user', content: 'Help' }], answer_key: '7/8', guideline: undefined }), { reply: 'Hi' });
+  assert.deepEqual(await callComponent(echo, { reply: 'Hi', conversation: [{ role: 'user', content: 'Help' }], answer_key: '7/8', guideline: undefined }), { output: { reply: 'Hi' }, flags: [] });
   await assert.rejects(callComponent(echo, { reply: 'Hi', learner_name: 'Ann' }), refused(/learner_name/));
   await assert.rejects(callComponent(echo, ['Hi']), refused(/JSON object/));
   assert.deepEqual(bodies, [{ reply: 'Hi' }]);
@@ -81,8 +84,8 @@ test('an http entry is called only on a host its sends_to lists, over https unle
   await assert.rejects(callComponent(manifest('https://me:pw@example.org/x', { sends_to: ['example.org'] }), { reply: 'Hi' }), refused(/credentials/));
   assert.equal(bodies.length, 0);
   let sent;
-  const fetch = async (url, init) => { sent = { url, ...init }; return Response.json({ ok: true }); };
-  assert.deepEqual(await callComponent(manifest('https://hints.example.org/v1', { sends_to: ['hints.example.org'] }), { reply: 'Hi' }, { fetch }), { ok: true });
+  const fetch = async (url, init) => { sent = { url, ...init }; return Response.json({ output: 'ok' }); };
+  assert.deepEqual(await callComponent(manifest('https://hints.example.org/v1', { sends_to: ['hints.example.org'] }), { reply: 'Hi' }, { fetch }), { output: 'ok', flags: [] });
   assert.deepEqual([sent.url, sent.method, sent.redirect, sent.body], ['https://hints.example.org/v1', 'POST', 'manual', '{"reply":"Hi"}']);
   await assert.rejects(callComponent(manifest(`${base}/redirect`), { reply: 'Hi' }), failed(/status 302/));
 });
@@ -114,6 +117,11 @@ test('each slot reads its answer by its shape and keeps only its fields', async 
   const context = manifest(`${base}/items`, { slot: 'context', receives: ['teacher_text'], attribution: 'Acme, CC BY 4.0.' });
   assert.deepEqual(await lookup(context, 'fractions'), { items: [{ text: 'About fractions', source: 'https://example.org/a', attribution: 'Acme, CC BY 4.0.' }, { text: 'Two', attribution: 'Their own.' }] });
   assert.deepEqual(bodies.at(-1), { teacher_text: 'fractions' });
+  const step = (path) => manifest(`${base}${path}`);
+  const answer = await callComponent(step('/step'), { reply: 'Hi' });
+  assert.deepEqual([answer.output.length, answer.flags, Object.keys(answer)], [20000, [{ label: 'Gives the answer', reason: 'It says 7/8.' }], ['output', 'flags']]);
+  await assert.rejects(callComponent(step('/no-output'), { reply: 'Hi' }), failed(/\{ output, flags/));
+  await assert.rejects(callComponent(step('/bad-flags'), { reply: 'Hi' }), failed(/a step's/));
 });
 
 test('a manifest that doesn’t fit, a core component and the wrong slot are refused', async (t) => {
@@ -158,11 +166,11 @@ test('an mcp component is a stdio server the harness starts: it gets the cut pay
   t.after(() => { if (saved === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = saved; });
   const payload = { reply: 'Hi', learner_message: 'Just tell me', conversation: [{ role: 'user', content: 'Just tell me' }] };
   const answered = await callComponent(mode('echo'), payload, { dir: fixtures, env: { FIXTURE: '1' } });
-  assert.deepEqual(answered.received, { reply: 'Hi', conversation: payload.conversation });
-  assert.ok(answered.env.includes('PATH') && answered.env.includes('FIXTURE'));
-  assert.ok(!answered.env.includes('OPENAI_API_KEY'));
-  assert.deepEqual((await callComponent(mode('text'), payload, { dir: fixtures })).received, answered.received);
-  assert.equal((await callComponent(mode('ask'), payload, { dir: fixtures })).sampling, -32601, 'a request from the server gets an error, and the call goes on');
+  assert.deepEqual(answered.output.received, { reply: 'Hi', conversation: payload.conversation });
+  assert.ok(answered.output.env.includes('PATH') && answered.output.env.includes('FIXTURE'));
+  assert.ok(!answered.output.env.includes('OPENAI_API_KEY'));
+  assert.deepEqual((await callComponent(mode('text'), payload, { dir: fixtures })).output.received, answered.output.received);
+  assert.equal((await callComponent(mode('ask'), payload, { dir: fixtures })).output.sampling, -32601, 'a request from the server gets an error, and the call goes on');
   await assert.rejects(callComponent(mode('fail'), payload, { dir: fixtures }), failed(/tool failed: The fixture refuses/));
   await assert.rejects(callComponent(mode('crash'), payload, { dir: fixtures }), failed(/exit code 3.+crashed on purpose/));
   await assert.rejects(callComponent(mode('noise'), payload, { dir: fixtures }), failed(/other than JSON-RPC/));
@@ -177,7 +185,7 @@ test('the CLI validates the manifest, then calls the component and prints its an
   const payload = `${fixtures}payload.json`;
   const run = cli(echo, '--input', payload, '--json');
   assert.equal(run.status, 0, run.stderr);
-  assert.deepEqual(JSON.parse(run.stdout).received, { reply: 'What have you tried so far?' });
+  assert.deepEqual(JSON.parse(run.stdout).output.received, { reply: 'What have you tried so far?' });
   const plain = cli(echo, '--input', payload);
   assert.match(plain.stdout, /^fixture\/echo 1\.0\.0 \(step, mcp\) received reply; left out learner_message, which it doesn't receive\./);
   const invalid = cli(payload, '--input', payload);

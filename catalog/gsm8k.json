@@ -1,0 +1,34 @@
+{
+  "id": "gsm8k",
+  "name": "GSM8K",
+  "kind": "benchmark",
+  "summary": "8,500 grade school math word problems written by people, each with a step-by-step solution.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "not stated (grade school)",
+  "url": "https://github.com/openai/grade-school-math",
+  "repository": "https://huggingface.co/datasets/openai/gsm8k",
+  "license": {
+    "spdx": [
+      "MIT"
+    ],
+    "source": "https://github.com/openai/grade-school-math/blob/master/LICENSE"
+  },
+  "access": "open download",
+  "formats": [
+    "JSONL",
+    "Parquet"
+  ],
+  "made_by": [
+    "OpenAI"
+  ],
+  "cite": "Cobbe, K., Kosaraju, V., Bavarian, M., Chen, M., Jun, H., Kaiser, L., Plappert, M., Tworek, J., Hilton, J., Nakano, R., Hesse, C., & Schulman, J. (2021). Training Verifiers to Solve Math Word Problems. arXiv:2110.14168",
+  "status": "released",
+  "fits": {
+    "slots": [],
+    "how": "No slot yet: its problems and solutions could be questions with answer keys in agent tests, which VETTING checks replies against."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

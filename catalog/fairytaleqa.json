@@ -1,0 +1,44 @@
+{
+  "id": "fairytaleqa",
+  "name": "FairytaleQA",
+  "kind": "dataset",
+  "summary": "10,580 questions written by education experts about 278 children's stories, covering seven narrative elements, for reading comprehension from kindergarten to eighth grade.",
+  "subjects": [
+    "reading"
+  ],
+  "grades": "K-8",
+  "url": "https://github.com/uci-edu/FairytaleQAData",
+  "repository": "https://huggingface.co/datasets/WorkInTheDark/FairytaleQA",
+  "license": {
+    "spdx": [
+      "Apache-2.0"
+    ],
+    "note": "A software license applied to data; the stories come from Project Gutenberg.",
+    "source": "https://github.com/uci-edu/FairytaleQAData/blob/main/LICENSE"
+  },
+  "access": "open download",
+  "formats": [
+    "CSV"
+  ],
+  "made_by": [
+    "University of California, Irvine",
+    "IBM Research",
+    "Tencent WeChat AI",
+    "Rensselaer Polytechnic Institute",
+    "University of Washington",
+    "University of Notre Dame",
+    "Syracuse University",
+    "HKUST",
+    "Georgia Institute of Technology",
+    "UCLA",
+    "Columbia University"
+  ],
+  "cite": "Xu, Y., Wang, D., Yu, M., Ritchie, D., Yao, B., Wu, T., et al. (2022). Fantastic Questions and Where to Find Them: FairytaleQA, an Authentic Dataset for Narrative Comprehension. ACL 2022. https://doi.org/10.18653/v1/2022.acl-long.34",
+  "status": "released",
+  "fits": {
+    "slots": [],
+    "how": "No slot yet: its stories and questions could become agent test cases for a reading tutor."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

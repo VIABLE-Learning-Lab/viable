@@ -1,0 +1,35 @@
+{
+  "id": "tutorgym",
+  "name": "TutorGym",
+  "kind": "benchmark",
+  "summary": "A testbed that puts AI agents inside existing tutoring systems (CTAT, Apprentice Tutors, OATutor), as tutors compared with the system's own feedback or as students compared with human learning data, across 223 tutor domains.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "not stated",
+  "url": "https://github.com/Teachable-AI-Lab/tutor_gym",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "MIT"
+    ],
+    "source": "https://github.com/Teachable-AI-Lab/tutor_gym/blob/main/LICENSE"
+  },
+  "access": "open download",
+  "formats": [
+    "Python"
+  ],
+  "made_by": [
+    "Teachable AI Lab, Georgia Institute of Technology"
+  ],
+  "cite": "Weitekamp, D., Siddiqui, M. N., & MacLellan, C. J. (2025). TutorGym: A Testbed for Evaluating AI Agents as Tutors and Students. AIED 2025. https://doi.org/10.1007/978-3-031-98420-4_26",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "simulated-learner"
+    ],
+    "how": "Its comparisons with human learning data could show which known errors a simulated learner reproduces before it plays the learner in agent tests."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

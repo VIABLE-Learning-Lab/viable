@@ -2,7 +2,8 @@
 
 This guide is for anyone who puts the harness in front of learners: a school or district, a
 researcher, or a developer building a learning app on it. It says what the harness itself
-guarantees, and what it leaves to you.
+guarantees, and what it leaves to you. To run agents and courses built on VIABLE on your own server,
+behind the same calls your apps make to VIABLE, see [self-hosting.md](self-hosting.md).
 
 **This is not legal advice.** It names questions a deployment has to answer, not the answers for
 your learners, your school or your country. Using the harness does not make a deployment compliant
@@ -61,12 +62,16 @@ before a learner's message is sent anywhere. The media folder is `--media-dir`, 
 the system's temp folder; the steps list prints each file's path. The harness deletes none of these
 files.
 
+`viable-harness serve` sends the same for each run. It also keeps the newest 500 runs' replies and
+traces in memory until it stops, for apps that read a run back, and writes one log line per run with
+its timing and outcome, never the learner's words or ID ([self-hosting.md](self-hosting.md)).
+
 Memory is off unless you turn it on with `--memory-dir <dir> --learner <id>` (or `memoryDir` and
 `learner` in `runAgent`). A learner's file holds each fact, its id and when it was saved, and
 nothing else: no name, no message, no run. A fact is what a Memory step's Learn mode asked a model to
 pick from the exchange, what a Save step wrote, or what an Agent step chose to save; the harness
 can't tell whether a fact names someone, so say in the agent's memory instructions what not to keep.
-The ID must be a pseudonymous one (letters, digits, dots, dashes, underscores; no spaces or `@`), and
+The ID must be a pseudonymous one (letters, digits, dots, dashes, underscores, colons; no spaces or `@`), and
 every agent run with the same folder shares its memory: use a folder per course or per agent.
 Delete `<dir>/<id>.json` to forget one learner, or the folder to forget everyone. A learner keeps
 their newest 200 facts.

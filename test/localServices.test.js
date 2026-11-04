@@ -6,12 +6,14 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { runAgent } from '../src/index.js';
-import { chunkText, packageKnowledge, searchTerms } from '../src/knowledge.js';
+import { fileURLToPath } from 'node:url';
+import { readAgentFile, runAgent } from '../src/index.js';
+import { chunkText, knowledgeFolders, packageKnowledge, searchTerms } from '../src/knowledge.js';
 import { htmlToMarkdown } from '../src/markdown.js';
 import { memoryFiles } from '../src/memory.js';
 import { LOCAL_STEPS, mediaFiles, openAIImages, openAISpeech } from '../src/run.js';
 import { STEP_MANIFESTS } from '../src/agents/steps/index.js';
+import { zipFile } from './zipFile.js';
 
 const sha256 = (text) => createHash('sha256').update(text).digest('hex');
 const chat = (content = 'ok') => async () => new Response(JSON.stringify({ choices: [{ message: { content }, finish_reason: 'stop' }] }), { headers: { 'content-type': 'application/json' } });
@@ -83,6 +85,87 @@ test('a caller’s searchKnowledge still wins over the package’s', async () =>
   assert.equal(result.output.text, '[1] Mine\nFrom your own index.');
   assert.deepEqual(asked[0].knowledgeBaseIds, ['kb'], 'the graph names the package’s knowledge bases by ref');
   await assert.rejects(runAgent(doc, { input: 'hi', services: { searchKnowledge: null } }), { code: 'knowledge_unavailable' });
+});
+
+test('an agent file’s knowledge bases are searched in the folders mapped to them', async (t) => {
+  const dir = folder(t, { 'tides.md': '# Tides\n\nTides rise and fall twice a day because the Moon pulls on the oceans.', 'notes.pdf': '%PDF-1.4' });
+  mkdirSync(join(dir, 'files', 'unit-2'));
+  writeFileSync(join(dir, 'files', 'unit-2', 'moon.txt'), 'The Moon orbits Earth about every 27 days, and its phases repeat every 29 and a half.');
+  writeFileSync(join(dir, 'files', '.draft.md'), 'A hidden draft about tides that nobody published.');
+  // A link inside the folder to a file elsewhere on the machine is left out.
+  const secret = folder(t, { 'secret.md': 'Private notes about the tides elsewhere on the machine.' });
+  symlinkSync(join(secret, 'files', 'secret.md'), join(dir, 'files', 'link.md'));
+  const listed = await knowledgeFolders({ kb_123: join(dir, 'files') });
+  assert.deepEqual(listed.files.map((file) => file.path), ['tides.md', join('unit-2', 'moon.txt')]);
+  assert.deepEqual(listed.skipped, { kb_123: ['notes.pdf'] });
+
+  // As VIABLE exports it: the Knowledge step names the knowledge base by its ID.
+  const agent = { format: 'viable.agent', format_version: 1, name: 'Sea', graph: { entry: 's', nodes: [{ id: 's', type: 'knowledge', config: { knowledge_bases: ['kb_123'] }, next: 'out' }, { id: 'out', type: 'output', config: { text: '{{s.context}}' } }] } };
+  const result = await runAgent(agent, { input: 'Why do tides rise?', knowledge: { kb_123: join(dir, 'files') } });
+  assert.match(result.output.text, /^\[1\] tides\.md\n.*Moon pulls on the oceans/s);
+  assert.ok(!/hidden draft|Private notes/.test(result.output.text));
+  const moon = await runAgent(agent, { input: 'How often do the phases of the Moon repeat?', knowledge: { kb_123: join(dir, 'files') } });
+  assert.match(moon.output.text, /^\[1\] moon\.txt\n/, 'subfolders are read too');
+
+  await assert.rejects(runAgent(agent, { input: 'tides' }), (error) => error.code === 'knowledge_unavailable' && /--knowledge <id>=<folder>/.test(error.message));
+  await assert.rejects(runAgent(agent, { input: 'tides', knowledge: { kb_999: join(dir, 'files') } }), (error) => /no knowledge base "kb_123" \(it has: kb_999\)\. Map it to a folder of its files with --knowledge kb_123=<folder>/.test(error.message));
+  const pdfs = folder(t, { 'only.pdf': '%PDF-1.4' });
+  await assert.rejects(knowledgeFolders({ kb_123: join(pdfs, 'files') }), (error) => error.code === 'knowledge_folder_empty' && /only\.pdf aren't read/.test(error.message));
+  await assert.rejects(knowledgeFolders({ kb_123: join(dir, 'missing') }), { code: 'knowledge_folder_unreadable' });
+
+  // A package's knowledge base of the same ref is replaced by the folder (its PDF can't be read locally).
+  const doc = pkg({ files: [{ ref: 'f', name: 'tides.pdf', path: 'files/tides.pdf' }], knowledge_bases: [{ ref: 'sea', name: 'Sea', file_refs: ['f'] }], agents: [{ ref: 'a', name: 'A', graph: { entry: 's', nodes: [{ id: 's', type: 'knowledge', config: { knowledge_base_refs: ['sea'] }, next: 'out' }, { id: 'out', type: 'output', config: { text: '{{s.context}}' } }] } }] });
+  await assert.rejects(runAgent(doc, { input: 'tides', dir }), (error) => error.code === 'knowledge_unavailable' && /--knowledge sea=<folder>/.test(error.message));
+  assert.match((await runAgent(doc, { input: 'Why do tides rise?', dir, knowledge: { sea: join(dir, 'files') } })).output.text, /^\[1\] tides\.md/);
+});
+
+test('a course downloaded as a .viable.zip runs with its files read from the archive', async (t) => {
+  const dir = scratch(t);
+  const guides = fileURLToPath(new URL('./fixtures/library/', import.meta.url));
+  const library = JSON.parse(readFileSync(new URL('../examples/library-research-help.json', import.meta.url), 'utf8'));
+  // As VIABLE writes one: package.viable.json at the root, the files under files/, named by path.
+  library.files = library.files.map(({ url: _url, ...file }, i) => ({ ...file, path: `files/file-${i + 1}-${file.name}` }));
+  const entries = [{ name: 'package.viable.json', data: JSON.stringify(library) }, ...library.files.map((file, i) => ({ name: file.path, data: readFileSync(join(guides, file.name)), store: i === 0 }))];
+  const course = join(dir, 'library.viable.zip');
+  writeFileSync(course, zipFile(entries));
+
+  const { doc, zip } = await readAgentFile(course);
+  assert.equal(doc.format, 'viable.course-package');
+  const asked = [];
+  const fetch = async (_url, init) => { asked.push(JSON.parse(init.body)); return chat('Who wrote it? [1]')(); };
+  const result = await runAgent(doc, { input: 'Is this website trustworthy?', zip, fetch });
+  assert.equal(result.steps.find((step) => step.nodeId === 'search').status, 'completed');
+  assert.match(asked[0].messages[0].content, /\[1\] Evaluating sources\n/, 'a passage from a file in the archive reaches the model');
+
+  const outside = { ...library, files: library.files.map((file, i) => (i === 2 ? { ...file, path: '../evaluating-sources.md' } : file)) };
+  writeFileSync(course, zipFile([{ name: 'package.viable.json', data: JSON.stringify(outside) }, ...entries.slice(1), { name: '../evaluating-sources.md', data: 'outside' }]));
+  const climbing = await readAgentFile(course);
+  await assert.rejects(runAgent(climbing.doc, { input: 'Is this website trustworthy?', zip: climbing.zip, fetch }), /outside the package's archive/);
+
+  writeFileSync(course, zipFile([{ name: 'package.viable.json', data: ' '.repeat(2 * 1024 * 1024 + 1) }]));
+  await assert.rejects(readAgentFile(course), /package\.viable\.json is larger than 2 MB/);
+  writeFileSync(course, zipFile([{ name: 'course/package.viable.json', data: '{}' }]));
+  await assert.rejects(readAgentFile(course), /has no package\.viable\.json at its root/);
+  writeFileSync(course, Buffer.from('PK\x03\x04 cut short'));
+  await assert.rejects(readAgentFile(course), /isn't a whole zip file/);
+});
+
+test('a PDF in a course package is searched through the text VIABLE read from it', async (t) => {
+  const dir = scratch(t);
+  // As VIABLE's course page downloads it with its files: the PDF, and its text at text_path.
+  const text = '### Page 1\n\n# Moon phases\n\nThe Moon has phases because we see more or less of its sunlit half.\n\n### Page 2\n\nA full moon rises at sunset, opposite the Sun.';
+  const file = { ref: 'file-1', name: 'moon-phases.pdf', type: 'application/pdf', path: 'files/file-1-moon-phases.pdf', text_path: 'files/file-1-moon-phases.pdf.md', text_sha256: sha256(text), title: 'Moon phases' };
+  const doc = pkg({ files: [file], knowledge_bases: [{ ref: 'kb-1', name: 'Moon', file_refs: ['file-1'], websites: [] }], agents: [{ ref: 'agent-1', name: 'Tutor', graph: { entry: 's', nodes: [{ id: 's', type: 'knowledge', config: { knowledge_base_refs: ['kb-1'] }, next: 'out' }, { id: 'out', type: 'output', config: { text: '{{s.context}}' } }] } }] });
+  const course = join(dir, 'moon.viable.zip');
+  writeFileSync(course, zipFile([{ name: 'package.viable.json', data: JSON.stringify(doc) }, { name: file.path, data: '%PDF-1.4 not text', store: true }, { name: file.text_path, data: text }]));
+  const { zip } = await readAgentFile(course);
+  const result = await runAgent(doc, { input: 'When does a full moon rise?', zip });
+  assert.match(result.output.text, /^\[1\] Moon phases\n.*full moon rises at sunset/s);
+
+  const changed = { ...doc, files: [{ ...file, text_sha256: sha256('something else') }] };
+  await assert.rejects(runAgent(changed, { input: 'full moon', zip }), /"moon-phases\.pdf"'s text isn't the file the package names/);
+  const without = { ...doc, files: [{ ...file, text_path: undefined }] };
+  await assert.rejects(runAgent(without, { input: 'full moon', zip }), { code: 'knowledge_unavailable' });
 });
 
 test('a package’s agent calls another of its agents, within the run’s budgets', async () => {

@@ -1,0 +1,38 @@
+{
+  "id": "illustrative-mathematics",
+  "name": "IM K–12 Math (Illustrative Mathematics)",
+  "kind": "content",
+  "summary": "A full K-12 math curriculum (K-5, 6-8, and high school Algebra 1, Geometry and Algebra 2), free to view online.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "K-12",
+  "url": "https://illustrativemathematics.org/site-ip-content/",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-4.0",
+      "CC-BY-NC-4.0"
+    ],
+    "note": "Two editions: IM K–12 Math (2019–2021, on im.kendallhunt.com) is CC BY 4.0 for any use; IM K–12 Math v.360 (2024, on accessim.org) is CC BY-NC 4.0, and commercial use needs a license from IM. Trademarks are excluded.",
+    "source": "https://illustrativemathematics.org/site-ip-content/"
+  },
+  "access": "open download",
+  "access_note": "Free to view online at im.kendallhunt.com and accessim.org.",
+  "formats": [
+    "web"
+  ],
+  "made_by": [
+    "Illustrative Mathematics"
+  ],
+  "cite": "Based on IM® K–12 Math by Illustrative Mathematics®, CC BY 4.0 (IM's attribution statement; v.360 has its own).",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "context"
+    ],
+    "how": "Its lessons and practice problems could be an activity's readings and questions; the CC BY edition also for commercial use."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

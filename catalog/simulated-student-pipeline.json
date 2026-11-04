@@ -1,0 +1,35 @@
+{
+  "id": "simulated-student-pipeline",
+  "name": "Simulated student models for fractions (Princeton)",
+  "kind": "model",
+  "summary": "A planned pipeline and neural simulated student models for fraction arithmetic, trained on rule-based students' synthetic reasoning together with real students' reasoning.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "6-8",
+  "url": "https://k12-ai-infrastructure.org/princeton-university/",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "Apache-2.0"
+    ],
+    "note": "Stated intent for the codebase; no license is named for the model weights or data.",
+    "source": "https://k12-ai-infrastructure.org/princeton-university/"
+  },
+  "access": "not yet released",
+  "formats": [],
+  "made_by": [
+    "Princeton University"
+  ],
+  "cite": "Princeton University. Pipeline for Training Simulated Student Models with Reduced Human Data. K-12 AI Infrastructure Program project, https://k12-ai-infrastructure.org/princeton-university/",
+  "status": "expected",
+  "expected": "The project page gives no date; the Program expects its new public goods to be released in summer 2027.",
+  "fits": {
+    "slots": [
+      "simulated-learner"
+    ],
+    "how": "Could play a learner who holds known fraction errors in agent tests."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

@@ -25,6 +25,7 @@
     "steps:build": "node scripts/build-steps.mjs",
     "check:pr-title": "node scripts/check-pr-title.mjs",
     "xapi:build": "node scripts/build-xapi-profile.mjs",
-    "components:build": "node scripts/build-component-pages.mjs"
+    "components:build": "node scripts/build-component-pages.mjs",
+    "catalog:build": "node scripts/build-catalog-page.mjs"
   }
 }

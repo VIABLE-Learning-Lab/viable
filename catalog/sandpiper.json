@@ -1,0 +1,37 @@
+{
+  "id": "sandpiper",
+  "name": "Sandpiper",
+  "kind": "tool",
+  "summary": "A web app that uses language models to annotate tutoring transcripts with a research team's codes, masking personal information first, and compares the annotations with people's coding.",
+  "subjects": [
+    "any"
+  ],
+  "grades": "not stated",
+  "url": "https://github.com/National-Tutoring-Observatory/sandpiper",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "MIT"
+    ],
+    "source": "https://github.com/National-Tutoring-Observatory/sandpiper/blob/main/LICENSE"
+  },
+  "access": "open download",
+  "access_note": "Self-hosting needs MongoDB, Redis and model provider keys; the hosted instance needs a sign-in and paid credits. Transcripts go to commercial model providers.",
+  "formats": [
+    "Node.js web app"
+  ],
+  "made_by": [
+    "National Tutoring Observatory",
+    "Cornell University"
+  ],
+  "cite": "Hedley, D., Pietrzak, D., Dias, J., Burden, I., Ahtisham, B., Zhou, Z., Vanacore, K., Marland, J., Slama, R., Reich, J., Koedinger, K., & Kizilcec, R. (2026). Sandpiper: Orchestrated AI-Annotation for Educational Discourse at Scale. arXiv:2603.08406",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "detector"
+    ],
+    "how": "Its coding schemes and agreement checks are how a detector is judged: against people's labels on a sample."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

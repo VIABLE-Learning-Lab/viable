@@ -17,12 +17,12 @@ const quote = (text) => (text ? `<blockquote>${esc(text)}</blockquote>` : '<p cl
 
 const HELP_NAMES = { ask_first: 'Ask first', hint: 'Hint', explain: 'Explain', check_only: 'Only check' };
 // The VETTING step's own words for its exits (src/agents/steps/vetting.js).
-const OUTCOMES = {
+export const OUTCOMES = {
   passed: ['Passed', 'the reviewer approved the reply'],
   unverified: ['Unverified', 'attempts ran out or a review couldn’t run'],
   attention: ['Needs attention', 'the reply model flagged a safety concern and wrote a caring reply, which isn’t reviewed']
 };
-const VERDICTS = { pass: 'Passed', fail: 'Did not pass', error: 'The review couldn’t run', safety: 'Safety concern, not reviewed' };
+export const VERDICTS = { pass: 'Passed', fail: 'Did not pass', error: 'The review couldn’t run', safety: 'Safety concern, not reviewed' };
 
 /** Sorts files by shape: learner records (events), run traces (steps) and a course package's first activity with teaching settings. */
 export function viewInputs(files) {

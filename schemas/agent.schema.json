@@ -80,8 +80,8 @@
       "required": ["id", "type"],
       "properties": {
         "id": { "type": "string", "minLength": 1 },
-        "type": { "enum": ["input", "llm", "condition", "image", "speech", "transcribe", "http", "loop", "each", "transform", "output", "subagent", "router", "agent", "knowledge", "memory", "state", "guardrail", "parallel", "ask", "note", "vetting"] },
-        "config": { "type": "object", "description": "The step's settings; each type's required fields are checked by validateGraph, and schemas/steps.json describes every setting. A condition's cases are [{when, to, label}], label (1–60 characters) naming the case on the canvas and in the trace." },
+        "type": { "enum": ["input", "llm", "condition", "image", "speech", "transcribe", "http", "loop", "each", "transform", "output", "subagent", "router", "agent", "knowledge", "memory", "state", "guardrail", "parallel", "ask", "note", "vetting", "component"] },
+        "config": { "type": "object", "description": "The step's settings; each type's required fields are checked by validateGraph, and schemas/steps.json describes every setting. A condition's cases are [{when, to, label}], label (1–60 characters) naming the case on the canvas and in the trace. A component step's manifest is inline, in config.manifest (component.schema.json)." },
         "next": { "type": ["string", "null"] },
         "branches": { "type": "object", "description": "Named exits (condition: true/false; router: route names and fallback; vetting: passed/unverified/attention; guardrail: pass/fail; each: each/done)." },
         "x": { "type": "number" },

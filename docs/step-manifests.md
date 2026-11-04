@@ -121,7 +121,8 @@ sentence: [
 `{key}` is a setting, formatted by its widget: a reference shows as its step and field ("tutor →
 pictures"), long text as its first clause, a select as its option label, a list as "a, b and c".
 `{@name}` is a computed phrase the portal provides: `@outputs`, `@routes`, `@paths`, `@cases`,
-`@tools`, `@checks`, `@assignments`, `@values`, `@exits`, `@agent`.
+`@tools`, `@checks`, `@assignments`, `@values`, `@exits`, `@agent`, and for a Component step
+`@component` (its manifest's label) and `@sends` (what each field sends, and to which hosts).
 
 ## Outputs
 

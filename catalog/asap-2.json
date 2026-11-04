@@ -1,0 +1,35 @@
+{
+  "id": "asap-2",
+  "name": "ASAP 2.0",
+  "kind": "dataset",
+  "summary": "About 24,000 source-based persuasive essays by students in grades 6, 8, 9 and 10, with human scores, the rubric and the source texts.",
+  "subjects": [
+    "writing"
+  ],
+  "grades": "6, 8, 9 and 10",
+  "url": "https://github.com/scrosseye/ASAP_2.0",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-4.0"
+    ],
+    "note": "CC BY 4.0 since 2026-01-20; earlier copies say CC BY-NC-SA 4.0. About half its essays are also in PERSUADE 2.0.",
+    "source": "https://github.com/scrosseye/ASAP_2.0"
+  },
+  "access": "open download",
+  "formats": [
+    "CSV"
+  ],
+  "made_by": [
+    "The Learning Agency Lab",
+    "Vanderbilt University"
+  ],
+  "cite": "Crossley, S. A., Baffour, P., Burleigh, L., & King, J. (2025). A large-scale corpus for assessing source-based writing quality: ASAP 2.0. Assessing Writing, 65, 100954. https://doi.org/10.1016/j.asw.2025.100954",
+  "status": "released",
+  "fits": {
+    "slots": [],
+    "how": "No slot yet: its scored essays could be the learner's work in agent test cases for a writing feedback agent."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

@@ -1,0 +1,37 @@
+{
+  "id": "mrbench",
+  "name": "MRBench and the BEA 2025 shared task data",
+  "kind": "benchmark",
+  "summary": "Replies from seven AI and human tutors to students' math mistakes, each annotated on eight teaching dimensions, such as finding the mistake, revealing the answer and giving actionable guidance.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "not stated (elementary and middle school problems, from Bridge and MathDial)",
+  "url": "https://github.com/kaushal0494/UnifyingAITutorEvaluation",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-SA-4.0"
+    ],
+    "note": "Stated in the README; there is no LICENSE file. Its dialogues come from MathDial and Bridge, and Bridge's dataset card says CC BY-NC 4.0, so whether its data may be used commercially is unclear.",
+    "unclear": true,
+    "source": "https://github.com/kaushal0494/UnifyingAITutorEvaluation"
+  },
+  "access": "open download",
+  "formats": [
+    "JSON"
+  ],
+  "made_by": [
+    "Mohamed bin Zayed University of Artificial Intelligence"
+  ],
+  "cite": "Maurya, K. K., Srivatsa, K. A., Petukhova, K., & Kochmar, E. (2025). Unifying AI Tutor Evaluation: An Evaluation Taxonomy for Pedagogical Ability Assessment of LLM-Powered AI Tutors. NAACL 2025. https://doi.org/10.18653/v1/2025.naacl-long.57",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "judge"
+    ],
+    "how": "Its human annotations could check how well a judge agrees with people on dimensions such as revealing the answer, as the harness's judge calibration does with a teacher's labels."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

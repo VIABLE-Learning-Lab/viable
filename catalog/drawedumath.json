@@ -1,0 +1,42 @@
+{
+  "id": "drawedumath",
+  "name": "DrawEduMath",
+  "kind": "benchmark",
+  "summary": "2,030 images of students' handwritten answers to 188 math problems, each described by a teacher, with teacher-written and synthetic questions and answers about the images.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "2 through high school",
+  "url": "https://drawedumath.org",
+  "repository": "https://huggingface.co/datasets/Heffernan-WPI-Lab/DrawEduMath",
+  "license": {
+    "spdx": [
+      "CC-BY-NC-4.0",
+      "CC-BY-4.0",
+      "Apache-2.0"
+    ],
+    "note": "The dataset card says CC BY-NC 4.0 for all of it; ASSISTments' responsible use guidelines put the students' images under CC BY-NC 4.0 and the descriptions and questions under CC BY 4.0, and the problems keep their curricula's licenses. The code is Apache-2.0.",
+    "source": "https://huggingface.co/datasets/Heffernan-WPI-Lab/DrawEduMath"
+  },
+  "access": "open download",
+  "access_note": "The images load by address from ASSISTments' servers.",
+  "formats": [
+    "CSV",
+    "JPEG"
+  ],
+  "made_by": [
+    "Worcester Polytechnic Institute",
+    "University of California, Berkeley",
+    "Insource Services",
+    "Teaching Lab",
+    "Allen Institute for AI"
+  ],
+  "cite": "Baral, S., Lucy, L., Knight, R., Ng, A., Soldaini, L., Heffernan, N. T., & Lo, K. (2025). DrawEduMath: Evaluating Vision Language Models with Expert-Annotated Students' Hand-Drawn Math Images. NAACL 2025. https://doi.org/10.18653/v1/2025.naacl-long.352",
+  "status": "released",
+  "fits": {
+    "slots": [],
+    "how": "No slot yet: it could test whether a model reads a picture of a learner's work correctly, in agent tests that start with pictures, for non-commercial use."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

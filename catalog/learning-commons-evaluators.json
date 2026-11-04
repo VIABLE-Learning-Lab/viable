@@ -1,0 +1,45 @@
+{
+  "id": "learning-commons-evaluators",
+  "name": "Learning Commons Evaluators",
+  "kind": "evaluator",
+  "summary": "Model-based evaluators, with their prompts, rubrics and validation data, that rate educational text for complexity, the quality of feedback on student writing, math standards alignment and critical thinking.",
+  "subjects": [
+    "reading",
+    "writing",
+    "math",
+    "durable-skills"
+  ],
+  "grades": "not stated for the set (its text complexity data covers grades 3-4)",
+  "url": "https://docs.learningcommons.org/evaluators/understanding-evaluators/introduction",
+  "repository": "https://github.com/learning-commons-org/evaluators",
+  "license": {
+    "spdx": [
+      "MIT",
+      "CC-BY-4.0",
+      "CC-BY-NC-SA-4.0"
+    ],
+    "note": "Code MIT; prompts and settings CC BY 4.0; the annotated CLEAR and PERSUADE 2.0 corpora CC BY-NC-SA 4.0 (non-commercial).",
+    "source": "https://github.com/learning-commons-org/evaluators/blob/main/LICENSE.md"
+  },
+  "access": "open download",
+  "access_note": "Running an evaluator calls a model provider on your own key; math standards alignment also needs a Learning Commons API key. The SDKs are in early access.",
+  "formats": [
+    "npm package",
+    "PyPI package",
+    "Jupyter notebooks",
+    "CSV"
+  ],
+  "made_by": [
+    "Learning Commons"
+  ],
+  "cite": "Learning Commons (2025). Evaluators. https://github.com/learning-commons-org/evaluators",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "judge"
+    ],
+    "how": "Its prompts and rubrics, Withholding Answers and Tone Appropriateness among them, could rate replies in agent tests, checked against people's ratings before their scores are shown."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

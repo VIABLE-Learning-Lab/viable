@@ -1,0 +1,36 @@
+{
+  "id": "storiza-corpus",
+  "name": "Storiza corpus of early reader story recordings",
+  "kind": "dataset",
+  "summary": "A planned corpus of about 80 hours of K-3 children reading stories aloud, across U.S. dialects, with word-aligned reading-error labels and baseline speech recognition models.",
+  "subjects": [
+    "reading"
+  ],
+  "grades": "K-3",
+  "url": "https://k12-ai-infrastructure.org/the-storiza-corpus-of-early-reader-story-recordings-a-dialect-inclusive-speech-dataset-for-reading-technology-development/",
+  "repository": null,
+  "license": {
+    "spdx": [],
+    "note": "No license is named on the project page. Its audio is to be restricted, governed through the Linguistic Data Consortium under IRB data-banking approvals.",
+    "source": "https://k12-ai-infrastructure.org/the-storiza-corpus-of-early-reader-story-recordings-a-dialect-inclusive-speech-dataset-for-reading-technology-development/"
+  },
+  "access": "not yet released",
+  "access_note": "Planned: restricted audio through the Linguistic Data Consortium, models on Hugging Face, scripts on GitHub and OSF.",
+  "formats": [
+    "WAV",
+    "transcriptions",
+    "xAPI logs"
+  ],
+  "made_by": [
+    "University of Florida"
+  ],
+  "cite": "The Storiza Corpus of Early Reader Story Recordings: A Dialect-Inclusive Speech Dataset for Reading Technology Development. K-12 AI Infrastructure Program project.",
+  "status": "expected",
+  "expected": "The project page gives no date; the Program expects its new public goods to be released in summer 2027.",
+  "fits": {
+    "slots": [],
+    "how": "No slot yet: the harness passes no audio to components."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

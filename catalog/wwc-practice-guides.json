@@ -1,0 +1,39 @@
+{
+  "id": "wwc-practice-guides",
+  "name": "What Works Clearinghouse practice guides",
+  "kind": "content",
+  "summary": "Recommendations from the U.S. Institute of Education Sciences for challenges in classrooms and schools, on topics such as foundational reading, writing, fractions, algebra and behavior.",
+  "subjects": [
+    "reading",
+    "writing",
+    "math"
+  ],
+  "grades": "varies by guide (K-3 to secondary)",
+  "url": "https://ies.ed.gov/ncee/wwc/practiceguides",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "LicenseRef-Public-Domain"
+    ],
+    "note": "A U.S. government work: \"This report is in the public domain.\" Checked in the 2024 guide; older guides may quote others' material.",
+    "source": "https://ies.ed.gov/ncee/WWC/Docs/PracticeGuide/behavioral-interventions-practice-guide_v3a_508a.pdf"
+  },
+  "access": "open download",
+  "formats": [
+    "PDF",
+    "web"
+  ],
+  "made_by": [
+    "Institute of Education Sciences, U.S. Department of Education"
+  ],
+  "cite": "Cite each guide as its front matter asks, for example: Lane, K. L., et al. (2024). Teacher-Delivered Behavioral Interventions in Grades K–5 (WWC 2025001). National Center for Education Evaluation and Regional Assistance.",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "context"
+    ],
+    "how": "A guide's recommendations could be knowledge for tutors, in How the AI helps or a Knowledge step."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

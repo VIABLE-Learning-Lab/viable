@@ -90,10 +90,15 @@ What the harness enforces:
 | At most `options.maxBytes` back (default 1 MiB; for MCP, all the server writes to stdout), as JSON, with a 2xx status or no MCP error | `component_failed` |
 | The answer fits its slot's shape | `component_failed` |
 
-`component_refused` means nothing was sent. The code is in `error.code`, for a step's When something
-goes wrong path once a step can call a component (planned, below). The answer is data, never
+`component_refused` means nothing was sent. The code is in `error.code`, and a graph's Component
+step takes its When something goes wrong path on any of the three (below). The answer is data, never
 instructions: the harness keeps only the fields its slot reads, and cuts their text (a judge's
-reason to 600 characters, a mark's label to 120 and its evidence to 1,000, an item's text to 4,000).
+reason to 600 characters, a mark's label to 120 and its evidence to 1,000, an item's text to 4,000,
+a step's text output to 20,000 and a flag's label to 120 and its reason to 600).
+
+These checks and the slots' readings are in `src/components/contract.js`, which imports no Node
+built-ins: a host that bundles the engine for a server calls an HTTP component with its `callOut`
+and `overHttp`, adding its own address rules (`checkEntry`). `call.js` adds the MCP transport.
 
 What it can't enforce:
 
@@ -116,17 +121,47 @@ What it can't enforce:
 | detector | `detect(manifest, record)` | `learning_events`: the record's `events` and `turns` | `{ marks: [{ turn_index, label, evidence }] }`, `turn_index` being the turn's place in the record's `turns`, from 0 |
 | measure | `measure(manifest, record)` | `learning_events`, as above | `{ measures: [{ id, value }] }`, each value a number, text, true, false or null |
 | context | `lookup(manifest, query)` | `teacher_text` for a string, or the payload you pass | `{ items: [{ text, source, attribution }] }`; an item without its own attribution gets the component's (`attribution`, else `cite`) |
+| step | a graph's Component step (below) | the fields its `inputs` map, each worked out from the run | `{ output, flags }`: `output` any JSON value, `flags` (optional) at most 20 `{ label, reason }` |
 
 `detect`, `measure` and `lookup` take `callComponent`'s options last. With a judge component, the
 tests' result names it in `judge_component` (`id@version`), `judge_model` is null, and a judge
 that fails, times out or answers out of shape makes that case an error, never a fail; a manifest
 that isn't a judge is refused before any case runs.
 
+### A step in a graph
+
+A `component` step holds a step component's manifest inline and calls it once per run:
+
+```json
+{ "id": "hint", "type": "component", "next": "reply", "config": {
+  "manifest": { "id": "acme/fraction-hints", "version": "0.1.0", "slot": "step", "runs": { "kind": "http", "entry": "https://hints.example.org/v1/hint" }, "receives": ["learner_message", "reply"], "sends_to": ["hints.example.org"], "…": "…" },
+  "inputs": { "learner_message": "{{input}}", "reply": "{{tutor.content}}" },
+  "on_error": "continue"
+} }
+```
+
+- **Checked when the graph is**: the manifest fits the schema, its slot is `step`, it runs `http` or
+  `mcp` (a host may allow fewer: VIABLE runs `http` only), an HTTP entry is on a host in `sends_to`,
+  and `inputs` names only fields the manifest receives.
+- **Sends** each field of `inputs`, a template worked out like any step's setting (a lone
+  `{{…}}` keeps its value's type, so `{{history}}` goes as a list). A field `inputs` leaves out isn't
+  sent. The run trace records the component (`id@version`), its entry and what was sent, credential-like
+  names redacted.
+- **Answers** `{ output, flags }`. Later steps read `{{hint.output}}`, `{{hint.flags}}` and
+  `{{hint.component}}`; `status` is `completed`.
+- **When something goes wrong**: `component_refused`, `component_timeout` or `component_failed` stops
+  the run (status 422 for a refusal, else 502), unless `on_error` is `continue`: then `output` is null,
+  `flags` empty, `status` `failed` and `error` `{ code, message }`, and the run goes on. A Branch, or a
+  Reply's `{{ hint.status == "failed" ? … : hint.output }}`, decides what the learner sees.
+- **Time**: the call's 30 seconds, or less when the run has less time left.
+- **Hosts**: the engine calls `services.callComponent(manifest, payload, { timeoutMs })`; a run
+  without one fails saying so. `runAgent` and `viable-harness run` pass `callComponent` (HTTP, and MCP
+  servers started in the agent file's folder). VIABLE passes an HTTP-only one under its Fetch URL
+  step's address rules: public HTTPS on port 443, no IP addresses or local names, and the
+  deployment's allowlist.
+
 Planned, not built:
 
-- **step**: a component as a step of an agent graph needs VIABLE's editor to place it and give it
-  a When something goes wrong path. Until then `callComponent` calls a step component on its own,
-  and no graph runs one.
 - **simulated-learner**: no agent test uses one yet; `callComponent` returns its answer as it came.
 
 ## The review checklist

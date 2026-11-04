@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 470" role="img" aria-label="Where the harness runs. The VIABLE Developer Platform is hosted: it adds the workflow editor, knowledge bases, courses and class lists, consent and studies with the research export, and logs and billing, and it runs the harness. A course downloaded from it as a package runs on your own server with viable-harness serve, your model endpoint and your disk. Your app sends the same request to either one.">
+  <style>
+    .t { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; }
+    .fg { fill: #1f2328; } .mu { fill: #59636e; } .ac { fill: #0969da; }
+    .box { fill: #ffffff; stroke: #d1d9e0; stroke-width: 1.5; }
+    .core { fill: #ddf4ff; stroke: #0969da; stroke-width: 1.5; }
+    .ln { stroke: #59636e; stroke-width: 1.6; fill: none; }
+    .hd { fill: #59636e; }
+    @media (prefers-color-scheme: dark) {
+      .fg { fill: #f0f6fc; } .mu { fill: #9198a1; } .ac { fill: #4493f8; }
+      .box { fill: #0d1117; stroke: #3d444d; }
+      .core { fill: #12233d; stroke: #4493f8; }
+      .ln { stroke: #9198a1; } .hd { fill: #9198a1; }
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="hd" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+
+  <g class="t">
+    <rect class="box" x="40" y="30" width="500" height="250" rx="16"/>
+    <text class="ac" x="64" y="60" font-size="12" font-weight="600" letter-spacing="1.4">HOSTED</text>
+    <text class="fg" x="64" y="86" font-size="18" font-weight="700">VIABLE Developer Platform</text>
+    <text class="mu" x="64" y="114" font-size="13.5">· build agents in the workflow editor</text>
+    <text class="mu" x="64" y="136" font-size="13.5">· knowledge bases from files and websites</text>
+    <text class="mu" x="64" y="158" font-size="13.5">· courses, class lists, sections and sign-in</text>
+    <text class="mu" x="64" y="180" font-size="13.5">· consent, studies and the research export</text>
+    <text class="mu" x="64" y="202" font-size="13.5">· logs, usage and billing</text>
+    <rect class="core" x="60" y="222" width="460" height="38" rx="10"/>
+    <text class="fg" x="290" y="246" font-size="13.5" font-weight="600" text-anchor="middle">runs the VIABLE harness</text>
+
+    <rect class="box" x="660" y="30" width="500" height="250" rx="16"/>
+    <text class="ac" x="684" y="60" font-size="12" font-weight="600" letter-spacing="1.4">YOURS</text>
+    <text class="fg" x="684" y="86" font-size="18" font-weight="700">Your own server</text>
+    <text class="mu" x="684" y="114" font-size="13.5">· viable-harness serve course.viable.zip</text>
+    <text class="mu" x="684" y="136" font-size="13.5">· your model endpoint and keys</text>
+    <text class="mu" x="684" y="158" font-size="13.5">· learners’ memory and media stay on your disk</text>
+    <text class="mu" x="684" y="180" font-size="13.5">· no editor, accounts, class lists or research</text>
+    <text class="mu" x="694" y="202" font-size="13.5">export: you bring what you need</text>
+    <rect class="core" x="680" y="222" width="460" height="38" rx="10"/>
+    <text class="fg" x="910" y="246" font-size="13.5" font-weight="600" text-anchor="middle">runs the VIABLE harness</text>
+
+    <text class="mu" x="600" y="120" font-size="12.5" text-anchor="middle">Download</text>
+    <text class="mu" x="600" y="136" font-size="12.5" text-anchor="middle">as package</text>
+    <text class="mu" x="600" y="170" font-size="12" text-anchor="middle">.viable.zip</text>
+
+    <rect class="box" x="430" y="360" width="340" height="80" rx="14"/>
+    <text class="fg" x="600" y="392" font-size="16" font-weight="700" text-anchor="middle">Your app</text>
+    <text class="mu" x="600" y="416" font-size="13" text-anchor="middle">POST /v1/agents/{slug}/runs</text>
+
+    <text class="mu" x="300" y="330" font-size="12.5" text-anchor="middle">api.viablelab.org</text>
+    <text class="mu" x="900" y="330" font-size="12.5" text-anchor="middle">your server’s address</text>
+    <text class="mu" x="600" y="342" font-size="12.5" text-anchor="middle">the same request to either</text>
+  </g>
+
+  <path class="ln" d="M542,150 H656" marker-end="url(#a)"/>
+  <path class="ln" d="M470,360 L300,284" marker-end="url(#a)"/>
+  <path class="ln" d="M730,360 L900,284" marker-end="url(#a)"/>
+</svg>

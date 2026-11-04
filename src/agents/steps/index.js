@@ -17,6 +17,7 @@ import loop from './loop.js';
 import each from './each.js';
 import parallel from './parallel.js';
 import http from './http.js';
+import component from './component.js';
 import transform from './transform.js';
 import vetting from './vetting.js';
 import guardrail from './guardrail.js';
@@ -25,7 +26,7 @@ import note from './note.js';
 
 export const STEP_MANIFESTS = Object.freeze([
   input, output, ask, llm, agent, router, image, speech, transcribe, knowledge, memory, state,
-  condition, loop, each, parallel, http, transform, vetting, guardrail, subagent, note
+  condition, loop, each, parallel, http, component, transform, vetting, guardrail, subagent, note
 ]);
 
 const BY_TYPE = new Map(STEP_MANIFESTS.map((manifest) => [manifest.type, manifest]));
@@ -38,7 +39,7 @@ export const STEP_CATEGORIES = Object.freeze(['start', 'ai', 'safety', 'logic', 
 export const SETTING_LEVELS = Object.freeze(['setup', 'option', 'recovery', 'advanced']);
 export const SETTING_WIDGETS = Object.freeze(['text', 'textarea', 'prompt', 'json', 'expr', 'number', 'boolean', 'select', 'model', 'knowledge_bases', 'agents', 'list', 'routes', 'assignments', 'checks', 'fields', 'voice']);
 export const STEP_PARTS = Object.freeze(['@pictures', '@outputs', '@cases', '@loop', '@outcomes', '@routes', '@paths']);
-export const SENTENCE_PHRASES = Object.freeze(['@outputs', '@routes', '@paths', '@cases', '@tools', '@checks', '@assignments', '@values', '@exits', '@agent']);
+export const SENTENCE_PHRASES = Object.freeze(['@outputs', '@routes', '@paths', '@cases', '@tools', '@checks', '@assignments', '@values', '@exits', '@agent', '@component', '@sends']);
 export const CONDITION_FORMS = Object.freeze(['set', 'unset', 'present', 'absent', 'is', 'has', 'not', 'all', 'any']);
 
 // A config value by dot path ("params.temperature").

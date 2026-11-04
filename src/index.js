@@ -1,5 +1,6 @@
-export { LOCAL_STEPS, audioFiles, mediaFiles, openAICompatible, openAIImages, openAISpeech, packageAgents, pickAgent, runAgent } from './run.js';
-export { packageKnowledge } from './knowledge.js';
+export { LOCAL_STEPS, audioFiles, mediaFiles, openAICompatible, openAIImages, openAISpeech, packageAgents, pickAgent, readAgentFile, runAgent } from './run.js';
+export { knowledgeFolders, packageKnowledge } from './knowledge.js';
+export { loadAgents, readTurn, runTrace, serve } from './serve.js';
 export { memoryFiles } from './memory.js';
 export { htmlToMarkdown, toMarkdown } from './markdown.js';
 export { HELP_LEVELS, SKILLS, TEACHING_LIMITS, teachingContext, teachingRunContext, teachingSettings } from './teaching.js';
@@ -11,6 +12,7 @@ export { draftCases, runAgentTests } from './testRuns.js';
 export { CALIBRATION_MIN_CASES, DRAFT_KINDS, TURN_KINDS, calibrateJudge, casesFromTurns, draftMessages, readDrafts } from './testCases.js';
 export { findMisconceptions, misconceptionTerms } from './utils/misconceptions.js';
 export { COMPONENTS, SLOTS, component } from './components/index.js';
+export { CATALOG, CATALOG_KINDS, openForAnyUse, searchCatalog } from './catalog.js';
 export { CALL_LIMITS, callComponent, checkManifest, detect, lookup, measure } from './components/call.js';
 export { teacherView, viewInputs } from './view.js';
 export { SUITES, compare, loadSuite, runConformance, runSuite } from './conformance.js';

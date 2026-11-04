@@ -1,0 +1,37 @@
+{
+  "id": "tutorbench",
+  "name": "TutorBench",
+  "kind": "benchmark",
+  "summary": "About 1,500 expert-written tutoring tasks in high school and AP STEM subjects, each with its own rubric, testing explanations, feedback on student work and hints.",
+  "subjects": [
+    "math",
+    "science",
+    "computer-science"
+  ],
+  "grades": "high school and AP",
+  "url": "https://labs.scale.com/leaderboard/tutorbench",
+  "repository": "https://huggingface.co/datasets/ScaleAI/TutorBench",
+  "license": {
+    "spdx": [],
+    "unclear": true,
+    "note": "The full dataset's card states no license; its 30-item samples are CC BY-NC 4.0.",
+    "source": "https://huggingface.co/datasets/ScaleAI/TutorBench"
+  },
+  "access": "open download",
+  "formats": [
+    "Parquet"
+  ],
+  "made_by": [
+    "Scale AI"
+  ],
+  "cite": "Srinivasa, R. S., Che, Z., Zhang, C. B. C., et al. (2025). TutorBench: A Benchmark To Assess Tutoring Capabilities Of Large Language Models. arXiv:2510.02663",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "judge"
+    ],
+    "how": "Its rubrics could rate replies in agent tests, once its license is clear."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

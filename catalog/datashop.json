@@ -1,0 +1,36 @@
+{
+  "id": "datashop",
+  "name": "DataShop and LearnSphere",
+  "kind": "learning-data-repository",
+  "summary": "A repository of students' step-by-step interaction data from tutors and online courses for learning scientists, with LearnSphere's Tigris tool for building analysis workflows.",
+  "subjects": [
+    "any"
+  ],
+  "grades": "not stated",
+  "url": "https://pslcdatashop.web.cmu.edu/",
+  "repository": "https://github.com/LearnSphere/WorkflowComponents",
+  "license": {
+    "spdx": [],
+    "note": "No open license: DataShop's terms limit data to research and forbid redistributing or de-anonymizing it, and some projects add their own terms. LearnSphere's code says \"All Rights Reserved\".",
+    "source": "https://pslcdatashop.web.cmu.edu/Terms"
+  },
+  "access": "account",
+  "access_note": "A free sign-in; public datasets are open to any signed-in user, private ones on request to their owners.",
+  "formats": [
+    "tab-delimited text",
+    "web"
+  ],
+  "made_by": [
+    "Carnegie Mellon University (LearnLab)"
+  ],
+  "cite": "Koedinger, K. R., Baker, R. S. J. d., Cunningham, K., Skogsholm, A., Leber, B., & Stamper, J. (2010). A Data Repository for the EDM community: The PSLC DataShop. In Handbook of Educational Data Mining. CRC Press. Each dataset gives its own citation.",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "measure"
+    ],
+    "how": "Its step-level data could check the harness's measures against other learners' data, for research."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

@@ -1,0 +1,48 @@
+{
+  "id": "learning-commons-knowledge-graph",
+  "name": "Learning Commons Knowledge Graph",
+  "kind": "knowledge-graph",
+  "summary": "U.S. academic standards, learning components, learning progressions and misconception data from several publishers, linked in one graph with a shared schema.",
+  "subjects": [
+    "math",
+    "reading",
+    "writing",
+    "science",
+    "social-studies",
+    "english-language-development",
+    "durable-skills"
+  ],
+  "grades": "K-12 (varies by dataset)",
+  "url": "https://docs.learningcommons.org/knowledge-graph/understanding-knowledge-graph/introduction",
+  "repository": "https://github.com/learning-commons-org/knowledge-graph",
+  "license": {
+    "spdx": [
+      "MIT",
+      "CC-BY-4.0",
+      "CC0-1.0"
+    ],
+    "note": "Code MIT. Data is licensed dataset by dataset: the open ones are CC BY 4.0 or CC0, and state standards carry each state's own terms. IM v.360 instructional and assessment materials, OpenSciEd and one more dataset are gated: not openly licensed, and only with the publisher's approval. Its terms of use rule out high-stakes decisions such as grading or placement.",
+    "source": "https://github.com/learning-commons-org/knowledge-graph/blob/main/LICENSE.md"
+  },
+  "access": "open download",
+  "access_note": "The open datasets download as JSONL (nodes.jsonl and relationships.jsonl). The REST API and the MCP server, both in early access, need a Learning Commons API key.",
+  "formats": [
+    "JSONL",
+    "REST API",
+    "MCP"
+  ],
+  "made_by": [
+    "Learning Commons",
+    "each dataset's publisher"
+  ],
+  "cite": "Learning Commons Knowledge Graph, https://github.com/learning-commons-org/knowledge-graph (release v1.16.0, 2026-10-21). Each dataset carries its own attribution statement.",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "context"
+    ],
+    "how": "A standard, with its learning components, joins the AI's instructions on every turn through an activity's teaching settings. Choosing a standard needs Learning Commons' API."
+  },
+  "in_harness": "learning-commons/knowledge-graph-standards",
+  "verified_at": "2026-11-03"
+}

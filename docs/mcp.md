@@ -24,6 +24,7 @@ stderr.
 | `calibrate_judge` | Compares `run_agent_tests`' verdicts with a person's pass or fail per case: the confusion table, every disagreement and, from 10 labelled cases, agreement and Cohen's kappa. | no |
 | `suggest_changes` | Suggested changes to an activity's teaching settings from runs and learners' records, each with its evidence; with `accept`, the settings once the teacher accepts one. | no |
 | `list_components` | The component manifests (`docs/components.md`). | no |
+| `find_public_goods` | A few words, a kind, a slot or `open` to entries of the public goods catalog ([catalog.md](catalog.md)): each with its license and a note on its terms, how to get it, how it would fit and the date it was checked. Entries describe, not endorse. | no |
 
 Each tool has a JSON Schema for its arguments, and each result carries `structuredContent` and the
 same JSON as text after a one-line summary (clients before 2025-06-18 get the text only).
@@ -32,6 +33,25 @@ Model calls go to the OpenAI-compatible endpoint in the server's environment, `O
 (default `https://api.openai.com/v1`) and `OPENAI_API_KEY`, with the models the call names. A Fetch
 URL step in an agent run fetches its public https address from the machine running the server.
 Nothing goes to VIABLE.
+
+## Where the server runs
+
+On your own computer. You don't run it yourself and nothing hosts it: your assistant starts
+`viable-harness mcp` as a child process when it starts, talks to it over that process's stdin and
+stdout, and stops it when it quits. That's why setting it up means telling the assistant the
+command, not an address. Tools that call a model reach the endpoint in the server's environment
+(`OPENAI_API_KEY`, `OPENAI_BASE_URL`); everything else (validating a file, writing How the AI helps,
+finding misconceptions, the measures, the catalog, the components) needs no key and nothing from
+the network.
+
+Tried for real on 2026-11-03 in Codex CLI 0.165, installed from the repository as described here:
+its agent called `find_misconceptions`, `validate_document`, `teaching_instructions`,
+`compute_measures`, `list_components` and `check_reply` and followed three of the Skills; every
+tool answered, and `check_reply`, without a key, said so. Claude Code 2.1 started the server and
+listed its eleven tools and four Skills.
+
+A hosted server that assistants reach by address, with nothing to install, isn't built: it would
+run on the VIABLE Developer Platform with a project's key.
 
 ## Configuring a client
 
@@ -69,6 +89,12 @@ VS Code (`.vscode/mcp.json`):
 }
 ```
 
+Codex CLI:
+
+```sh
+codex mcp add viable-harness --env OPENAI_API_KEY=sk-... -- node /path/to/viable-harness/bin/viable-harness.mjs mcp
+```
+
 Claude Code:
 
 ```sh
@@ -79,6 +105,39 @@ With an open-weight model, set `OPENAI_BASE_URL` to its endpoint (for example
 `http://localhost:11434/v1` for Ollama) and name its models in each call. An agent SDK with an MCP
 client starts the same command over stdio. Hosts that only connect to remote MCP servers over HTTP,
 such as ChatGPT's connectors, can't start this one: it speaks stdio only.
+
+## Views in assistants that show MCP Apps
+
+In a host that renders [MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview) (the
+`io.modelcontextprotocol/ui` extension, [specification
+2026-01-26](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx)),
+three tools' results also show as a small page in the conversation:
+
+| Tool | View | What it shows |
+| --- | --- | --- |
+| `check_reply` | `ui://viable-harness/check-reply` | The outcome and whether the reply is checked; the learner's message and the guideline, or the question (never its answer key), it was checked against; each review round with its verdict and the reviewer's reason; the rewritten reply. |
+| `run_agent_tests` | `ui://viable-harness/agent-tests` | How many cases passed, failed and couldn't be run or judged; each case, the failed ones open, with the judge's reason, the learner's message, what a good reply does and must not do, and the agent's reply. |
+| `suggest_changes` | `ui://viable-harness/suggestions` | Each suggestion with why, its evidence, the setting it proposes and the id to accept it; after `accept`, the new settings. |
+
+**Which hosts.** The extension's [client matrix](https://modelcontextprotocol.io/extensions/client-matrix)
+lists the hosts that render MCP Apps. Of those, the ones that start a local stdio server, such as
+Claude Desktop, VS Code with GitHub Copilot, Cursor and Goose, can show these views. The server
+offers them only to a client that says in `initialize` that it renders them
+(`capabilities.extensions["io.modelcontextprotocol/ui"].mimeTypes` holding
+`text/html;profile=mcp-app`). To that client it adds `resources` and the extension to its
+capabilities, gives the three tools `_meta.ui.resourceUri` (and the older `_meta["ui/resourceUri"]`),
+and serves the pages through `resources/list` and `resources/read`.
+
+**Every other client** sees the server as before: the same capabilities and tools, no resources, and
+each result as text and `structuredContent`. Results don't change with views either: a view reads
+the same `structuredContent`, and the text still reaches the model.
+
+**What a view does.** Each page is one self-contained HTML document, its style and script inline. It
+loads nothing, so it works under the extension's default content security policy, which allows no
+network. It runs in the host's sandboxed frame, takes the host's theme and colours when the host
+sends them (otherwise the system's light or dark setting), and tells the host its height. Text that
+learners and models wrote goes on the page only as text, never parsed as HTML. A view calls no tools
+and sends no messages: what to do with a result is still up to the assistant and the person.
 
 ## Limits
 
@@ -108,13 +167,15 @@ take 1 to 25 cases. A call over a limit gets an error result naming it.
 
 ## The protocol
 
-`initialize`, `notifications/initialized`, `ping`, `tools/list` and `tools/call`. Other methods get
-`-32601`; a malformed message `-32700` or `-32600`; an unknown tool or arguments that aren't an
-object `-32602`. Arguments that don't fit a tool's schema, or a tool that fails, come back as a
+`initialize`, `notifications/initialized`, `ping`, `tools/list` and `tools/call`; for a client that
+renders views, also `resources/list`, `resources/templates/list` (empty) and `resources/read` (an
+unknown view gets `-32002`). Other methods get `-32601`; a malformed message `-32700` or `-32600`; an
+unknown tool or arguments that aren't an object `-32602`. Arguments that don't fit a tool's schema, or a tool that fails, come back as a
 result with `isError: true` and a message saying what to change, so the assistant can act on it.
 Batches and cancellation aren't supported; each message is handled as it arrives, so a `ping` isn't
 held up by a running agent.
 
 From code, `mcpServer({ baseUrl, apiKey, fetch })` (`src/mcp.js`) returns the server for one
 connection, a function that takes one parsed message and returns the response, and `serveStdio()`
-runs it over stdin and stdout.
+runs it over stdin and stdout. `src/mcpViews.js` has the views: pure functions that turn a result
+into what its page shows, and the page they are embedded in.

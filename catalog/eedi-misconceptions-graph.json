@@ -1,0 +1,39 @@
+{
+  "id": "eedi-misconceptions-graph",
+  "name": "Eedi Misconceptions Graph",
+  "kind": "knowledge-graph",
+  "summary": "Common math misconceptions, each linked to the skills (Eedi constructs) it hinders, drawn from students' answers to Eedi's diagnostic questions.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "K-12",
+  "url": "https://docs.learningcommons.org/knowledge-graph/datasets/learning-components/eedi-misconceptions-graph",
+  "repository": "https://github.com/learning-commons-org/knowledge-graph",
+  "license": {
+    "spdx": [
+      "CC-BY-4.0"
+    ],
+    "note": "Attribution: Eedi Misconceptions Graph v1.0 (c) 2026 Eedi Ltd. is licensed under CC BY 4.0 and available at https://www.eedi.com.",
+    "source": "https://docs.learningcommons.org/knowledge-graph/resources/license"
+  },
+  "access": "open download",
+  "access_note": "In the Learning Commons Knowledge Graph's open files; its REST API doesn't serve it. The open release doesn't link misconceptions to standards.",
+  "formats": [
+    "JSONL",
+    "MCP"
+  ],
+  "made_by": [
+    "Eedi Ltd.",
+    "Learning Commons"
+  ],
+  "cite": "Eedi Ltd. (2026). Eedi Misconceptions Graph v1.0. Distributed through the Learning Commons Knowledge Graph.",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "context"
+    ],
+    "how": "A teacher picks the misconceptions the AI listens for, found by the words of a goal or a standard; the harness carries 8,117 misconceptions and the 2,258 constructs they hinder."
+  },
+  "in_harness": "eedi/misconceptions-graph",
+  "verified_at": "2026-11-03"
+}

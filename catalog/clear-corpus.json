@@ -1,0 +1,37 @@
+{
+  "id": "clear-corpus",
+  "name": "CLEAR corpus (CommonLit Ease of Readability)",
+  "kind": "dataset",
+  "summary": "About 5,000 reading passages for grades 3 to 12, with readability scores from teachers' judgments and their genre and publication details.",
+  "subjects": [
+    "reading"
+  ],
+  "grades": "3-12",
+  "url": "https://github.com/scrosseye/CLEAR-Corpus",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "MIT",
+      "CC-BY-NC-SA-4.0"
+    ],
+    "unclear": true,
+    "note": "CommonLit's announcement says the dataset and metadata are MIT; the GitHub README says CC BY-NC-SA 4.0. Each passage also has its own license: many are public domain, some non-commercial or no-derivatives.",
+    "source": "https://github.com/scrosseye/CLEAR-Corpus"
+  },
+  "access": "open download",
+  "formats": [
+    "XLSX"
+  ],
+  "made_by": [
+    "CommonLit",
+    "Georgia State University"
+  ],
+  "cite": "Crossley, S., Heintz, A., Choi, J. S., Batchelor, J., Karimi, M., & Malatinszky, A. (2023). A large-scaled corpus for assessing text readability. Behavior Research Methods, 55(2), 491-507. https://doi.org/10.3758/s13428-022-01802-x",
+  "status": "released",
+  "fits": {
+    "slots": [],
+    "how": "No slot yet: its passages, chosen by their own licenses, could be an activity's readings, and its scores could check how an agent pitches a text's difficulty."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

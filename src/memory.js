@@ -13,13 +13,14 @@ import { rankByKeywords, searchTerms } from './knowledge.js';
 // As VIABLE keeps them (src/utils/agentMemory.js): the newest 200 facts per learner, 1,000 characters each.
 const LIMITS = { perLearner: 200, chars: 1000 };
 
-// A pseudonymous ID that is also a safe file name: no spaces or @, so a full name or an email doesn't fit.
-const PSEUDONYM = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+// A pseudonymous ID: no spaces or @, so a full name or an email doesn't fit. The colon of an app's
+// prefix (my-app:s-0412, as VIABLE's apps name learners) is written %3A in the file name.
+const PSEUDONYM = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 
 export function checkLearner(id) {
   if (id == null || id === '') throw Object.assign(new Error('Memory needs the learner\'s pseudonymous ID (learner, or --learner <id> on the command line).'), { status: 400, code: 'invalid_learner' });
   if (typeof id !== 'string' || !PSEUDONYM.test(id)) {
-    throw Object.assign(new Error(`"${String(id).slice(0, 40)}" isn't a pseudonymous learner ID: use 1 to 128 letters, digits, dots, dashes or underscores (such as s-0412), never a name or an email.`), { status: 400, code: 'invalid_learner' });
+    throw Object.assign(new Error(`"${String(id).slice(0, 40)}" isn't a pseudonymous learner ID: use 1 to 128 letters, digits, dots, dashes, underscores or colons (such as s-0412 or my-app:s-0412), never a name or an email.`), { status: 400, code: 'invalid_learner' });
   }
   return id;
 }
@@ -27,7 +28,7 @@ export function checkLearner(id) {
 /** The engine's memory service, kept in dir (created when a fact is first saved). */
 export function memoryFiles(dir) {
   const folder = resolve(dir);
-  const fileOf = (learner) => join(folder, `${checkLearner(learner)}.json`);
+  const fileOf = (learner) => join(folder, `${checkLearner(learner).replaceAll(':', '%3A')}.json`);
   // One write at a time per learner: an Agent step may save several facts at once.
   const queues = new Map();
   const serial = (learner, work) => {

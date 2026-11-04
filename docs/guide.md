@@ -7,10 +7,14 @@ formats and the measures. The [README](../README.md) is the overview; [component
 ## The command line
 
 ```sh
-viable-harness run <agent.json | package.json> --input "..." [--teaching teaching.json] [--section id]
-                   [--context context.json] [--model id] [--agent ref] [--no-teaching] [--json]
+viable-harness run <agent.json | package.json | course.viable.zip> --input "..." [--teaching teaching.json]
+                   [--section id] [--context context.json] [--model id] [--agent ref] [--no-teaching] [--json]
                    [--speech-model id] [--image-model id] [--media-dir dir] [--no-speech]
-                   [--memory-dir dir --learner id]
+                   [--memory-dir dir --learner id] [--knowledge kb-id=folder...]
+viable-harness serve <agent.json | package.json | course.viable.zip | folder>... [--port 8080] [--host 127.0.0.1]
+                     [--token-env NAME] [--cors origin] [--max-body bytes] [--timeout seconds] [--max-runs n]
+                     [--model id] [--speech-model id] [--image-model id] [--media-dir dir] [--no-speech]
+                     [--memory-dir dir] [--knowledge kb-id=folder...]
 viable-harness check --reply "..." [--message "..."] (--guideline "..." | --question "..." --answer-key "...")
                      [--key-concepts "a, b"] [--teaching teaching.json] [--section id] [--rewrite n]
                      --model id [--reviewer id] [--json]
@@ -22,6 +26,7 @@ viable-harness calibrate <results.json> <labels.json> [--json]
 viable-harness validate <file> [--kind agent|course-package|learning-events|teaching|component]
 viable-harness measure <events.json>
 viable-harness misconceptions "<a few words, or a standard's text>" [--json]
+viable-harness catalog [words...] [--kind kind] [--slot slot] [--open] [--json]
 viable-harness components [--json]
 viable-harness component <manifest.json> --input payload.json [--json]
 viable-harness suggest <record.json | run.json | package.json...> [--teaching teaching.json] [--json]
@@ -34,7 +39,9 @@ viable-harness mcp
 (`node bin/viable-harness.mjs` until the package is published; `npm link` puts `viable-harness` on
 your path.)
 
-- **run**: from a course package, the first agent (or `--agent <ref>`) with the teaching settings of
+- **run**: a `.viable.zip` (a course downloaded with its files) runs as it is: its files are read from
+  the archive, which is never unpacked. `--knowledge <id>=<folder>` searches a folder's text files as
+  the knowledge base an agent file names by that ID (a package's by its ref). From a course package, the first agent (or `--agent <ref>`) with the teaching settings of
   the first activity that uses it. `--teaching` replaces them with a file
   (`schemas/teaching.schema.json`), `--section` applies a section's own help level and note,
   `--no-teaching` runs without any. With `--context` holding `{ "question": "...", "answer_key": "..." }`,
@@ -55,6 +62,11 @@ your path.)
 - **measure**: the research export's learner measures from a list of learning events and turns.
 - **misconceptions** and **components**: Eedi's misconceptions for a goal or a standard's text, with
   their attribution; the component manifests.
+- **serve**: answers apps over HTTP as VIABLE answers their agent runs: `POST /v1/agents/<slug>/runs`
+  with the same fields, reading a run back, `GET /v1/agents` and `GET /health`. An agent file answers
+  at its file's name, a package's agents at their slugs from VIABLE (else their refs). Without
+  `--token-env` it serves only this machine. It logs one JSON line per run, without what the learner
+  wrote ([self-hosting.md](self-hosting.md)).
 - **suggest**: suggested changes to How the AI helps from learner records and runs (below).
 - **view**: the teacher's page (below) from learner records and `run --json` traces, each file
   recognized by its shape; a course package supplies its first activity's teaching settings, and
@@ -66,7 +78,7 @@ your path.)
 | --- | --- |
 | Input, LLM, Condition, Router, Agent, VETTING, Guardrail, Transform, State, Loop, For each, Parallel, Ask, Reply (output), Note | Run as on VIABLE. An Agent step's memory tools work as Memory steps do; in a course package it searches the package's knowledge bases (`search_knowledge`, not browsing or reading whole documents) and calls its other agents. |
 | Fetch URL (http) | Reads JSON, text and HTML pages, which become Markdown (headings, paragraphs, lists, links, images, table rows) without scripts, styles or site chrome. |
-| Knowledge | In a course package: searches the files its knowledge bases name, by keywords (BM25, Chinese and Japanese by character pairs), as VIABLE searches a keyword-only knowledge base, with sources the Reply cites. Files are text, Markdown, CSV, JSON or HTML, by `path` in the package's folder or downloaded from their `url`, and must match their `bytes` and `sha256`. A PDF or Office file, a website, or an agent file's knowledge bases fail with a message saying so. |
+| Knowledge | In a course package (a folder or its `.viable.zip`), and in folders mapped with `--knowledge` to an agent file's knowledge bases: searches their files by keywords (BM25, Chinese and Japanese by character pairs), as VIABLE searches a keyword-only knowledge base, with sources the Reply cites. Files are text, Markdown, CSV, JSON or HTML, by `path` in the package's folder or zip or downloaded from their `url`, and must match their `bytes` and `sha256`. A PDF or Office file is searched through the text VIABLE packaged with it (`text_path`). A website, a file without that text, or an agent file's knowledge base without a folder fails with a message saying so. |
 | Sub-agent | In a course package: another of its agents, by its ref or its name as a slug, run as VIABLE runs a sub-agent (the message only, without the activity's teaching settings, within the run's budgets, two levels deep). Any other agent fails with a message saying so. |
 | Speech | Calls your endpoint's `/audio/speech` (OpenAI's shape) and saves the audio to a file. A Kokoro voice (`af_heart`) goes as it is to a Kokoro model, else as OpenAI's `nova` (female) or `onyx` (male). |
 | Memory | With `--memory-dir` and `--learner`: one JSON file per learner in that folder, holding each fact, its id and when it was saved, recalled by keywords. Skipped otherwise, with its reason in the trace. |
@@ -103,14 +115,17 @@ minutes. The harness doesn't price calls: cost is always 0.
 
 For a host that keeps its own harness, assistant or agent SDK:
 
-- **An MCP server.** `viable-harness mcp` serves eleven tools over stdio: `check_reply`,
+- **An MCP server.** `viable-harness mcp` serves twelve tools over stdio: `check_reply`,
   `teaching_instructions`, `find_misconceptions`, `compute_measures`, `validate_document`,
-  `run_agent`, `run_agent_tests`, `draft_tests`, `calibrate_judge`, `suggest_changes` and
-  `list_components`. A client starts it as
+  `run_agent`, `run_agent_tests`, `draft_tests`, `calibrate_judge`, `suggest_changes`,
+  `list_components` and `find_public_goods`. A client starts it as
   `node /path/to/viable-harness/bin/viable-harness.mjs mcp`, with `OPENAI_BASE_URL` and
   `OPENAI_API_KEY` for the tools that call models. The host decides whether a reply is checked and
   what is kept; only an agent the harness runs is guaranteed its VETTING steps
-  ([mcp.md](mcp.md)).
+  ([mcp.md](mcp.md)). In an assistant that renders MCP Apps, `check_reply`, `run_agent_tests` and
+  `suggest_changes` also show their result as a small page: each VETTING round with the reviewer's
+  reason, each test case with the judge's reason, each suggestion with its evidence. Other
+  assistants get the same text as before ([mcp.md](mcp.md#views-in-assistants-that-show-mcp-apps)).
 - **Agent Skills.** `skills/` holds four, a folder with a `SKILL.md` each, for assistants that load
   skills: `writing-how-the-ai-helps`, `checking-replies-with-vetting`, `writing-agent-tests` and
   `reading-learning-evidence`. Each uses the tools and commands above; copy a folder to where your
@@ -188,7 +203,22 @@ payload.json`. The harness sends only the fields `receives` lists, calls an HTTP
 in `sends_to`, and stops at a timeout or an oversized answer; what an MCP server does on its own
 machine it can't control. A judge component rates agent tests (`runAgentTests(doc, cases, {
 judgeComponent })`), and `detect`, `measure` and `lookup` call a detector, a measure or a context
-component. Start one from `integrations/_template/`.
+component. A graph runs a step component as a Component step: its manifest held in the step, `inputs`
+mapping each field it receives to a template, its answer `{ output, flags }` read as `{{id.output}}`
+and `{{id.flags}}`, and `on_error: continue` to go on without it when it is refused, times out or
+answers out of shape ([components.md](components.md#a-step-in-a-graph)). Start one from
+`integrations/_template/`.
+
+## The public goods catalog
+
+[catalog.md](catalog.md) lists open datasets, benchmarks, knowledge graphs, standards, evaluators,
+models, tools, open content and learning data repositories for K-12 AI, one file each in `catalog/`
+(`schemas/catalog-entry.schema.json`), each with its license and a note on gated, non-commercial,
+mixed or conflicting terms, how to get it, whether it is released, the slot it would fill and the
+date it was checked. `searchCatalog(query, { kind, slot, open })`, `viable-harness catalog` and the
+MCP tool `find_public_goods` search it with no network; `open` keeps what anyone may download and
+use, commercially too. Entries describe, not endorse; listing is not joining the harness (that is a
+component).
 
 ## Agent tests
 

@@ -1,0 +1,40 @@
+{
+  "id": "mathdial",
+  "name": "MathDial",
+  "kind": "dataset",
+  "summary": "About 2,900 one-to-one tutoring dialogues in which teachers tutor a simulated student through a mistaken solution to a math word problem, annotated with the teachers' moves.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "not stated (grade school word problems)",
+  "url": "https://github.com/eth-nlped/mathdial",
+  "repository": "https://huggingface.co/datasets/eth-nlped/mathdial",
+  "license": {
+    "spdx": [
+      "CC-BY-SA-4.0",
+      "CC-BY-4.0"
+    ],
+    "note": "The GitHub README says CC BY-SA 4.0 and the Hugging Face card CC BY 4.0; there is no LICENSE file. The students' turns are written by a model.",
+    "source": "https://github.com/eth-nlped/mathdial"
+  },
+  "access": "open download",
+  "formats": [
+    "JSONL",
+    "CSV"
+  ],
+  "made_by": [
+    "ETH Zurich",
+    "TU Darmstadt",
+    "Nanyang Technological University"
+  ],
+  "cite": "Macina, J., Daheim, N., Chowdhury, S. P., Sinha, T., Kapur, M., Gurevych, I., & Sachan, M. (2023). MathDial: A Dialogue Tutoring Dataset with Rich Pedagogical Properties Grounded in Math Reasoning Problems. Findings of EMNLP 2023. https://doi.org/10.18653/v1/2023.findings-emnlp.372",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "simulated-learner"
+    ],
+    "how": "Its students hold a mistaken solution through a whole dialogue, a pattern for a simulated learner in agent tests; its teachers' moves show replies to compare against."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

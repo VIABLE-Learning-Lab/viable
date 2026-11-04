@@ -79,6 +79,16 @@
       "expect": { "valid": false, "errors": ["$.files[0].url"] }
     },
     {
+      "id": "package-file-text-copy", "description": "A PDF in a .viable.zip may name a Markdown copy of its text, for a reader that can't read PDFs.",
+      "input": { "kind": "course-package", "document": { "format": "viable.course-package", "version": 1, "files": [{ "ref": "file-1", "name": "moon.pdf", "path": "files/file-1-moon.pdf", "text_path": "files/file-1-moon.pdf.md", "text_sha256": "2c49be9e93295bc46fcbda067e4ab026a62b735be1a3ea90121eb2d15adb94c6" }], "course": { "title": "Moon phases" } } },
+      "expect": { "valid": true, "errors": [] }
+    },
+    {
+      "id": "package-file-text-sha256", "description": "A text copy's sha256 is 64 hexadecimal digits.",
+      "input": { "kind": "course-package", "document": { "format": "viable.course-package", "version": 1, "files": [{ "ref": "file-1", "name": "moon.pdf", "path": "files/file-1-moon.pdf", "text_path": "files/file-1-moon.pdf.md", "text_sha256": "not-a-hash" }], "course": { "title": "Moon phases" } } },
+      "expect": { "valid": false, "errors": ["$.files[0].text_sha256"] }
+    },
+    {
       "id": "package-knowledge-base-file-resolves", "description": "A knowledge base's file_refs must name the package's files.",
       "input": { "kind": "course-package", "document": { "format": "viable.course-package", "version": 1, "files": [{ "ref": "notes", "name": "notes.md", "url": "https://example.org/notes.md" }], "knowledge_bases": [{ "ref": "kb", "name": "Notes", "file_refs": ["notes", "gone"] }], "course": { "title": "Library" } } },
       "expect": { "valid": false, "errors": ["$.knowledge_bases[0].file_refs[1]"] }

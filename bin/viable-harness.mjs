@@ -3,14 +3,16 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { runAgent } from '../src/run.js';
+import { readAgentFile, runAgent } from '../src/run.js';
+import { loadAgents, serve } from '../src/serve.js';
 import { KINDS, validateDocument } from '../src/validate.js';
 import { measureLearner } from '../src/measures.js';
 import { checkReply } from '../src/check.js';
 import { draftCases, runAgentTests } from '../src/testRuns.js';
 import { calibrateJudge, casesFromTurns } from '../src/testCases.js';
 import { findMisconceptions } from '../src/utils/misconceptions.js';
-import { COMPONENTS } from '../src/components/index.js';
+import { COMPONENTS, SLOTS } from '../src/components/index.js';
+import { CATALOG_KINDS, openForAnyUse, searchCatalog } from '../src/catalog.js';
 import { callComponent } from '../src/components/call.js';
 import { teacherView, viewInputs } from '../src/view.js';
 import { serveStdio } from '../src/mcp.js';
@@ -19,9 +21,14 @@ import { toStatements } from '../src/xapi.js';
 import { suggestChanges } from '../src/suggest.js';
 
 const USAGE = `Usage:
-  viable-harness run <agent.json | package.json> --input "..." [--context file.json] [--teaching teaching.json]
-                     [--section <id>] [--agent <ref>] [--model <id>] [--speech-model <id>] [--image-model <id>]
-                     [--media-dir <dir>] [--no-speech] [--memory-dir <dir> --learner <id>] [--no-teaching] [--json]
+  viable-harness run <agent.json | package.json | course.viable.zip> --input "..." [--context file.json]
+                     [--teaching teaching.json] [--section <id>] [--agent <ref>] [--model <id>] [--speech-model <id>]
+                     [--image-model <id>] [--media-dir <dir>] [--no-speech] [--memory-dir <dir> --learner <id>]
+                     [--knowledge <kb-id>=<folder>...] [--no-teaching] [--json]
+  viable-harness serve <agent.json | package.json | course.viable.zip | folder>... [--port 8080] [--host 127.0.0.1]
+                       [--token-env <NAME>] [--cors <origin>] [--max-body <bytes>] [--timeout <seconds>] [--max-runs <n>]
+                       [--model <id>] [--speech-model <id>] [--image-model <id>] [--media-dir <dir>] [--no-speech]
+                       [--memory-dir <dir>] [--knowledge <kb-id>=<folder>...]
   viable-harness validate <file> [--kind ${KINDS.join('|')}]
   viable-harness measure <events.json>
   viable-harness check --reply "..." [--message "..."] (--guideline "..." | --question "..." --answer-key "...")
@@ -34,6 +41,8 @@ const USAGE = `Usage:
   viable-harness calibrate <results.json> <labels.json> [--json]
   viable-harness misconceptions "<a few words, or a standard's text>" [--json]
   viable-harness components [--json]
+  viable-harness catalog [words...] [--kind ${CATALOG_KINDS.join('|')}]
+                         [--slot ${SLOTS.join('|')}] [--open] [--json]
   viable-harness component <manifest.json> --input payload.json [--json]
   viable-harness view <record.json | run.json | package.json...> [--teaching teaching.json] [--out report.html]
   viable-harness suggest <record.json | run.json | package.json...> [--teaching teaching.json] [--json]
@@ -48,7 +57,15 @@ model and --image-model every image model; Speech and Image steps call the endpo
 new temp folder); --no-speech lets Speech steps pass on. Memory steps keep what they save in --memory-dir, one file
 per --learner (a pseudonymous ID, never a name); delete <dir>/<id>.json to forget a learner. Without them, Memory
 steps are skipped. From a course package it runs the first agent (or --agent) with the teaching settings of the first
-activity that uses it, and searches the package's own files for its Knowledge steps.
+activity that uses it, and searches the package's own files for its Knowledge steps; a .viable.zip (a course
+downloaded with its files) holds them. --knowledge kb_123=./guides searches a folder's text files for the knowledge
+base an agent file names kb_123 (a package's by its ref), once per knowledge base.
+serve answers apps over HTTP as VIABLE answers their agent runs (docs/self-hosting.md): POST /v1/agents/<slug>/runs
+with the same fields, GET /v1/agents/<slug>/runs/<run_id>, GET /v1/agents and GET /health. An agent file answers at
+its file's name, a package's agents at their refs. --token-env names the variable holding the token callers send
+(Authorization: Bearer); without one it serves only 127.0.0.1. With --memory-dir, a run's user is the learner's
+pseudonymous ID for Memory steps. Limits: --max-body (default 1048576 bytes), --timeout (default 300 seconds) and
+--max-runs at once (default 4). It logs one JSON line per run, without what the learner wrote.
 check reviews one reply with VETTING (the reviewer is --reviewer, else --model); with --rewrite, a failed reply is
 rewritten by --model and reviewed again. test runs each case through the agent and has --judge-model rate the reply.
 draft-tests has --model draft cases from How the AI helps, for a person to read before they run; tests-from-records
@@ -58,6 +75,8 @@ view writes the teacher's page from learner records and run --json traces, with 
 settings and the changes suggest proposes from them; it prints it without --out.
 component calls an out-of-process component (http or mcp) with the fields of the payload its manifest receives,
 and prints its answer as its slot reads it (docs/components.md). An MCP server starts in the manifest's folder.
+catalog searches the public goods catalog (docs/catalog.md) by words, kind and the slot each would fill; --open keeps
+what anyone may download and use, commercially too. Entries describe, not endorse: check a license before you use it.
 mcp serves these as MCP tools over stdio (docs/mcp.md).`;
 
 // A course package's first activity with teaching settings, or a teaching settings file itself.
@@ -83,16 +102,30 @@ function printCalibration(checked) {
   if (checked.disagreements.length) console.log(`\nDisagreements:\n${checked.disagreements.map((item) => `  ${item.name}: person ${item.person}, judge ${item.judge}${item.reason ? `: ${item.reason}` : ''}`).join('\n')}`);
 }
 
+// --knowledge <id>=<folder>, once per knowledge base: { id: folder }, or null without any.
+function knowledgeOf(pairs = []) {
+  const folders = new Map();
+  for (const pair of pairs) {
+    const at = pair.indexOf('=');
+    if (at < 1 || at === pair.length - 1) throw new Error(`--knowledge takes <knowledge base id>=<folder>, not "${pair}".`);
+    if (folders.has(pair.slice(0, at))) throw new Error(`--knowledge names ${pair.slice(0, at)} twice.`);
+    folders.set(pair.slice(0, at), pair.slice(at + 1));
+  }
+  return folders.size ? Object.fromEntries(folders) : null;
+}
+
 const readJson = (file) => {
   try { return JSON.parse(readFileSync(file, 'utf8')); } catch (error) { throw new Error(`Couldn't read ${file} as JSON: ${error.message}`); }
 };
 
-function printRun(result) {
+// The model each step called: the one --model, --speech-model or --image-model gave, else the agent's.
+function printRun(result, swapped = {}) {
   console.log(`Agent: ${result.agent}${result.activity ? ` (with the teaching settings of "${result.activity}")` : result.teaching ? ' (with your teaching settings)' : ''}\n`);
   console.log(result.output.text || '(no reply text)');
   console.log('\nSteps:');
   for (const step of result.steps) {
-    const model = step.model ? `, ${step.model}` : '';
+    const used = step.nodeType === 'speech' ? swapped.speechModel : step.nodeType === 'image' ? swapped.imageModel : swapped.model;
+    const model = step.model ? `, ${used || step.model}` : '';
     const tokens = step.tokens != null ? `, ${step.tokens} tokens` : '';
     console.log(`  ${step.stepNumber}. ${step.nodeId} (${step.nodeType}) ${step.status} in ${step.durationMs} ms${model}${tokens}${step.error ? `: ${step.error}` : ''}`);
     if (step.nodeType === 'vetting' && step.output) {
@@ -102,6 +135,7 @@ function printRun(result) {
     if (step.output?.skipped) console.log(`       skipped: ${typeof step.output.skipped === 'string' ? step.output.skipped : step.output.reason}`);
     else if (step.nodeType === 'speech' && step.output?.url) console.log(`       audio: ${step.output.url}`);
     else if (step.nodeType === 'image') for (const url of step.output?.urls || []) console.log(`       picture: ${url}`);
+    else if (step.nodeType === 'component') for (const flag of step.output?.flags || []) console.log(`       flag: ${flag.label}${flag.reason ? `: ${flag.reason}` : ''}`);
   }
   console.log(`\n${result.modelCalls} model calls, ${result.usage.total} tokens.`);
 }
@@ -121,7 +155,7 @@ async function main(argv) {
   const { values, positionals } = parseArgs({
     args: argv,
     allowPositionals: true,
-    options: { reply: { type: 'string' }, message: { type: 'string' }, guideline: { type: 'string' }, question: { type: 'string' }, 'answer-key': { type: 'string' }, 'key-concepts': { type: 'string' }, rewrite: { type: 'string' }, reviewer: { type: 'string' }, 'judge-model': { type: 'string' }, input: { type: 'string', short: 'i' }, context: { type: 'string' }, teaching: { type: 'string' }, section: { type: 'string' }, 'no-teaching': { type: 'boolean' }, agent: { type: 'string' }, model: { type: 'string' }, json: { type: 'boolean' }, kind: { type: 'string' }, help: { type: 'boolean', short: 'h' }, out: { type: 'string' }, 'speech-model': { type: 'string' }, 'audio-dir': { type: 'string' }, 'no-speech': { type: 'boolean' }, 'home-page': { type: 'string' }, 'activity-base': { type: 'string' }, 'include-text': { type: 'boolean' }, count: { type: 'string' }, 'image-model': { type: 'string' }, 'media-dir': { type: 'string' }, 'memory-dir': { type: 'string' }, learner: { type: 'string' } }
+    options: { reply: { type: 'string' }, message: { type: 'string' }, guideline: { type: 'string' }, question: { type: 'string' }, 'answer-key': { type: 'string' }, 'key-concepts': { type: 'string' }, rewrite: { type: 'string' }, reviewer: { type: 'string' }, 'judge-model': { type: 'string' }, input: { type: 'string', short: 'i' }, context: { type: 'string' }, teaching: { type: 'string' }, section: { type: 'string' }, 'no-teaching': { type: 'boolean' }, agent: { type: 'string' }, model: { type: 'string' }, json: { type: 'boolean' }, kind: { type: 'string' }, help: { type: 'boolean', short: 'h' }, out: { type: 'string' }, 'speech-model': { type: 'string' }, 'audio-dir': { type: 'string' }, 'no-speech': { type: 'boolean' }, 'home-page': { type: 'string' }, 'activity-base': { type: 'string' }, 'include-text': { type: 'boolean' }, count: { type: 'string' }, 'image-model': { type: 'string' }, 'media-dir': { type: 'string' }, 'memory-dir': { type: 'string' }, learner: { type: 'string' }, knowledge: { type: 'string', multiple: true }, port: { type: 'string' }, host: { type: 'string' }, 'token-env': { type: 'string' }, cors: { type: 'string' }, 'max-body': { type: 'string' }, timeout: { type: 'string' }, 'max-runs': { type: 'string' }, slot: { type: 'string' }, open: { type: 'boolean' } }
   });
   const [command, file] = positionals;
   if (values.help || !command) return console.log(USAGE);
@@ -148,6 +182,18 @@ async function main(argv) {
     }
     return;
   }
+  if (command === 'catalog') {
+    const found = searchCatalog(positionals.slice(1).join(' '), { kind: values.kind ?? null, slot: values.slot ?? null, open: values.open === true });
+    if (values.json) return console.log(JSON.stringify(found, null, 2));
+    if (!found.entries.length) return console.log('No public good matched. Try other words, or fewer filters.');
+    for (const entry of found.entries) {
+      console.log(`${entry.name} (${entry.kind}${entry.status === 'expected' ? ', not yet released' : ''}): ${entry.summary}`);
+      console.log(`  license: ${entry.license.spdx.join(', ') || 'none stated'}${entry.license.unclear ? ' (unclear)' : ''}${entry.license.note ? `: ${entry.license.note}` : ''}`);
+      console.log(`  access: ${entry.access}${openForAnyUse(entry) ? ', and its licenses allow any use' : ''}; fits: ${entry.fits.slots.join(', ') || 'no slot yet'}${entry.in_harness ? `; built in as ${entry.in_harness}` : ''}`);
+      console.log(`  ${entry.url}  (checked ${entry.verified_at})`);
+    }
+    return console.log(`\n${plural(found.entries.length, 'public good')}${found.match === 'most_words' ? ' sharing the most words (none had them all)' : ''}. Entries describe, not endorse: check each license before you use it.`);
+  }
   if (command === 'misconceptions') {
     const found = findMisconceptions(positionals.slice(1).join(' '));
     if (values.json) return console.log(JSON.stringify(found, null, 2));
@@ -167,7 +213,7 @@ async function main(argv) {
     if (command === 'suggest') {
       if (values.json) return console.log(JSON.stringify(suggestions, null, 2));
       if (!suggestions.length) return console.log('No suggestions from this evidence.');
-      for (const item of suggestions) console.log(`${item.change}\n  why: ${item.why}\n${item.evidence.map((line) => `  - ${line}`).join('\n')}\n  ${item.patch ? `proposes: ${JSON.stringify(item.patch)}` : 'proposes nothing: look at the evidence'}\n`);
+      for (const item of suggestions) console.log(`${item.change}\n  why: ${item.why}\n${item.evidence.map((line) => `  - ${line}`).join('\n')}\n  ${item.patch ? `changes: ${Object.keys(item.patch).join(', ')} (--json shows the new settings)` : 'changes nothing: look at the evidence'}\n`);
       return console.log('The teacher decides.');
     }
     const html = teacherView({ ...inputs, teaching, suggestions });
@@ -187,17 +233,33 @@ async function main(argv) {
     const checked = calibrateJudge(readJson(file), readJson(positionals[2]));
     return values.json ? console.log(JSON.stringify(checked, null, 2)) : printCalibration(checked);
   }
-  const doc = readJson(file);
-  if (command === 'draft-tests') {
-    const drafted = await draftCases(teachingOf(doc), { model: values.model, count: values.count == null ? 8 : Number(values.count), section: values.section ?? null });
-    for (const item of drafted.rejected) console.error(`Rejected case ${item.index}${item.name ? ` (${item.name})` : ''}: ${item.reason}`);
-    if (drafted.missing.length) console.error(`No valid case covers: ${drafted.missing.join(', ')}. Draft again, or write those yourself.`);
-    console.error(`${plural(drafted.cases.length, 'case')} drafted by ${drafted.model}${drafted.section ? ` for section ${drafted.section}: run them with --section ${drafted.section}` : ''}. A model's guesses: read and edit each before running it.`);
-    if (!drafted.cases.length) { process.exitCode = 1; return; }
-    return writeCases(drafted.cases, values.out);
+  if (command === 'serve') {
+    const whole = (name, fallback, least = 1) => {
+      if (values[name] == null) return fallback;
+      const n = Number(values[name]);
+      if (!Number.isInteger(n) || n < least) throw new Error(`--${name} takes a whole number of at least ${least}, not "${values[name]}".`);
+      return n;
+    };
+    const tokenEnv = values['token-env'];
+    if (tokenEnv && !process.env[tokenEnv]) throw new Error(`--token-env ${tokenEnv}: set ${tokenEnv} to the token apps will send (Authorization: Bearer <token>).`);
+    const { agents, skipped } = await loadAgents(positionals.slice(1));
+    for (const line of skipped) console.error(`Skipped ${line}`);
+    if (!agents.length) throw new Error(`No agent file or course package in ${positionals.slice(1).join(', ')}.`);
+    const { server, url, notes } = await serve(agents, {
+      port: whole('port', 8080, 0), host: values.host ?? '127.0.0.1', token: tokenEnv ? process.env[tokenEnv] : null, cors: values.cors ?? null,
+      maxBodyBytes: whole('max-body', 1024 * 1024), timeoutMs: whole('timeout', 300) * 1000, maxRuns: whole('max-runs', 4),
+      knowledge: knowledgeOf(values.knowledge), memoryDir: values['memory-dir'] ?? null, model: values.model ?? null,
+      speechModel: values['speech-model'] ?? null, imageModel: values['image-model'] ?? null, mediaDir: values['media-dir'] ?? null, silent: values['no-speech'] === true
+    });
+    console.error(`Serving ${plural(agents.length, 'agent')} at ${url}${tokenEnv ? `, to callers with the token in ${tokenEnv}` : ''}:`);
+    for (const agent of agents) console.error(`  POST ${url}/v1/agents/${agent.slug}/runs  ${agent.name} (${agent.file}${agent.ref ? `, agent ${agent.ref}` : ''})`);
+    for (const note of notes) console.error(`Note: ${note}`);
+    for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => server.close(() => process.exit(0)));
+    return;
   }
   if (command === 'run') {
     if (values.input == null) throw new Error('Give the learner\'s message with --input "...".');
+    const { doc, dir, zip } = await readAgentFile(file);
     const result = await runAgent(doc, {
       input: values.input,
       context: values.context ? readJson(values.context) : null,
@@ -211,9 +273,20 @@ async function main(argv) {
       memoryDir: values['memory-dir'] ?? null,
       learner: values.learner ?? null,
       silent: values['no-speech'] === true,
-      dir: dirname(resolve(file))
+      knowledge: knowledgeOf(values.knowledge),
+      dir,
+      zip
     });
-    return values.json ? console.log(JSON.stringify(result, null, 2)) : printRun(result);
+    return values.json ? console.log(JSON.stringify(result, null, 2)) : printRun(result, { model: values.model, speechModel: values['speech-model'], imageModel: values['image-model'] });
+  }
+  const doc = readJson(file);
+  if (command === 'draft-tests') {
+    const drafted = await draftCases(teachingOf(doc), { model: values.model, count: values.count == null ? 8 : Number(values.count), section: values.section ?? null });
+    for (const item of drafted.rejected) console.error(`Rejected case ${item.index}${item.name ? ` (${item.name})` : ''}: ${item.reason}`);
+    if (drafted.missing.length) console.error(`No valid case covers: ${drafted.missing.join(', ')}. Draft again, or write those yourself.`);
+    console.error(`${plural(drafted.cases.length, 'case')} drafted by ${drafted.model}${drafted.section ? ` for section ${drafted.section}: run them with --section ${drafted.section}` : ''}. A model's guesses: read and edit each before running it.`);
+    if (!drafted.cases.length) { process.exitCode = 1; return; }
+    return writeCases(drafted.cases, values.out);
   }
   if (command === 'validate') {
     const { kind, errors } = validateDocument(doc, values.kind);

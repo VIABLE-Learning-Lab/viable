@@ -1,0 +1,36 @@
+{
+  "id": "productive-coaching-benchmark",
+  "name": "Productive Coaching benchmark (Quill.org)",
+  "kind": "benchmark",
+  "summary": "A planned benchmark, with educator-written feedback and annotated AI coaching sessions from several learning tools, for judging whether an AI's coaching on student writing is productive.",
+  "subjects": [
+    "writing"
+  ],
+  "grades": "8-12",
+  "url": "https://k12-ai-infrastructure.org/quill/",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-4.0"
+    ],
+    "note": "Stated intent on the project page, for its leaderboard and adoption package; not yet stated for each dataset.",
+    "source": "https://k12-ai-infrastructure.org/quill/"
+  },
+  "access": "not yet released",
+  "access_note": "A public leaderboard is planned, hosted by Learning Commons.",
+  "formats": [],
+  "made_by": [
+    "Quill.org"
+  ],
+  "cite": "Quill.org. The \"Productive Coaching\" Benchmark: Validating Coaching Quality in Student-Facing, AI-Powered Learning Tools. K-12 AI Infrastructure Program project, https://k12-ai-infrastructure.org/quill/",
+  "status": "expected",
+  "expected": "The project page gives no date; the Program expects its new public goods to be released in summer 2027.",
+  "fits": {
+    "slots": [
+      "judge"
+    ],
+    "how": "Its rubric and scoring could rate coaching replies in agent tests."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

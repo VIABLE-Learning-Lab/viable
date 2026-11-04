@@ -1,0 +1,38 @@
+{
+  "id": "mathfish",
+  "name": "MathFish",
+  "kind": "benchmark",
+  "summary": "About 21,800 K-12 math problems from Illustrative Mathematics and Fishtank Learning, labeled with the Common Core standards they address, for testing whether models can tell which standards a problem fits.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "K-12",
+  "url": "https://huggingface.co/datasets/allenai/mathfish",
+  "repository": "https://github.com/allenai/mathfish",
+  "license": {
+    "spdx": [
+      "ODC-By-1.0",
+      "CC-BY-4.0",
+      "CC-BY-NC-SA-4.0",
+      "Apache-2.0"
+    ],
+    "note": "The dataset is labeled ODC-By 1.0; its Illustrative Mathematics problems are CC BY 4.0 and its Fishtank Learning problems CC BY-NC-SA 4.0 (non-commercial). The code is Apache-2.0.",
+    "source": "https://huggingface.co/datasets/allenai/mathfish"
+  },
+  "access": "open download",
+  "formats": [
+    "JSONL",
+    "images"
+  ],
+  "made_by": [
+    "Allen Institute for AI"
+  ],
+  "cite": "Lucy, L., August, T., Wang, R. E., Soldaini, L., Allison, C., & Lo, K. (2024). Mathfish: Evaluating Language Model Math Reasoning via Grounding in Educational Curricula. arXiv:2408.04226",
+  "status": "released",
+  "fits": {
+    "slots": [],
+    "how": "No slot yet: it could test whether a problem an agent writes fits the standard in an activity's teaching settings."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

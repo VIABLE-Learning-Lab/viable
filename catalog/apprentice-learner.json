@@ -1,0 +1,37 @@
+{
+  "id": "apprentice-learner",
+  "name": "Apprentice Learner Architecture",
+  "kind": "tool",
+  "summary": "Simulated learners that learn from worked examples and correctness feedback inside tutoring systems, used to model students, compare tutors and author tutors.",
+  "subjects": [
+    "any"
+  ],
+  "grades": "not stated",
+  "url": "https://github.com/apprenticelearner/AL_Core",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "MIT"
+    ],
+    "source": "https://github.com/apprenticelearner/AL_Core/blob/main/LICENSE"
+  },
+  "access": "open download",
+  "formats": [
+    "Python"
+  ],
+  "made_by": [
+    "Christopher J. MacLellan",
+    "Erik Harpstead",
+    "Daniel Weitekamp"
+  ],
+  "cite": "MacLellan, C. J., & Koedinger, K. R. (2022). Domain-General Tutor Authoring with Apprentice Learner Models. International Journal of Artificial Intelligence in Education, 32, 76-117. https://doi.org/10.1007/s40593-020-00214-2",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "simulated-learner"
+    ],
+    "how": "Could play the learner in agent tests out of process, its errors compared with real students'."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

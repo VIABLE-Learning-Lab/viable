@@ -1,0 +1,36 @@
+{
+  "id": "csta-computer-science-standards",
+  "name": "CSTA PK–12 Computer Science Standards (2026)",
+  "kind": "standards",
+  "summary": "What students should know and be able to do in computer science from pre-K through high school, with high school specialty standards in areas such as AI, cybersecurity and data science.",
+  "subjects": [
+    "computer-science"
+  ],
+  "grades": "PK-12",
+  "url": "https://csteachers.org/k12standards/",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-NC-SA-4.0"
+    ],
+    "note": "Non-commercial and share-alike; the Computer Science Teachers Association handles other licensing requests.",
+    "source": "https://csteachers.org/wp-content/uploads/2026/07/2026-CSTA-PK%E2%80%9312-Computer-Science-Standards.pdf"
+  },
+  "access": "open download",
+  "formats": [
+    "PDF"
+  ],
+  "made_by": [
+    "Computer Science Teachers Association"
+  ],
+  "cite": "Computer Science Teachers Association. (2026). 2026 CSTA PK–12 computer science standards. https://doi.org/10.1145/3820482",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "context"
+    ],
+    "how": "A standard's text could be an activity's context, as Learning Commons standards are; under a non-commercial license, only as opt-in context."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

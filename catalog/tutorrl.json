@@ -1,0 +1,36 @@
+{
+  "id": "tutorrl",
+  "name": "TutorRL-7B",
+  "kind": "model",
+  "summary": "Open 7-billion-parameter math tutoring models, trained with reinforcement learning against a simulated student to guide students rather than give answers away.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "not stated",
+  "url": "https://huggingface.co/eth-nlped/TutorRL-7B",
+  "repository": "https://github.com/eth-lre/PedagogicalRL",
+  "license": {
+    "spdx": [
+      "Apache-2.0",
+      "CC-BY-4.0"
+    ],
+    "note": "The model cards say Apache-2.0, linking a LICENSE file the repository doesn't have; the repository's README and the paper say CC BY 4.0. Fine-tuned from Qwen2.5-7B-Instruct (Apache-2.0).",
+    "source": "https://huggingface.co/eth-nlped/TutorRL-7B"
+  },
+  "access": "open download",
+  "formats": [
+    "safetensors"
+  ],
+  "made_by": [
+    "ETH Zurich",
+    "TU Darmstadt"
+  ],
+  "cite": "Dinucu-Jianu, D., Macina, J., Daheim, N., Hakimi, I., Gurevych, I., & Sachan, M. (2025). From Problem-Solving to Teaching Problem-Solving: Aligning LLMs with Pedagogy using Reinforcement Learning. EMNLP 2025. arXiv:2505.15607",
+  "status": "released",
+  "fits": {
+    "slots": [],
+    "how": "No slot: it is a model, which the harness can run as an agent's model through an OpenAI-compatible server."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

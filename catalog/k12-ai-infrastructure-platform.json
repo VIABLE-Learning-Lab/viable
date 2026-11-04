@@ -1,0 +1,35 @@
+{
+  "id": "k12-ai-infrastructure-platform",
+  "name": "K-12 AI Infrastructure Platform",
+  "kind": "learning-data-repository",
+  "summary": "The K-12 AI Infrastructure Program's hub, run by DrivenData, for the datasets, benchmarks and challenges it funds or lists, each shown with its license.",
+  "subjects": [
+    "any"
+  ],
+  "grades": "K-12",
+  "url": "https://platform.k12-ai-infrastructure.org/",
+  "repository": null,
+  "license": {
+    "spdx": [],
+    "note": "Each resource has its own license, shown on its page; of the ten datasets it listed on 2026-11-03, four were non-commercial.",
+    "source": "https://platform.k12-ai-infrastructure.org/termsofuse/"
+  },
+  "access": "account",
+  "access_note": "Its terms of use ask for a registered account to download.",
+  "formats": [
+    "web",
+    "ZIP"
+  ],
+  "made_by": [
+    "K-12 AI Infrastructure Program (Digital Promise)",
+    "DrivenData"
+  ],
+  "cite": "K-12 AI Infrastructure Program Platform, https://platform.k12-ai-infrastructure.org",
+  "status": "released",
+  "fits": {
+    "slots": [],
+    "how": "No slot: a source of datasets and benchmarks, where the Program asks its grantees to release their public goods."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

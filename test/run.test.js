@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HELP_LEVELS, runAgent } from '../src/index.js';
+import { zipFile } from './zipFile.js';
 
 const json = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
 const argument = json('../examples/argument-writing.json');
@@ -172,4 +173,47 @@ test('the CLI saves pictures in --media-dir and keeps memory between runs with -
   const nameless = await run('--input', 'x', '--memory-dir', memory);
   assert.equal(nameless.code, 1);
   assert.match(nameless.err, /Memory needs the learner's pseudonymous ID/);
+});
+
+test('the CLI runs a .viable.zip, and --knowledge maps an agent file’s knowledge base to a folder', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'viable-harness-test-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const server = createServer((req, res) => {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', () => {
+      const prompt = JSON.parse(body).messages.map((message) => message.content).join('\n');
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({ choices: [{ message: { content: /Moon pulls on the oceans/.test(prompt) ? 'The Moon pulls the sea [1].' : 'No passage.' }, finish_reason: 'stop' }] }));
+    });
+  });
+  await new Promise((done) => server.listen(0, '127.0.0.1', done));
+  t.after(() => server.close());
+  const run = (...args) => new Promise((done) => {
+    const bin = fileURLToPath(new URL('../bin/viable-harness.mjs', import.meta.url));
+    const child = spawn(process.execPath, [bin, 'run', ...args, '--model', 'qwen3'], { env: { ...process.env, OPENAI_BASE_URL: `http://127.0.0.1:${server.address().port}/v1` } });
+    let out = '';
+    let err = '';
+    child.stdout.on('data', (chunk) => { out += chunk; });
+    child.stderr.on('data', (chunk) => { err += chunk; });
+    child.on('close', (code) => done({ code, out, err }));
+  });
+  mkdirSync(join(dir, 'sea'));
+  writeFileSync(join(dir, 'sea', 'tides.md'), '# Tides\n\nTides rise and fall twice a day because the Moon pulls on the oceans.');
+  const graph = { entry: 'search', nodes: [{ id: 'search', type: 'knowledge', config: { knowledge_bases: ['kb_9f2'] }, next: 'answer' }, { id: 'answer', type: 'llm', config: { model: 'm', system: '{{search.context}}' }, next: 'out' }, { id: 'out', type: 'output', config: { text: '{{answer.content}}' } }] };
+  writeFileSync(join(dir, 'sea.agent.json'), JSON.stringify({ format: 'viable.agent', format_version: 1, name: 'Sea', graph }));
+  const mapped = await run(join(dir, 'sea.agent.json'), '--input', 'Why do tides rise?', '--knowledge', `kb_9f2=${join(dir, 'sea')}`);
+  assert.equal(mapped.code, 0, mapped.err);
+  assert.match(mapped.out, /The Moon pulls the sea \[1\]\./);
+  const unmapped = await run(join(dir, 'sea.agent.json'), '--input', 'Why do tides rise?');
+  assert.equal(unmapped.code, 1);
+  assert.match(unmapped.err, /--knowledge <id>=<folder>/);
+  assert.match((await run(join(dir, 'sea.agent.json'), '--input', 'x', '--knowledge', 'kb_9f2')).err, /--knowledge takes <knowledge base id>=<folder>, not "kb_9f2"/);
+
+  const course = join(dir, 'sea.viable.zip');
+  const pkg = { format: 'viable.course-package', version: 1, course: { title: 'Sea' }, files: [{ ref: 'file-1', name: 'tides.md', path: 'files/file-1-tides.md' }], knowledge_bases: [{ ref: 'kb-1', name: 'Sea', file_refs: ['file-1'] }], agents: [{ ref: 'agent-1', name: 'Sea', graph: { ...graph, nodes: graph.nodes.map((node) => (node.type === 'knowledge' ? { ...node, config: { knowledge_base_refs: ['kb-1'] } } : node)) } }] };
+  writeFileSync(course, zipFile([{ name: 'package.viable.json', data: JSON.stringify(pkg) }, { name: 'files/file-1-tides.md', data: readFileSync(join(dir, 'sea', 'tides.md')) }]));
+  const zipped = await run(course, '--input', 'Why do tides rise?');
+  assert.equal(zipped.code, 0, zipped.err);
+  assert.match(zipped.out, /The Moon pulls the sea \[1\]\.\n[\s\S]*search \(knowledge\) completed/);
 });

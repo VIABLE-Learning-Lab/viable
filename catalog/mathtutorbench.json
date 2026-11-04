@@ -1,0 +1,41 @@
+{
+  "id": "mathtutorbench",
+  "name": "MathTutorBench",
+  "kind": "benchmark",
+  "summary": "A benchmark that scores AI tutors on seven math tutoring tasks across math expertise, understanding the student and teaching, with a trained reward model for open-ended scaffolding.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "not stated",
+  "url": "https://eth-lre.github.io/mathtutorbench/",
+  "repository": "https://github.com/eth-lre/mathtutorbench",
+  "license": {
+    "spdx": [
+      "CC-BY-4.0",
+      "CC-BY-SA-4.0"
+    ],
+    "unclear": true,
+    "note": "The README's badge says CC BY 4.0; its footer and the project page say CC BY-SA 4.0. There is no LICENSE file and no separate license for the code, and bundled data from MathDial and Bridge keeps those datasets' terms.",
+    "source": "https://github.com/eth-lre/mathtutorbench"
+  },
+  "access": "open download",
+  "access_note": "Running it needs a local model server or an OpenAI-compatible API key.",
+  "formats": [
+    "Python",
+    "JSON",
+    "YAML"
+  ],
+  "made_by": [
+    "ETH Zurich"
+  ],
+  "cite": "Macina, J., Daheim, N., Hakimi, I., Kapur, M., Gurevych, I., & Sachan, M. (2025). MathTutorBench: A Benchmark for Measuring Open-ended Pedagogical Capabilities of LLM Tutors. EMNLP 2025. https://doi.org/10.18653/v1/2025.emnlp-main.11",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "judge"
+    ],
+    "how": "Its teaching tasks and reward model could rate replies in agent tests, once its license is confirmed."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

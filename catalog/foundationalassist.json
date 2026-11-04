@@ -1,0 +1,38 @@
+{
+  "id": "foundationalassist",
+  "name": "FoundationalASSIST",
+  "kind": "dataset",
+  "summary": "1.7 million interactions of 5,000 grade 6 to 8 students with 3,395 math problems in ASSISTments, with the problems' text, students' first answers, hint requests and skills.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "6-8",
+  "url": "https://huggingface.co/datasets/ASSISTments/FoundationalASSIST",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-NC-4.0"
+    ],
+    "note": "Non-commercial, for research and education under ASSISTments' responsible use guidelines.",
+    "source": "https://huggingface.co/datasets/ASSISTments/FoundationalASSIST"
+  },
+  "access": "request",
+  "access_note": "Gated on Hugging Face: a form asking for affiliation and intended use, reviewed weekly.",
+  "formats": [
+    "CSV"
+  ],
+  "made_by": [
+    "The ASSISTments Foundation"
+  ],
+  "cite": "Worden, E., Heffernan, C., Heffernan, N., & Sonkar, S. (2026). FoundationalASSIST: An Educational Dataset for Foundational Knowledge Tracing and Pedagogical Grounding of LLMs. arXiv:2602.00070",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "measure",
+      "simulated-learner"
+    ],
+    "how": "Its real answer sequences could check mastery measures, and its students' wrong answers could test which errors a simulated learner reproduces."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

@@ -1,0 +1,36 @@
+{
+  "id": "openscied",
+  "name": "OpenSciEd",
+  "kind": "content",
+  "summary": "A free science curriculum designed for the NGSS, for elementary, middle and high school (biology, chemistry and physics).",
+  "subjects": [
+    "science"
+  ],
+  "grades": "K-12",
+  "url": "https://openscied.org/",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-NC-4.0"
+    ],
+    "note": "CC BY-NC 4.0 since October 18, 2023 (its terms page still also names CC BY 4.0). Commercial use is under OpenSciEd's own agreement, which can require fees and prohibits using the materials to train AI models.",
+    "source": "https://openscied.org/commercial-license/"
+  },
+  "access": "open download",
+  "formats": [
+    "web"
+  ],
+  "made_by": [
+    "OpenSciEd"
+  ],
+  "cite": "OpenSciEd, https://openscied.org",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "context"
+    ],
+    "how": "Its units could be an activity's readings for non-commercial use. The Learning Commons Knowledge Graph lists it as a gated dataset."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

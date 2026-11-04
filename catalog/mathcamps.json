@@ -1,0 +1,34 @@
+{
+  "id": "mathcamps",
+  "name": "MathCAMPS",
+  "kind": "benchmark",
+  "summary": "9,707 synthetic math word problems, each tied to one of 44 Common Core standards for grades K to 8, with follow-up questions.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "K-8",
+  "url": "https://github.com/gpoesia/mathcamps",
+  "repository": "https://huggingface.co/datasets/mathcamps/mathcamps",
+  "license": {
+    "spdx": [
+      "MIT"
+    ],
+    "note": "The problems were written by language models from a grammar for each standard; the repository also holds over 220,000 model responses.",
+    "source": "https://github.com/gpoesia/mathcamps/blob/main/LICENSE"
+  },
+  "access": "open download",
+  "formats": [
+    "JSON"
+  ],
+  "made_by": [
+    "Shubhra Mishra, Gabriel Poesia and Noah D. Goodman"
+  ],
+  "cite": "Mishra, S., Poesia, G., & Goodman, N. D. (2025). From Next-Token to Mathematics: The Learning Dynamics of Mathematical Reasoning in Language Models. COLM 2025. arXiv:2407.00900",
+  "status": "released",
+  "fits": {
+    "slots": [],
+    "how": "No slot yet: its problems, with answers and standards, could be agent test cases for an activity's standard."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

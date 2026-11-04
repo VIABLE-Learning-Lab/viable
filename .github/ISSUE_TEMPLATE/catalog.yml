@@ -1,0 +1,63 @@
+name: Add a public good to the catalog
+description: List an open dataset, benchmark, knowledge graph, standard, evaluator, model, tool, open content or learning data repository for K-12 AI.
+labels: [catalog, needs triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The catalog (docs/catalog.md) describes public goods for K-12 AI; it doesn't endorse them. Every fact in an entry comes from a primary source: the work's own site, repository, license file, dataset card or paper. Closed commercial products, and work only marketing describes, stay out. To bring the work into the harness itself, open a component proposal instead.
+  - type: input
+    id: name
+    attributes:
+      label: The public good
+      description: Its name, and a link to its own page.
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options: [knowledge graph, standards or progressions, open content, dataset, benchmark, evaluator, model, tool, learning data repository, not sure]
+    validations:
+      required: true
+  - type: textarea
+    id: license
+    attributes:
+      label: License
+      description: As its license file, dataset card or page states it, with the link. Say which part each license covers, and whether any part is gated or non-commercial, or its sources disagree.
+    validations:
+      required: true
+  - type: dropdown
+    id: access
+    attributes:
+      label: How to get it
+      options: [open download, API key, account, request, not yet released]
+    validations:
+      required: true
+  - type: input
+    id: status
+    attributes:
+      label: Released, or when it's expected
+      description: For work not out yet, the date its makers give, with the link.
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Subjects, grades, makers and how to cite it
+      description: As its makers state them.
+    validations:
+      required: true
+  - type: dropdown
+    id: slot
+    attributes:
+      label: The slot it would fill
+      description: docs/components.md describes the six.
+      options: [context, step, detector, judge, simulated learner, measure, none yet, not sure]
+  - type: checkboxes
+    id: checked
+    attributes:
+      label: Checked
+      options:
+        - label: I checked the link, the license and the status against the primary source today.
+          required: true

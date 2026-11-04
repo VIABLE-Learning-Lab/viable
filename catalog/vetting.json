@@ -1,0 +1,37 @@
+{
+  "id": "vetting",
+  "name": "VETTING",
+  "kind": "tool",
+  "summary": "A method, with a Python package, in which a second model checks each AI reply against a policy the learner never sees, before the learner sees the reply.",
+  "subjects": [
+    "any"
+  ],
+  "grades": "not stated",
+  "url": "https://doi.org/10.1016/j.caeai.2026.100646",
+  "repository": "https://github.com/hichipli/vetting-python",
+  "license": {
+    "spdx": [
+      "MIT"
+    ],
+    "note": "The package is MIT; the paper is open access under CC BY 4.0.",
+    "source": "https://github.com/hichipli/vetting-python/blob/main/LICENSE"
+  },
+  "access": "open download",
+  "access_note": "The Python package calls a model provider on your own key.",
+  "formats": [
+    "PyPI package"
+  ],
+  "made_by": [
+    "VIABLE Lab"
+  ],
+  "cite": "Li, H., Zhang, S., & Botelho, A. F. (2026). VETTING: A dual-LLM framework for in-loop safety verification via policy isolation in educational AI. Computers and Education: Artificial Intelligence, 11, 100646. https://doi.org/10.1016/j.caeai.2026.100646",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "step"
+    ],
+    "how": "The harness runs it in JavaScript: the graph's VETTING step and checkReply review each reply against the guideline or answer key and the teacher's settings."
+  },
+  "in_harness": "viable/vetting",
+  "verified_at": "2026-11-03"
+}

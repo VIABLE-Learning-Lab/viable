@@ -1,0 +1,37 @@
+{
+  "id": "persuade-2",
+  "name": "PERSUADE 2.0",
+  "kind": "dataset",
+  "summary": "Over 25,000 argumentative essays by U.S. students in grades 6 to 12, with holistic scores and annotated argument elements rated for effectiveness.",
+  "subjects": [
+    "writing"
+  ],
+  "grades": "6-12",
+  "url": "https://github.com/scrosseye/persuade_corpus_2.0",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-4.0"
+    ],
+    "note": "CC BY 4.0 since 2026-10-27; earlier copies say CC BY-NC-SA 4.0. The data includes writers' demographics.",
+    "source": "https://github.com/scrosseye/persuade_corpus_2.0"
+  },
+  "access": "open download",
+  "access_note": "CSV files linked from the README; the test set's archive password is in the README.",
+  "formats": [
+    "CSV"
+  ],
+  "made_by": [
+    "The Learning Agency Lab",
+    "Georgia State University",
+    "Vanderbilt University"
+  ],
+  "cite": "Crossley, S. A., Tian, Y., Baffour, P., Franklin, A., Benner, M., & Boser, U. (2024). A large-scale corpus for assessing written argumentation: PERSUADE 2.0. Assessing Writing, 61, 100865. https://doi.org/10.1016/j.asw.2024.100865",
+  "status": "released",
+  "fits": {
+    "slots": [],
+    "how": "No slot yet: its essays could be the learner's work in agent test cases for a writing feedback agent."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

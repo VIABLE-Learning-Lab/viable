@@ -103,6 +103,21 @@
       "id": "groups-name-steps", "description": "A canvas group holds steps the graph has.",
       "input": { "graph": { "entry": "in", "groups": [{ "id": "g", "nodes": ["ghost"] }], "nodes": [{ "id": "in", "type": "input", "next": "out" }, { "id": "out", "type": "output" }] } },
       "expect": { "valid": false, "code": "invalid_graph", "includes": ["groups"] }
+    },
+    {
+      "id": "component-step", "description": "A component step holds a step component's manifest and maps the fields it receives to run values.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "hint" }, { "id": "hint", "type": "component", "config": { "manifest": {"id": "acme/fraction-hints", "version": "0.1.0", "slot": "step", "label": "Fraction hints", "summary": "Writes one hint for a fraction problem.", "runs": {"kind": "http", "entry": "https://hints.example.org/v1/hint"}, "receives": ["learner_message"], "sends_to": ["hints.example.org"], "uses_models": false, "license": {"code": "Apache-2.0"}, "authors": ["Example Lab"], "cite": "Example Lab (2027). Fraction hints.", "evidence": {"original": "Synthetic.", "integration": "Synthetic.", "unknown": "Synthetic."}, "risk": "high", "maintainer": {"name": "Example Lab"}, "harness": ">=0.2.0 <1.0.0"}, "inputs": { "learner_message": "{{input}}" } }, "next": "out" }, { "id": "out", "type": "output", "config": { "text": "{{hint.output}}" } }] } },
+      "expect": { "valid": true }
+    },
+    {
+      "id": "component-step-slot", "description": "A component step runs step components only; a judge is refused, naming the slot.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "hint" }, { "id": "hint", "type": "component", "config": { "manifest": {"id": "acme/fraction-hints", "version": "0.1.0", "slot": "judge", "label": "Fraction hints", "summary": "Writes one hint for a fraction problem.", "runs": {"kind": "http", "entry": "https://hints.example.org/v1/hint"}, "receives": ["learner_message"], "sends_to": ["hints.example.org"], "uses_models": false, "license": {"code": "Apache-2.0"}, "authors": ["Example Lab"], "cite": "Example Lab (2027). Fraction hints.", "evidence": {"original": "Synthetic.", "integration": "Synthetic.", "unknown": "Synthetic."}, "risk": "high", "maintainer": {"name": "Example Lab"}, "harness": ">=0.2.0 <1.0.0"}, "inputs": {} }, "next": "out" }, { "id": "out", "type": "output", "config": { "text": "{{hint.output}}" } }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["judge"] }
+    },
+    {
+      "id": "component-step-inputs", "description": "A component step sends only fields its manifest receives; the error names the extra one.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "hint" }, { "id": "hint", "type": "component", "config": { "manifest": {"id": "acme/fraction-hints", "version": "0.1.0", "slot": "step", "label": "Fraction hints", "summary": "Writes one hint for a fraction problem.", "runs": {"kind": "http", "entry": "https://hints.example.org/v1/hint"}, "receives": ["learner_message"], "sends_to": ["hints.example.org"], "uses_models": false, "license": {"code": "Apache-2.0"}, "authors": ["Example Lab"], "cite": "Example Lab (2027). Fraction hints.", "evidence": {"original": "Synthetic.", "integration": "Synthetic.", "unknown": "Synthetic."}, "risk": "high", "maintainer": {"name": "Example Lab"}, "harness": ">=0.2.0 <1.0.0"}, "inputs": { "learner_message": "{{input}}", "conversation": "{{history}}" } }, "next": "out" }, { "id": "out", "type": "output", "config": { "text": "{{hint.output}}" } }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["conversation"] }
     }
   ]
 }

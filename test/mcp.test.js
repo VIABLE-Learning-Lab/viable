@@ -8,7 +8,7 @@ import { COMPONENTS, HELP_LEVELS } from '../src/index.js';
 import { MAX_ARGUMENTS, PROTOCOL_VERSIONS, mcpServer } from '../src/mcp.js';
 
 const json = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
-const TOOL_NAMES = ['check_reply', 'teaching_instructions', 'find_misconceptions', 'compute_measures', 'validate_document', 'run_agent', 'draft_tests', 'run_agent_tests', 'calibrate_judge', 'suggest_changes', 'list_components'];
+const TOOL_NAMES = ['check_reply', 'teaching_instructions', 'find_misconceptions', 'compute_measures', 'validate_document', 'run_agent', 'draft_tests', 'run_agent_tests', 'calibrate_judge', 'suggest_changes', 'list_components', 'find_public_goods'];
 
 // A scripted OpenAI-compatible endpoint: each call takes the next reply (the last one repeats).
 function scripted(...replies) {
@@ -213,6 +213,18 @@ test('list_components: every manifest', async () => {
   assert.deepEqual(structuredContent.components.map((item) => item.id), COMPONENTS.map((item) => item.id));
 });
 
+test('find_public_goods: entries by words and filters, described as data to check, not endorsed', async () => {
+  const found = await call(mcpServer(), 'find_public_goods', { query: 'misconceptions', slot: 'context' });
+  assert.equal(found.structuredContent.match, 'every_word');
+  assert.ok(found.structuredContent.entries.some((entry) => entry.in_harness === 'eedi/misconceptions-graph'));
+  assert.ok(found.structuredContent.entries.every((entry) => entry.fits.slots.includes('context') && entry.license && entry.verified_at));
+  assert.match(found.content[0].text, /describe, not endorse/);
+  const open = await call(mcpServer(), 'find_public_goods', { open: true });
+  assert.ok(open.structuredContent.entries.length > 0 && open.structuredContent.entries.every((entry) => entry.access === 'open download'));
+  assert.equal((await call(mcpServer(), 'find_public_goods', { kind: 'spreadsheet' })).isError, true);
+  assert.match((await call(mcpServer(), 'find_public_goods', { query: 'zzzzqqq' })).content[0].text, /No public good matched/);
+});
+
 test('protocol errors are JSON-RPC errors; a tool’s own failures are results the assistant can act on', async () => {
   const handle = mcpServer();
   const code = async (message) => (await handle(message)).error.code;
@@ -279,6 +291,48 @@ test('over stdio, stdout carries only JSON-RPC, and model calls go to the endpoi
     assert.match(err, /MCP server on stdio/);
   } finally {
     server.close();
+  }
+});
+
+const APPS = { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: ['text/html;profile=mcp-app'] } } };
+
+test('a client that renders MCP Apps gets views: the extension, the resources, and each view on its tool', async () => {
+  const handle = mcpServer({ fetch: scripted('PASS').fetch });
+  const { result } = await handle(request('initialize', { protocolVersion: '2025-06-18', capabilities: APPS, clientInfo: { name: 'test', version: '1' } }));
+  assert.deepEqual(result.capabilities, { tools: { listChanged: false }, resources: { listChanged: false }, extensions: { 'io.modelcontextprotocol/ui': {} } });
+  const { tools } = (await handle(request('tools/list'))).result;
+  const viewed = tools.filter((tool) => tool._meta);
+  assert.deepEqual(viewed.map((tool) => tool.name), ['check_reply', 'run_agent_tests', 'suggest_changes']);
+  for (const { _meta } of viewed) assert.equal(_meta['ui/resourceUri'], _meta.ui.resourceUri, 'the older flat key too');
+
+  const { resources } = (await handle(request('resources/list'))).result;
+  assert.deepEqual(resources.map((item) => item.uri), viewed.map((tool) => tool._meta.ui.resourceUri));
+  for (const resource of resources) {
+    assert.match(resource.uri, /^ui:\/\/viable-harness\//);
+    assert.equal(resource.mimeType, 'text/html;profile=mcp-app');
+    const { contents } = (await handle(request('resources/read', { uri: resource.uri }))).result;
+    assert.deepEqual(contents.map(({ uri, mimeType, _meta }) => ({ uri, mimeType, _meta })), [{ uri: resource.uri, mimeType: 'text/html;profile=mcp-app', _meta: { ui: { prefersBorder: true } } }]);
+    assert.match(contents[0].text, /^<!doctype html>/);
+  }
+  assert.deepEqual((await handle(request('resources/templates/list'))).result, { resourceTemplates: [] });
+  assert.equal((await handle(request('resources/read', { uri: 'ui://viable-harness/nope' }))).error.code, -32002);
+  assert.equal((await handle(request('resources/read', {}))).error.code, -32602);
+
+  // The result is the same as any client's: the view reads it, and the text stays for the model.
+  const args = { reply: 'Which denominator works for both?', guideline: 'Never give the answer.', reviewer: 'judge' };
+  const plain = mcpServer({ fetch: scripted('PASS').fetch });
+  await plain(initialize('2025-06-18'));
+  assert.deepEqual(await call(handle, 'check_reply', args), await call(plain, 'check_reply', args));
+});
+
+test('a client that doesn’t say it renders MCP Apps sees the server as before', async () => {
+  const unlike = [{}, { extensions: {} }, { extensions: { 'io.modelcontextprotocol/ui': {} } }, { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: ['text/html'] } } }];
+  for (const capabilities of unlike) {
+    const handle = mcpServer();
+    const { result } = await handle(request('initialize', { protocolVersion: '2025-06-18', capabilities, clientInfo: { name: 'test', version: '1' } }));
+    assert.deepEqual(result.capabilities, { tools: { listChanged: false } }, JSON.stringify(capabilities));
+    assert.ok((await handle(request('tools/list'))).result.tools.every((tool) => !('_meta' in tool)));
+    assert.equal((await handle(request('resources/read', { uri: 'ui://viable-harness/check-reply' }))).error.code, -32601);
   }
 });
 

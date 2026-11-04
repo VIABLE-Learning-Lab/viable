@@ -1,0 +1,35 @@
+{
+  "id": "pybkt",
+  "name": "pyBKT",
+  "kind": "tool",
+  "summary": "A Python library of Bayesian Knowledge Tracing models that estimate a student's mastery of each skill from their sequence of right and wrong answers.",
+  "subjects": [
+    "any"
+  ],
+  "grades": "not stated",
+  "url": "https://github.com/CAHLR/pyBKT",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "MIT"
+    ],
+    "source": "https://github.com/CAHLR/pyBKT/blob/master/LICENSE"
+  },
+  "access": "open download",
+  "formats": [
+    "PyPI package"
+  ],
+  "made_by": [
+    "Computational Approaches to Human Learning Research Lab, UC Berkeley"
+  ],
+  "cite": "Badrinath, A., Wang, F., & Pardos, Z. A. (2021). pyBKT: An Accessible Python Library of Bayesian Knowledge Tracing Models. EDM 2021, 468-474.",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "measure"
+    ],
+    "how": "Could compute mastery from learning events out of process (it is Python), beside the harness's own mastery streak."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

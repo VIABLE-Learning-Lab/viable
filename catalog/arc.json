@@ -1,0 +1,37 @@
+{
+  "id": "arc",
+  "name": "AI2 Reasoning Challenge (ARC)",
+  "kind": "benchmark",
+  "summary": "7,787 multiple-choice science questions from standardized tests for grades 3 to 9, split into a Challenge Set and an Easy Set.",
+  "subjects": [
+    "science"
+  ],
+  "grades": "3-9",
+  "url": "https://huggingface.co/datasets/allenai/ai2_arc",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-SA-4.0"
+    ],
+    "unclear": true,
+    "note": "The Hugging Face card is tagged CC BY-SA 4.0, but the README in AI2's original download says \"Do not distribute\" and \"Non-commercial use only\", and some questions are used under license from a research partner.",
+    "source": "https://huggingface.co/datasets/allenai/ai2_arc"
+  },
+  "access": "open download",
+  "formats": [
+    "Parquet",
+    "JSONL",
+    "CSV"
+  ],
+  "made_by": [
+    "Allen Institute for AI"
+  ],
+  "cite": "Clark, P., Cowhey, I., Etzioni, O., Khot, T., Sabharwal, A., Schoenick, C., & Tafjord, O. (2018). Think you have Solved Question Answering? Try ARC, the AI2 Reasoning Challenge. arXiv:1803.05457",
+  "status": "released",
+  "fits": {
+    "slots": [],
+    "how": "No slot yet: its questions and answer keys could be agent test cases, once its terms are clear."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

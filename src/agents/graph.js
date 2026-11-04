@@ -12,6 +12,8 @@ import { MODEL_MODES } from '../config/modelModes.js';
 import { validSketch } from '../utils/agentCollaboration.js';
 import { agentVettingControls, vettingControlErrors } from '../utils/vettingControls.js';
 import { describeSteps } from './steps/index.js';
+import { checkSchema, schemaFor } from '../schemas.js';
+import { entryProblem } from '../components/contract.js';
 
 export const NODE_TYPES = Object.freeze([
   'input',
@@ -35,7 +37,8 @@ export const NODE_TYPES = Object.freeze([
   'parallel',
   'ask',
   'note',
-  'vetting'
+  'vetting',
+  'component'
 ]);
 
 export const DEFAULT_GRAPH_LIMITS = Object.freeze({
@@ -76,7 +79,8 @@ export const NODE_REQUIREMENTS = Object.freeze({
   guardrail: Object.freeze({ all: Object.freeze(['checks']) }),
   parallel: Object.freeze({ all: Object.freeze(['paths']) }),
   each: Object.freeze({ all: Object.freeze(['items']) }),
-  vetting: Object.freeze({ all: Object.freeze(['model']) })
+  vetting: Object.freeze({ all: Object.freeze(['model']) }),
+  component: Object.freeze({ all: Object.freeze(['manifest']) })
 });
 
 /** Outgoing handle names a node exposes; router and parallel derive theirs from config. */
@@ -139,6 +143,7 @@ export function describeGraphSchema(limits = DEFAULT_GRAPH_LIMITS) {
       'Picture memory: on a server-kept conversation, picture steps (remember, default true) keep the pictures shown by the number the learner sees. Every step reads {{conversation.pictures}} [{number, url, prompt, label, description}], {{conversation.unfinished}} (numbers not drawn; pass as items to finish them in the same numbers) and {{conversation.picture_history}}. One edited picture keeps its number; several pictures (new ones, versions, a mixture) become a new set numbered from 1. Pictures a run draws but its reply does not attach are not remembered. An llm step with pictures=true is told the current pictures by number, the newest marked, at the start of its turn message. Do not copy picture URLs or plans into State.',
       'An llm step can attach images from earlier steps with config.images=[{image_url:"{{step.url}}"}]. A URL in prompt text is only text. Typed image inputs are downloaded safely and converted to provider-native image data; the selected chat model must support image input.',
       `An llm node may declare at most ${limits.maxStructuredOutputs} structured outputs: type string, number, boolean or list. A list ({name, type: "list", max_items 1–10, fields: [{name, type, description}]}) returns several items with up to 10 fields each, or text items without fields; use it instead of numbered copies like prompt_1, prompt_2.`,
+      'A component step runs another team\'s method from its manifest, held inline in config.manifest (schemas/component.schema.json; slot step, runs http or mcp). config.inputs maps each field the manifest receives to a template, such as {"learner_message": "{{input}}"}; only those fields are sent, to the entry on a host its sends_to lists, without following a redirect, within 30 seconds and 1 MiB. Later steps read {{id.output}} and {{id.flags}} [{label, reason}]. A refusal, timeout or answer out of shape stops the run unless config.on_error is continue, which returns status=failed and error {code, message}. Hosts may run fewer kinds: VIABLE calls http components only, over public HTTPS, so an mcp component runs with viable-harness on your own machine.',
       `run_limits may set max_model_calls (${RUN_LIMITS.max_model_calls.join('–')}) and timeout_seconds (${RUN_LIMITS.timeout_seconds.join('–')}).`
     ],
     // Each step type's settings, outputs and plain-language sentence, as the portal's step panel shows them.
@@ -275,6 +280,7 @@ export function validateGraph(graph, options = {}) {
       errors.push(`HTTP node "${node.id}" requires config.url.`);
     }
     errors.push(...validateOrchestrationNode(node));
+    if (node.type === 'component') errors.push(...componentErrors(node, options.componentRuns));
   }
 
   for (const node of nodes) {
@@ -391,6 +397,31 @@ function validateOrchestrationNode(node) {
     }
     if (cfg.scope != null && !['run', 'conversation'].includes(cfg.scope)) errors.push(`${label} scope must be run or conversation.`);
   }
+  return errors;
+}
+
+// A Component step's manifest is inline: it fits schemas/component.schema.json, fills the step slot and
+// runs in a way this host can (componentRuns: http and mcp unless the host says fewer); its inputs name
+// only fields the manifest receives.
+function componentErrors(node, componentRuns = ['http', 'mcp']) {
+  const cfg = node.config || {};
+  const label = `Component node "${node.id}"`;
+  const manifest = cfg.manifest;
+  if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) return [`${label} requires config.manifest, the component's manifest as JSON (schemas/component.schema.json).`];
+  const errors = checkSchema(schemaFor('component'), manifest).map((error) => `${label} manifest ${error}.`);
+  if (errors.length) return errors;
+  const { id, runs, receives } = manifest;
+  if (manifest.slot !== 'step') errors.push(`${label} runs ${id}, a ${manifest.slot} component; a Component step runs step components.`);
+  if (runs.kind === 'core') errors.push(`${label}: ${id} runs in the harness's own process${runs.step_type ? `, as the ${runs.step_type} step` : ''}, not as a Component step.`);
+  else if (!componentRuns.includes(runs.kind)) errors.push(`${label} runs ${id} over ${runs.kind}, which this host can't: it runs only ${componentRuns.join(' and ')} components.${runs.kind === 'mcp' ? ' An MCP server runs with viable-harness on your own machine.' : ''}`);
+  else if (runs.kind === 'http' && entryProblem(manifest)) errors.push(`${label}: ${entryProblem(manifest)}`);
+  const inputs = cfg.inputs ?? {};
+  if (typeof inputs !== 'object' || Array.isArray(inputs)) errors.push(`${label} inputs must map fields the component receives to values, such as { "learner_message": "{{input}}" }.`);
+  else {
+    const extra = Object.keys(inputs).filter((key) => !receives.includes(key));
+    if (extra.length) errors.push(`${label} sends ${extra.join(', ')}, which ${id} doesn't receive (it receives ${receives.join(', ') || 'nothing'}).`);
+  }
+  if (cfg.on_error != null && !['stop', 'continue'].includes(cfg.on_error)) errors.push(`${label} on_error must be stop or continue.`);
   return errors;
 }
 

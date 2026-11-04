@@ -1,0 +1,37 @@
+{
+  "id": "bridge",
+  "name": "Bridge",
+  "kind": "dataset",
+  "summary": "700 real tutoring conversations with 1st to 5th graders that end in a math mistake, each annotated by expert teachers with the error, a remediation strategy and an expert's reply.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "1-5",
+  "url": "https://github.com/rosewang2008/bridge",
+  "repository": "https://huggingface.co/datasets/rose-e-wang/bridge",
+  "license": {
+    "spdx": [
+      "MIT",
+      "CC-BY-NC-4.0"
+    ],
+    "note": "The GitHub LICENSE is MIT, for the software; the Hugging Face card says CC BY-NC 4.0, so treat the data as non-commercial.",
+    "source": "https://huggingface.co/datasets/rose-e-wang/bridge"
+  },
+  "access": "open download",
+  "formats": [
+    "JSON"
+  ],
+  "made_by": [
+    "Stanford University"
+  ],
+  "cite": "Wang, R. E., Zhang, Q., Robinson, C., Loeb, S., & Demszky, D. (2024). Bridging the Novice-Expert Gap via Models of Decision-Making: A Case Study on Remediating Math Mistakes. NAACL 2024. https://doi.org/10.18653/v1/2024.naacl-long.120",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "judge"
+    ],
+    "how": "Its experts' replies and strategies could be the reference a judge compares an agent's reply to a mistake against, for non-commercial use."
+  },
+  "in_harness": null,
+  "verified_at": "2026-11-03"
+}

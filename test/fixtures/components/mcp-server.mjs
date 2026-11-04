@@ -1,5 +1,5 @@
-// A stdio MCP server for the mcp path of callComponent: its tool "echo" answers with the arguments it
-// got and the names of its environment's variables. node mcp-server.mjs <mode>: echo, text (the same
+// A stdio MCP server for the mcp path of callComponent: its tool "echo" answers as a step component,
+// its output the arguments it got and the names of its environment's variables, with one flag. node mcp-server.mjs <mode>: echo, text (the same
 // answer as text only), ask (asks the client to sample first, then answers as text), fail (isError),
 // slow (never answers the call), crash (exits when called), noise (writes a line that isn't JSON).
 import { createInterface } from 'node:readline';
@@ -20,7 +20,7 @@ for await (const line of createInterface({ input: process.stdin })) {
     call = message;
     if (mode === 'ask') { send({ jsonrpc: '2.0', id: 'sample', method: 'sampling/createMessage', params: { messages: [] } }); continue; }
   } else if (message.id !== 'sample') continue;
-  const answer = { received: call.params.arguments, env: Object.keys(process.env).sort(), ...(message.id === 'sample' ? { sampling: message.error?.code } : {}) };
+  const answer = { output: { received: call.params.arguments, env: Object.keys(process.env).sort(), ...(message.id === 'sample' ? { sampling: message.error?.code } : {}) }, flags: [{ label: 'Echoed', reason: 'The fixture answers with what it got.' }] };
   const said = [{ type: 'text', text: JSON.stringify(answer) }];
   if (mode === 'echo') send({ jsonrpc: '2.0', id: call.id, result: { content: said, structuredContent: answer } });
   if (mode === 'text' || mode === 'ask') send({ jsonrpc: '2.0', id: call.id, result: { content: said } });

@@ -15,6 +15,7 @@
  */
 
 import { fetchAgentFile, fetchAgentUrl } from './http.js';
+import { CALL_LIMITS } from '../components/contract.js';
 import { MAX_SPEECH_CHARACTERS, speechRuns } from '../utils/speechText.js';
 import { parseBase64Asset } from '../utils/base64Asset.js';
 import { ExpressionError, evaluateCondition, evaluateExpression, expressionPaths, openContext, renderTemplate, renderValue, resolvePath } from './expression.js';
@@ -86,6 +87,7 @@ export async function runAgentGraph(env, graph, options = {}) {
     generateSpeech: noHostService('speech'),
     transcribeAudio: noHostService('transcription'),
     storeAudio: noHostService('audio storage'),
+    callComponent: noHostService('component'),
     billingFields: () => ({}),
     models: NO_MODEL_CATALOG,
     httpFetch: (url, init) => fetch(url, init),
@@ -895,6 +897,27 @@ const HANDLERS = {
     step.input = { method: String(request.method || 'POST').toUpperCase(), url: safeUrl(request.url) };
     const output = await fetchAgentUrl(request, services);
     return { output, next: node.next };
+  },
+
+  // Another team's method (docs/components.md): the values config.inputs names, sent to the component
+  // its manifest describes through the host's callComponent. A refusal, timeout or answer out of shape
+  // stops the run, or with on_error continue returns status failed and goes on.
+  async component(node, ctx, env, services, hooks, budgets, step) {
+    const cfg = node.config || {};
+    const manifest = cfg.manifest || {};
+    const named = `${manifest.id}@${manifest.version}`;
+    const inputs = cfg.inputs && typeof cfg.inputs === 'object' ? cfg.inputs : {};
+    const payload = renderValue(inputs, ctx.scope());
+    step.input = { component: named, entry: manifest.runs?.kind === 'http' ? safeUrl(manifest.runs.entry) : manifest.runs?.entry ?? null, inputs: stepValue(renderValue(inputs, ctx.traceScope()), 8000) };
+    try {
+      const answer = await services.callComponent(manifest, payload, { timeoutMs: Math.max(1, Math.min(CALL_LIMITS.timeoutMs, ctx.deadline - Date.now())) });
+      return { output: { ...answer, component: named, status: 'completed' }, next: node.next };
+    } catch (caught) {
+      if (!String(caught?.code).startsWith('component_')) throw caught;
+      const error = new AgentRunError(`Component step "${node.id}": ${caught.message}`, { status: caught.code === 'component_refused' ? 422 : 502, code: caught.code });
+      if (cfg.on_error !== 'continue') throw error;
+      return { output: { output: null, flags: [], component: named, status: 'failed', error: { code: caught.code, message: clip(caught.message, 500) } }, error, next: node.next };
+    }
   },
 
   loop(node, ctx, env, services, hooks, budgets) {
