@@ -1,3 +1,6 @@
 node_modules/
 dist/
 .DS_Store
+# Copied in when the Harness is packed.
+harness/LICENSE
+harness/NOTICE

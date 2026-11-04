@@ -1,0 +1,42 @@
+{
+  "name": "@viable-lab/harness",
+  "version": "0.3.0",
+  "description": "What teaching needs, around any AI model or agent: context before the reply, rules, checks and evidence. No dependencies.",
+  "license": "MIT",
+  "author": "Hongming (Chip) Li",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json",
+    "./schemas/*": "./schemas/*",
+    "./*": "./src/*"
+  },
+  "bin": {
+    "viable-harness": "./bin/viable-harness.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "schemas",
+    "conformance",
+    "skills",
+    "docs",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VIABLE-Learning-Lab/viable.git",
+    "directory": "harness"
+  },
+  "scripts": {
+    "test": "node --import ./test/no-network.js --test test/*.test.js",
+    "prepack": "node scripts/prepack.mjs"
+  }
+}

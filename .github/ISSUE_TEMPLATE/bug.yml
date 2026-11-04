@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in the harness does the wrong thing.
+description: Something in the Harness or the Engine does the wrong thing.
 labels: [bug, needs triage]
 body:
   - type: markdown

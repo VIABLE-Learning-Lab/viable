@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        A component joins the harness in one of six slots, with a manifest that says what learner data it receives, which hosts it calls, its license and its evidence (docs/components.md). We can write the adapter with you; you review it for fidelity to your work.
+        A component joins the Harness in one of six slots, with a manifest that says what learner data it receives, which hosts it calls, its license and its evidence (docs/components.md). We can write the adapter with you; you review it for fidelity to your work.
   - type: input
     id: name
     attributes:

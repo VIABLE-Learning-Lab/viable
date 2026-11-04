@@ -1,0 +1,118 @@
+# VIABLE Engine
+
+**AI tutors, courses and class lists on your own server, set up in the browser.**
+
+For a school, a library or a lab that wants this running on its own machines, on any model. Nothing here needs VIABLE's hosted
+service, and nothing is held back because it is open: add a model and what it makes possible turns on.
+
+<p align="center">
+  <img src="../docs/images/console.gif" width="100%" alt="The Engine's console. A teacher writes the goal of an activity and how far the AI may go, types what a learner might say, and sees what the AI would be told at that moment. Then a learner's page opens with that activity, and the AI replies by asking how they got their answer.">
+</p>
+
+<sub>A real server, from empty. Only the model's words are scripted here.</sub>
+
+## Ten minutes, from nothing to a class
+
+```sh
+npx github:VIABLE-Learning-Lab/viable start
+```
+
+It keeps everything in `~/.viable-engine`, and opens its console, signed in.
+
+1. **Models.** Add a provider (OpenAI, OpenRouter, Ollama, LM Studio, or any OpenAI-compatible address), test it, and say what each
+   of its models is for.
+2. **Courses.** Start from nothing, from an example, or from a file.
+3. **An activity.** Say what learners do, the goal, and how far the AI may go. Type what a learner might say to see exactly what the
+   AI would be told at that moment. **Try it**, as a learner, without being counted. Then open it.
+4. **People.** Let anyone with the link in, or paste your class list and print a card for each learner with their personal code.
+5. **Share** the link or its QR code. A class on your network needs `--host 0.0.0.0`, on a network you trust, since that's plain
+   http; a class anywhere needs a [server](#where-it-runs) on https.
+
+Then **Progress** shows who has done what, what to look at, and any change the evidence suggests, which you can accept with one
+button.
+
+What you change reaches learners on their next message. There is nothing to restart and nothing to publish.
+
+## What each model turns on
+
+| Role | Calls | What it makes possible |
+| --- | --- | --- |
+| Writes replies | `/chat/completions` | Replies, word by word. Photos and PDFs from learners, if you say this model reads them |
+| Reviews replies | `/chat/completions` | A second model in an agent's check step |
+| Reads the moment *(optional)* | `/chat/completions` | A small model picks what each turn needs. Otherwise rules do, in English |
+| Hears learners | `/audio/transcriptions` | The microphone: a voice message, dictation, a conversation by voice |
+| Reads aloud | `/audio/speech` | Replies read aloud, and an agent's Speech step |
+| Draws pictures | `/images/generations` | An agent's Image step |
+| Searches by meaning | `/embeddings` | Knowledge search by meaning as well as keywords |
+
+The console shows each one on or off, and why. Keys are encrypted where they are kept, and never come back to a browser.
+
+## A chat button on your website
+
+A library wants research help on its guides' pages, answering from its own guides, on its own server.
+
+1. **Knowledge.** Make a knowledge base, add the guides as files or read them from your website.
+2. **Chat pages.** Make a page: its instructions, its knowledge base, how many messages a visitor gets.
+3. Copy the one line onto your site, and say which sites may show it.
+
+```html
+<script src="https://your-server/embed.js" data-agent="research-help" async></script>
+```
+
+Anyone who can open it can use it on your model keys, up to the limits you set.
+
+## From the Developer Platform
+
+On the Developer Platform, download the course or agent as a package with its files (Courses → ⋯ → Export). In the console:
+**Courses → From a file**. Or start with it:
+
+```sh
+npx github:VIABLE-Learning-Lab/viable start course.viable.zip
+```
+
+| Travels | Stays behind |
+| --- | --- |
+| Activities, question sets, How the AI helps, agents and their look, chat page settings, knowledge files, website snapshots | Learners and their work, class lists, keys, study data |
+
+A workflow built on the visual editor runs here as it is: you can't redraw it in the console, and you can change its look and page.
+The other way works too: **Settings → Download**, then import it on the Developer Platform, where models it doesn't have become
+its default, and it says so.
+
+## Where it runs
+
+`viable-engine deploy <target> [package] --out <folder>` writes a folder with its own README and exact commands, and you deploy it
+yourself. With no package, the server starts empty and you set it up at `/console`. A course changed there stays in the store.
+
+| Target | Keeps things in | How far it has been tried |
+| --- | --- | --- |
+| `node` | a folder | run by the tests |
+| `docker` | a volume | run under Docker |
+| `cloudflare` | D1 | run with `wrangler dev --local` |
+| `firebase` | Firestore | run in the Functions emulator; never deployed |
+| `aws-lambda` | an S3 bucket | its handler tested; never deployed |
+| `cloud-run` | a Cloud Storage bucket as a folder | its image run under Docker; never deployed |
+
+## What it keeps, and who sees it
+
+Everything stays in your store. A learner's name lives only on the class list, and is never sent to a model. Learner records carry a
+pseudonymous code. `--keep-days <n>` deletes what learners wrote after that many days, and
+`viable-engine forget <code>` deletes one learner. [deploying.md](docs/deploying.md) lists what the code guarantees, and what is
+still yours to do, such as your agreement with each model provider.
+
+## More than the console
+
+```sh
+viable-engine start                                 # the console, on a folder of its own
+viable-engine serve course.viable.zip --port 8080   # one package, with your flags
+viable-engine run agent.json --input "..."          # one reply, in a terminal
+viable-engine inspect course.viable.zip             # what it needs, before you run it
+viable-engine verify https://your-server            # whether a server works
+```
+
+Apps call the same API as the hosted platform (`POST /v1/agents/<slug>/runs`), so they move by changing an address.
+[self-hosting.md](docs/self-hosting.md) is the reference: flags, the API, what differs from VIABLE. Others:
+[learner-pages.md](docs/learner-pages.md), [deploying.md](docs/deploying.md), [try.md](docs/try.md).
+
+**Not here:** the visual workflow editor, studies with consent and the research export stay on the
+[Developer Platform](https://developers.viablelab.org). LTI isn't built. The Engine is built on the
+[VIABLE Harness](../harness/README.md), which you can use without any of this.

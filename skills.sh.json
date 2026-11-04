@@ -1,0 +1,3 @@
+{
+  "paths": ["./harness/skills", "./engine/skills"]
+}

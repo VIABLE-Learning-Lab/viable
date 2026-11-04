@@ -1,10 +1,10 @@
 cff-version: 1.2.0
-message: If you use the VIABLE harness in your research, please cite it, and cite VETTING as below.
-title: "VIABLE harness: an open education harness"
+message: If you use VIABLE's Harness or Engine in your research, please cite it, and cite VETTING as below.
+title: "VIABLE: an open education harness, and an engine to run it"
 type: software
 version: 0.2.0
 license: MIT
-repository-code: https://github.com/VIABLE-Learning-Lab/viable-harness
+repository-code: https://github.com/VIABLE-Learning-Lab/viable
 url: https://developers.viablelab.org
 authors:
   - family-names: Li

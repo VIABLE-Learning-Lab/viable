@@ -1,9 +1,9 @@
 # Security
 
-The harness runs with learners, many of them minors, so a security report comes first.
+This runs with learners, many of them minors, so a security report comes first.
 
 - **Report privately**, never in a public issue: through GitHub's private vulnerability reporting
-  ([Security, then Report a vulnerability](https://github.com/VIABLE-Learning-Lab/viable-harness/security/advisories/new)),
+  ([Security, then Report a vulnerability](https://github.com/VIABLE-Learning-Lab/viable/security/advisories/new)),
   or to a maintainer in MAINTAINERS.md.
 - **We answer within 7 days**, agree on a fix, release it, update VIABLE's hosted platform, and only
   then disclose, crediting you unless you'd rather not be named.
@@ -18,7 +18,7 @@ A course package or an agent file is a file someone sent you. Opening one, with 
 `deploy` or the MCP tools, is meant to be safe, and a way around any of this is a security problem:
 
 - **It can't start a program**, unless you name its component: `--allow-component <id>`, or
-  `VIABLE_HARNESS_ALLOW_COMPONENTS` on a scaffold. The MCP tools never allow one. Once named, it runs with your rights,
+  `VIABLE_ENGINE_ALLOW_COMPONENTS` on a scaffold. The MCP tools never allow one. Once named, it runs with your rights,
   and the harness can't limit it. The name is the ID the file claims, so read what `inspect` shows it starts.
 - **It can't reach your own network.** Fetch URL steps, `fetch_url`, files named by URL and http components go to public
   addresses. On Node the name is looked up first, so a name whose answer changes between that lookup and the
@@ -26,7 +26,7 @@ A course package or an agent file is a file someone sent you. Opening one, with 
 - **It can't get into generated code** through its title or file name, or hold a server's memory with a zip that
   inflates far past its size.
 
-What it can still do, by design, so `viable-harness inspect` lists it and you read it first:
+What it can still do, by design, so `viable-engine inspect` lists it and you read it first:
 
 - Send what its steps say to any public address: a Fetch URL step's address may come from a learner's words, and an
   http component receives what its `inputs` give it.

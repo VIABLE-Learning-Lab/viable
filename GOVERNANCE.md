@@ -1,6 +1,6 @@
 # Governance
 
-**Who decides.** The VIABLE Lab maintains the harness. Its maintainers (MAINTAINERS.md) review and
+**Who decides.** The VIABLE Lab maintains this repository. Its maintainers (MAINTAINERS.md) review and
 merge changes and cut releases; a disagreement among them is settled by the lab's lead.
 
 **Becoming a maintainer.** Someone who has had several substantial pull requests merged, reviewed
@@ -12,7 +12,7 @@ to a copyleft or source-available one. There is no enterprise folder, and nothin
 back for VIABLE's hosted platform: whatever a teacher's setting means is computed here.
 
 **The names.** The code is free to fork; the names VIABLE and VETTING are not. A product may say it
-"runs on the VIABLE harness" or "reads VIABLE's formats" when it passes the conformance fixtures.
+"runs on VIABLE" or "reads VIABLE's formats" when it passes the conformance fixtures.
 
 **Succession.** If the lab can no longer look after the project, the repository and the names go to
 a successor the lab names here, and the last release keeps working with no hosted service.

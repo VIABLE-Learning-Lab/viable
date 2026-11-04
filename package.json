@@ -1,31 +1,40 @@
 {
-  "name": "@viable-lab/harness",
-  "version": "0.2.0",
-  "description": "VIABLE's open education harness: the agent engine with VETTING, How the AI helps, the open formats and the research measures, on your own model keys.",
+  "name": "@viable-lab/engine",
+  "version": "0.3.0",
+  "description": "Run VIABLE yourself: AI tutors, courses, class lists and chat pages on your own server, on any model, with the VIABLE Harness inside.",
   "license": "MIT",
   "author": "Hongming (Chip) Li",
   "private": true,
   "type": "module",
-  "main": "./src/index.js",
+  "main": "./engine/src/index.js",
   "exports": {
-    ".": "./src/index.js",
+    ".": "./engine/src/index.js",
     "./package.json": "./package.json",
-    "./schemas/*": "./schemas/*",
-    "./*": "./src/*"
+    "./harness": "./harness/src/index.js",
+    "./harness/*": "./harness/src/*",
+    "./*": "./engine/src/*"
   },
   "bin": {
-    "viable-harness": "./bin/viable-harness.mjs"
+    "viable-engine": "./engine/bin/viable-engine.mjs"
   },
   "files": [
-    "bin",
-    "src",
-    "dist",
-    "schemas",
-    "conformance",
+    "engine/bin",
+    "engine/src",
+    "engine/dist",
+    "engine/schemas",
+    "engine/conformance",
+    "engine/deploy",
+    "engine/skills",
+    "engine/docs",
+    "engine/README.md",
+    "harness/bin",
+    "harness/src",
+    "harness/schemas",
+    "harness/conformance",
+    "harness/skills",
+    "harness/docs",
+    "harness/README.md",
     "examples",
-    "skills",
-    "docs",
-    "deploy",
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
@@ -36,10 +45,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/VIABLE-Learning-Lab/viable-harness.git"
+    "url": "git+https://github.com/VIABLE-Learning-Lab/viable.git"
   },
   "dependencies": {
-    "entities": "^9.0.0"
+    "entities": "^9.0.0",
+    "uqr": "^0.1.3"
   },
   "devDependencies": {
     "dompurify": "3.4.17",
@@ -51,15 +61,17 @@
     "temml": "0.13.5"
   },
   "scripts": {
-    "test": "node --import ./test/no-network.js --test test/*.test.js",
-    "steps:build": "node scripts/build-steps.mjs",
+    "test": "node --import ./harness/test/no-network.js --test harness/test/*.test.js engine/test/*.test.js",
+    "test:harness": "node --import ./harness/test/no-network.js --test harness/test/*.test.js",
+    "test:engine": "node --import ./harness/test/no-network.js --test engine/test/*.test.js",
+    "steps:build": "node engine/scripts/build-steps.mjs",
     "check:pr-title": "node scripts/check-pr-title.mjs",
-    "xapi:build": "node scripts/build-xapi-profile.mjs",
-    "components:build": "node scripts/build-component-pages.mjs",
-    "catalog:build": "node scripts/build-catalog-page.mjs",
-    "fonts:build": "node scripts/build-fonts.mjs",
-    "build:assets": "node scripts/build-learner-assets.mjs",
-    "prepack": "node scripts/build-learner-assets.mjs",
-    "prepare": "node scripts/prepare.mjs"
+    "xapi:build": "node harness/scripts/build-xapi-profile.mjs",
+    "components:build": "node harness/scripts/build-component-pages.mjs",
+    "catalog:build": "node harness/scripts/build-catalog-page.mjs",
+    "fonts:build": "node harness/scripts/build-fonts.mjs",
+    "build:assets": "node engine/scripts/build-learner-assets.mjs",
+    "prepack": "node engine/scripts/build-learner-assets.mjs",
+    "prepare": "node engine/scripts/prepare.mjs"
   }
 }

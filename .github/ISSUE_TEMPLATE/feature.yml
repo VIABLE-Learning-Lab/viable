@@ -1,5 +1,5 @@
 name: Feature request
-description: Something the harness should do for a teacher, a researcher or a developer.
+description: Something this should do for a teacher, a researcher or a developer.
 labels: [enhancement, needs triage]
 body:
   - type: textarea
@@ -25,5 +25,5 @@ body:
     attributes:
       label: Fit
       options:
-        - label: It works without VIABLE's hosted platform (the harness never depends on it).
+        - label: It works without VIABLE's hosted platform (this never depends on it).
         - label: It sends no learner's name or identifier to a model.

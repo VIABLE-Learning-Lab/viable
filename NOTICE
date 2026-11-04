@@ -1,7 +1,7 @@
-VIABLE harness (@viable-lab/harness)
+VIABLE (@viable-lab/engine and @viable-lab/harness)
 Copyright (c) 2025-2026 Hongming (Chip) Li. The code is under the MIT License (LICENSE).
 
-The harness carries the data below, which keeps its own license: Creative Commons Attribution 4.0
+The Harness carries the data below, which keeps its own license: Creative Commons Attribution 4.0
 International (CC BY 4.0), https://creativecommons.org/licenses/by/4.0/. Keep these statements
 with any copy of the data, and with what you build that shows it.
 
@@ -43,10 +43,11 @@ Eedi Misconceptions Graph
     https://creativecommons.org/licenses/by/4.0. "Eedi Misconceptions Graph v1.0" (c) 2026 Eedi
     Ltd., licensed under CC BY 4.0 and available at https://www.eedi.com.
 
-The npm package the harness depends on, with its own license file in node_modules/:
+The npm packages the Engine depends on, each with its own license file in node_modules/:
   entities (BSD-2-Clause).
+  uqr (MIT).
 
-The fonts in src/ui/fonts/, also inlined from src/ui/fontData.js into pages the harness writes, keep
+The fonts in harness/src/ui/fonts/, also inlined from harness/src/ui/fontData.js into pages it writes, keep
 their own license, the SIL Open Font License 1.1 (OFL-*.txt beside them, https://openfontlicense.org):
   Atkinson Hyperlegible Next, (c) 2020-2024 The Atkinson Hyperlegible Next Project Authors
   (https://github.com/googlefonts/atkinson-hyperlegible-next).

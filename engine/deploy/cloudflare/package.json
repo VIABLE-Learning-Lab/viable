@@ -1,0 +1,8 @@
+{
+  "name": "{{name}}",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "wrangler dev --local", "deploy": "wrangler deploy" },
+  "dependencies": { "entities": "{{entities_version}}", "uqr": "{{uqr_version}}" },
+  "devDependencies": { "wrangler": "^4.0.0" }
+}

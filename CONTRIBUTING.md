@@ -1,18 +1,18 @@
 # Contributing
 
-Thanks for helping. The harness is used with minors, so every change is held to what a teacher, a
+Thanks for helping. This is used with minors, so every change is held to what a teacher, a
 researcher and a developer would each need from it. This page covers how to get set up, how to make
 a change, and how it gets reviewed and merged.
 
 ## Ways to help
 
-- **Report a bug or ask for a feature** with an [issue](https://github.com/VIABLE-Learning-Lab/viable-harness/issues/new/choose).
-- **Ask, answer or show what you built** in [Discussions](https://github.com/VIABLE-Learning-Lab/viable-harness/discussions).
+- **Report a bug or ask for a feature** with an [issue](https://github.com/VIABLE-Learning-Lab/viable/issues/new/choose).
+- **Ask, answer or show what you built** in [Discussions](https://github.com/VIABLE-Learning-Lab/viable/discussions).
 - **Improve the docs or an example**: small fixes are the best first pull request.
-- **Bring your research in as a component**: open a [component proposal](https://github.com/VIABLE-Learning-Lab/viable-harness/issues/new?template=component.yml) first, then see [docs/components.md](docs/components.md).
+- **Bring your research in as a component**: open a [component proposal](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=component.yml) first, then see [docs/components.md](harness/docs/components.md).
 - **List a public good in the catalog**: see [Catalog entries](#catalog-entries).
 - **Connect one to agents**: see [Connectors](#connectors).
-- **Fix or build something**: look for [good first issues](https://github.com/VIABLE-Learning-Lab/viable-harness/labels/good%20first%20issue) and [help wanted](https://github.com/VIABLE-Learning-Lab/viable-harness/labels/help%20wanted); for anything larger than a fix, open an issue first so we can agree on where it belongs.
+- **Fix or build something**: look for [good first issues](https://github.com/VIABLE-Learning-Lab/viable/labels/good%20first%20issue) and [help wanted](https://github.com/VIABLE-Learning-Lab/viable/labels/help%20wanted); for anything larger than a fix, open an issue first so we can agree on where it belongs.
 
 ## Set up
 
@@ -20,34 +20,26 @@ Node 22 or later. No model key is needed for the tests: they script the model's 
 anything reaches the network.
 
 ```sh
-git clone https://github.com/VIABLE-Learning-Lab/viable-harness.git
-cd viable-harness
+git clone https://github.com/VIABLE-Learning-Lab/viable.git
+cd viable
 npm ci
 npm test
 ```
 
 | Where | What |
 | --- | --- |
-| `src/agents/` | the graph engine (`engine.js`), its checks (`graph.js`), expressions, VETTING's prompts, and one manifest per step type in `steps/` |
-| `src/utils/` | How the AI helps (`teaching.js`), the research measures, the misconception search and the data copies |
-| `src/` | the public functions: `run.js`, `check.js`, `agentTests.js` and `testRuns.js`, `suggest.js`, `view.js`, the MCP server (`mcpTools.js`, `mcpProtocol.js`, `mcp.js` for stdio, `mcpViews.js`), `xapi.js`, `conformance.js`, `validate.js` |
-| `src/ui/` | what every page shares: the theme (`theme.js`, its fonts and the mark) and `parts.js`, a VETTING round, a test case and a suggestion written once for every page that shows them |
-| `src/components/` | the built-in components' manifests |
-| `catalog/` | the public goods catalog, one entry per file ([docs/catalog.md](docs/catalog.md)) |
-| `src/resources/` | connectors, one per resource ([docs/resources.md](docs/resources.md)) |
-| `schemas/`, `conformance/` | the open formats, and the fixtures another implementation checks itself against |
-| `examples/`, `skills/`, `docs/` | course packages, Agent Skills, documentation |
-| `bin/viable-harness.mjs` | the command line |
-| `test/` | the tests; `boundary.test.js` keeps the harness standing alone |
+| `harness/` | **The Harness**, its own package, with no dependencies. `src/harness.js`: `prepare`, `check`, `record`. `src/brief.js`: what a turn gets. `src/tasks/`: the kinds of teaching work. `src/checks/`: VETTING's review. `src/gateway.js`, `src/mcp*.js`: the ways in. `src/utils/`: How the AI helps, measures, the misconception search and the data copies. `src/components/`, `src/resources/`, `catalog/`: others' work joining. `src/ui/`: what every page shares |
+| `engine/` | **The Engine**, which stands on the Harness. `src/agents/`: the graph engine and one manifest per step type. `src/server/`: the handler, the runtime and what serves pages. `src/learner/`: the learner pages. `src/console/`: its own pages. `deploy/`: one scaffold per target |
+| `harness/schemas/`, `harness/conformance/`, `engine/conformance/` | the open formats, and the fixtures another implementation checks itself against |
+| `harness/skills/`, `engine/skills/` | Agent Skills |
+| `examples/` | course packages |
+| `harness/test/`, `engine/test/` | the tests; each `boundary.test.js` keeps its part standing where it should |
 
 ## Making a change
 
-- **Keep the harness standing alone.** Code imports only Node's built-ins, its own files and the npm
-  packages `test/boundary.test.js` lists. Dependencies are under MIT or Apache-2.0; the one exception,
-  `entities` (BSD-2-Clause), is named there. A new dependency needs a reason a few lines of code
-  can't meet. Modules a host bundles for a server or a browser (the engine,
-  `agentTests.js`, `suggest.js`, `checkPlan.js`, `mcpTools.js`, `mcpProtocol.js`) import no `node:` built-ins; local-only code (`run.js`,
-  `knowledge.js`) may.
+- **Keep the two parts apart.** `harness/` imports only Node's built-ins and its own files, so it installs alone. `engine/`
+  adds the Harness, `uqr` (MIT) and `entities` (BSD-2-Clause, the one exception to MIT or Apache-2.0). A new dependency needs a reason a few
+  lines of code can't meet. What a host bundles for a server or a browser imports no `node:` built-ins; local-only code may.
 - **Protect learners.** No learner's name or identifier is ever sent to a model, and fixtures, tests
   and examples hold no real learner's data: write synthetic ones.
 - **Say only what is built.** README lines, step tips, component pages and docs describe what the code
@@ -78,8 +70,8 @@ Checks run on every pull request: the tests on Node 22 and 24, the title and the
 maintainer reviews it (CODEOWNERS), usually within a week, and squash-merges it, so you are the
 author of the commit on `main`.
 
-The harness is also developed inside VIABLE's platform repository, which runs this exact code. A
-maintainer brings your commit into it, under `harness/`, keeping you as its author and recording
+This repository is also developed inside VIABLE's platform repository, which runs this exact code. A
+maintainer brings your commit into it, under `open/`, keeping you as its author and recording
 which commit here it came from; it goes through that repository's review and tests like any other
 change, and when it is merged there, the next publication recognises it as already here and adds
 nothing. Changes made in the platform repository arrive here as commits whose
@@ -89,12 +81,12 @@ nothing. Changes made in the platform repository arrive here as commits whose
 
 A component is another team's work in one of six slots (context, step, detector, judge, simulated
 learner, measure), with a manifest stating the learner data it receives, the hosts it calls, its
-license and its evidence. [docs/components.md](docs/components.md) has the format, the review
+license and its evidence. [docs/components.md](harness/docs/components.md) has the format, the review
 checklist and how to add one; we write the adapter with its authors where we can.
 
 ## Catalog entries
 
-The public goods catalog ([docs/catalog.md](docs/catalog.md)) lists open datasets, benchmarks,
+The public goods catalog ([docs/catalog.md](harness/docs/catalog.md)) lists open datasets, benchmarks,
 knowledge graphs, standards, evaluators, models, tools, open content and learning data repositories
 for K-12 AI, one file each in `catalog/`, checked against `schemas/catalog-entry.schema.json`. An
 entry describes the work; it doesn't endorse it, and listing it doesn't bring it into the harness
@@ -107,18 +99,18 @@ entry describes the work; it doesn't endorse it, and listing it doesn't bring it
   card or paper) on the day you set `verified_at`: the link, the license of each part, with a note
   for gated, non-commercial, mixed or conflicting terms (and `unclear` where the sources disagree,
   rather than a guess), how to get it, and whether it is released.
-- **How**: open an [issue](https://github.com/VIABLE-Learning-Lab/viable-harness/issues/new?template=catalog.yml),
+- **How**: open an [issue](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=catalog.yml),
   or a pull request with `catalog/<id>.json` and what `npm run catalog:build` writes from it
   (`npm test` checks both).
 - **`connect`**: how far it is connected (0 listed, 1 fetchable, 2 one command from an effect, 3 built
   in), as what, the exact command, and a note: what results can show and what they can't, or why it goes
-  no further ([docs/resources.md](docs/resources.md)).
+  no further ([docs/resources.md](harness/docs/resources.md)).
 
 ## Connectors
 
 A connector turns a public good into what the harness runs: a test suite, a judge, a calibration set, a
 knowledge folder, a context lookup or a measure. Fetch the data and read it first, then follow
-[Write a connector](docs/resources.md#write-a-connector). Say so in the entry when it can't be done
+[Write a connector](harness/docs/resources.md#write-a-connector). Say so in the entry when it can't be done
 well: a connector nobody would use is worse than none.
 
 ## Releases

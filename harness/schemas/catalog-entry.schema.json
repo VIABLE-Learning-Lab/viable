@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "An entry in the harness's public goods catalog",
+  "description": "One education public good: what it is, where it lives, its license and access as its primary sources stated them on verified_at, and the harness slot it would fill. An entry describes; it doesn't endorse. One file per entry in catalog/, named by its id; docs/catalog.md lists them.",
+  "type": "object",
+  "required": ["id", "name", "kind", "summary", "subjects", "grades", "url", "repository", "license", "access", "formats", "made_by", "cite", "status", "fits", "in_harness", "connect", "verified_at"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 60, "description": "lowercase words joined by hyphens; the file is catalog/<id>.json" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "kind": { "enum": ["knowledge-graph", "standards", "content", "dataset", "benchmark", "evaluator", "model", "tool", "learning-data-repository"] },
+    "summary": { "type": "string", "minLength": 20, "maxLength": 300, "description": "one plain sentence a teacher who builds software understands" },
+    "subjects": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["math", "reading", "writing", "science", "computer-science", "social-studies", "english-language-development", "durable-skills", "any"] }
+    },
+    "grades": { "type": "string", "minLength": 1, "maxLength": 120, "description": "the grades as its makers state them (K-12, 6-8, high school), or not stated" },
+    "url": { "type": "string", "pattern": "^https://", "description": "its own page" },
+    "repository": { "type": ["string", "null"], "pattern": "^https://", "description": "where its code or data is kept, when that isn't url" },
+    "license": {
+      "type": "object",
+      "required": ["spdx", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "spdx": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^(?:LicenseRef-)?[A-Za-z0-9.+-]+$" }, "description": "every license its parts carry, as SPDX identifiers; empty when none is stated" },
+        "note": { "type": "string", "minLength": 1, "maxLength": 600, "description": "which license covers which part, and gated, non-commercial, mixed or conflicting terms" },
+        "unclear": { "const": true, "description": "its sources disagree or leave out whether a use is allowed" },
+        "source": { "type": "string", "pattern": "^https://", "description": "where the license is stated" }
+      },
+      "if": { "anyOf": [{ "properties": { "spdx": { "maxItems": 0 } } }, { "required": ["unclear"] }] },
+      "then": { "required": ["note"] }
+    },
+    "access": { "enum": ["open download", "API key", "account", "request", "not yet released"] },
+    "access_note": { "type": "string", "minLength": 1, "maxLength": 400 },
+    "formats": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 60 } },
+    "made_by": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "maxLength": 120 } },
+    "cite": { "type": "string", "minLength": 1, "maxLength": 600 },
+    "status": { "enum": ["released", "expected"] },
+    "expected": { "type": "string", "minLength": 1, "maxLength": 300, "description": "when it is expected, in its makers' own words and date" },
+    "fits": {
+      "type": "object",
+      "required": ["slots", "how"],
+      "additionalProperties": false,
+      "properties": {
+        "slots": { "type": "array", "uniqueItems": true, "items": { "enum": ["context", "step", "detector", "judge", "simulated-learner", "measure"] }, "description": "the harness slots it would fill (docs/components.md); empty for none yet" },
+        "how": { "type": "string", "minLength": 20, "maxLength": 400 }
+      }
+    },
+    "in_harness": { "type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$", "description": "the id of the built-in component that carries it" },
+    "connect": {
+      "type": "object",
+      "required": ["level", "as", "command", "note"],
+      "additionalProperties": false,
+      "description": "How far it is connected (docs/resources.md): 0 listed, 1 fetchable, 2 has an effect in one command, 3 built in",
+      "properties": {
+        "level": { "enum": [0, 1, 2, 3] },
+        "as": { "type": "array", "uniqueItems": true, "items": { "enum": ["test-suite", "judge", "calibration-set", "knowledge-folder", "context-lookup", "measure", "step"] }, "description": "what it becomes in the harness; empty below level 2" },
+        "command": { "type": ["string", "null"], "pattern": "^viable-(harness|engine) ", "description": "the exact command, or null at level 0" },
+        "note": { "type": "string", "minLength": 20, "maxLength": 500, "description": "at level 2 or 3, what results from it can show and what they can't; below, why it goes no further" }
+      },
+      "if": { "properties": { "level": { "const": 0 } } },
+      "then": { "properties": { "command": { "const": null }, "as": { "maxItems": 0 } } },
+      "else": { "properties": { "command": { "type": "string" } } }
+    },
+    "verified_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "the date its url, license and status were checked against its primary sources" }
+  },
+  "allOf": [
+    { "if": { "properties": { "status": { "const": "expected" } } }, "then": { "required": ["expected"], "properties": { "access": { "const": "not yet released" } } }, "else": { "properties": { "expected": false } } }
+  ]
+}

@@ -1,0 +1,12 @@
+# Only if you use Firebase App Hosting instead of Functions; see README.md. Not tried by the harness's tests.
+runConfig:
+  cpu: 1
+  memoryMiB: 1024
+  concurrency: 40
+env:
+  - variable: OPENAI_BASE_URL
+    value: "{{endpoint}}"
+  - variable: OPENAI_API_KEY
+    secret: {{name}}-model-key
+  - variable: VIABLE_ENGINE_TOKEN
+    secret: {{name}}-token

@@ -1,6 +1,6 @@
-# Who runs on the harness
+# Who runs on this
 
-Products, projects and research that run on the harness or read its formats. Add yours with a pull
+Products, projects and research that run on the Harness or the Engine, or read their formats. Add yours with a pull
 request: a line with its name, a link and what it uses. An implementation of the formats or of
 VETTING says which conformance suites it passes.
 

@@ -1,0 +1,42 @@
+{
+  "id": "mathcamps",
+  "name": "MathCAMPS",
+  "kind": "benchmark",
+  "summary": "9,707 synthetic math word problems, each tied to one of 44 Common Core standards for grades K to 8, with follow-up questions.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "K-8",
+  "url": "https://github.com/gpoesia/mathcamps",
+  "repository": "https://huggingface.co/datasets/mathcamps/mathcamps",
+  "license": {
+    "spdx": [
+      "MIT"
+    ],
+    "note": "The problems were written by language models from a grammar for each standard; the repository also holds over 220,000 model responses.",
+    "source": "https://github.com/gpoesia/mathcamps/blob/main/LICENSE"
+  },
+  "access": "open download",
+  "formats": [
+    "JSON"
+  ],
+  "made_by": [
+    "Shubhra Mishra, Gabriel Poesia and Noah D. Goodman"
+  ],
+  "cite": "Mishra, S., Poesia, G., & Goodman, N. D. (2025). From Next-Token to Mathematics: The Learning Dynamics of Mathematical Reasoning in Language Models. COLM 2025. arXiv:2407.00900",
+  "status": "released",
+  "fits": {
+    "slots": [],
+    "how": "Its problems, each tied to a standard, become test cases for an activity's standard."
+  },
+  "in_harness": null,
+  "connect": {
+    "level": 2,
+    "as": [
+      "test-suite"
+    ],
+    "command": "viable-engine test agent.json --suite mathcamps --standard 6.EE.A.1 --limit 20 --judge-model <model>",
+    "note": "The same three kinds of case as GSM8K, from problems tied to a Common Core standard, so a suite can match an activity's standard (--standard, K-8, 44 standards). Language models wrote the problems. It shows what your judge read in these replies, not what learners learn."
+  },
+  "verified_at": "2026-11-03"
+}

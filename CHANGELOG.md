@@ -1,12 +1,54 @@
 # Changelog
 
-Changes that matter to people who build on the harness. Versions follow semantic versioning; a change
+Changes that matter to people who build on this. Versions follow semantic versioning; a change
 to a format or to what a step's setting means is at least a minor version and says how to move
 existing files.
 
-## Unreleased (0.2.0)
+## Unreleased (0.3.0)
+
+Two parts, one repository.
+
+- **The Harness and the Engine are separate.** The repository is `viable`. `@viable-lab/harness` has no dependencies and nothing
+  of the Engine; `@viable-lab/engine` stands on it. `viable-engine` takes every `viable-harness` command, and the commands that
+  run agents (`run`, `serve`, `try`, `inspect`, `deploy`, `verify`, `knowledge`, `records`, `forget`, `test` on an agent file) moved
+  to it. `VIABLE_HARNESS_*` variables are now `VIABLE_ENGINE_*`. A scaffold's code is in `vendor/engine` and `vendor/harness`.
+- **Agents, chat pages and knowledge, in the console.** From an empty server, in the browser: a knowledge base from files and
+  websites, an agent from a form, a chat page with its link, QR code and chat button. A package can now hold knowledge bases
+  with no agent yet (`anyOf` in its schema), and keeps and downloads its files' text copies and its websites' pages, which it
+  used to lose when added in the console. `uqr` (MIT) is a new dependency of the Engine. A scaffold's `package.json` lists it.
+- **Before the reply.** `prepare` reads the moment and gives a model what it needs (`turnBrief`), `check` and `record` take the turn, and
+  five tasks prepare other teaching work. The gateway and the Engine read the moment by default: `--whole-settings` on the gateway sends
+  everything the teacher set, as before.
+- **Rules.** `tools_off` in How the AI helps says which tools are off, and they are removed, not only told.
+- **Confirming a learner's right answer no longer fails an answer-key review.** The rule read "Yes, 3 5/6" as giving the answer away. A
+  reply that treats the answer as the learner's own now passes, and one that supplies it still fails. The reviewer still reads only the
+  reply, so it can't check the learner really said it. A review's default limit is now 1,024 tokens in both modes, so a reasoning model
+  doesn't run out before it answers: an empty review counts as a failure.
+- **`checkReply` no longer runs a graph.** The review is in `checks/vetting.js`, and the graph's VETTING step runs the same one.
+- **`viable-harness test --endpoint`** tests whatever is behind an OpenAI-compatible endpoint.
+- **A course's setting for who its learners are now applies on your own server.** A package with `identify: code` opens only for
+  personal codes on its class list, which a package doesn't carry, so add one in the console, on People; one with `identify: ask` asks
+  for a name or ID. Each browser stays the default, and a class code or a proxy's header still wins. To keep the old behaviour for a
+  package, set `identify` to `browser`.
+- **Hardened after an adversarial review.** A page that isn't for everyone holds only its panels' names until the server knows who is asking (`/panels`). A package added in the browser can't start a program, take another course's address or turn on its own chat page, and an image at another address is dropped from it. Going back to a version keeps who can get in. New limits: wrong tokens per address, new learners per address and per course, large messages with no stated size. `--trust-proxy` counts a proxy's visitors apart. A `start` server on this computer answers only to its names. A store's files are its owner's alone. A survey's host gets an ID that signs in to nothing.
+- **People, Share and Progress in the console.** A class list with personal codes, cards and a CSV; sections, with their own links, help
+  level, note and opening; a QR code and a poster; who has done what, one learner's work, and what to look at, with a suggested change
+  accepted in one button. A name never reaches a model. Scaffolds and images now also install `uqr`, which draws the QR codes.
+
+## 0.2.0
 
 The first version as its own repository.
+
+- **Models, set up in the browser.** `/console` is the Engine's own pages, behind the teacher's token and session; its first
+  is Models. Add any OpenAI-compatible provider, test it, and say what each model is for, as seven roles, each on its own
+  provider and key. Keys are encrypted at rest, with `VIABLE_ENGINE_SECRET` or a key in the store's folder, and never reach a
+  browser. The environment and the model flags keep working and win. `serve` with no agents starts, and sends you there.
+- **What a model makes possible turns on, on any target.** Voice on the learner pages (dictation, voice messages and
+  conversations) through `/audio/transcriptions`, reading aloud through `/audio/speech`, a learner's photos and PDFs for a
+  reply model switched on as reading them, pictures from an Image step on the page, and knowledge search by meaning through
+  `/embeddings`, kept per file and falling back to keywords. `inspect` and `GET /v1/server` (so `verify`) report what is on and
+  off and why. A models file also takes `transcribe`, `picker`, `meaning` and `reads`. Replies reach a page and `stream: true`
+  word by word where the endpoint streams.
 
 - **Docker has been run.** The root `Dockerfile` didn't build before; it now does, for `linux/amd64` from an arm64 Mac
   too. A docker scaffold has a health check, `compose.yaml`, and `records.js` for `records export` and `forget` inside the
@@ -29,7 +71,7 @@ The first version as its own repository.
   `maxTotalBytes` for more.
 - **A document can't start a program.** A component step in an agent file or a package calls only `http`
   components at a public address, unless the person running it names the ID (`--allow-component`,
-  `VIABLE_HARNESS_ALLOW_COMPONENTS`). If you run an MCP component from a file, add the flag. `inspect` says
+  `VIABLE_ENGINE_ALLOW_COMPONENTS`). If you run an MCP component from a file, add the flag. `inspect` says
   what each step would contact or start.
 - **A Node host refuses private addresses** in Fetch URL steps, `fetch_url`, files named by URL and http
   components, when a name is looked up and again as the connection is made
@@ -53,9 +95,9 @@ The first version as its own repository.
 - **MCP Apps views**: in assistants that render MCP Apps (`io.modelcontextprotocol/ui`),
   `check_reply`, `run_agent_tests` and `suggest_changes` show their result as a self-contained page
   that loads nothing; the server offers them only to a client that says it renders them.
-- **Your own server**: `viable-harness serve` answers apps' agent runs as VIABLE does
+- **Your own server**: `viable-engine serve` answers apps' agent runs as VIABLE does
   (`POST /v1/agents/{slug}/runs`, reading a run back), with a token, limits, memory per pseudonymous
-  learner and one log line per run; a `Dockerfile` serves `/agents` ([self-hosting.md](docs/self-hosting.md)).
+  learner and one log line per run; a `Dockerfile` serves `/agents` ([self-hosting.md](engine/docs/self-hosting.md)).
 - **Courses as they are downloaded**: `run` and `serve` take a `.viable.zip` and read its files from
   the archive; `--knowledge <id>=<folder>` searches a folder as the knowledge base an exported agent
   file names.
@@ -67,19 +109,19 @@ The first version as its own repository.
   searched by `searchCatalog`, `viable-harness catalog` and the MCP tool `find_public_goods`.
 - **Component steps**: a graph's `component` step runs a step component from its manifest held in
   `config.manifest`, sending the fields `config.inputs` maps; its answer is `{ output, flags }`, and
-  `on_error: continue` goes on without it. `runAgent` and `viable-harness run` call HTTP components
+  `on_error: continue` goes on without it. `runAgent` and `viable-engine run` call HTTP components
   and MCP servers; `validateGraph(graph, { componentRuns })` lets a host allow fewer.
   `agent.schema.json` adds `component` to the step types: files without one need no change. A step
   component's answer from `callComponent` is read like the other slots': only `output` (text cut to
   20,000 characters) and `flags` (at most 20 `{ label, reason }`).
-- **`viable-harness try`, and no command at all**: the real pages on this computer, with a panel showing what the
+- **`viable-engine try`, and no command at all**: the real pages on this computer, with a panel showing what the
   AI did with each message. Scripted replies without a key, your own model with one. A scripted tour, and a static
   copy for a website. `serve --panel` gives the same panel to the token holder; `test --html` shows a run as a page.
   The engine tells `hooks.onVettingDraft` and `hooks.onVettingRound` as a review happens.
 - **The learner pages are in the core** (`src/learner/`) and served by `serve` and every scaffold, at VIABLE's paths
   (`server/learner.js`). Course packages and agent files may carry `profile` and `chat_page`; a package's websites
   may carry a `snapshot`, `path_prefix` and `include_subpages`; knowledge bases `file_links` and `search_mode`; a
-  course `shared_devices`. `viable-harness knowledge refresh`, `records export` and `forget`; `serve --class-code-env`
+  course `shared_devices`. `viable-engine knowledge refresh`, `records export` and `forget`; `serve --class-code-env`
   and `--learner-header`.
 - **A package runs on your own cloud**: `inspect` reports everything it needs, `deploy` writes a folder for node,
   docker, cloudflare, aws-lambda, cloud-run or firebase with a README of exact commands, and `verify` checks the

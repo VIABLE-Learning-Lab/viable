@@ -31,4 +31,4 @@ jobs:
       - name: Generated files are current
         run: |
           npm run steps:build
-          git diff --exit-code -- schemas/steps.json
+          git diff --exit-code -- engine/schemas/steps.json

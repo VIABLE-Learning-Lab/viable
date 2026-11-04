@@ -1,7 +1,0 @@
-{
-  "name": "{{name}}",
-  "private": true,
-  "type": "module",
-  "engines": { "node": ">=22" },
-  "dependencies": { "entities": "{{entities_version}}" }
-}

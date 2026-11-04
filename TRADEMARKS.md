@@ -5,7 +5,7 @@ identify this project and the work behind it, so people can tell what they are g
 
 You may, without asking:
 
-- say your product "runs on the VIABLE harness" or "uses VETTING from the VIABLE harness" when it
+- say your product "runs on VIABLE" or "uses VETTING from the VIABLE Harness" when it
   does;
 - say your implementation "reads VIABLE's formats" or "implements VETTING" when it passes the
   matching suites in `conformance/`;

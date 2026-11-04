@@ -1,0 +1,370 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://developers.viablelab.org/schemas/agent.schema.json",
+  "title": "VIABLE agent file (.agent.json)",
+  "description": "An exported agent: its workflow (graph) and profile, and what it depends on by reference (models, knowledge bases by their settings and website sources, published sub-agents), so another project or account can rebuild it. Uploaded files, pasted text and an uploaded avatar stay behind. `viable-engine validate` also runs VIABLE's own graph checks (src/agents/graph.js validateGraph) on the graph.",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "name",
+    "graph"
+  ],
+  "properties": {
+    "format": {
+      "const": "viable.agent"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "exported_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "graph": {
+      "$ref": "#/$defs/graph"
+    },
+    "profile": {
+      "type": "object",
+      "description": "How the agent presents itself on its chat page and activities (title, tagline, color, theme, greeting, starters, placeholder, notice, avatar_url as a data: address) and how what a learner has open reaches it (open)."
+    },
+    "chat_page": {
+      "$ref": "#/$defs/chat_page"
+    },
+    "requires": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "knowledge_bases": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/knowledge_base"
+          }
+        },
+        "agents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "slug"
+            ],
+            "properties": {
+              "slug": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "graph": {
+      "type": "object",
+      "description": "An agent workflow: steps (nodes) joined by next and branches, walked from entry.",
+      "required": [
+        "entry",
+        "nodes"
+      ],
+      "properties": {
+        "version": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "entry": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The id of the first step."
+        },
+        "variables": {
+          "type": "object"
+        },
+        "run_limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_model_calls": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 60
+            },
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 120
+            }
+          }
+        },
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/node"
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "sketch": {
+          "type": "object",
+          "description": "Canvas drawings kept for collaborators; runs ignore them."
+        },
+        "groups": {
+          "type": "array",
+          "maxItems": 50,
+          "description": "Canvas groups kept for collaborators, each step in at most one; runs ignore them.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "nodes"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 280,
+                "description": "What the block does."
+              },
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Step ids."
+              },
+              "collapsed": {
+                "type": "boolean"
+              },
+              "settings": {
+                "type": "array",
+                "maxItems": 8,
+                "description": "Settings shown on the block: a setting of one of this group's steps, by its dot path in that step's config. Editor-only.",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "step",
+                    "key"
+                  ],
+                  "properties": {
+                    "step": {
+                      "type": "string",
+                      "description": "One of this group's step ids."
+                    },
+                    "key": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z_][\\w]*(\\.[A-Za-z_][\\w]*)*$",
+                      "description": "Such as params.temperature."
+                    },
+                    "label": {
+                      "type": "string",
+                      "maxLength": 40
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": [
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "enum": [
+            "input",
+            "llm",
+            "condition",
+            "image",
+            "speech",
+            "transcribe",
+            "http",
+            "loop",
+            "each",
+            "transform",
+            "output",
+            "subagent",
+            "router",
+            "agent",
+            "knowledge",
+            "memory",
+            "state",
+            "guardrail",
+            "parallel",
+            "ask",
+            "note",
+            "vetting",
+            "component"
+          ]
+        },
+        "config": {
+          "type": "object",
+          "description": "The step's settings; each type's required fields are checked by validateGraph, and schemas/steps.json describes every setting. A condition's cases are [{when, to, label}], label (1–60 characters) naming the case on the canvas and in the trace. A component step's manifest is inline, in config.manifest (component.schema.json)."
+        },
+        "next": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "branches": {
+          "type": "object",
+          "description": "Named exits (condition: true/false; router: route names and fallback; vetting: passed/unverified/attention; guardrail: pass/fail; each: each/done)."
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      }
+    },
+    "knowledge_base": {
+      "type": "object",
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "search_mode": {
+          "type": "string"
+        },
+        "chunk_size": {
+          "type": "integer"
+        },
+        "file_links": {
+          "type": "boolean"
+        },
+        "repeated_text": {
+          "enum": [
+            "remove",
+            "keep"
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "kind",
+              "url"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "list",
+                  "sitemap",
+                  "crawl"
+                ]
+              },
+              "name": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "urls": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "path_prefix": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "max_pages": {
+                "type": "integer"
+              },
+              "include_subpages": {
+                "type": "boolean"
+              },
+              "refresh_hours": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "other_documents": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Uploaded files and pasted text: not in the file, to add again by hand."
+        }
+      }
+    },
+    "chat_page": {
+      "type": "object",
+      "description": "The agent's chat page, for a server running this file: on or paused, how it looks and behaves, its limits and allowed sites. Never the key behind it.",
+      "required": [
+        "settings"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "active",
+            "paused"
+          ]
+        },
+        "settings": {
+          "type": "object",
+          "description": "launcher, allowed_sites, daily_limit, limits (visitor_per_minute, visitor_per_day, message_chars, daily_cost), show_progress, stream_replies, links_in_place, voice, attachments, learners. Unknown fields are dropped, and each is bounded when it is read."
+        }
+      }
+    }
+  }
+}

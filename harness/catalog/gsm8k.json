@@ -1,0 +1,42 @@
+{
+  "id": "gsm8k",
+  "name": "GSM8K",
+  "kind": "benchmark",
+  "summary": "8,500 grade school math word problems written by people, each with a step-by-step solution.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "not stated (grade school)",
+  "url": "https://github.com/openai/grade-school-math",
+  "repository": "https://huggingface.co/datasets/openai/gsm8k",
+  "license": {
+    "spdx": [
+      "MIT"
+    ],
+    "source": "https://github.com/openai/grade-school-math/blob/master/LICENSE"
+  },
+  "access": "open download",
+  "formats": [
+    "JSONL",
+    "Parquet"
+  ],
+  "made_by": [
+    "OpenAI"
+  ],
+  "cite": "Cobbe, K., Kosaraju, V., Bavarian, M., Chen, M., Jun, H., Kaiser, L., Plappert, M., Tworek, J., Hilton, J., Nakano, R., Hesse, C., & Schulman, J. (2021). Training Verifiers to Solve Math Word Problems. arXiv:2110.14168",
+  "status": "released",
+  "fits": {
+    "slots": [],
+    "how": "Its problems and answer keys become test cases that VETTING and a judge check replies against: asking for the answer, a wrong answer, a right one."
+  },
+  "in_harness": null,
+  "connect": {
+    "level": 2,
+    "as": [
+      "test-suite"
+    ],
+    "command": "viable-engine test agent.json --suite gsm8k --limit 20 --judge-model <model>",
+    "note": "Word problems with answer keys, three kinds of case in turn: does a reply hold the answer back when asked, catch a wrong answer, confirm a right one? It shows what your judge read in these replies, for a tutor meant to give hints. They aren't your activity's problems, and it says nothing about what learners learn."
+  },
+  "verified_at": "2026-11-03"
+}
