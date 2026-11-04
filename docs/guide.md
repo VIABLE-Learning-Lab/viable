@@ -6,6 +6,11 @@ formats and the measures. The [README](../README.md) is the overview; [component
 
 ## The command line
 
+`viable-harness --help` has every flag. `viable-harness try [package...]` opens the real pages on this
+computer with what the AI did beside them; `--demo --tour` plays the scene by itself and `--export <dir>`
+writes a static copy of demo mode ([try.md](try.md)). `view` and `suggest` also take a folder, which stands for
+every JSON file in it.
+
 ```sh
 viable-harness run <agent.json | package.json | course.viable.zip> --input "..." [--teaching teaching.json]
                    [--section id] [--context context.json] [--model id] [--agent ref] [--no-teaching] [--json]
@@ -26,7 +31,15 @@ viable-harness calibrate <results.json> <labels.json> [--json]
 viable-harness validate <file> [--kind agent|course-package|learning-events|teaching|component]
 viable-harness measure <events.json>
 viable-harness misconceptions "<a few words, or a standard's text>" [--json]
-viable-harness catalog [words...] [--kind kind] [--slot slot] [--open] [--json]
+viable-harness catalog [words...] [--kind kind] [--slot slot] [--open] [--connected] [--json]
+viable-harness resources [list | get <id> | use <id>] [--accept-license] [--dir folder] [--json]
+viable-harness inspect <package> [--json]
+viable-harness deploy <node|docker|cloudflare|aws-lambda|cloud-run|firebase> <package> --out <dir>
+viable-harness verify <url> [--token-env NAME] [--turn] [--json]
+viable-harness gateway --upstream <url> [--teaching file] [--reviewer-model id] [--data-dir dir]
+viable-harness knowledge refresh <package> --out <folder>
+viable-harness records export --data-dir <dir>
+viable-harness forget <learner> --data-dir <dir>
 viable-harness components [--json]
 viable-harness component <manifest.json> --input payload.json [--json]
 viable-harness suggest <record.json | run.json | package.json...> [--teaching teaching.json] [--json]
@@ -85,6 +98,23 @@ your path.)
 | Transcribe | Skipped: a local run sends no recording. |
 | Image | Calls your endpoint's `/images/generations`, or `/images/edits` for a step that changes a picture, and saves each picture to a file. Its prompt (the learner's and the models' text, as the step writes it) goes to that endpoint. A refusal by the endpoint's safety system is marked blocked, as on VIABLE. Pictures saved as files aren't kept by number for later turns. |
 
+## Serving it
+
+`serve` is for one machine. For a cloud, `inspect` says what a package needs, `deploy <target>` writes a folder
+ready to deploy, and `verify` checks it from outside ([self-hosting.md](self-hosting.md)). In code,
+`createHandler({ agents, runtime, store, options, routes })` is a function from a web Request to a Response, and
+`createApp({ bytes, vars, store, models })` builds one from a package's bytes. `serve --panel` adds the panel to
+your own server, for the token holder, on a page asked for with `?panel=1`. `test ... --html` shows results as a page.
+
+### Learners' pages
+
+A package carries each agent's look and chat page settings, and `serve` hosts them: `/chat/<agent>`, `/embed.js`,
+`/course/<course>`, and `/teacher` behind the token (with none set, one made at start and printed once). Limits and allowed sites are enforced. A learner is a browser
+with a code they can re-enter, or whoever has a class code (`--class-code-env`), or who a proxy says
+(`--learner-header`). `viable-harness records export` gives `view` and `suggest` what the server kept, and
+`viable-harness forget <code>` removes one learner. Voice, attachments, studies and class lists stay on VIABLE
+([learner-pages.md](learner-pages.md)).
+
 ## From code
 
 ```js
@@ -115,7 +145,7 @@ minutes. The harness doesn't price calls: cost is always 0.
 
 For a host that keeps its own harness, assistant or agent SDK:
 
-- **An MCP server.** `viable-harness mcp` serves twelve tools over stdio: `check_reply`,
+- **An MCP server.** `viable-harness mcp` serves its tools over stdio: `check_reply`,
   `teaching_instructions`, `find_misconceptions`, `compute_measures`, `validate_document`,
   `run_agent`, `run_agent_tests`, `draft_tests`, `calibrate_judge`, `suggest_changes`,
   `list_components` and `find_public_goods`. A client starts it as
@@ -126,7 +156,15 @@ For a host that keeps its own harness, assistant or agent SDK:
   `suggest_changes` also show their result as a small page: each VETTING round with the reviewer's
   reason, each test case with the judge's reason, each suggestion with its evidence. Other
   assistants get the same text as before ([mcp.md](mcp.md#views-in-assistants-that-show-mcp-apps)).
-- **Agent Skills.** `skills/` holds four, a folder with a `SKILL.md` each, for assistants that load
+- **The hosted MCP server.** `https://api.viablelab.org/mcp` serves the tools that need no local files, with
+  nothing to install: with no key, standards, misconceptions, teaching instructions, public goods, validation and
+  components; with a VIABLE API key, also `check_reply` and a project's published agents
+  ([mcp.md](mcp.md#hosted-or-local)).
+- **The gateway** (`viable-harness gateway`, `gatewayHandler`): an OpenAI-compatible endpoint in front of any
+  other. It adds How the AI helps, holds a reply until VETTING passes it, and keeps records `view` and `suggest`
+  read. `/v1/check`, `/v1/teaching/instructions` and `/v1/misconceptions` answer over plain HTTP
+  ([with-your-stack.md](with-your-stack.md)).
+- **Agent Skills.** `skills/` holds five, a folder with a `SKILL.md` each, for assistants that load
   skills: `writing-how-the-ai-helps`, `checking-replies-with-vetting`, `writing-agent-tests` and
   `reading-learning-evidence`. Each uses the tools and commands above; copy a folder to where your
   assistant reads skills from.
@@ -149,6 +187,8 @@ tips, defaults and bounds), outputs, flow and the plain-language sentence VIABLE
 written from the step manifests in `src/agents/steps/` by `npm run steps:build`, never by hand
 ([step-manifests.md](step-manifests.md)).
 
+**A package with no course.** `course` is optional in `viable.course-package`. With none, the package is one or more agents with their knowledge and chat pages. `inspect`, `serve`, `run`, `deploy`, `validate` and `knowledge refresh` all read it. Importing it on VIABLE makes the agents and knowledge bases, and no course.
+
 ## The measures
 
 `measureLearner({ events, turns })` returns the research export's learner metrics (messages,
@@ -159,18 +199,26 @@ file VIABLE's export and dashboard use (`src/utils/researchMetrics.js`).
 
 ## The teacher view
 
-`viable-harness view` (or `teacherView({ teaching, records, runs, title, suggestions })`) makes one
-HTML page for a teacher who doesn't read JSON: How the AI helps as it was set, with each section's
-own level and note; what VETTING did, with every reply that didn't pass, its rounds and the
-reviewer's reasons; each learner's measures, by the ID their record carries, with the definitions and
-caveats above; misconceptions heard, where a turn's `misconceptions` or an event's
-`data.misconception` names them; and, when given, suggested changes with their evidence, for the
-teacher to decide on. It is self-contained (no scripts, nothing loaded from the internet), escapes
-everything learners and models wrote, and prints.
+`viable-harness view` (or `teacherView({ teaching, records, runs, title, suggestions })`) makes one HTML page for a
+teacher who doesn't read JSON. It opens on what happened, in sentences and a row of marks, one group for each reply
+reviewed and one mark for each round. Then come How the AI helps as it was set, with each section's own level and
+note; what VETTING did, with every reply that was sent back as a marked-up draft (the draft struck, the reviewer's
+reason beside it, the rewrite); each learner's measures, by the ID their record carries, as a row of ticks and
+crosses and small bars, with every measure and its definition and caveats a click away; misconceptions heard, most
+learners first, with who said them; and, when given, suggested changes as its conclusion, with their evidence and
+what to do next, for the teacher to decide on. It is self-contained (no scripts, its fonts inlined, nothing loaded
+from the internet), escapes everything learners and models wrote, works in dark mode and on a phone, and prints with
+every section open.
 
 ```sh
 node bin/viable-harness.mjs view learner-*.json run-*.json examples/fractions-practice.json --out class.html
 ```
+
+What the page shares with the MCP views is written once in `src/ui/`. `theme.js` holds the tokens, under the names
+and light values of VIABLE's portal's stylesheet, with the fonts, the mark and the base components. `parts.js` holds a VETTING
+round, a test case and a suggestion as pure functions returning a tree, which `treeHtml` writes on a server and
+`treeDom` builds in a browser. A served page uses `themeCss({ fonts: 'url' })` and adds `fontRoutes()` to the
+server's routes.
 
 ## Suggested changes
 
@@ -201,7 +249,8 @@ component that runs out of process, as an HTTP endpoint or a stdio MCP server, i
 `callComponent(manifest, payload)` or `viable-harness component <manifest.json> --input
 payload.json`. The harness sends only the fields `receives` lists, calls an HTTP entry only on a host
 in `sends_to`, and stops at a timeout or an oversized answer; what an MCP server does on its own
-machine it can't control. A judge component rates agent tests (`runAgentTests(doc, cases, {
+machine it can't control. Those are for a manifest you point at yourself: a component step in a document
+calls only public http components unless you name it (`--allow-component <id>`). A judge component rates agent tests (`runAgentTests(doc, cases, {
 judgeComponent })`), and `detect`, `measure` and `lookup` call a detector, a measure or a context
 component. A graph runs a step component as a Component step: its manifest held in the step, `inputs`
 mapping each field it receives to a template, its answer `{ output, flags }` read as `{{id.output}}`
@@ -215,10 +264,15 @@ answers out of shape ([components.md](components.md#a-step-in-a-graph)). Start o
 models, tools, open content and learning data repositories for K-12 AI, one file each in `catalog/`
 (`schemas/catalog-entry.schema.json`), each with its license and a note on gated, non-commercial,
 mixed or conflicting terms, how to get it, whether it is released, the slot it would fill and the
-date it was checked. `searchCatalog(query, { kind, slot, open })`, `viable-harness catalog` and the
+date it was checked. `searchCatalog(query, { kind, slot, open, connected })`, `viable-harness catalog` and the
 MCP tool `find_public_goods` search it with no network; `open` keeps what anyone may download and
 use, commercially too. Entries describe, not endorse; listing is not joining the harness (that is a
 component).
+
+Each entry says how far it is connected: listed, fetchable, one command from an effect, or built in. `viable-harness
+resources` fetches a good from its makers, on their terms, and turns it into what the harness runs: `test --suite`,
+`test --judge`, `calibrate --set`, `--knowledge <id>=resource:<resource>`, a standards search or a measure
+([resources.md](resources.md)).
 
 ## Agent tests
 

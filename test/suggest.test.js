@@ -71,10 +71,14 @@ test('a chosen misconception without a source of its own keeps the release it ca
 
 test('the sample class in examples/ gives the README’s two suggestions without a model', async () => {
   const { readFileSync, readdirSync } = await import('node:fs');
+  const { teacherView, viewInputs } = await import('../src/view.js');
   const dir = new URL('../examples/class/', import.meta.url);
-  const records = readdirSync(dir).map((name) => JSON.parse(readFileSync(new URL(name, dir), 'utf8')));
   const fractions = JSON.parse(readFileSync(new URL('../examples/fractions-practice.json', import.meta.url), 'utf8'));
-  const found = suggestChanges({ teaching: fractions.course.activities[0].teaching, records });
+  const inputs = viewInputs([...readdirSync(dir).map((name) => ({ name, doc: JSON.parse(readFileSync(new URL(name, dir), 'utf8')) })), { name: 'package', doc: fractions }]);
+  assert.equal(inputs.records.length, 4);
+  assert.equal(inputs.runs.length, 8, 'its runs give the page its marked-up drafts');
+  const found = suggestChanges(inputs);
+  assert.match(teacherView({ ...inputs, suggestions: found }), /<del>3\/4 \+ 1\/8 = 7\/8\.<\/del>/);
   assert.deepEqual(found.map((item) => item.rule), ['misconception_heard', 'stuck_on_a_skill']);
   assert.deepEqual(found[1].patch, { sections: { sec_p2: { help: 'explain' } } });
 });

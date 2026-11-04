@@ -11,6 +11,7 @@ a change, and how it gets reviewed and merged.
 - **Improve the docs or an example**: small fixes are the best first pull request.
 - **Bring your research in as a component**: open a [component proposal](https://github.com/VIABLE-Learning-Lab/viable-harness/issues/new?template=component.yml) first, then see [docs/components.md](docs/components.md).
 - **List a public good in the catalog**: see [Catalog entries](#catalog-entries).
+- **Connect one to agents**: see [Connectors](#connectors).
 - **Fix or build something**: look for [good first issues](https://github.com/VIABLE-Learning-Lab/viable-harness/labels/good%20first%20issue) and [help wanted](https://github.com/VIABLE-Learning-Lab/viable-harness/labels/help%20wanted); for anything larger than a fix, open an issue first so we can agree on where it belongs.
 
 ## Set up
@@ -29,9 +30,11 @@ npm test
 | --- | --- |
 | `src/agents/` | the graph engine (`engine.js`), its checks (`graph.js`), expressions, VETTING's prompts, and one manifest per step type in `steps/` |
 | `src/utils/` | How the AI helps (`teaching.js`), the research measures, the misconception search and the data copies |
-| `src/` | the public functions: `run.js`, `check.js`, `agentTests.js` and `testRuns.js`, `suggest.js`, `view.js`, `mcp.js` with its views (`mcpViews.js`), `xapi.js`, `conformance.js`, `validate.js` |
+| `src/` | the public functions: `run.js`, `check.js`, `agentTests.js` and `testRuns.js`, `suggest.js`, `view.js`, the MCP server (`mcpTools.js`, `mcpProtocol.js`, `mcp.js` for stdio, `mcpViews.js`), `xapi.js`, `conformance.js`, `validate.js` |
+| `src/ui/` | what every page shares: the theme (`theme.js`, its fonts and the mark) and `parts.js`, a VETTING round, a test case and a suggestion written once for every page that shows them |
 | `src/components/` | the built-in components' manifests |
 | `catalog/` | the public goods catalog, one entry per file ([docs/catalog.md](docs/catalog.md)) |
+| `src/resources/` | connectors, one per resource ([docs/resources.md](docs/resources.md)) |
 | `schemas/`, `conformance/` | the open formats, and the fixtures another implementation checks itself against |
 | `examples/`, `skills/`, `docs/` | course packages, Agent Skills, documentation |
 | `bin/viable-harness.mjs` | the command line |
@@ -43,7 +46,7 @@ npm test
   packages `test/boundary.test.js` lists. Dependencies are under MIT or Apache-2.0; the one exception,
   `entities` (BSD-2-Clause), is named there. A new dependency needs a reason a few lines of code
   can't meet. Modules a host bundles for a server or a browser (the engine,
-  `agentTests.js`, `suggest.js`) import no `node:` built-ins; local-only code (`run.js`,
+  `agentTests.js`, `suggest.js`, `checkPlan.js`, `mcpTools.js`, `mcpProtocol.js`) import no `node:` built-ins; local-only code (`run.js`,
   `knowledge.js`) may.
 - **Protect learners.** No learner's name or identifier is ever sent to a model, and fixtures, tests
   and examples hold no real learner's data: write synthetic ones.
@@ -95,7 +98,7 @@ The public goods catalog ([docs/catalog.md](docs/catalog.md)) lists open dataset
 knowledge graphs, standards, evaluators, models, tools, open content and learning data repositories
 for K-12 AI, one file each in `catalog/`, checked against `schemas/catalog-entry.schema.json`. An
 entry describes the work; it doesn't endorse it, and listing it doesn't bring it into the harness
-(a component does).
+(a connector or a component does).
 
 - **What qualifies**: work for K-12 education that anyone can find and get on its makers' terms,
   released, or announced by its makers with a date. Closed commercial products, and work only its
@@ -107,6 +110,16 @@ entry describes the work; it doesn't endorse it, and listing it doesn't bring it
 - **How**: open an [issue](https://github.com/VIABLE-Learning-Lab/viable-harness/issues/new?template=catalog.yml),
   or a pull request with `catalog/<id>.json` and what `npm run catalog:build` writes from it
   (`npm test` checks both).
+- **`connect`**: how far it is connected (0 listed, 1 fetchable, 2 one command from an effect, 3 built
+  in), as what, the exact command, and a note: what results can show and what they can't, or why it goes
+  no further ([docs/resources.md](docs/resources.md)).
+
+## Connectors
+
+A connector turns a public good into what the harness runs: a test suite, a judge, a calibration set, a
+knowledge folder, a context lookup or a measure. Fetch the data and read it first, then follow
+[Write a connector](docs/resources.md#write-a-connector). Say so in the entry when it can't be done
+well: a connector nobody would use is worse than none.
 
 ## Releases
 

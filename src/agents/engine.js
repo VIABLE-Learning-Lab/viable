@@ -5,7 +5,7 @@
  * branching and back-edges (loops). Hard budgets — max steps, max model calls,
  * max loop iterations, and a wall-clock deadline — guarantee termination even
  * for cyclic graphs. Provider calls go through the services the host passes
- * (VIABLE's: src/utils/agentPlatform.js, the same clients as the fixed
+ * (VIABLE's platform passes its own, the same clients as the fixed
  * endpoints) and are reported via hooks so the caller can persist traces and
  * per-call billing rows.
  *
@@ -64,7 +64,7 @@ function budgetError(kind, budgets) {
 
 // A service only a host has (model calls, media, storage): without one, a clear error.
 const noHostService = (name) => async () => {
-  throw new AgentRunError(`This run has no ${name} service. Pass hostServices (VIABLE's: src/utils/agentPlatform.js) or services.`, { status: 500, code: 'host_service_missing' });
+  throw new AgentRunError(`This run has no ${name} service. Pass hostServices or services.`, { status: 500, code: 'host_service_missing' });
 };
 
 // Without a model catalog a model is taken as named: the default context window, no known
@@ -74,8 +74,8 @@ const NO_MODEL_CATALOG = Object.freeze({ resolve: unlisted, resolveChat: unliste
 
 /**
  * options.hostServices(deadline): what the host gives this run (model calls on the paying account's
- * keys, media, billing fields, the model catalog; VIABLE's is platformServices in
- * src/utils/agentPlatform.js), called with the run's deadline. options.services override any of it.
+ * keys, media, billing fields, the model catalog), called with the run's deadline. options.services
+ * override any of it.
  */
 export async function runAgentGraph(env, graph, options = {}) {
   const budgets = { ...DEFAULT_BUDGETS, ...(options.budgets || {}) };
@@ -369,7 +369,8 @@ function summarizeOutput(node, output, ctx) {
       // A long reply is cut (its text to 4,000 characters), but what an app acts on (citations, result data) stays whole.
       // An agent step keeps what it looked up, so a run can be diagnosed.
       ...(node.type === 'agent' && Array.isArray(safeOutput.tool_calls) ? { tool_calls: safeOutput.tool_calls, turns: safeOutput.turns, model: safeOutput.model } : {}),
-      // A review keeps its verdict (the turn records it: learning_turns.vetting_json) and its rounds, replies cut.
+      ...(node.type === 'knowledge' ? { query: safeOutput.query, count: safeOutput.count, results: (safeOutput.results || []).map((item) => ({ ...item, text: String(item.text ?? '').slice(0, 300) })) } : {}),
+      // A review keeps its verdict (the host's record of the turn keeps it) and its rounds, replies cut.
       ...(node.type === 'vetting' ? { outcome: safeOutput.outcome, passed: safeOutput.passed, attempts: safeOutput.attempts, stop_reason: safeOutput.stop_reason, ...(Array.isArray(safeOutput.attempt_details) ? { attempt_details: shortRounds(safeOutput.attempt_details) } : {}) } : {}),
       // Run lists need the current message even when the accumulated history fills the trace.
       ...(node.type === 'input' ? { message: String(safeOutput.message ?? '').slice(0, 4000), ...(typeof safeOutput.content === 'string' ? { content: safeOutput.content.slice(0, 4000) } : {}), ...(safeOutput.history_summary ? { history_summary: safeOutput.history_summary } : {}) } : {}),
@@ -1253,6 +1254,8 @@ const HANDLERS = {
       const fromDraft = attempt === 1 && Boolean(draft);
       // A round: what was reviewed (the draft or a reply written for it), the verdict and the reviewer's reason.
       const round = (fields) => ({ attempt, source: fromDraft ? 'draft' : 'generated', ...fields, ...(fromDraft ? { draft: true } : {}) });
+      // Kept, and told to whoever watches the run as it happens (hooks.onVettingRound).
+      const keep = (item) => { attempts.push(item); hooks.onVettingRound?.(node, item); };
       if (fromDraft) {
         response = draft;
       } else {
@@ -1264,7 +1267,7 @@ const HANDLERS = {
         } catch (error) {
           if (attempt === 1) throw error;
           const reason = String(error?.message || error);
-          attempts.push(round({ passed: false, verification: `Generation Error: ${reason.slice(0, 300)}`, reply: null, verdict: 'error', feedback: reason.slice(0, 1000) }));
+          keep(round({ passed: false, verification: `Generation Error: ${reason.slice(0, 300)}`, reply: null, verdict: 'error', feedback: reason.slice(0, 1000) }));
           stopReason = 'GENERATION_ERROR';
           break;
         }
@@ -1274,10 +1277,11 @@ const HANDLERS = {
           requiresAttention = true;
           outcome = 'attention';
           stopReason = 'SAFETY_TRIGGERED';
-          attempts.push(round({ passed: false, verification: 'N/A (Safety Triggered)', reply: clip(response, 4000), verdict: 'safety', feedback: null }));
+          keep(round({ passed: false, verification: 'N/A (Safety Triggered)', reply: clip(response, 4000), verdict: 'safety', feedback: null }));
           break;
         }
       }
+      hooks.onVettingDraft?.(node, { attempt, source: fromDraft ? 'draft' : 'generated', reply: clip(response, 4000) });
       let verdict;
       try {
         const check = (prompt) => ({ messages: [{ role: 'system', content: prompt }, { role: 'user', content: full
@@ -1287,11 +1291,11 @@ const HANDLERS = {
         verdict = full ? parseVerificationResult(verified.content) : (() => { const r = parseSimpleVerificationResult(verified.content); return { passed: r.passed, verificationOutput: r.passed ? 'PASS' : r.failureReason, reason: r.reason }; })();
       } catch (error) {
         const reason = String(error?.message || error);
-        attempts.push(round({ passed: false, verification: `Verification Error: ${reason.length > 300 ? `${reason.slice(0, 300).replace(/\s+\S*$/, '')}…` : reason}`, reply: clip(response, 4000), verdict: 'error', feedback: reason.slice(0, 1000) }));
+        keep(round({ passed: false, verification: `Verification Error: ${reason.length > 300 ? `${reason.slice(0, 300).replace(/\s+\S*$/, '')}…` : reason}`, reply: clip(response, 4000), verdict: 'error', feedback: reason.slice(0, 1000) }));
         stopReason = 'VERIFICATION_ERROR';
         break;
       }
-      attempts.push(round({ passed: verdict.passed, verification: verdict.verificationOutput, reply: clip(response, 4000), verdict: verdict.passed ? 'pass' : 'fail', feedback: verdict.passed ? null : verdict.reason ?? verdict.verificationOutput }));
+      keep(round({ passed: verdict.passed, verification: verdict.verificationOutput, reply: clip(response, 4000), verdict: verdict.passed ? 'pass' : 'fail', feedback: verdict.passed ? null : verdict.reason ?? verdict.verificationOutput }));
       if (verdict.passed) {
         outcome = 'passed';
         stopReason = 'VERIFICATION_PASSED';
@@ -1446,7 +1450,7 @@ const DEFAULT_CONTEXT_WINDOW = 128000;
 const MAX_HISTORY_TOKENS = 100000;
 // A conversation of many short messages folds before execution's 400-message load could drop any.
 const MAX_UNSUMMARIZED_MESSAGES = 300;
-const SUMMARY_MODEL = 'viable-3';
+export const SUMMARY_MODEL = 'viable-3';
 const SUMMARY_SOURCE_CHARS = 400000;
 
 function contextWindowOf(models, model, provider) {
@@ -2066,7 +2070,7 @@ const PII_PATTERNS = [
   ['phone number', /(?<![\w+])(?:\+\d{1,3}(?:[\s.-]?\d{2,4}){2,4}|\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4})(?!\d)/g]
 ];
 
-// ponytail: regex PII detection covers common formats only; add a model check for names/addresses when needed.
+// Patterns for common formats only, so it misses names and street addresses. Put a model's check after it if those matter.
 export function detectPii(text) {
   const types = [];
   let redacted = String(text ?? '');
@@ -2174,8 +2178,8 @@ async function runSubAgent(env, ctx, services, hooks, budgets, node, slug, input
       maxModelCalls: Math.max(0, budgets.maxModelCalls - ctx.modelCalls),
       maxLoopIterations: budgets.maxLoopIterations,
       timeoutMs: Math.max(1, ctx.runStartedAt + budgets.timeoutMs - Date.now()),
-      // ponytail: sub-agents running at once each get the parent's remaining tokens; the shared
-      // model call count still bounds them. Charge tokens to the parent live if that ever matters.
+      // Sub-agents running at once each get the parent's remaining tokens, so together they can pass a
+      // token budget by up to their number; the shared model call count still bounds them.
       maxRunTokens: Math.max(1, budgets.maxRunTokens - tokensUsed(ctx.usage))
     },
     services: { ...services, ...(target.services || {}) },

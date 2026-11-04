@@ -45,3 +45,26 @@ Eedi Misconceptions Graph
 
 The npm package the harness depends on, with its own license file in node_modules/:
   entities (BSD-2-Clause).
+
+The fonts in src/ui/fonts/, also inlined from src/ui/fontData.js into pages the harness writes, keep
+their own license, the SIL Open Font License 1.1 (OFL-*.txt beside them, https://openfontlicense.org):
+  Atkinson Hyperlegible Next, (c) 2020-2024 The Atkinson Hyperlegible Next Project Authors
+  (https://github.com/googlefonts/atkinson-hyperlegible-next).
+  Atkinson Hyperlegible Mono, (c) 2020-2024 The Atkinson Hyperlegible Mono Project Authors
+  (https://github.com/googlefonts/atkinson-hyperlegible-next-mono).
+  Both are Google Fonts' latin subsets, as served.
+
+The built browser files of the learner pages (dist/, made by `npm run build:assets`; not in this
+repository, in the package and the image) bundle these libraries, under their own licenses, whose
+statements are kept at the end of each file:
+  marked, temml, mermaid and what it uses (MIT): @braintree/sanitize-url, @iconify/utils,
+    @mermaid-js/parser, @upsetjs/venn.js, cose-base, cytoscape, cytoscape-cose-bilkent,
+    cytoscape-fcose, dagre-d3-es, dayjs, es-toolkit, katex, khroma, layout-base, lodash-es, roughjs,
+    stylis, ts-dedent, uuid.
+  DOMPurify (MPL-2.0 or Apache-2.0, used under Apache-2.0).
+  pdf.js (pdfjs-dist, Apache-2.0), with its character maps, standard fonts and image decoders under
+    their own licenses, listed in its folder in dist/. chevrotain (Apache-2.0).
+  highlight.js, d3-ease, d3-sankey (BSD-3-Clause).
+  d3 and its modules, delaunator, internmap (ISC).
+  elkjs (EPL-2.0 or GPL-3.0-or-later, used under EPL-2.0; its source is at
+    https://github.com/kieler/elkjs), robust-predicates (Unlicense).

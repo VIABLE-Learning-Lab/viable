@@ -32,5 +32,11 @@
     "how": "A standard's text could be an activity's context, as Learning Commons standards are; under a non-commercial license, only as opt-in context."
   },
   "in_harness": null,
+  "connect": {
+    "level": 1,
+    "as": [],
+    "command": "viable-harness resources get csta-computer-science-standards",
+    "note": "Comes down as its PDF, which a local run doesn't read as knowledge, so nothing is made from it. Non-commercial and share-alike: asks you to accept its license first."
+  },
   "verified_at": "2026-11-03"
 }

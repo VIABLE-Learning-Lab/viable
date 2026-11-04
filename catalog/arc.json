@@ -33,5 +33,11 @@
     "how": "No slot yet: its questions and answer keys could be agent test cases, once its terms are clear."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Its terms conflict: a CC BY-SA tag on the dataset card, and \"Do not distribute\" and \"Non-commercial use only\" in its original download. Not connected until that is clear."
+  },
   "verified_at": "2026-11-03"
 }

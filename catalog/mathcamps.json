@@ -27,8 +27,16 @@
   "status": "released",
   "fits": {
     "slots": [],
-    "how": "No slot yet: its problems, with answers and standards, could be agent test cases for an activity's standard."
+    "how": "Its problems, each tied to a standard, become test cases for an activity's standard."
   },
   "in_harness": null,
+  "connect": {
+    "level": 2,
+    "as": [
+      "test-suite"
+    ],
+    "command": "viable-harness test agent.json --suite mathcamps --standard 6.EE.A.1 --limit 20 --judge-model <model>",
+    "note": "The same three kinds of case as GSM8K, from problems tied to a Common Core standard, so a suite can match an activity's standard (--standard, K-8, 44 standards). Language models wrote the problems. It shows what your judge read in these replies, not what learners learn."
+  },
   "verified_at": "2026-11-03"
 }

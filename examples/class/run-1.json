@@ -1,0 +1,125 @@
+{
+  "agent": "Fractions tutor",
+  "activity": "Practice: equivalent fractions",
+  "teaching": {
+    "goal": "Learners rewrite fractions with a common denominator before adding or subtracting, and can say why the denominators can’t just be added.",
+    "help": "hint"
+  },
+  "output": {
+    "text": "What could both denominators become? Try listing multiples of 2 and of 3."
+  },
+  "steps": [
+    {
+      "stepNumber": 1,
+      "nodeId": "input",
+      "nodeType": "input",
+      "status": "completed",
+      "input": null,
+      "output": {
+        "message": "What is 1/2 + 1/3?",
+        "content": "What is 1/2 + 1/3?",
+        "history": []
+      },
+      "model": null,
+      "tokens": null,
+      "cost": null,
+      "error": null,
+      "startedOffsetMs": 0,
+      "durationMs": 1
+    },
+    {
+      "stepNumber": 2,
+      "nodeId": "on_question",
+      "nodeType": "condition",
+      "status": "completed",
+      "input": {
+        "field": "context.question",
+        "op": "truthy",
+        "value": null,
+        "left": null
+      },
+      "output": {
+        "result": false,
+        "field": "context.question",
+        "op": "truthy",
+        "left": null,
+        "right": null
+      },
+      "model": null,
+      "tokens": null,
+      "cost": null,
+      "error": null,
+      "startedOffsetMs": 1,
+      "durationMs": 1
+    },
+    {
+      "stepNumber": 3,
+      "nodeId": "vet_general",
+      "nodeType": "vetting",
+      "status": "completed",
+      "input": {
+        "mode": "simple",
+        "message": "What is 1/2 + 1/3?"
+      },
+      "output": {
+        "content": "What could both denominators become? Try listing multiples of 2 and of 3.",
+        "passed": true,
+        "requires_attention": false,
+        "outcome": "passed",
+        "stop_reason": "VERIFICATION_PASSED",
+        "attempts": 1,
+        "verification": "PASS",
+        "attempt_details": [
+          {
+            "attempt": 1,
+            "source": "generated",
+            "passed": true,
+            "verification": "PASS",
+            "reply": "What could both denominators become? Try listing multiples of 2 and of 3.",
+            "verdict": "pass",
+            "feedback": null
+          }
+        ],
+        "model": "gpt-oss-120b",
+        "verification_model": "gpt-oss-120b",
+        "usage": {
+          "prompt": 20,
+          "completion": 10,
+          "total": 30
+        },
+        "cost": 0
+      },
+      "model": "gpt-oss-120b",
+      "tokens": 30,
+      "cost": 0,
+      "error": null,
+      "startedOffsetMs": 2,
+      "durationMs": 25
+    },
+    {
+      "stepNumber": 4,
+      "nodeId": "reply_general",
+      "nodeType": "output",
+      "status": "completed",
+      "input": null,
+      "output": {
+        "text": "What could both denominators become? Try listing multiples of 2 and of 3.",
+        "attachments": []
+      },
+      "model": null,
+      "tokens": null,
+      "cost": null,
+      "error": null,
+      "startedOffsetMs": 27,
+      "durationMs": 0
+    }
+  ],
+  "usage": {
+    "prompt": 20,
+    "completion": 10,
+    "total": 30
+  },
+  "cost": 0,
+  "modelCalls": 2,
+  "stepCount": 4
+}

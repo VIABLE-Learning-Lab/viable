@@ -31,5 +31,11 @@
     "how": "No slot: a source of datasets and benchmarks, where the Program asks its grantees to release their public goods."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "A platform that lists resources, each on its own terms, behind an account. Where a resource it lists is connected here, it has its own entry."
+  },
   "verified_at": "2026-11-03"
 }

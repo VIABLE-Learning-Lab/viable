@@ -1,0 +1,134 @@
+{
+  "agent": "Fractions tutor",
+  "activity": "Practice: equivalent fractions",
+  "teaching": {
+    "goal": "Learners rewrite fractions with a common denominator before adding or subtracting, and can say why the denominators can’t just be added.",
+    "help": "hint"
+  },
+  "output": {
+    "text": "Think about the size of the pieces. Is a half the same size as a third? What would have to be true of the pieces before you could count them together?"
+  },
+  "steps": [
+    {
+      "stepNumber": 1,
+      "nodeId": "input",
+      "nodeType": "input",
+      "status": "completed",
+      "input": null,
+      "output": {
+        "message": "why cant i just add the bottoms",
+        "content": "why cant i just add the bottoms",
+        "history": []
+      },
+      "model": null,
+      "tokens": null,
+      "cost": null,
+      "error": null,
+      "startedOffsetMs": 0,
+      "durationMs": 0
+    },
+    {
+      "stepNumber": 2,
+      "nodeId": "on_question",
+      "nodeType": "condition",
+      "status": "completed",
+      "input": {
+        "field": "context.question",
+        "op": "truthy",
+        "value": null,
+        "left": null
+      },
+      "output": {
+        "result": false,
+        "field": "context.question",
+        "op": "truthy",
+        "left": null,
+        "right": null
+      },
+      "model": null,
+      "tokens": null,
+      "cost": null,
+      "error": null,
+      "startedOffsetMs": 0,
+      "durationMs": 0
+    },
+    {
+      "stepNumber": 3,
+      "nodeId": "vet_general",
+      "nodeType": "vetting",
+      "status": "completed",
+      "input": {
+        "mode": "simple",
+        "message": "why cant i just add the bottoms"
+      },
+      "output": {
+        "content": "Think about the size of the pieces. Is a half the same size as a third? What would have to be true of the pieces before you could count them together?",
+        "passed": true,
+        "requires_attention": false,
+        "outcome": "passed",
+        "stop_reason": "VERIFICATION_PASSED",
+        "attempts": 2,
+        "verification": "PASS",
+        "attempt_details": [
+          {
+            "attempt": 1,
+            "source": "generated",
+            "passed": false,
+            "verification": "FAILED: It uses “least common multiple”, which this class hasn’t met.",
+            "reply": "To add fractions you find the least common multiple of the denominators, then convert each fraction.",
+            "verdict": "fail",
+            "feedback": "FAILED: It uses “least common multiple”, which this class hasn’t met."
+          },
+          {
+            "attempt": 2,
+            "source": "generated",
+            "passed": true,
+            "verification": "PASS",
+            "reply": "Think about the size of the pieces. Is a half the same size as a third? What would have to be true of the pieces before you could count them together?",
+            "verdict": "pass",
+            "feedback": null
+          }
+        ],
+        "model": "gpt-oss-120b",
+        "verification_model": "gpt-oss-120b",
+        "usage": {
+          "prompt": 40,
+          "completion": 20,
+          "total": 60
+        },
+        "cost": 0
+      },
+      "model": "gpt-oss-120b",
+      "tokens": 60,
+      "cost": 0,
+      "error": null,
+      "startedOffsetMs": 0,
+      "durationMs": 1
+    },
+    {
+      "stepNumber": 4,
+      "nodeId": "reply_general",
+      "nodeType": "output",
+      "status": "completed",
+      "input": null,
+      "output": {
+        "text": "Think about the size of the pieces. Is a half the same size as a third? What would have to be true of the pieces before you could count them together?",
+        "attachments": []
+      },
+      "model": null,
+      "tokens": null,
+      "cost": null,
+      "error": null,
+      "startedOffsetMs": 1,
+      "durationMs": 0
+    }
+  ],
+  "usage": {
+    "prompt": 40,
+    "completion": 20,
+    "total": 60
+  },
+  "cost": 0,
+  "modelCalls": 4,
+  "stepCount": 4
+}

@@ -37,6 +37,14 @@ export const CATALOG = [
       "how": "A teacher picks the misconceptions the AI listens for, found by the words of a goal or a standard; the harness carries 8,117 misconceptions and the 2,258 constructs they hinder."
     },
     "in_harness": "eedi/misconceptions-graph",
+    "connect": {
+      "level": 3,
+      "as": [
+        "context-lookup"
+      ],
+      "command": "viable-harness misconceptions \"adding fractions\"",
+      "note": "In the core, with no download: a teacher finds misconceptions by words and the AI listens for those chosen. Matched by words: the open release doesn't link them to standards."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -82,9 +90,17 @@ export const CATALOG = [
       "slots": [
         "context"
       ],
-      "how": "A standard, with its learning components, joins the AI's instructions on every turn through an activity's teaching settings. Choosing a standard needs Learning Commons' API."
+      "how": "A standard, with its learning components, joins the AI's instructions on every turn through an activity's teaching settings. A local search of the open release can choose one, with no API key."
     },
     "in_harness": "learning-commons/knowledge-graph-standards",
+    "connect": {
+      "level": 2,
+      "as": [
+        "context-lookup"
+      ],
+      "command": "viable-harness resources use learning-commons-knowledge-graph \"adding fractions\" --grade 5",
+      "note": "A local search of one jurisdiction's standards with no API key; --code gives one as teaching settings, with its learning components and the standards before it, and --teaching reads them. Matched by words, where VIABLE's search goes by meaning. The harness also carries a standard already chosen. Reads about a gigabyte as it streams and keeps a few megabytes."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -127,6 +143,14 @@ export const CATALOG = [
       "how": "An activity can aim at a skill and a level instead of a standard; the harness carries its own copy."
     },
     "in_harness": "carnegie/skills-progressions",
+    "connect": {
+      "level": 3,
+      "as": [
+        "context-lookup"
+      ],
+      "command": "viable-harness run agent.json --teaching teaching.json --input \"...\"",
+      "note": "In the core, with no download: an activity's teaching settings can aim at a skill and a level instead of a standard, and the AI is told what that level asks. Its license is unclear on the Carnegie Foundation's side, as the entry says."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -163,6 +187,12 @@ export const CATALOG = [
       "how": "A standard's text could be an activity's context, as Learning Commons standards are; under a non-commercial license, only as opt-in context."
     },
     "in_harness": null,
+    "connect": {
+      "level": 1,
+      "as": [],
+      "command": "viable-harness resources get csta-computer-science-standards",
+      "note": "Comes down as its PDF, which a local run doesn't read as knowledge, so nothing is made from it. Non-commercial and share-alike: asks you to accept its license first."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -198,9 +228,17 @@ export const CATALOG = [
       "slots": [
         "context"
       ],
-      "how": "Its lessons and practice problems could be an activity's readings and questions; the CC BY edition also for commercial use."
+      "how": "One unit's student lessons in the CC BY edition become a knowledge folder a Knowledge step searches."
     },
     "in_harness": null,
+    "connect": {
+      "level": 2,
+      "as": [
+        "knowledge-folder"
+      ],
+      "command": "viable-harness resources get illustrative-mathematics --grade 6 --unit 4",
+      "note": "One unit's student lessons, grades 6-8, in the CC BY edition, as files a Knowledge step searches: then --knowledge <kb-id>=resource:illustrative-mathematics. Student pages only, so no teacher's guide or answer keys, and pictures become their descriptions."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -237,6 +275,12 @@ export const CATALOG = [
       "how": "Its units could be an activity's readings for non-commercial use. The Learning Commons Knowledge Graph lists it as a gated dataset."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Web pages under a non-commercial license, and its commercial terms prohibit training AI models. Not connected: no clean way to hold it apart from uses its terms rule out."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -277,6 +321,12 @@ export const CATALOG = [
       "how": "Its chapters could be an activity's readings or a Knowledge step's sources; most current editions only for non-commercial use."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Books as web pages and PDFs, with a different license by edition, most now non-commercial. Not connected until a book can be fetched as text with its license checked book by book."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -313,9 +363,17 @@ export const CATALOG = [
       "slots": [
         "context"
       ],
-      "how": "A guide's recommendations could be knowledge for tutors, in How the AI helps or a Knowledge step."
+      "how": "Each guide's recommendations and evidence ratings become a knowledge folder a Knowledge step searches."
     },
     "in_harness": null,
+    "connect": {
+      "level": 2,
+      "as": [
+        "knowledge-folder"
+      ],
+      "command": "viable-harness run agent.json --input \"...\" --knowledge <kb-id>=resource:wwc-practice-guides",
+      "note": "Each guide's recommendations with their evidence ratings, as files a Knowledge step searches and cites. Not the guides' full text, which is in PDFs a local run doesn't read. It lets an agent say what the guides recommend; whether its replies improve is yours to test."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -347,10 +405,20 @@ export const CATALOG = [
     "cite": "Crossley, S. A., Baffour, P., Burleigh, L., & King, J. (2025). A large-scale corpus for assessing source-based writing quality: ASAP 2.0. Assessing Writing, 65, 100954. https://doi.org/10.1016/j.asw.2025.100954",
     "status": "released",
     "fits": {
-      "slots": [],
-      "how": "No slot yet: its scored essays could be the learner's work in agent test cases for a writing feedback agent."
+      "slots": [
+        "judge"
+      ],
+      "how": "Its scored essays and rubric are a set to check a model's reading of writing against trained raters."
     },
     "in_harness": null,
+    "connect": {
+      "level": 2,
+      "as": [
+        "calibration-set"
+      ],
+      "command": "viable-harness calibrate --set asap-2 --judge-model <model> --limit 30",
+      "note": "Does a model reading an essay land on the same side of \"adequate mastery\" as trained raters? The same number of essays from each score, with their rubric. A pass or fail on one line, so it isn't the score agreement papers report. Writers' demographics are dropped at download. It says nothing about whether feedback helps. These are real students' essays, masked by their makers: running this sends them to the model you name, so use one whose terms you accept."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -385,9 +453,15 @@ export const CATALOG = [
       "slots": [
         "judge"
       ],
-      "how": "Its experts' replies and strategies could be the reference a judge compares an agent's reply to a mistake against, for non-commercial use."
+      "how": "Its experts' replies and strategies could be the reference a judge compares an agent's reply to a mistake against, for non-commercial use, given whole sessions."
     },
     "in_harness": null,
+    "connect": {
+      "level": 1,
+      "as": [],
+      "command": "viable-harness resources get bridge",
+      "note": "Comes down as its JSON. Each transcript is four turns long and the problem is often on a picture the text doesn't hold, so as test cases they would test little; MathDial and MRBench are connected instead. Non-commercial: asks you to accept its license first."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -428,6 +502,12 @@ export const CATALOG = [
       "how": "Its rubric could rate feedback replies on science writing in agent tests, checked against its annotations."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Not released yet, so there is nothing to fetch or check."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -465,6 +545,12 @@ export const CATALOG = [
       "how": "No slot yet: its passages, chosen by their own licenses, could be an activity's readings, and its scores could check how an agent pitches a text's difficulty."
     },
     "in_harness": null,
+    "connect": {
+      "level": 1,
+      "as": [],
+      "command": "viable-harness resources get clear-corpus",
+      "note": "Comes down as its spreadsheet. XLSX, which the harness doesn't read, and each passage has its own license, so nothing is made from it. Asks you to accept its unclear license first."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -498,10 +584,20 @@ export const CATALOG = [
     "cite": "Crossley, S. A., Tian, Y., Baffour, P., Franklin, A., Kim, Y., Morris, W., Benner, M., Picou, A., & Boser, U. (2023). The English Language Learner Insight, Proficiency and Skills Evaluation (ELLIPSE) Corpus. International Journal of Learner Corpus Research, 9(2), 248-269. https://doi.org/10.1075/ijlcr.22026.cro",
     "status": "released",
     "fits": {
-      "slots": [],
-      "how": "No slot yet: its essays could be multilingual learners' work in agent test cases for a writing feedback agent."
+      "slots": [
+        "judge"
+      ],
+      "how": "Its scored essays and rubric are a set to check a model's reading of English learners' writing against raters."
     },
     "in_harness": null,
+    "connect": {
+      "level": 2,
+      "as": [
+        "calibration-set"
+      ],
+      "command": "viable-harness calibrate --set ellipse --judge-model <model> --limit 30",
+      "note": "The same check as ASAP 2.0 on English learners' essays, for English proficiency: run both to see whether a model reads these writers as raters do. Essays whose raters split across the line are left out. Writers' demographics are dropped at download. It rates language, not ideas. These are real students' essays, masked by their makers: running this sends them to the model you name, so use one whose terms you accept."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -543,9 +639,17 @@ export const CATALOG = [
     "status": "released",
     "fits": {
       "slots": [],
-      "how": "No slot yet: its stories and questions could become agent test cases for a reading tutor."
+      "how": "A story's passage and an educator's question become test cases for a reading tutor."
     },
     "in_harness": null,
+    "connect": {
+      "level": 2,
+      "as": [
+        "test-suite"
+      ],
+      "command": "viable-harness test agent.json --suite fairytaleqa --limit 20 --judge-model <model>",
+      "note": "A passage from a children's story and an educator's question about it: does a reading tutor send the learner back to the text, catch a wrong answer, confirm a right one? The stories are old and from Project Gutenberg, so they may not suit your learners. It shows what your judge read, not what learners learn."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -584,6 +688,12 @@ export const CATALOG = [
       "how": "Its real answer sequences could check mastery measures, and its students' wrong answers could test which errors a simulated learner reproduces."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Gated: a form reviewed weekly, for non-commercial research and education. A connector can't fetch it for you."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -621,9 +731,17 @@ export const CATALOG = [
       "slots": [
         "simulated-learner"
       ],
-      "how": "Its students hold a mistaken solution through a whole dialogue, a pattern for a simulated learner in agent tests; its teachers' moves show replies to compare against."
+      "how": "A mistaken solution becomes a test case, with what the teacher saw in it. Its students also hold a mistake through a whole dialogue, a pattern for a simulated learner, which agent tests don't use yet."
     },
     "in_harness": null,
+    "connect": {
+      "level": 2,
+      "as": [
+        "test-suite"
+      ],
+      "command": "viable-harness test agent.json --suite mathdial --limit 20 --judge-model <model>",
+      "note": "A learner shows a mistaken solution: does the reply find the mistake with a question or a hint, without giving the answer? The solutions are written by a model; the teachers who read them are real. It shows what your judge read in these replies, not what learners learn. Asks you to accept its license first."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -662,6 +780,12 @@ export const CATALOG = [
       "how": "Its discourse annotations could check a detector that marks moments in classroom or tutoring talk, for research."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "By request: each person agrees to terms that limit it to research and forbid sharing. A connector can't fetch it for you."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -699,6 +823,12 @@ export const CATALOG = [
       "how": "No slot yet: its essays could be the learner's work in agent test cases for a writing feedback agent."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Its files are behind Google Drive links with no stable address to pin. ASAP 2.0 holds about half of its essays with the same kind of score, and is connected."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -735,6 +865,12 @@ export const CATALOG = [
       "how": "No slot yet: the harness passes no audio to components."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Not released yet, its audio is to be restricted, and the harness passes no audio to components."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -771,6 +907,12 @@ export const CATALOG = [
       "how": "Its labels could check a detector that marks talk moves in tutoring turns for the teacher, against people's labels."
     },
     "in_harness": null,
+    "connect": {
+      "level": 1,
+      "as": [],
+      "command": "viable-harness resources get talkmoves",
+      "note": "Comes down as its repository's archive. It could check a detector against people's labels, but the harness has no talk-move detector to check yet. Non-commercial and share-alike: asks you to accept its license first."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -808,6 +950,12 @@ export const CATALOG = [
       "how": "No slot yet: its questions and answer keys could be agent test cases, once its terms are clear."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Its terms conflict: a CC BY-SA tag on the dataset card, and \"Do not distribute\" and \"Non-commercial use only\" in its original download. Not connected until that is clear."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -850,6 +998,12 @@ export const CATALOG = [
       "how": "No slot yet: it could test whether a model reads a picture of a learner's work correctly, in agent tests that start with pictures, for non-commercial use."
     },
     "in_harness": null,
+    "connect": {
+      "level": 1,
+      "as": [],
+      "command": "viable-harness resources get drawedumath",
+      "note": "Comes down as its CSV of questions about pictures of students' work. Agent tests can start with pictures, but a model reading one isn't what they rate yet, so nothing is made from it. Non-commercial: asks you to accept its license first."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -881,9 +1035,17 @@ export const CATALOG = [
     "status": "released",
     "fits": {
       "slots": [],
-      "how": "No slot yet: its problems and solutions could be questions with answer keys in agent tests, which VETTING checks replies against."
+      "how": "Its problems and answer keys become test cases that VETTING and a judge check replies against: asking for the answer, a wrong answer, a right one."
     },
     "in_harness": null,
+    "connect": {
+      "level": 2,
+      "as": [
+        "test-suite"
+      ],
+      "command": "viable-harness test agent.json --suite gsm8k --limit 20 --judge-model <model>",
+      "note": "Word problems with answer keys, three kinds of case in turn: does a reply hold the answer back when asked, catch a wrong answer, confirm a right one? It shows what your judge read in these replies, for a tutor meant to give hints. They aren't your activity's problems, and it says nothing about what learners learn."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -924,6 +1086,12 @@ export const CATALOG = [
       "how": "Its annotated dialogues could become agent test cases and check a judge against people's ratings."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Not released yet, so there is nothing to fetch or check."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -955,9 +1123,17 @@ export const CATALOG = [
     "status": "released",
     "fits": {
       "slots": [],
-      "how": "No slot yet: its problems, with answers and standards, could be agent test cases for an activity's standard."
+      "how": "Its problems, each tied to a standard, become test cases for an activity's standard."
     },
     "in_harness": null,
+    "connect": {
+      "level": 2,
+      "as": [
+        "test-suite"
+      ],
+      "command": "viable-harness test agent.json --suite mathcamps --standard 6.EE.A.1 --limit 20 --judge-model <model>",
+      "note": "The same three kinds of case as GSM8K, from problems tied to a Common Core standard, so a suite can match an activity's standard (--standard, K-8, 44 standards). Language models wrote the problems. It shows what your judge read in these replies, not what learners learn."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -996,6 +1172,12 @@ export const CATALOG = [
       "how": "No slot yet: it could test whether a problem an agent writes fits the standard in an activity's teaching settings."
     },
     "in_harness": null,
+    "connect": {
+      "level": 1,
+      "as": [],
+      "command": "viable-harness resources get mathfish",
+      "note": "Comes down as its JSONL. It tests whether a problem fits a standard, which needs an agent that writes problems and a check of its own, so nothing is made from it yet. Part is non-commercial: asks you to accept its license first."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -1037,6 +1219,12 @@ export const CATALOG = [
       "how": "Its teaching tasks and reward model could rate replies in agent tests, once its license is confirmed."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Its license is unclear and it runs as a Python benchmark. Its dialogues come from MathDial and Bridge, which are connected."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -1071,9 +1259,17 @@ export const CATALOG = [
       "slots": [
         "judge"
       ],
-      "how": "Its human annotations could check how well a judge agrees with people on dimensions such as revealing the answer, as the harness's judge calibration does with a teacher's labels."
+      "how": "Its annotations are a set to check a judge against: how far it agrees with people on guidance, on finding the mistake and on what to do next, as the harness's judge calibration does with a teacher's labels."
     },
     "in_harness": null,
+    "connect": {
+      "level": 2,
+      "as": [
+        "calibration-set"
+      ],
+      "command": "viable-harness calibrate --set mrbench --judge-model <model> --limit 30",
+      "note": "Checks your judge model against trained annotators, with no labels of your own, on tutors' replies to learners' math mistakes: confusion table, agreement and kappa, half Yes and half No. It describes this model on these replies and this rubric (--dimension), not your agent. Its license is unclear for commercial use: asks you to accept it first. These are real tutoring conversations from its sources: running this sends them to the model you name, so use one whose terms you accept."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -1110,6 +1306,12 @@ export const CATALOG = [
       "how": "Its rubric and scoring could rate coaching replies in agent tests."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Not released yet, so there is nothing to fetch or check."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -1145,6 +1347,12 @@ export const CATALOG = [
       "how": "Its misconceptions could be context the AI listens for, and its classifiers could mark misconceptions in learners' answers for the teacher."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Not released yet, so there is nothing to fetch or check."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -1182,6 +1390,12 @@ export const CATALOG = [
       "how": "Its rubrics could rate replies in agent tests, once its license is clear."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Its full dataset's license isn't stated and it comes only as Parquet. Not connected until its license is clear."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -1217,6 +1431,12 @@ export const CATALOG = [
       "how": "Its comparisons with human learning data could show which known errors a simulated learner reproduces before it plays the learner in agent tests."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Python code to clone and run yourself. It checks simulated learners, and no agent test uses one yet."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -1259,9 +1479,18 @@ export const CATALOG = [
       "slots": [
         "judge"
       ],
-      "how": "Its prompts and rubrics, Withholding Answers and Tone Appropriateness among them, could rate replies in agent tests, checked against people's ratings before their scores are shown."
+      "how": "Its prompts rate replies in agent tests, one quality each, Withholding Answers and Tone Appropriateness among them, and their fixtures check a judge model against its experts first."
     },
     "in_harness": null,
+    "connect": {
+      "level": 2,
+      "as": [
+        "judge",
+        "calibration-set"
+      ],
+      "command": "viable-harness test agent.json cases.json --judge learning-commons-evaluators/withholding-answers --judge-model <model>",
+      "note": "Rates replies with its makers' prompts on your judge model, one quality each, such as Withholding Answers and Tone. Check it first against their experts: viable-harness calibrate --set learning-commons-evaluators --judge-model <model>. Their prompts are built for writing feedback in grades 6-12 and tuned on one model, so another subject or model is worth checking again."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -1297,6 +1526,12 @@ export const CATALOG = [
       "how": "Could play a learner who holds known fraction errors in agent tests."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Not released yet, so there is nothing to fetch or check."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -1333,6 +1568,12 @@ export const CATALOG = [
       "how": "No slot: it is a model, which the harness can run as an agent's model through an OpenAI-compatible server."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "A model, with nothing to fetch here: serve it from an OpenAI-compatible server and name it with --model."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -1370,6 +1611,12 @@ export const CATALOG = [
       "how": "Could play the learner in agent tests out of process, its errors compared with real students'."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Python code to clone and run yourself. It would play the learner, and no agent test uses a simulated learner yet."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -1402,9 +1649,17 @@ export const CATALOG = [
       "slots": [
         "measure"
       ],
-      "how": "Could compute mastery from learning events out of process (it is Python), beside the harness's own mastery streak."
+      "how": "Computes mastery from learning events out of process (it is Python), beside the harness's own mastery streak, from a template the harness writes."
     },
     "in_harness": null,
+    "connect": {
+      "level": 2,
+      "as": [
+        "measure"
+      ],
+      "command": "viable-harness resources get pybkt",
+      "note": "Writes a measure from a template: fit Bayesian Knowledge Tracing on a class's records with pyBKT (which needs Python 3.12 and older packages), then viable-harness measure record.json --component manifest.json gives mastery per skill, beside the harness's own streak. It needs many attempts per skill. Not compared with the streak on real learners."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -1442,6 +1697,12 @@ export const CATALOG = [
       "how": "Its coding schemes and agreement checks are how a detector is judged: against people's labels on a sample."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "A web app that needs MongoDB, Redis and model keys, not a file. Its way of checking coders against people is what calibrate does for a judge."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -1479,6 +1740,14 @@ export const CATALOG = [
       "how": "The harness runs it in JavaScript: the graph's VETTING step and checkReply review each reply against the guideline or answer key and the teacher's settings."
     },
     "in_harness": "viable/vetting",
+    "connect": {
+      "level": 3,
+      "as": [
+        "step"
+      ],
+      "command": "viable-harness check --reply \"...\" --question \"...\" --answer-key \"...\" --model <model>",
+      "note": "In the core, with no download: the graph's VETTING step and checkReply review a reply against the answer key or guideline before a learner sees it. Its authors' study is about review of replies, not about what learners learn with it here."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -1515,6 +1784,12 @@ export const CATALOG = [
       "how": "Its step-level data could check the harness's measures against other learners' data, for research."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Behind a sign-in, and its terms limit data to research and forbid passing it on. A connector can't fetch it for you."
+    },
     "verified_at": "2026-11-03"
   },
   {
@@ -1550,6 +1825,12 @@ export const CATALOG = [
       "how": "No slot: a source of datasets and benchmarks, where the Program asks its grantees to release their public goods."
     },
     "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "A platform that lists resources, each on its own terms, behind an account. Where a resource it lists is connected here, it has its own entry."
+    },
     "verified_at": "2026-11-03"
   }
 ];

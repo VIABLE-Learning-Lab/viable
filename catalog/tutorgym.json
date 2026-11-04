@@ -31,5 +31,11 @@
     "how": "Its comparisons with human learning data could show which known errors a simulated learner reproduces before it plays the learner in agent tests."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Python code to clone and run yourself. It checks simulated learners, and no agent test uses one yet."
+  },
   "verified_at": "2026-11-03"
 }

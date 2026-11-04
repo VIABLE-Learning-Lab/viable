@@ -1,10 +1,15 @@
-# Only what the image copies: the code, the formats and the examples.
+# Only what the image copies: the code, the formats and the examples. Nothing else reaches a build, such as a .env.
+*
+!package.json
+!package-lock.json
+!bin
+!src
+!schemas
+!conformance
+!examples
+!LICENSE
+!NOTICE
+!scripts/build-learner-assets.mjs
 **/node_modules
 **/.DS_Store
-.git
-.github
-test
-docs
-skills
-integrations
-scripts
+**/.env*

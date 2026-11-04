@@ -40,7 +40,8 @@ measures, the formats and the CLI), with its limits.
   always through the host's model service ([components.md](components.md)). The six components the
   harness carries today run in its own process and contact no other host
   (`viable-harness components`). A component reaching data or hosts its manifest doesn't list is a
-  security issue ([SECURITY.md](../SECURITY.md)).
+  security issue ([SECURITY.md](../SECURITY.md)). One in a package you were sent starts no program
+  unless you name it ([components.md](components.md#a-component-in-a-document)).
 - **A local run keeps its trace on the machine.** `viable-harness run` and `runAgent` return the
   trace (each step's input and output, VETTING's rounds) to you and send it nowhere; nothing of the
   run goes to VIABLE. What leaves the machine is what each step sends, listed below.
@@ -152,7 +153,7 @@ written from them. Before learners use it:
   your school's safeguarding and reporting procedures, and give learners resources that fit where they
   are.
 - Read the replies that didn't pass: the teacher view (`viable-harness view`) lists each one with its
-  rounds and the reviewer's reasons.
+  rounds and the reviewer's reasons (a gateway keeps those only with `--keep-text`).
 
 ### Accessibility
 

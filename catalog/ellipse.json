@@ -29,9 +29,19 @@
   "cite": "Crossley, S. A., Tian, Y., Baffour, P., Franklin, A., Kim, Y., Morris, W., Benner, M., Picou, A., & Boser, U. (2023). The English Language Learner Insight, Proficiency and Skills Evaluation (ELLIPSE) Corpus. International Journal of Learner Corpus Research, 9(2), 248-269. https://doi.org/10.1075/ijlcr.22026.cro",
   "status": "released",
   "fits": {
-    "slots": [],
-    "how": "No slot yet: its essays could be multilingual learners' work in agent test cases for a writing feedback agent."
+    "slots": [
+      "judge"
+    ],
+    "how": "Its scored essays and rubric are a set to check a model's reading of English learners' writing against raters."
   },
   "in_harness": null,
+  "connect": {
+    "level": 2,
+    "as": [
+      "calibration-set"
+    ],
+    "command": "viable-harness calibrate --set ellipse --judge-model <model> --limit 30",
+    "note": "The same check as ASAP 2.0 on English learners' essays, for English proficiency: run both to see whether a model reads these writers as raters do. Essays whose raters split across the line are left out. Writers' demographics are dropped at download. It rates language, not ideas. These are real students' essays, masked by their makers: running this sends them to the model you name, so use one whose terms you accept."
+  },
   "verified_at": "2026-11-03"
 }

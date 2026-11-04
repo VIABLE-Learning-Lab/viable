@@ -32,5 +32,11 @@
     "how": "No slot: it is a model, which the harness can run as an agent's model through an OpenAI-compatible server."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "A model, with nothing to fetch here: serve it from an OpenAI-compatible server and name it with --model."
+  },
   "verified_at": "2026-11-03"
 }

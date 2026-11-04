@@ -33,8 +33,16 @@
     "slots": [
       "simulated-learner"
     ],
-    "how": "Its students hold a mistaken solution through a whole dialogue, a pattern for a simulated learner in agent tests; its teachers' moves show replies to compare against."
+    "how": "A mistaken solution becomes a test case, with what the teacher saw in it. Its students also hold a mistake through a whole dialogue, a pattern for a simulated learner, which agent tests don't use yet."
   },
   "in_harness": null,
+  "connect": {
+    "level": 2,
+    "as": [
+      "test-suite"
+    ],
+    "command": "viable-harness test agent.json --suite mathdial --limit 20 --judge-model <model>",
+    "note": "A learner shows a mistaken solution: does the reply find the mistake with a question or a hint, without giving the answer? The solutions are written by a model; the teachers who read them are real. It shows what your judge read in these replies, not what learners learn. Asks you to accept its license first."
+  },
   "verified_at": "2026-11-03"
 }

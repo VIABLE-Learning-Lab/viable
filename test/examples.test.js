@@ -1,4 +1,5 @@
 // Every example in examples/ runs locally as it is, on a scripted OpenAI-compatible endpoint.
+import './no-network.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';

@@ -41,8 +41,16 @@
     "slots": [
       "context"
     ],
-    "how": "A standard, with its learning components, joins the AI's instructions on every turn through an activity's teaching settings. Choosing a standard needs Learning Commons' API."
+    "how": "A standard, with its learning components, joins the AI's instructions on every turn through an activity's teaching settings. A local search of the open release can choose one, with no API key."
   },
   "in_harness": "learning-commons/knowledge-graph-standards",
+  "connect": {
+    "level": 2,
+    "as": [
+      "context-lookup"
+    ],
+    "command": "viable-harness resources use learning-commons-knowledge-graph \"adding fractions\" --grade 5",
+    "note": "A local search of one jurisdiction's standards with no API key; --code gives one as teaching settings, with its learning components and the standards before it, and --teaching reads them. Matched by words, where VIABLE's search goes by meaning. The harness also carries a standard already chosen. Reads about a gigabyte as it streams and keeps a few megabytes."
+  },
   "verified_at": "2026-11-03"
 }

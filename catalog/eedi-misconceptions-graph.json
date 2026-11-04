@@ -35,5 +35,13 @@
     "how": "A teacher picks the misconceptions the AI listens for, found by the words of a goal or a standard; the harness carries 8,117 misconceptions and the 2,258 constructs they hinder."
   },
   "in_harness": "eedi/misconceptions-graph",
+  "connect": {
+    "level": 3,
+    "as": [
+      "context-lookup"
+    ],
+    "command": "viable-harness misconceptions \"adding fractions\"",
+    "note": "In the core, with no download: a teacher finds misconceptions by words and the AI listens for those chosen. Matched by words: the open release doesn't link them to standards."
+  },
   "verified_at": "2026-11-03"
 }

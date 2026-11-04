@@ -33,5 +33,11 @@
     "how": "No slot yet: its passages, chosen by their own licenses, could be an activity's readings, and its scores could check how an agent pitches a text's difficulty."
   },
   "in_harness": null,
+  "connect": {
+    "level": 1,
+    "as": [],
+    "command": "viable-harness resources get clear-corpus",
+    "note": "Comes down as its spreadsheet. XLSX, which the harness doesn't read, and each passage has its own license, so nothing is made from it. Asks you to accept its unclear license first."
+  },
   "verified_at": "2026-11-03"
 }

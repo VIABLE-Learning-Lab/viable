@@ -18,7 +18,8 @@ export function publicUrl(value, allowlist) {
   const host = url.hostname.toLowerCase().replace(/\.$/, '');
   // Reject IP literals (including URL-normalized decimal/hex IPv4), local names,
   // credentials and nonstandard ports. Workers also rejects private DNS targets
-  // at connection time, avoiding a DNS-check/fetch rebinding race.
+  // at connection time, avoiding a DNS-check/fetch rebinding race. A host on Node has
+  // no such transport, and injects server/publicFetch.js as httpFetch instead.
   if (url.protocol !== 'https:' || url.username || url.password || url.port ||
       !host.includes('.') || host.includes(':') || /^\d+\.\d+\.\d+\.\d+$/.test(host) ||
       /(^|\.)(localhost|local|internal|lan|home|test|invalid)$/.test(host)) {
@@ -132,8 +133,8 @@ export async function htmlToSource(html, sourceUrl, toMarkdown, signal, { knowle
       return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : null;
     } catch { return null; }
   };
-  // ponytail: inventory covers anchors and img src/data-src, not CSS backgrounds
-  // or JavaScript-created content; add rendered-page extraction only when needed.
+  // The inventory covers anchors and img src/data-src, not CSS backgrounds or
+  // what JavaScript creates: a page drawn that way shows less here than in a browser.
   // Extract independently of Markdown conversion. These URLs are metadata only:
   // never fetch linked pages/images or execute page scripts.
   const rewriter = new HTMLRewriter()
@@ -229,7 +230,7 @@ export async function htmlToSource(html, sourceUrl, toMarkdown, signal, { knowle
 // Outside Workers (the harness on Node) there is no HTMLRewriter: the page goes to toMarkdown whole,
 // which drops scripts, styles and site chrome itself (src/markdown.js), and its title, links and
 // images are read with patterns.
-// shortcut: no LibGuides guide_pages, embed lines or 256 KiB inventory cap; port them if a local run needs them.
+// shortcut: a LibGuides guide's other pages and embed lines aren't followed, and its inventory has no size cap; add them if a run on Node needs them.
 async function patternSource(html, sourceUrl, toMarkdown) {
   const attribute = (tag, name) => {
     const match = new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i').exec(tag);

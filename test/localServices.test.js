@@ -71,7 +71,7 @@ test('a package’s files are checked, stay in its folder, and are text', async 
   await fails({ files: [{ ref: 'a', name: 'link.md', path: 'files/link.md' }], knowledge_bases: kb }, /outside the package's folder/);
   await fails({ files: [{ ref: 'a', name: 'gone.md', path: 'files/gone.md' }], knowledge_bases: kb }, /no such file/);
   await fails({ files: [{ ref: 'a', name: 'a.pdf', path: 'files/a.pdf' }], knowledge_bases: kb }, /not "a\.pdf"\. Run the agent on VIABLE/, 'knowledge_unavailable');
-  await fails({ files: [], knowledge_bases: [{ ref: 'kb', name: 'KB', websites: [{ url: 'https://example.org' }] }] }, /doesn't crawl/, 'knowledge_unavailable');
+  await fails({ files: [], knowledge_bases: [{ ref: 'kb', name: 'KB', websites: [{ url: 'https://example.org' }] }] }, /no snapshot of them/, 'knowledge_unavailable');
   await fails({ files: [], knowledge_bases: [{ ref: 'other', name: 'KB' }] }, /no knowledge base "kb" \(it has: other\)/);
   const download = async () => new Response('not found', { status: 404 });
   await assert.rejects(packageKnowledge(pkg({ files: [{ ref: 'a', name: 'a.md', url: 'https://example.org/a.md' }], knowledge_bases: kb }), { fetch: download })({ knowledgeBaseIds: ['kb'], query: 'guide' }), /couldn't read "a\.md" \(https:\/\/example\.org\/a\.md\): The file address answered with status 404/);
@@ -166,6 +166,22 @@ test('a PDF in a course package is searched through the text VIABLE read from it
   await assert.rejects(runAgent(changed, { input: 'full moon', zip }), /"moon-phases\.pdf"'s text isn't the file the package names/);
   const without = { ...doc, files: [{ ...file, text_path: undefined }] };
   await assert.rejects(runAgent(without, { input: 'full moon', zip }), { code: 'knowledge_unavailable' });
+});
+
+test('a website in a package is searched from its snapshot, and cited at the page’s address', async (t) => {
+  const dir = scratch(t);
+  const text = '# Hours\n\nThe main library opens at nine on weekdays, and at noon on Saturdays.';
+  const page = { url: 'https://guides.example.org/hours', title: 'Library hours', path: 'files/page-1.md', sha256: sha256(text) };
+  const site = { kind: 'crawl', url: 'https://guides.example.org/', snapshot: [page] };
+  const doc = pkg({ files: [], knowledge_bases: [{ ref: 'kb-1', name: 'Guides', websites: [site] }], agents: [{ ref: 'agent-1', name: 'Desk', graph: { entry: 's', nodes: [{ id: 's', type: 'knowledge', config: { knowledge_base_refs: ['kb-1'] }, next: 'o' }, { id: 'o', type: 'output', config: { text: '{{s.context}}' } }] } }] });
+  const course = join(dir, 'help.viable.zip');
+  writeFileSync(course, zipFile([{ name: 'package.viable.json', data: JSON.stringify(doc) }, { name: page.path, data: text }]));
+  const { zip } = await readAgentFile(course);
+  const result = await runAgent(doc, { input: 'When does the library open on Saturdays?', zip });
+  assert.match(result.output.text, /noon on Saturdays/);
+  assert.match(JSON.stringify(result.output.citations || result.output), /guides\.example\.org\/hours/);
+  const changed = { ...doc, knowledge_bases: [{ ...doc.knowledge_bases[0], websites: [{ ...site, snapshot: [{ ...page, sha256: sha256('another') }] }] }] };
+  await assert.rejects(runAgent(changed, { input: 'Saturdays', zip }), /isn't the file the package names/);
 });
 
 test('a package’s agent calls another of its agents, within the run’s budgets', async () => {

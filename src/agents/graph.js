@@ -532,7 +532,7 @@ export function slugify(name) {
   return base || 'agent';
 }
 
-// A course package names knowledge bases by ref (packages.js): a Knowledge step's
+// A course package names knowledge bases by ref: a Knowledge step's
 // config.knowledge_base_refs and an Agent step's config.tools.knowledge_base_refs.
 export const graphKnowledgeRefs = (graph) => (Array.isArray(graph?.nodes) ? graph.nodes : []).flatMap((node) => [node?.config?.knowledge_base_refs, node?.config?.tools?.knowledge_base_refs].filter(Array.isArray).flat());
 
@@ -543,6 +543,20 @@ export function linkKnowledgeRefs(graph, idOf) {
     let config = node?.config;
     if (Array.isArray(config?.knowledge_base_refs)) { const { knowledge_base_refs: refs, ...rest } = config; config = { ...rest, knowledge_bases: refs.map(idOf) }; }
     if (Array.isArray(config?.tools?.knowledge_base_refs)) { const { knowledge_base_refs: refs, ...tools } = config.tools; config = { ...config, tools: { ...tools, knowledge_bases: refs.map(idOf) } }; }
+    return config === node?.config ? node : { ...node, config };
+  }) };
+}
+
+/** The agents a graph calls, by slug: its Sub-agent steps and its Agent steps' tools.agents. */
+export const graphAgentSlugs = (graph) => [...new Set((Array.isArray(graph?.nodes) ? graph.nodes : []).flatMap((node) => [node?.type === 'subagent' ? node.config?.slug : null, ...(Array.isArray(node?.config?.tools?.agents) ? node.config.tools.agents : [])]).filter(Boolean))];
+
+/** A graph with those slugs replaced (slugOf: a slug's new one, or nothing to keep it). */
+export function linkAgentSlugs(graph, slugOf) {
+  if (!Array.isArray(graph?.nodes)) return graph;
+  return { ...graph, nodes: graph.nodes.map((node) => {
+    let config = node?.config;
+    if (node?.type === 'subagent' && config?.slug) config = { ...config, slug: slugOf(config.slug) ?? config.slug };
+    if (Array.isArray(config?.tools?.agents)) config = { ...config, tools: { ...config.tools, agents: config.tools.agents.map((slug) => slugOf(slug) ?? slug) } };
     return config === node?.config ? node : { ...node, config };
   }) };
 }

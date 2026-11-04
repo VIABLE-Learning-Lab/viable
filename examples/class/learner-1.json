@@ -188,12 +188,33 @@
       "started_at": "2026-10-20T14:01:00Z",
       "misconceptions": [
         "a8f41abf-895d-55fd-8138-d781d205c487"
-      ]
+      ],
+      "conversation_id": "learner-1-chat",
+      "first_output_ms": 1300,
+      "signals": {
+        "source": "typed",
+        "active_2m_ms": 42000,
+        "keys": 61,
+        "deleted": 9,
+        "pasted": 0
+      },
+      "turn_index": 1
     },
     {
       "message": "the pieces are smaller?",
       "reply": "Yes. So with the same number of pieces, which fraction is bigger?",
-      "started_at": "2026-10-20T14:05:00Z"
+      "started_at": "2026-10-20T14:05:00Z",
+      "conversation_id": "learner-1-chat",
+      "first_output_ms": 1500,
+      "signals": {
+        "source": "typed",
+        "think_ms": 52000,
+        "active_2m_ms": 58000,
+        "keys": 22,
+        "deleted": 4,
+        "pasted": 0
+      },
+      "turn_index": 2
     }
   ]
 }

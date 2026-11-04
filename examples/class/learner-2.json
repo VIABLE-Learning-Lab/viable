@@ -188,12 +188,33 @@
       "started_at": "2026-10-20T14:01:00Z",
       "misconceptions": [
         "a8f41abf-895d-55fd-8138-d781d205c487"
-      ]
+      ],
+      "conversation_id": "learner-2-chat",
+      "first_output_ms": 1300,
+      "signals": {
+        "source": "typed",
+        "active_2m_ms": 36000,
+        "keys": 48,
+        "deleted": 6,
+        "pasted": 0
+      },
+      "turn_index": 1
     },
     {
       "message": "3/5",
       "reply": "That adds the tops and the bottoms. What would 1/2 be in sixths?",
-      "started_at": "2026-10-20T14:05:00Z"
+      "started_at": "2026-10-20T14:05:00Z",
+      "conversation_id": "learner-2-chat",
+      "first_output_ms": 1500,
+      "signals": {
+        "source": "typed",
+        "think_ms": 71000,
+        "active_2m_ms": 80000,
+        "keys": 31,
+        "deleted": 12,
+        "pasted": 0
+      },
+      "turn_index": 2
     }
   ]
 }

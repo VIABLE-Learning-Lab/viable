@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // Code and dependencies under MIT or Apache-2.0; entities (BSD-2-Clause, permissive) decodes HTML for
-// Fetch URL and is the one exception (docs/open-harness.md in VIABLE's API repository, section 7).
+// Fetch URL and is the one exception.
 export const PACKAGES = { entities: 'BSD-2-Clause' };
 export const LICENSES = new Set(['MIT', 'Apache-2.0', ...Object.values(PACKAGES)]);
 
@@ -31,6 +31,10 @@ function files(dir, keep) {
   });
 }
 const code = () => ['bin', 'src', 'scripts'].filter((part) => existsSync(join(ROOT, part))).flatMap((part) => files(join(ROOT, part), (name) => /\.m?js$/.test(name)));
+// The learner pages' browser code, and what builds it: its libraries are dev dependencies, bundled into
+// dist/ (NOTICE lists them); nothing that runs on a server imports them.
+export const BROWSER_PACKAGES = ['dompurify', 'esbuild', 'highlight.js', 'marked', 'mermaid', 'pdfjs-dist', 'temml'];
+const isBrowserCode = (file) => relative(ROOT, file).startsWith(join('src', 'learner', 'browser')) || [join('scripts', 'build-learner-assets.mjs'), join('scripts', 'prepare.mjs')].includes(relative(ROOT, file));
 
 test('the code imports only built-ins, its own files and the listed packages', () => {
   const packages = new Set();
@@ -44,7 +48,9 @@ test('the code imports only built-ins, its own files and the listed packages', (
         assert.ok(!relative(ROOT, target).startsWith('..'), `${relative(ROOT, file)} imports ${spec}, outside the harness`);
         continue;
       }
-      packages.add(spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0]);
+      const name = spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0];
+      if (!isBrowserCode(file)) packages.add(name);
+      else assert.ok(BROWSER_PACKAGES.includes(name), `${relative(ROOT, file)} imports ${name}, which isn't listed for the browser code`);
     }
   }
   assert.deepEqual([...packages].sort(), Object.keys(PACKAGES).sort());

@@ -94,6 +94,16 @@
       "expect": { "valid": false, "errors": ["$.knowledge_bases[0].file_refs[1]"] }
     },
     {
+      "id": "package-agent-without-course", "description": "An agent on its own is a package with no course: agents, with what they search and their chat pages.",
+      "input": { "kind": "course-package", "document": { "format": "viable.course-package", "version": 1, "title": "Library help", "agents": [{ "ref": "desk", "name": "Library help", "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "out" }, { "id": "out", "type": "output" }] }, "chat_page": { "status": "active", "settings": { "allowed_sites": ["https://library.example.org"] } } }] } },
+      "expect": { "valid": true, "errors": [] }
+    },
+    {
+      "id": "package-holds-something", "description": "A package holds a course, or at least one agent.",
+      "input": { "kind": "course-package", "document": { "format": "viable.course-package", "version": 1, "title": "Nothing" } },
+      "expect": { "valid": false, "errors": ["$"] }
+    },
+    {
       "id": "package-ref-pattern", "description": "Refs are short names of letters, digits, _, . and -, starting with a letter or digit.",
       "input": { "kind": "course-package", "document": { "format": "viable.course-package", "version": 1, "agents": [{ "ref": "my tutor", "name": "Tutor", "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "out" }, { "id": "out", "type": "output" }] } }], "course": { "title": "Fractions" } } },
       "expect": { "valid": false, "errors": ["$.agents[0].ref"] }

@@ -36,5 +36,11 @@
     "how": "Its annotated dialogues could become agent test cases and check a judge against people's ratings."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Not released yet, so there is nothing to fetch or check."
+  },
   "verified_at": "2026-11-03"
 }

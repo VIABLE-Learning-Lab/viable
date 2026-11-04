@@ -20,7 +20,7 @@ function graphErrors(graph, where) {
   try { validateGraph(graph); return []; } catch (error) { return [`${where}: ${[error.message, ...(error.details || [])].join(' ')}`]; }
 }
 
-// A package's parts refer to each other by ref, as VIABLE's import checks (packages.js readPackage).
+// A package's parts refer to each other by ref, and these are checked as VIABLE checks a package it imports.
 function refErrors(pkg) {
   const errors = [];
   const refs = (list) => new Set((Array.isArray(list) ? list : []).map((item) => item?.ref));

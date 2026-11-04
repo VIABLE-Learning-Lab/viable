@@ -1,0 +1,125 @@
+{
+  "agent": "Fractions tutor",
+  "activity": "Practice: equivalent fractions",
+  "teaching": {
+    "goal": "Learners rewrite fractions with a common denominator before adding or subtracting, and can say why the denominators can’t just be added.",
+    "help": "hint"
+  },
+  "output": {
+    "text": "Good question. If you cut every piece in half, what happens to the number of shaded pieces?"
+  },
+  "steps": [
+    {
+      "stepNumber": 1,
+      "nodeId": "input",
+      "nodeType": "input",
+      "status": "completed",
+      "input": null,
+      "output": {
+        "message": "do i change the top number too",
+        "content": "do i change the top number too",
+        "history": []
+      },
+      "model": null,
+      "tokens": null,
+      "cost": null,
+      "error": null,
+      "startedOffsetMs": 0,
+      "durationMs": 0
+    },
+    {
+      "stepNumber": 2,
+      "nodeId": "on_question",
+      "nodeType": "condition",
+      "status": "completed",
+      "input": {
+        "field": "context.question",
+        "op": "truthy",
+        "value": null,
+        "left": null
+      },
+      "output": {
+        "result": false,
+        "field": "context.question",
+        "op": "truthy",
+        "left": null,
+        "right": null
+      },
+      "model": null,
+      "tokens": null,
+      "cost": null,
+      "error": null,
+      "startedOffsetMs": 0,
+      "durationMs": 0
+    },
+    {
+      "stepNumber": 3,
+      "nodeId": "vet_general",
+      "nodeType": "vetting",
+      "status": "completed",
+      "input": {
+        "mode": "simple",
+        "message": "do i change the top number too"
+      },
+      "output": {
+        "content": "Good question. If you cut every piece in half, what happens to the number of shaded pieces?",
+        "passed": true,
+        "requires_attention": false,
+        "outcome": "passed",
+        "stop_reason": "VERIFICATION_PASSED",
+        "attempts": 1,
+        "verification": "PASS",
+        "attempt_details": [
+          {
+            "attempt": 1,
+            "source": "generated",
+            "passed": true,
+            "verification": "PASS",
+            "reply": "Good question. If you cut every piece in half, what happens to the number of shaded pieces?",
+            "verdict": "pass",
+            "feedback": null
+          }
+        ],
+        "model": "gpt-oss-120b",
+        "verification_model": "gpt-oss-120b",
+        "usage": {
+          "prompt": 20,
+          "completion": 10,
+          "total": 30
+        },
+        "cost": 0
+      },
+      "model": "gpt-oss-120b",
+      "tokens": 30,
+      "cost": 0,
+      "error": null,
+      "startedOffsetMs": 0,
+      "durationMs": 0
+    },
+    {
+      "stepNumber": 4,
+      "nodeId": "reply_general",
+      "nodeType": "output",
+      "status": "completed",
+      "input": null,
+      "output": {
+        "text": "Good question. If you cut every piece in half, what happens to the number of shaded pieces?",
+        "attachments": []
+      },
+      "model": null,
+      "tokens": null,
+      "cost": null,
+      "error": null,
+      "startedOffsetMs": 0,
+      "durationMs": 0
+    }
+  ],
+  "usage": {
+    "prompt": 20,
+    "completion": 10,
+    "total": 30
+  },
+  "cost": 0,
+  "modelCalls": 2,
+  "stepCount": 4
+}

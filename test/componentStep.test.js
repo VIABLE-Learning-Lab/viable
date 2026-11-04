@@ -1,3 +1,4 @@
+import './no-network.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -83,12 +84,13 @@ test('an mcp component step runs as a stdio server started in the agent’s fold
     { id: 'echo', type: 'component', config: { manifest: { ...echo, runs: { ...echo.runs, server: { command: 'node', args: ['mcp-server.mjs', mode] } } }, inputs: { reply: '{{input}}' }, ...config }, next: 'reply' },
     { id: 'reply', type: 'output', config: { text: '{{ echo.status == "failed" ? echo.error.message : echo.output.received.reply }}' } }
   ] });
-  const result = await runAgent(doc('echo'), { input: 'What have you tried?', dir: fixtures });
+  const named = { dir: fixtures, allowComponents: ['fixture/echo'] };
+  const result = await runAgent(doc('echo'), { input: 'What have you tried?', ...named });
   assert.equal(result.output.text, 'What have you tried?');
   assert.deepEqual(result.outputs.echo.flags, [{ label: 'Echoed', reason: 'The fixture answers with what it got.' }]);
   assert.ok(!result.outputs.echo.output.env.includes('OPENAI_API_KEY'));
-  await assert.rejects(runAgent(doc('fail'), { input: 'Hi', dir: fixtures }), (error) => error.code === 'component_failed' && /tool failed: The fixture refuses/.test(error.message));
-  assert.match((await runAgent(doc('crash', { on_error: 'continue' }), { input: 'Hi', dir: fixtures })).output.text, /exit code 3/);
+  await assert.rejects(runAgent(doc('fail'), { input: 'Hi', ...named }), (error) => error.code === 'component_failed' && /tool failed: The fixture refuses/.test(error.message));
+  assert.match((await runAgent(doc('crash', { on_error: 'continue' }), { input: 'Hi', ...named })).output.text, /exit code 3/);
 });
 
 test('validation checks a component step’s manifest, its slot, how it runs, and the fields its inputs name', () => {
@@ -116,7 +118,7 @@ test('viable-harness run runs a graph with a component step', (t) => {
     { id: 'reply', type: 'output', config: { text: 'Echoed: {{echo.output.received.reply}}' } }
   ] } };
   writeFileSync(join(dir, 'echo.agent.json'), JSON.stringify(agent));
-  const run = spawnSync(process.execPath, [bin, 'run', join(dir, 'echo.agent.json'), '--input', 'Hello'], { encoding: 'utf8' });
+  const run = spawnSync(process.execPath, [bin, 'run', join(dir, 'echo.agent.json'), '--input', 'Hello', '--allow-component', 'fixture/echo'], { encoding: 'utf8' });
   assert.equal(run.status, 0, run.stderr);
   assert.match(run.stdout, /Echoed: Hello/);
   assert.match(run.stdout, /2\. echo \(component\) completed in \d+ ms\n {7}flag: Echoed: The fixture answers with what it got\./);

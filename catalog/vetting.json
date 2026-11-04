@@ -33,5 +33,13 @@
     "how": "The harness runs it in JavaScript: the graph's VETTING step and checkReply review each reply against the guideline or answer key and the teacher's settings."
   },
   "in_harness": "viable/vetting",
+  "connect": {
+    "level": 3,
+    "as": [
+      "step"
+    ],
+    "command": "viable-harness check --reply \"...\" --question \"...\" --answer-key \"...\" --model <model>",
+    "note": "In the core, with no download: the graph's VETTING step and checkReply review a reply against the answer key or guideline before a learner sees it. Its authors' study is about review of replies, not about what learners learn with it here."
+  },
   "verified_at": "2026-11-03"
 }

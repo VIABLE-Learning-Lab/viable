@@ -188,7 +188,17 @@
       "started_at": "2026-10-20T14:01:00Z",
       "misconceptions": [
         "a8f41abf-895d-55fd-8138-d781d205c487"
-      ]
+      ],
+      "conversation_id": "learner-3-chat",
+      "first_output_ms": 1300,
+      "signals": {
+        "source": "typed",
+        "active_2m_ms": 95000,
+        "keys": 74,
+        "deleted": 21,
+        "pasted": 0
+      },
+      "turn_index": 1
     }
   ]
 }

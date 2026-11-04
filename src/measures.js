@@ -13,8 +13,8 @@ const ordered = (events) => [...events].sort((a, b) => (time(a.at) ?? 0) - (time
 
 /**
  * Graded attempts, as the export's attempts: each graded Questions answer, and each answer an agent
- * graded (a turn's assessment). shortcut: a pre- or post-test's answers count too (VIABLE leaves them
- * out by the activity's role, which events don't carry); drop them before calling if you have both.
+ * graded (a turn's assessment). A pre- or post-test's answers count too, since events don't carry an
+ * activity's role; drop them before calling if you have both.
  */
 export function attemptsOf(events = [], turns = []) {
   const answers = events.filter((event) => event?.type === 'questions.answer' && CORRECT.has(event.data?.correct))

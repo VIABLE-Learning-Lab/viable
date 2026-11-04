@@ -37,10 +37,8 @@ export const CITATIONS = {
   landis1977: { text: 'Landis, J. R., & Koch, G. G. (1977). The measurement of observer agreement for categorical data. Biometrics, 33(1), 159–174.', url: 'https://doi.org/10.2307/2529310' },
   mchugh2012: { text: 'McHugh, M. L. (2012). Interrater reliability: The kappa statistic. Biochemia Medica, 22(3), 276–282.', url: 'https://doi.org/10.11613/BM.2012.031' },
   kestin2025: { text: 'Kestin, G., Miller, K., Klales, A., Milbourne, T., & Ponti, G. (2025). AI tutoring outperforms in-class active learning: an RCT introducing a novel research-based design in an authentic educational setting. Scientific Reports, 15.', url: 'https://doi.org/10.1038/s41598-025-97652-6' },
-  chenoweth2001: { text: 'Chenoweth, N. A., & Hayes, J. R. (2001). Fluency in writing: Generating text in L1 and L2. Written Communication, 18(1), 80–98.', url: 'https://doi.org/10.1177/0741088301018001004' },
   kaufer1986: { text: 'Kaufer, D. S., Hayes, J. R., & Flower, L. (1986). Composing written sentences. Research in the Teaching of English, 20(2), 121–140.', url: 'https://doi.org/10.58680/rte198615612' },
   baaijen2012: { text: 'Baaijen, V. M., Galbraith, D., & de Glopper, K. (2012). Keystroke analysis: Reflections on procedures and measures. Written Communication, 29(3), 246–277.', url: 'https://doi.org/10.1177/0741088312451108' },
-  leijten2013: { text: 'Leijten, M., & Van Waes, L. (2013). Keystroke logging in writing research: Using Inputlog to analyze and visualize writing processes. Written Communication, 30(3), 358–392.', url: 'https://doi.org/10.1177/0741088313491692' },
   leijten2014: { text: 'Leijten, M., Van Waes, L., Schriver, K., & Hayes, J. R. (2014). Writing in the workplace: Constructing documents using multiple digital sources. Journal of Writing Research, 5(3), 285–337.', url: 'https://doi.org/10.17239/jowr-2014.05.03.3' },
   medimorec2017: { text: 'Medimorec, S., & Risko, E. F. (2017). Pauses in written composition: On the importance of where writers pause. Reading and Writing, 30(6), 1267–1285.', url: 'https://doi.org/10.1007/s11145-017-9723-7' },
   kellogg1987: { text: 'Kellogg, R. T. (1987). Effects of topic knowledge on the allocation of processing time and cognitive effort to writing processes. Memory & Cognition, 15(3), 256–266.', url: 'https://doi.org/10.3758/BF03197724' },
@@ -181,7 +179,8 @@ export function deriveTurns(turns) {
     const gapMinutes = previous == null ? null : Math.max(0, (at - previous) / 60000);
     if (previous == null || gapMinutes >= SESSION_GAP_MINUTES) session += 1;
     previous = at;
-    return { ...turn, words: wordCount(turn.message), chars: String(turn.message || '').length, session_index: session, gap_minutes: gapMinutes == null ? null : Math.round(gapMinutes * 10) / 10 };
+    // A record kept without learners' text (the gateway's) carries the count instead.
+    return { ...turn, words: turn.message == null && Number.isFinite(turn.words) ? turn.words : wordCount(turn.message), chars: String(turn.message || '').length, session_index: session, gap_minutes: gapMinutes == null ? null : Math.round(gapMinutes * 10) / 10 };
   });
 }
 

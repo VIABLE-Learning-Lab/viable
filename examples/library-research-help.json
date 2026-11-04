@@ -145,6 +145,34 @@
             "y": 360
           }
         ]
+      },
+      "profile": {
+        "title": "Research desk",
+        "tagline": "Answers from the library’s guides",
+        "color": "#7a2b2b",
+        "greeting": "Ask me about finding, judging or citing sources. I answer from the library’s four research guides, and say which guide each answer comes from.",
+        "starters": [
+          "How do I tell if a website is trustworthy?",
+          "How do I turn a topic into a research question?",
+          "How do I cite a website?"
+        ],
+        "placeholder": "Ask the research desk…",
+        "notice": "Answers come from an AI assistant and can be wrong. Don’t share passwords or private details."
+      },
+      "chat_page": {
+        "status": "active",
+        "settings": {
+          "launcher": {
+            "label": "Ask the research desk",
+            "teaser": true
+          },
+          "allowed_sites": [],
+          "daily_limit": 300,
+          "limits": {
+            "visitor_per_minute": 8,
+            "message_chars": 2000
+          }
+        }
       }
     }
   ],

@@ -33,5 +33,11 @@
     "how": "Could play the learner in agent tests out of process, its errors compared with real students'."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Python code to clone and run yourself. It would play the learner, and no agent test uses a simulated learner yet."
+  },
   "verified_at": "2026-11-03"
 }

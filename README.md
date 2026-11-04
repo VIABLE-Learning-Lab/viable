@@ -1,162 +1,189 @@
 <p align="center">
-  <img src="docs/images/hero.svg" width="100%" alt="VIABLE harness, the open engine behind the VIABLE Developer Platform: your app, your AI assistant and the hosted platform all run on it.">
+  <img src="docs/images/hero.svg" width="100%" alt="VIABLE harness, the open engine behind the VIABLE Developer Platform: your app, your AI assistant and the hosted platform all run on it. A draft reply is struck through with the reviewer's reason, and its rewrite passes.">
 </p>
 
 <p align="center">
   <a href="https://github.com/VIABLE-Learning-Lab/viable-harness/actions/workflows/test.yml"><img alt="Tests" src="https://github.com/VIABLE-Learning-Lab/viable-harness/actions/workflows/test.yml/badge.svg"></a>
-  <a href="LICENSE"><img alt="Code: MIT" src="https://img.shields.io/badge/code-MIT-0969da"></a>
-  <a href="NOTICE"><img alt="Data: CC BY 4.0" src="https://img.shields.io/badge/data-CC%20BY%204.0-59636e"></a>
-  <img alt="Node 22 or later" src="https://img.shields.io/badge/node-22%2B-1a7f37">
-  <a href="docs/mcp.md"><img alt="MCP server" src="https://img.shields.io/badge/MCP-server-8250df"></a>
+  <a href="LICENSE"><img alt="Code: MIT" src="https://img.shields.io/badge/code-MIT-1f47a8"></a>
+  <a href="NOTICE"><img alt="Data: CC BY 4.0" src="https://img.shields.io/badge/data-CC%20BY%204.0-54607a"></a>
+  <img alt="Node 22 or later" src="https://img.shields.io/badge/node-22%2B-2e6f4c">
+  <a href="docs/mcp.md"><img alt="MCP" src="https://img.shields.io/badge/MCP-hosted%20or%20local-54607a"></a>
 </p>
 
 <p align="center">
-  <a href="#quick-start"><b>Quick start</b></a> ·
+  <a href="#see-it-work"><b>See it work</b></a> ·
   <a href="docs/self-hosting.md"><b>Your own server</b></a> ·
-  <a href="docs/mcp.md"><b>MCP</b></a> ·
-  <a href="docs/catalog.md"><b>Open resources</b></a> ·
-  <a href="docs/guide.md"><b>Guide</b></a> ·
-  <a href="CONTRIBUTING.md"><b>Contributing</b></a>
+  <a href="docs/with-your-stack.md"><b>Your own app</b></a> ·
+  <a href="docs/mcp.md"><b>Your AI assistant</b></a> ·
+  <a href="docs/resources.md"><b>Open resources</b></a> ·
+  <a href="docs/guide.md"><b>Guide</b></a>
 </p>
 
-**VIABLE harness** is the open-source engine of the [VIABLE Developer Platform](https://developers.viablelab.org).
-It runs AI tutors and other learning agents, puts what the teacher decided into every reply (the
-goal, how far the AI may help, the misconceptions to listen for), checks replies before a learner
-sees them, and records what happened so a teacher can see it and change it.
+**AI that follows the teacher, and shows its work.** VIABLE harness runs AI tutors and other learning
+agents with what a teacher decided built into every reply, checks each reply before a learner sees it,
+and shows the teacher what happened.
 
-The Developer Platform runs this same code for you, with a workflow editor, classes, consent and
-research tools around it. The harness is that engine on its own, under the MIT license, for when you
-want to run it yourself.
+It is the open-source engine of the [VIABLE Developer Platform](https://developers.viablelab.org). The
+platform runs this same code for you, with an editor, classes and research tools around it. The harness
+is for running it yourself, or putting parts of it inside what you already have.
 
-> An *agent harness* is the software around an AI model: what the model is told, what it may do, and
-> what is checked before anyone sees its answer. This one is built for learning.
+## See it work
 
-## What you can do with it
+<p align="center">
+  <img src="docs/images/try.gif" width="100%" alt="A real course page with a panel beside it. A learner asks the fractions tutor for the answer. The panel shows what the teacher told the AI, the draft struck through with the reviewer's reason in red, and the rewrite that reached the learner. Then the teacher's help level changes, the same message is asked again, and a different reply comes back.">
+</p>
 
-| You want to | Use | Start with |
-| --- | --- | --- |
-| Run a course or agent you built on the Developer Platform on your own server, with your own model keys | `viable-harness serve course.viable.zip` | [Your own server](docs/self-hosting.md) |
-| Give your own AI app a teacher's settings and a check on each reply | the JavaScript functions, or `serve` | [Guide](docs/guide.md#from-code) |
-| Let your AI assistant write teaching settings, check replies and read learner evidence | `viable-harness mcp` and four Agent Skills | [MCP](docs/mcp.md) |
-| Test an agent before learners meet it, and know how far to trust the judge | `viable-harness test`, `draft-tests`, `calibrate` | [Agent tests](docs/agent-tests.md) |
-| Find open datasets, benchmarks and tools for K-12 AI, and how each could plug in | `viable-harness catalog` | [Open resources](docs/catalog.md) |
-| Plug your own research method into an agent | a component manifest | [Components](docs/components.md) |
+```sh
+npx github:VIABLE-Learning-Lab/viable-harness
+```
+
+No key, nothing to set up. It opens real course pages on your computer, with a panel showing what the AI
+did with each message. Ask a tutor for the answer and watch what stops it, then change how far the AI may
+help and ask again. Without a key the model's words are scripted, and it says so; set `OPENAI_API_KEY` or
+`OPENAI_BASE_URL` and it runs on your model ([more](docs/try.md)).
+
+## Why you might be here
+
+### You built something on the Developer Platform, and want it on your own server
+
+A library's chat page in the corner of its site. A school's course. Download it as a package, and it runs
+where you choose, with your own model keys, looking the same to learners. Nothing goes to VIABLE.
+
+```sh
+viable-harness inspect course.viable.zip      # what it holds, and what it needs
+viable-harness deploy cloudflare course.viable.zip --out ./site
+viable-harness verify https://your-address --token-env VIABLE_HARNESS_TOKEN
+```
+
+Download a course from its page (Download as package, With its files), or an agent with a chat page from Agents (⋯, Export…, With its knowledge).
+
+Targets: `cloudflare`, `aws-lambda`, `cloud-run`, `firebase`, `docker`, `node`. Or hand it to your coding AI:
+
+> *Deploy `course.viable.zip` on Cloudflare, using the Skill `skills/deploying-a-viable-course` from
+> github.com/VIABLE-Learning-Lab/viable-harness.*
+
+It reads the package, asks only what it can't work out, and stops to ask you about logins, money and
+learners' data. [Your own server](docs/self-hosting.md) says what each target can and can't do, and
+[learner pages](docs/learner-pages.md) what learners get.
+
+<p align="center">
+  <img src="docs/images/research-desk.jpg" width="720" alt="A library's research desk with the panel beside it: the reply quotes two of the library's guides with numbered citations, and the panel shows the passages it found.">
+</p>
+
+### You already have an AI app, in any language
+
+Change one URL. Each call then carries the teacher's settings, each reply is checked before your app sees
+it, and a record feeds the teacher's page. Python, LangChain, the Vercel AI SDK or your own backend: nothing
+else changes.
+
+```sh
+viable-harness gateway --upstream https://api.openai.com/v1 --teaching fractions.json \
+  --reviewer-model your-reviewer-model --data-dir ./records
+export OPENAI_BASE_URL=http://127.0.0.1:8090/v1
+```
+
+[Recipes](docs/with-your-stack.md) for curl, Python, Node, LangChain, LangGraph, LlamaIndex, the OpenAI
+Agents SDK and the Vercel AI SDK, each one run as written, and what the gateway can't enforce.
+
+### You work with an AI assistant
+
+Add one address, with nothing to install, and it can look up K-12 standards and math misconceptions and
+write a teacher's settings. A VIABLE API key adds checking replies and running your published agents. Or run
+the server yourself, with your own keys, and your data stays on your computer.
+
+```sh
+claude mcp add --transport http viable https://api.viablelab.org/mcp   # hosted
+codex mcp add viable-harness -- viable-harness mcp                     # local
+```
+
+Where an assistant renders MCP Apps, a check plays out on the page: the reply being read, the strike, the
+reason, the rewrite, then the verdict. [MCP](docs/mcp.md) compares hosted and local, and [Agent
+Skills](skills/) teach an assistant how to use them.
+
+<p align="center">
+  <img src="docs/images/mcp-check-view.png" width="420" alt="A check in an assistant: Passed. The learner asked what 1/2 + 1/3 is; the draft is struck through with the reviewer's reason, and the rewrite passed.">
+</p>
+
+### You want to know whether your agent is any good
+
+Run research against it, one command each. Test suites from open benchmarks, a maker's evaluators as judges,
+and essays scored by people to check how far to trust a judge.
+
+```sh
+viable-harness test agent.json --suite gsm8k --limit 20 --judge-model your-model
+viable-harness test agent.json --suite mathdial --judge-model your-model \
+  --judge learning-commons-evaluators/withholding-answers
+viable-harness calibrate --set asap-2 --judge-model your-model
+```
+
+12 of the [catalog's 41 public goods](docs/catalog.md) are one command from an effect on your agent, and 3 are
+built in; the rest say how far they go, and why. A resource is fetched from its makers to your own folder,
+on their terms, with its license shown first ([how it works](docs/resources.md)).
+
+### You teach, and don't write code
+
+The [Developer Platform](https://developers.viablelab.org) is the place to build, and your learners open
+activities on the [Learning Platform](https://viablelearning.org). This is what you see of a class, here and
+there, from the same code:
+
+<p align="center">
+  <img src="docs/images/teacher-drafts.jpg" width="720" alt="Two replies the reviewer sent back, as a teacher would mark them: each failed draft struck through in red with the reviewer's reason beside it, then the rewrite, or the fallback the run replied with.">
+</p>
+
+### You have a method or a dataset
+
+Bring it as a [component](docs/components.md) from the template, or list it in the
+[catalog](CONTRIBUTING.md#catalog-entries). People then use it in one command, with your citation attached.
 
 ## Harness or Developer Platform?
 
 <p align="center">
-  <img src="docs/images/where-it-runs.svg" width="100%" alt="The Developer Platform is hosted and adds the workflow editor, knowledge bases, courses and class lists, consent, studies and the research export, and logs and billing; it runs the harness. A course downloaded from it as a package runs on your own server with viable-harness serve. Your app sends the same request to either.">
+  <img src="docs/images/where-it-runs.svg" width="100%" alt="The Developer Platform is hosted and adds the workflow editor, knowledge bases, courses and class lists, consent, studies and the research export, and logs and billing. A course or agent downloaded from it as a package runs on your own server or cloud, with any OpenAI-compatible model and the same learner pages and teacher's page. Both are one engine, and your app sends the same request to either.">
 </p>
 
-They are one engine: an agent behaves the same in both. Choose by what you need around it.
+One engine and one set of learner pages. Choose by what you need around them.
 
 | | [Developer Platform](https://developers.viablelab.org) (hosted) | The harness (yours) |
 | --- | --- | --- |
-| Building agents | in the browser, with a workflow editor and an assistant | agent files and course packages: downloaded from the platform or written by hand |
-| Models | the platform's, or your keys | any OpenAI-compatible endpoint: OpenAI, or an open-weight model on Ollama, vLLM, llama.cpp or LM Studio |
-| Knowledge | files and websites, searched by meaning and keywords | a package's files, searched by keywords |
-| Learners | courses, class lists, sections and sign-in; learners open activities on the [VIABLE Learning Platform](https://viablelearning.org) | your app says who the learner is |
+| Building agents | in the browser, with a workflow editor and an assistant | files: downloaded from the platform, or written by hand |
+| Models | the platform's, or your keys | any OpenAI-compatible endpoint, open-weight models included |
+| Knowledge | files and websites, searched by meaning and keywords | a package's files and its snapshot of each website, by keywords |
+| Learners | class lists, sections, sign-in | a browser with a code they can re-enter, a class code, or your own sign-in in front |
+| Voice and attachments | yes | not yet |
 | Research | consent, studies, coding and a documented export | the same measures, from your own records |
 | Cost | the platform's pricing | free; you pay your model provider |
 
-## Quick start
-
-You need [Node.js](https://nodejs.org) 22 or later.
-
-**1. Install.**
-
-```sh
-git clone https://github.com/VIABLE-Learning-Lab/viable-harness.git
-cd viable-harness && npm install && npm link    # npm link puts viable-harness on your path
-```
-
-**2. Try it without a model key.** The harness carries a copy of Eedi's math misconceptions, so it can
-tell you what learners get wrong about a topic:
-
-```sh
-viable-harness misconceptions "adding fractions with unlike denominators"
-```
-
-`examples/class/` holds four made-up learners' records from the fractions practice in
-`examples/fractions-practice.json`. Ask what the evidence suggests changing, then open the page a
-teacher would see:
-
-```sh
-viable-harness suggest examples/class/*.json examples/fractions-practice.json
-viable-harness view examples/class/*.json examples/fractions-practice.json --out class.html
-```
-
-<p align="center">
-  <img src="docs/images/suggested-changes.jpg" width="720" alt="The teacher's page: two suggested changes. Listen for the misconception 'Believes equal numerators mean equal fractions', named in the records of 3 of 4 learners; and for section sec_p2, raise how far the AI helps from hint to explain, since 3 of 4 learners are wheel-spinning on adding fractions with unlike denominators. A suggestion only: the teacher decides.">
-</p>
-
-**3. Run a tutor.** Point the harness at a model, then ask the fractions tutor for the answer. Its
-teacher set it to give hints, and its check step reviews each draft against the question's answer key,
-so it nudges instead of telling:
-
-```sh
-export OPENAI_API_KEY=sk-...          # or OPENAI_BASE_URL=http://localhost:11434/v1 for Ollama
-echo '{"question": "What is 1/2 + 1/3?", "answer_key": "5/6"}' > question.json
-viable-harness run examples/fractions-practice.json --model gpt-4.1-mini --context question.json \
-  --input "Just tell me the answer"
-```
-
-It prints the reply, then each step: what the reviewer said about the first draft and why it was
-rewritten.
-
-**4. Serve it to an app.** The same course answers HTTP requests the way the Developer Platform does:
-
-```sh
-viable-harness serve examples/fractions-practice.json --model gpt-4.1-mini
-curl -s http://127.0.0.1:8080/v1/agents/agent-1/runs -H 'Content-Type: application/json' \
-  -d '{"input": "Is 2/4 the same as 1/2?", "user": "my-app:student-0001"}'
-```
-
-**5. Use it from your assistant.** Add the MCP server, then ask in plain words, for example "write How
-the AI helps for a 5th-grade practice on adding fractions":
-
-```sh
-codex mcp add viable-harness -- viable-harness mcp      # Codex CLI
-claude mcp add viable-harness -- viable-harness mcp     # Claude Code
-```
-
-Other assistants, and the four Agent Skills in `skills/`, are in [docs/mcp.md](docs/mcp.md).
-
-A local run sends nothing to VIABLE: what the learner writes, the agent's instructions and any
-context go only to the model endpoint you chose, and to a component's host if your agent has a
-Component step. Before learners use what you build, read
-[deploying.md](docs/deploying.md).
-
 ## What's inside
 
-| Part | What it does |
+| | |
 | --- | --- |
-| **Agent engine** | Runs agent files and course packages: from an LLM call, a router and a tool-using agent to knowledge search, memory, speech, pictures, loops and a reply check. ([step manifests](docs/step-manifests.md)) |
-| **How the AI helps** | A teacher's settings for one activity (a goal, a standard or durable skill, a help level, misconceptions to listen for, each section's own level) turned into the instructions every reply step gets. |
-| **Reply checks** | A second model reviews each reply against the teacher's settings or a question's answer key before the learner sees it; a failed reply is rewritten or flagged. This is VETTING ([Li, Zhang & Botelho, 2026](https://doi.org/10.1016/j.caeai.2026.100646)). |
-| **Agent tests** | Cases drafted from the teacher's settings or taken from past turns, run against each version, rated by a judge whose agreement with people you can measure. ([agent tests](docs/agent-tests.md)) |
-| **Evidence for teachers** | Twenty learner measures with their definitions and caveats, a one-page teacher view, and changes to How the AI helps suggested from the evidence, which the teacher accepts or not. |
-| **Your own server** | `viable-harness serve`: the Developer Platform's agent-run API on your machine, with a token, limits and a container image. ([self-hosting](docs/self-hosting.md)) |
-| **MCP server and Agent Skills** | Tools and skills for the assistants people already use; checks, tests and suggestions show as views where the assistant renders MCP Apps. ([MCP](docs/mcp.md)) |
-| **Components** | Other teams' work (misconception data, standards, judges, detectors, measures, steps) joins through a manifest that says what learner data it receives and which hosts it calls; the harness enforces both. ([components](docs/components.md)) |
-| **Open resources** | A catalog of open education datasets, benchmarks and tools, with licenses and how each could plug in. ([catalog](docs/catalog.md)) |
-| **Open formats** | Agent files, course packages, learning events, teaching settings and component manifests as JSON Schema, an xAPI profile, and conformance cases another implementation can check itself against. ([conformance](conformance/README.md), [xAPI](docs/xapi.md)) |
+| **Agent engine** | Runs agent files and course packages: LLM steps, a router, a tool-using agent, knowledge search, memory, speech, pictures, loops, other teams' components ([step manifests](docs/step-manifests.md)) |
+| **Learner pages** | The chat page, the corner widget, the course home and its activities: the same code the platform serves ([learner pages](docs/learner-pages.md)) |
+| **How the AI helps** | A teacher's settings for an activity (a goal, a standard or skill, how far the AI may go, misconceptions to listen for, each section's own level) become the instructions every reply step gets |
+| **Reply check** | A second model reviews each reply before the learner sees it, and a failed one is rewritten or flagged. This is VETTING ([Li, Zhang & Botelho, 2026](https://doi.org/10.1016/j.caeai.2026.100646)) |
+| **Agent tests** | Cases from the teacher's settings, from past turns or from research, rated by a judge whose agreement with people you can measure ([agent tests](docs/agent-tests.md)) |
+| **The teacher's page** | What the AI did with a class, each learner's measures with their definitions, and changes it suggests, for the teacher to decide |
+| **Your own server** | The platform's agent-run API on your machine or any cloud ([self-hosting](docs/self-hosting.md)) |
+| **Gateway** | An OpenAI-compatible endpoint that adds all of this to any app ([your stack](docs/with-your-stack.md)) |
+| **MCP and Agent Skills** | For the assistants people already use ([MCP](docs/mcp.md), [skills](skills/)) |
+| **Components and resources** | Other teams' work joins through a manifest that says what learner data it receives and which hosts it calls ([components](docs/components.md), [resources](docs/resources.md)) |
+| **Open formats** | Agent files, course packages, learning events, teaching settings and component manifests as JSON Schema, an xAPI profile, and conformance cases ([conformance](conformance/README.md), [xAPI](docs/xapi.md)) |
 
-It carries open data, kept with its attribution: [Learning Commons](https://learningcommons.org)
-Knowledge Graph standards, the Carnegie Skills Progressions and Eedi's Misconceptions Graph (CC BY
-4.0).
+It carries open data, kept with its attribution: [Learning Commons](https://learningcommons.org) Knowledge
+Graph standards, the Carnegie Skills Progressions and Eedi's Misconceptions Graph.
 
 ## Privacy and safety
 
 The harness is used with minors, so its defaults protect them wherever it runs:
 
-- No learner's name or identifier is sent to a model. How the AI helps is set per activity or
-  section, never per learner.
-- A component receives only the learner data its manifest lists.
-- A reply that wasn't checked says so (unverified, needs attention); it is never shown as checked.
+- No learner's name or identifier is sent to a model. How the AI helps is set per activity or section, never
+  per learner.
+- What is hidden from learners never reaches their browser: answer keys, instructions, a teacher's notes.
+- A component receives only the learner data its manifest lists. A package can't start a program on your
+  machine unless you name it.
+- A reply that wasn't checked says so. It is never shown as checked.
 - What a tool, a file or a web page returns is data for the model, never instructions to it.
-- A self-hosted server logs one line per run, without what the learner wrote, and serves only your own
-  machine unless you set a token.
+- A server of your own answers only your own machine until you set a token, and its logs hold no learner's words.
 
 Running the harness doesn't make a deployment compliant with COPPA, FERPA or any other law by itself:
 [deploying.md](docs/deploying.md) lists what you still have to do. Report vulnerabilities privately
@@ -164,28 +191,27 @@ Running the harness doesn't make a deployment compliant with COPPA, FERPA or any
 
 ## Status
 
-Version 0.2, a preview, not yet published on npm. What's built and tested is described above; the
-formats, the command line and the functions follow semantic versioning ([CHANGELOG](CHANGELOG.md)).
-Not yet: a hosted MCP server you reach by address, the first components from other teams, and an
-LTI 1.3 connection for school learning management systems (on the Developer Platform).
+Version 0.2, a preview, not yet on npm. What's above is built and tested. Not yet: voice and attachments on your
+own server, the first components brought by their authors, and an LTI 1.3 connection for school learning
+management systems. The formats, the command line and the functions follow semantic versioning
+([CHANGELOG](CHANGELOG.md)).
 
 ## Contributing
 
 Issues, discussions and pull requests are welcome, from a typo to a new component or catalog entry.
-[CONTRIBUTING.md](CONTRIBUTING.md) covers setting up, testing, proposing a change, and how a pull
-request is reviewed and merged. Look for [good first issues](../../labels/good%20first%20issue), ask
-in [Discussions](../../discussions), and follow the [code of conduct](CODE_OF_CONDUCT.md).
+[CONTRIBUTING.md](CONTRIBUTING.md) covers setting up, testing and how a pull request lands. Look for [good
+first issues](../../labels/good%20first%20issue), ask in [Discussions](../../discussions), and follow the
+[code of conduct](CODE_OF_CONDUCT.md).
 
 ## Citing
 
-If you use the harness in research, cite it with [CITATION.cff](CITATION.cff) (GitHub's "Cite this
-repository"). For the reply check, cite: Li, H., Zhang, S., & Botelho, A. F. (2026). VETTING: A
-dual-LLM framework for in-loop safety verification via policy isolation in educational AI.
-*Computers and Education: Artificial Intelligence, 11*, 100646.
+If you use the harness in research, cite it with [CITATION.cff](CITATION.cff). For the reply check, cite: Li,
+H., Zhang, S., & Botelho, A. F. (2026). VETTING: A dual-LLM framework for in-loop safety verification via policy
+isolation in educational AI. *Computers and Education: Artificial Intelligence, 11*, 100646.
 
 ## License
 
-Code under [MIT](LICENSE). The data it carries stays under CC BY 4.0, with the attribution to keep in
+Code under [MIT](LICENSE). The data it carries stays under its own licenses, with the attribution to keep, in
 [NOTICE](NOTICE). The names VIABLE and VETTING: [TRADEMARKS.md](TRADEMARKS.md).
 
 Made by [VIABLE Lab](https://viablelab.org).

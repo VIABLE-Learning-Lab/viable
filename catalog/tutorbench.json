@@ -33,5 +33,11 @@
     "how": "Its rubrics could rate replies in agent tests, once its license is clear."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Its full dataset's license isn't stated and it comes only as Parquet. Not connected until its license is clear."
+  },
   "verified_at": "2026-11-03"
 }

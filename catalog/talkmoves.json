@@ -32,5 +32,11 @@
     "how": "Its labels could check a detector that marks talk moves in tutoring turns for the teacher, against people's labels."
   },
   "in_harness": null,
+  "connect": {
+    "level": 1,
+    "as": [],
+    "command": "viable-harness resources get talkmoves",
+    "note": "Comes down as its repository's archive. It could check a detector against people's labels, but the harness has no talk-move detector to check yet. Non-commercial and share-alike: asks you to accept its license first."
+  },
   "verified_at": "2026-11-03"
 }

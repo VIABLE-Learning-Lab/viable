@@ -1,7 +1,7 @@
 /**
  * How the AI helps: an activity's teaching settings (goal, standard or durable skill, help level) and
- * what the agent is told, from VIABLE's own src/utils/teaching.js, plus the durable skills VIABLE
- * carries (Carnegie Skills Progressions via Learning Commons, CC BY 4.0; SKILLS.framework.attribution).
+ * what the agent is told (utils/teaching.js), plus the durable skills
+ * (Carnegie Skills Progressions via Learning Commons, CC BY 4.0; SKILLS.framework.attribution).
  */
 import { teachingContext } from './utils/teaching.js';
 
@@ -10,7 +10,7 @@ export { SKILLS } from './utils/skillsData.js';
 
 /**
  * A run's context with the teacher's instructions in it, as a course activity's run gets them
- * (agentChatPages.js workspaceContext): context.workspace.teaching for templates, and teaching_view,
+ * (learner/workspace.js workspaceContext): context.workspace.teaching for templates, and teaching_view,
  * which the engine adds to the reply steps' instructions (and VETTING's review). section: the
  * learner's section ID, whose own help level and note (teaching.sections) apply.
  */

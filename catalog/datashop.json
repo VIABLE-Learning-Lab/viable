@@ -32,5 +32,11 @@
     "how": "Its step-level data could check the harness's measures against other learners' data, for research."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Behind a sign-in, and its terms limit data to research and forbid passing it on. A connector can't fetch it for you."
+  },
   "verified_at": "2026-11-03"
 }

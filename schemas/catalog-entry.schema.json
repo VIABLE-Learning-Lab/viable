@@ -3,7 +3,7 @@
   "title": "An entry in the harness's public goods catalog",
   "description": "One education public good: what it is, where it lives, its license and access as its primary sources stated them on verified_at, and the harness slot it would fill. An entry describes; it doesn't endorse. One file per entry in catalog/, named by its id; docs/catalog.md lists them.",
   "type": "object",
-  "required": ["id", "name", "kind", "summary", "subjects", "grades", "url", "repository", "license", "access", "formats", "made_by", "cite", "status", "fits", "in_harness", "verified_at"],
+  "required": ["id", "name", "kind", "summary", "subjects", "grades", "url", "repository", "license", "access", "formats", "made_by", "cite", "status", "fits", "in_harness", "connect", "verified_at"],
   "additionalProperties": false,
   "properties": {
     "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 60, "description": "lowercase words joined by hyphens; the file is catalog/<id>.json" },
@@ -49,6 +49,21 @@
       }
     },
     "in_harness": { "type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$", "description": "the id of the built-in component that carries it" },
+    "connect": {
+      "type": "object",
+      "required": ["level", "as", "command", "note"],
+      "additionalProperties": false,
+      "description": "How far it is connected (docs/resources.md): 0 listed, 1 fetchable, 2 has an effect in one command, 3 built in",
+      "properties": {
+        "level": { "enum": [0, 1, 2, 3] },
+        "as": { "type": "array", "uniqueItems": true, "items": { "enum": ["test-suite", "judge", "calibration-set", "knowledge-folder", "context-lookup", "measure", "step"] }, "description": "what it becomes in the harness; empty below level 2" },
+        "command": { "type": ["string", "null"], "pattern": "^viable-harness ", "description": "the exact command, or null at level 0" },
+        "note": { "type": "string", "minLength": 20, "maxLength": 500, "description": "at level 2 or 3, what results from it can show and what they can't; below, why it goes no further" }
+      },
+      "if": { "properties": { "level": { "const": 0 } } },
+      "then": { "properties": { "command": { "const": null }, "as": { "maxItems": 0 } } },
+      "else": { "properties": { "command": { "type": "string" } } }
+    },
     "verified_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "the date its url, license and status were checked against its primary sources" }
   },
   "allOf": [

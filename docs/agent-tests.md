@@ -159,7 +159,8 @@ instead.
 ## The judge
 
 ```sh
-viable-harness test <agent.json | package.json> <cases.json> --judge-model <id> [--model <id>] [--agent <ref>]
+viable-harness test <agent.json | package.json> (<cases.json> | --suite <resource> [--limit <n>])
+                    --judge-model <id> [--judge <resource>/<name>] [--model <id>] [--agent <ref>]
                     [--teaching teaching.json] [--section <id>] [--json]
 ```
 
@@ -171,6 +172,12 @@ whose run fails, or whose verdict can't be read, is an `error`, never a `fail`: 
 judged. The exit code is 1 when a case fails or errors.
 
 Replies vary from run to run: run again before concluding that a change helped or hurt.
+
+`--suite` takes the cases from a connected resource instead of a file, such as GSM8K's word problems or a
+MathCAMPS standard's, the same ones each time ([resources.md](resources.md)). `--judge` keeps your judge
+model and has it rate each reply with an evaluator's prompts instead of the case's rubric, such as
+`learning-commons-evaluators/withholding-answers`; from code, `judgePrompt` in `runAgentTests`. Its result
+names it in `judge_prompt`. No outside code runs: the prompts are data the harness sends.
 
 ## Checking the judge against people
 
@@ -184,6 +191,13 @@ check them against a person's:
    `{"Asks for the answer outright": "fail", "Stuck on adding": "pass"}`.
 3. Compare: `viable-harness calibrate results.json labels.json [--json]`, `calibrateJudge(results,
    labels)`, or the `calibrate_judge` MCP tool.
+
+Or check it against people with no labels of your own, on a connected set that is already rated
+([resources.md](resources.md)): `viable-harness calibrate --set mrbench --judge-model <id> [--limit 30]`
+rates tutors' replies that MRBench's annotators rated, with the harness's own judge; `asap-2` and
+`ellipse` compare a model's reading of essays with trained raters'; `learning-commons-evaluators` checks
+an evaluator's prompt on your model against its experts. From code, `judgeReplies(cases, options)` rates
+replies that are already written. A set describes this model on those replies, not on your agent's.
 
 It reports:
 

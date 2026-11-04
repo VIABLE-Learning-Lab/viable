@@ -2,7 +2,7 @@
  * A conversation's pictures: what the learner has been shown, by number, kept between turns so a
  * later turn can change "picture 2" or finish the ones that couldn't be drawn.
  *
- * Kept on a server conversation beside its State (agentExecution.js), not in it, so the author's
+ * Kept on a server conversation beside its State (the host keeps it), not in it, so the author's
  * 16 KB of State stays theirs. Steps read it as {{conversation.pictures}}, {{conversation.unfinished}}
  * and {{conversation.picture_history}}; picture steps update it (config.remember, on by default).
  *

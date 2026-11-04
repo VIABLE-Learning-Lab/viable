@@ -6,6 +6,8 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { COMPONENTS, HELP_LEVELS } from '../src/index.js';
 import { MAX_ARGUMENTS, PROTOCOL_VERSIONS, mcpServer } from '../src/mcp.js';
+import { handleMcpMessage } from '../src/mcpProtocol.js';
+import { mcpTools } from '../src/mcpTools.js';
 
 const json = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
 const TOOL_NAMES = ['check_reply', 'teaching_instructions', 'find_misconceptions', 'compute_measures', 'validate_document', 'run_agent', 'draft_tests', 'run_agent_tests', 'calibrate_judge', 'suggest_changes', 'list_components', 'find_public_goods'];
@@ -346,4 +348,30 @@ test('suggest_changes: suggestions with their evidence, and the settings once th
   assert.equal(accepted.teaching.help, 'hint');
   const wrong = await call(mcpServer(), 'suggest_changes', { teaching, runs, accept: 'nope' });
   assert.equal(wrong.isError, true);
+});
+
+test('with no runtimes, a host gets the tools that need none, and only the views of tools it offers', async () => {
+  const pure = mcpTools();
+  assert.deepEqual(pure.map((tool) => tool.name), TOOL_NAMES.filter((name) => !['check_reply', 'run_agent', 'draft_tests', 'run_agent_tests'].includes(name)));
+  const checked = [];
+  const hosted = mcpTools({ checkReply: async (options) => { checked.push(options); return { outcome: 'passed', passed: true }; }, endpoint: 'Model calls go through this host.' }).filter((tool) => tool.name === 'check_reply');
+  assert.match(hosted[0].description, /Model calls go through this host\./);
+  assert.ok(!/OPENAI_BASE_URL/.test(hosted[0].description));
+
+  // No connection: each message brings its own session, and what a tool's run gets is what the host passes.
+  const options = () => ({ tools: hosted, services: { host: 'mine' }, serverInfo: { name: 'hosted', version: '1' }, session: { version: PROTOCOL_VERSIONS[0], views: true } });
+  const listed = await handleMcpMessage(request('tools/list'), options());
+  assert.equal(listed.result.tools[0]._meta.ui.resourceUri, 'ui://viable-harness/check-reply');
+  const { resources } = (await handleMcpMessage(request('resources/list'), options())).result;
+  assert.deepEqual(resources.map((item) => item.uri), ['ui://viable-harness/check-reply']);
+  assert.equal((await handleMcpMessage(request('resources/read', { uri: 'ui://viable-harness/agent-tests' }), options())).error.code, -32002);
+  const called = await handleMcpMessage(request('tools/call', { name: 'check_reply', arguments: { reply: 'Hello.' } }), options());
+  assert.equal(called.result.structuredContent.outcome, 'passed');
+  assert.equal(checked[0].host, 'mine');
+
+  const asked = await handleMcpMessage(initialize('2025-06-18'), options());
+  assert.deepEqual(asked.result.capabilities, { tools: { listChanged: false } }, 'initialize says what this client said it renders');
+  assert.deepEqual(asked.result.serverInfo, { name: 'hosted', version: '1' });
+  assert.equal(asked.result.instructions, undefined);
+  assert.equal((await handleMcpMessage(request('tools/list'), { tools: pure })).result.tools.length, pure.length, 'with no session, as a new connection');
 });

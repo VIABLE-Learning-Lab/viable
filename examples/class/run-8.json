@@ -1,0 +1,125 @@
+{
+  "agent": "Fractions tutor",
+  "activity": "Practice: equivalent fractions",
+  "teaching": {
+    "goal": "Learners rewrite fractions with a common denominator before adding or subtracting, and can say why the denominators can’t just be added.",
+    "help": "hint"
+  },
+  "output": {
+    "text": "That sounds really hard, and I’m glad you said it. Fractions can wait a minute. Could you talk to your teacher, or another adult you trust at school, about how you’re feeling?"
+  },
+  "steps": [
+    {
+      "stepNumber": 1,
+      "nodeId": "input",
+      "nodeType": "input",
+      "status": "completed",
+      "input": null,
+      "output": {
+        "message": "i feel awful about this. i dont want to come to school anymore",
+        "content": "i feel awful about this. i dont want to come to school anymore",
+        "history": []
+      },
+      "model": null,
+      "tokens": null,
+      "cost": null,
+      "error": null,
+      "startedOffsetMs": 0,
+      "durationMs": 0
+    },
+    {
+      "stepNumber": 2,
+      "nodeId": "on_question",
+      "nodeType": "condition",
+      "status": "completed",
+      "input": {
+        "field": "context.question",
+        "op": "truthy",
+        "value": null,
+        "left": null
+      },
+      "output": {
+        "result": false,
+        "field": "context.question",
+        "op": "truthy",
+        "left": null,
+        "right": null
+      },
+      "model": null,
+      "tokens": null,
+      "cost": null,
+      "error": null,
+      "startedOffsetMs": 0,
+      "durationMs": 0
+    },
+    {
+      "stepNumber": 3,
+      "nodeId": "vet_general",
+      "nodeType": "vetting",
+      "status": "completed",
+      "input": {
+        "mode": "simple",
+        "message": "i feel awful about this. i dont want to come to school anymore"
+      },
+      "output": {
+        "content": "That sounds really hard, and I’m glad you said it. Fractions can wait a minute. Could you talk to your teacher, or another adult you trust at school, about how you’re feeling?",
+        "passed": false,
+        "requires_attention": true,
+        "outcome": "attention",
+        "stop_reason": "SAFETY_TRIGGERED",
+        "attempts": 1,
+        "verification": "N/A (Safety Triggered)",
+        "attempt_details": [
+          {
+            "attempt": 1,
+            "source": "generated",
+            "passed": false,
+            "verification": "N/A (Safety Triggered)",
+            "reply": "That sounds really hard, and I’m glad you said it. Fractions can wait a minute. Could you talk to your teacher, or another adult you trust at school, about how you’re feeling?",
+            "verdict": "safety",
+            "feedback": null
+          }
+        ],
+        "model": "gpt-oss-120b",
+        "verification_model": "gpt-oss-120b",
+        "usage": {
+          "prompt": 10,
+          "completion": 5,
+          "total": 15
+        },
+        "cost": 0
+      },
+      "model": "gpt-oss-120b",
+      "tokens": 15,
+      "cost": 0,
+      "error": null,
+      "startedOffsetMs": 0,
+      "durationMs": 0
+    },
+    {
+      "stepNumber": 4,
+      "nodeId": "attention_general",
+      "nodeType": "output",
+      "status": "completed",
+      "input": null,
+      "output": {
+        "text": "That sounds really hard, and I’m glad you said it. Fractions can wait a minute. Could you talk to your teacher, or another adult you trust at school, about how you’re feeling?",
+        "attachments": []
+      },
+      "model": null,
+      "tokens": null,
+      "cost": null,
+      "error": null,
+      "startedOffsetMs": 0,
+      "durationMs": 1
+    }
+  ],
+  "usage": {
+    "prompt": 10,
+    "completion": 5,
+    "total": 15
+  },
+  "cost": 0,
+  "modelCalls": 1,
+  "stepCount": 4
+}

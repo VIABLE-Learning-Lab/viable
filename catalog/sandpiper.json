@@ -33,5 +33,11 @@
     "how": "Its coding schemes and agreement checks are how a detector is judged: against people's labels on a sample."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "A web app that needs MongoDB, Redis and model keys, not a file. Its way of checking coders against people is what calibrate does for a judge."
+  },
   "verified_at": "2026-11-03"
 }

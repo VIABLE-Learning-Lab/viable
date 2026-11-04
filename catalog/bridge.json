@@ -30,8 +30,14 @@
     "slots": [
       "judge"
     ],
-    "how": "Its experts' replies and strategies could be the reference a judge compares an agent's reply to a mistake against, for non-commercial use."
+    "how": "Its experts' replies and strategies could be the reference a judge compares an agent's reply to a mistake against, for non-commercial use, given whole sessions."
   },
   "in_harness": null,
+  "connect": {
+    "level": 1,
+    "as": [],
+    "command": "viable-harness resources get bridge",
+    "note": "Comes down as its JSON. Each transcript is four turns long and the problem is often on a picture the text doesn't hold, so as test cases they would test little; MathDial and MRBench are connected instead. Non-commercial: asks you to accept its license first."
+  },
   "verified_at": "2026-11-03"
 }

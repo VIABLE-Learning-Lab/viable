@@ -30,8 +30,16 @@
     "slots": [
       "judge"
     ],
-    "how": "Its human annotations could check how well a judge agrees with people on dimensions such as revealing the answer, as the harness's judge calibration does with a teacher's labels."
+    "how": "Its annotations are a set to check a judge against: how far it agrees with people on guidance, on finding the mistake and on what to do next, as the harness's judge calibration does with a teacher's labels."
   },
   "in_harness": null,
+  "connect": {
+    "level": 2,
+    "as": [
+      "calibration-set"
+    ],
+    "command": "viable-harness calibrate --set mrbench --judge-model <model> --limit 30",
+    "note": "Checks your judge model against trained annotators, with no labels of your own, on tutors' replies to learners' math mistakes: confusion table, agreement and kappa, half Yes and half No. It describes this model on these replies and this rubric (--dimension), not your agent. Its license is unclear for commercial use: asks you to accept it first. These are real tutoring conversations from its sources: running this sends them to the model you name, so use one whose terms you accept."
+  },
   "verified_at": "2026-11-03"
 }

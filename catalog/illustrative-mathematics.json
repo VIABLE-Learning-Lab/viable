@@ -31,8 +31,16 @@
     "slots": [
       "context"
     ],
-    "how": "Its lessons and practice problems could be an activity's readings and questions; the CC BY edition also for commercial use."
+    "how": "One unit's student lessons in the CC BY edition become a knowledge folder a Knowledge step searches."
   },
   "in_harness": null,
+  "connect": {
+    "level": 2,
+    "as": [
+      "knowledge-folder"
+    ],
+    "command": "viable-harness resources get illustrative-mathematics --grade 6 --unit 4",
+    "note": "One unit's student lessons, grades 6-8, in the CC BY edition, as files a Knowledge step searches: then --knowledge <kb-id>=resource:illustrative-mathematics. Student pages only, so no teacher's guide or answer keys, and pictures become their descriptions."
+  },
   "verified_at": "2026-11-03"
 }

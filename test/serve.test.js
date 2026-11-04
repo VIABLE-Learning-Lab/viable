@@ -2,12 +2,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { createServer } from 'node:http';
+import { createServer, request as httpRequest } from 'node:http';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadAgents, serve } from '../src/serve.js';
+import { fileStore } from '../src/server/fileStore.js';
+import { listen } from '../src/server/node.js';
+import { memoryStore } from '../src/server/store.js';
 import { zipFile } from './zipFile.js';
 
 const EXAMPLES = fileURLToPath(new URL('../examples/', import.meta.url));
@@ -197,7 +200,7 @@ test('an agent file’s knowledge bases are searched in mapped folders, and a co
   const { agents: found, skipped } = await loadAgents([agents]);
   assert.deepEqual(found.map((agent) => agent.slug), ['lakes', 'sea-tutor', 'sea'], 'a package\'s agent at the slug it had where it was downloaded');
   assert.match(skipped[0], /notes\.json: Expected an agent file/);
-  const { call, notes } = await started(t, [agents], { knowledge: { kb_1: join(dir, 'sea') } });
+  const { call, notes } = await started(t, [agents], { knowledge: { kb_1: join(dir, 'sea') }, pages: { assets: { names: {} } } });
   assert.deepEqual(notes, [
     'Knowledge base kb_1: left out map.pdf (only text, Markdown, CSV, JSON and HTML files are read).',
     'lakes: knowledge base kb_2 (Lake guides) has no folder, so its searches fail: add --knowledge kb_2=<folder>.'
@@ -255,4 +258,176 @@ test('the CLI serves on a port of its own and refuses a public address without a
   assert.equal((await answer.json()).output.text, 'answered by Bearer model-key');
   await new Promise((resolve) => setTimeout(resolve, 50));
   assert.equal(JSON.parse(out.trim().split('\n').at(-1)).status, 200, 'one JSON line per run on stdout');
+});
+
+test('with a store it keeps conversations and memory across a restart; without one it stays stateless', async (t) => {
+  const dir = scratch(t);
+  const store = fileStore(join(dir, 'data'));
+  const graph = { entry: 'recall', nodes: [{ id: 'recall', type: 'memory', config: { mode: 'save', content: 'Likes tides' }, next: 'write' }, { id: 'write', type: 'llm', config: { model: 'm' }, next: 'out' }, { id: 'out', type: 'output', config: { text: '{{write.content}}' } }] };
+  const file = agentFile(dir, 'sea.agent.json', graph);
+  const first = await started(t, [file], { store });
+  const said = await (await first.call('/v1/agents/sea/runs', { body: { input: 'Why tides?', user: 's-0412' } })).json();
+  assert.match(said.conversation_id, /^agtc_/);
+  assert.deepEqual(await store.list('memory/'), ['memory/s-0412']);
+  const after = await started(t, [file], { store: fileStore(join(dir, 'data')) });
+  const next = await (await after.call('/v1/agents/sea/runs', { body: { input: 'And waves?', conversation_id: said.conversation_id } })).json();
+  assert.equal(next.conversation_id, said.conversation_id);
+  assert.deepEqual(after.calls[0].messages.filter((item) => item.role !== 'system').map((item) => item.content), ['Why tides?', 'What do you think comes first?', 'And waves?']);
+  assert.equal((await after.call(`/v1/agents/sea/runs/${said.run_id}`)).status, 200, 'a run outlives the process');
+  assert.equal((await after.call('/v1/agents/sea/runs', { body: { input: 'hi', user: 'Ada Lovelace' } })).status, 400, 'memory still refuses a name');
+  const none = await started(t, [file]);
+  assert.equal((await none.call('/v1/agents/sea/runs', { body: { input: 'hi', conversation_id: said.conversation_id } })).status, 400);
+});
+
+// A caller who hangs up: the request is sent, then its socket is destroyed once the model has been reached.
+function hangUp(url, path, body, reached) {
+  const target = new URL(`${url}${path}`);
+  const client = httpRequest({ host: target.hostname, port: target.port, path: target.pathname, method: 'POST', headers: { 'content-type': 'application/json' } });
+  client.on('error', () => {});
+  client.end(JSON.stringify(body));
+  reached.then(() => client.destroy());
+}
+const settled = async (done) => {
+  for (let i = 0; i < 200 && !done(); i += 1) await new Promise((resolve) => { setTimeout(resolve, 5); });
+  assert.ok(done(), 'it settled');
+};
+
+test('the node adapter aborts request.signal when the caller hangs up, and never after a whole answer', async (t) => {
+  let seen = null;
+  let reached;
+  const arrived = new Promise((resolve) => { reached = resolve; });
+  const handler = async (request) => {
+    seen = request.signal;
+    if (new URL(request.url).pathname === '/whole') return new Response('ok');
+    reached();
+    await new Promise((resolve) => { request.signal.addEventListener('abort', resolve, { once: true }); });
+    return new Response('nobody is there');
+  };
+  const { server, url } = await listen(handler, { port: 0 });
+  t.after(() => server.close());
+
+  assert.equal(await (await globalThis.fetch(`${url}/whole`, { method: 'POST', body: 'x' })).text(), 'ok');
+  await new Promise((resolve) => { setTimeout(resolve, 20); });
+  assert.equal(seen.aborted, false, 'a finished answer aborts nothing');
+
+  hangUp(url, '/held', {}, arrived);
+  await arrived;
+  await settled(() => seen.aborted);
+  assert.equal((await globalThis.fetch(`${url}/whole`)).status, 200, 'answering nobody harms nothing');
+});
+
+for (const stream of [false, true]) {
+  test(`a caller who hangs up stops a run${stream ? ' being streamed' : ''}: its model call is cut off, none more is made, nothing is kept`, async (t) => {
+    const dir = scratch(t);
+    const store = memoryStore();
+    const file = agentFile(dir, 'sea.agent.json', { entry: 'check', nodes: [{ id: 'check', type: 'vetting', config: { model: 'writer', verification_model: 'reviewer', guideline: 'Be kind.', max_attempts: 3 }, next: 'out' }, { id: 'out', type: 'output', config: { text: '{{check.content}}' } }] });
+    const sent = [];
+    let cutOff = 0;
+    let hold = true;
+    let reached;
+    const arrived = new Promise((resolve) => { reached = resolve; });
+    // As a real fetch does: refused at once if the signal has already aborted, and rejected when it does.
+    const fetch = (_url, init) => new Promise((resolve, reject) => {
+      if (init.signal?.aborted) return reject(init.signal.reason);
+      sent.push(JSON.parse(init.body).model);
+      if (!hold) return resolve(reply('PASS'));
+      reached();
+      init.signal.addEventListener('abort', () => { cutOff += 1; reject(init.signal.reason); }, { once: true });
+    });
+    const { url, lines, call } = await started(t, [file], { fetch, store, maxRuns: 1 });
+    hangUp(url, '/v1/agents/sea/runs', { input: 'Why tides?', stream }, arrived);
+    await arrived;
+    await settled(() => lines.length === 1);
+    assert.equal(cutOff, 1, 'the call in flight is cut off');
+    assert.deepEqual(sent, ['writer'], 'no attempt after it reaches the model');
+    assert.equal(lines[0].status, 499);
+    assert.equal(lines[0].code, 'client_closed_request');
+    assert.equal(lines[0].stream, stream);
+    assert.deepEqual(await store.list('conversations/'), [], 'a turn nobody received isn\'t kept');
+    assert.deepEqual(await store.list('runs/'), []);
+
+    hold = false;
+    const next = await call('/v1/agents/sea/runs', { body: { input: 'Still there?' } });
+    assert.equal(next.status, 200, 'its place among the runs is free again');
+  });
+}
+
+for (const stream of [false, true]) {
+  test(`a caller who hangs up in a conversation they know${stream ? ', being streamed,' : ''} still gets the turn: it finishes and is kept`, async (t) => {
+    const dir = scratch(t);
+    const store = memoryStore();
+    const file = agentFile(dir, 'sea.agent.json', { entry: 'write', nodes: [{ id: 'write', type: 'llm', config: { model: 'm' }, next: 'out' }, { id: 'out', type: 'output', config: { text: '{{write.content}}' } }] });
+    let hold = false;
+    let reached;
+    const arrived = new Promise((resolve) => { reached = resolve; });
+    let release;
+    let cutOff = 0;
+    const fetch = (_url, init) => new Promise((resolve, reject) => {
+      if (!hold) return resolve(reply('First answer.'));
+      reached();
+      init.signal?.addEventListener('abort', () => { cutOff += 1; reject(init.signal.reason); }, { once: true });
+      release = () => resolve(reply('Waiting for you.'));
+    });
+    const { url, lines, call } = await started(t, [file], { fetch, store });
+    const first = await (await call('/v1/agents/sea/runs', { body: { input: 'First?', history_mode: 'server' } })).json();
+    assert.ok(first.conversation_id);
+    hold = true;
+    hangUp(url, '/v1/agents/sea/runs', { input: 'Why tides?', stream, conversation_id: first.conversation_id }, arrived);
+    await arrived;
+    await new Promise((resolve) => { setTimeout(resolve, 50); });
+    assert.equal(cutOff, 0, 'its model call goes on');
+    release();
+    await settled(() => lines.length === 2);
+    assert.equal(lines[1].status, 200);
+    const { messages } = await store.get(`conversations/${first.conversation_id}`);
+    assert.deepEqual(messages.slice(-2).map((message) => message.content), ['Why tides?', 'Waiting for you.'], 'the reply is there when they come back');
+  });
+}
+
+test('turns in one conversation run one at a time, however long they take, and a queue past four is refused', async (t) => {
+  const dir = scratch(t);
+  const store = memoryStore();
+  const file = agentFile(dir, 'sea.agent.json', { entry: 'write', nodes: [{ id: 'write', type: 'llm', config: { model: 'm' }, next: 'out' }, { id: 'out', type: 'output', config: { text: '{{write.content}}' } }] });
+  let running = 0;
+  let most = 0;
+  const fetch = async () => {
+    running += 1;
+    most = Math.max(most, running);
+    await new Promise((resolve) => { setTimeout(resolve, 120); });
+    running -= 1;
+    return reply('Answered.');
+  };
+  const { call } = await started(t, [file], { fetch, store, timeoutMs: 200 });
+  const { conversation_id: id } = await (await call('/v1/agents/sea/runs', { body: { input: 'First', history_mode: 'server' } })).json();
+  const asked = ['one', 'two', 'three', 'four', 'five'].map((input) => call('/v1/agents/sea/runs', { body: { input, conversation_id: id } }));
+  const statuses = await Promise.all(asked.map(async (answer) => { const response = await answer; return [response.status, response.status === 429 ? (await response.json()).error.code : null, response.headers.get('retry-after')]; }));
+  assert.deepEqual(statuses, [[200, null, null], [200, null, null], [200, null, null], [200, null, null], [429, 'conversation_busy', '2']]);
+  assert.equal(most, 1, 'two at once would lose one of them');
+  const { messages } = await store.get(`conversations/${id}`);
+  assert.deepEqual(messages.filter((message) => message.role === 'user').map((message) => message.content), ['First', 'one', 'two', 'three', 'four'], 'each is kept');
+});
+
+test('a route that leaves out turn.signal has its turn finish whoever is waiting', async (t) => {
+  const dir = scratch(t);
+  const file = agentFile(dir, 'sea.agent.json', { entry: 'write', nodes: [{ id: 'write', type: 'llm', config: { model: 'm' }, next: 'out' }, { id: 'out', type: 'output', config: { text: '{{write.content}}' } }] });
+  let finished = null;
+  let reached;
+  const arrived = new Promise((resolve) => { reached = resolve; });
+  let release;
+  const fetch = (_url, init) => new Promise((resolve, reject) => {
+    reached();
+    init.signal?.addEventListener('abort', () => reject(init.signal.reason), { once: true });
+    release = () => resolve(reply('Kept going.'));
+  });
+  const route = (ctx) => async (request, requestUrl) => {
+    if (requestUrl.pathname !== '/page') return null;
+    finished = ctx.runTurn(ctx.served.get('sea'), { text: 'hi', history: [], context: null, user: null });
+    return ctx.json(200, { said: (await finished).output.text });
+  };
+  const { url } = await started(t, [file], { fetch, routes: [route] });
+  hangUp(url, '/page', {}, arrived);
+  await arrived;
+  await new Promise((resolve) => { setTimeout(resolve, 30); });
+  release();
+  assert.equal((await finished).output.text, 'Kept going.');
 });

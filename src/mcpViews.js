@@ -8,36 +8,25 @@
  * tree that the page builds with createElement and text nodes, so text that learners and models
  * wrote is never parsed as markup.
  */
-import { OUTCOMES, VERDICTS } from './view.js';
+import { themeCss } from './ui/theme.js';
+import { ATTRIBUTES, MARKS, OUTCOMES, PARTS_CSS, PARTS_SCRIPT, asSource, TAGS, h, mark, quote, str, suggestion, testCase, treeDom, vettingRounds } from './ui/parts.js';
 
+export { ATTRIBUTES, TAGS };
 export const VIEW_EXTENSION = 'io.modelcontextprotocol/ui';
 export const VIEW_MIME = 'text/html;profile=mcp-app';
 const APPS_PROTOCOL = '2026-01-26';
 
-// Everything a tree may hold: the page builds nothing else, and no attribute links or runs anything.
-export const TAGS = ['div', 'header', 'section', 'article', 'footer', 'h1', 'h2', 'h3', 'p', 'ul', 'ol', 'li', 'dl', 'dt', 'dd', 'blockquote', 'pre', 'code', 'strong', 'span', 'details', 'summary'];
-export const ATTRIBUTES = ['class', 'open', 'role'];
 // Why a check ended unverified, in the VETTING step's terms (src/agents/engine.js).
 const STOPS = { MAX_ATTEMPTS_REACHED: 'it failed every review', VERIFICATION_ERROR: 'a review couldn’t run', GENERATION_ERROR: 'a rewrite couldn’t be written' };
-const TEST_VERDICTS = { pass: 'Passed', fail: 'Failed', error: 'Error' };
 
 // The functions below run in the page too (viewHtml embeds their source): they use only each other,
-// the constants above and the language, never this module's imports.
-function h(tag, attrs, ...children) {
-  return [tag, attrs, ...children];
+// the parts (ui/parts.js), the constants above and the language, never this module's other imports.
+function heading(label, title, attrs, ...rest) {
+  return h('header', attrs, h('p', { class: 'eyebrow' }, label), h('h1', null, title), ...rest);
 }
 
-function str(value) {
-  if (value == null) return '';
-  return typeof value === 'object' ? JSON.stringify(value) : String(value);
-}
-
-function quote(value, empty) {
-  return str(value).trim() ? h('blockquote', null, str(value)) : h('p', { class: 'muted' }, empty);
-}
-
-function heading(tool, title, attrs, ...rest) {
-  return h('header', attrs, h('p', { class: 'eyebrow' }, tool), h('h1', null, title), ...rest);
+function casesOf(args) {
+  return Array.isArray(args.cases) ? args.cases : Array.isArray(args.cases?.cases) ? args.cases.cases : [];
 }
 
 /** A tool result's data: its structuredContent, or the JSON after the summary in its text. */
@@ -52,7 +41,15 @@ export function resultData(result) {
   }
 }
 
-/** check_reply: the outcome, whether the reply is checked, each round with the reviewer's reason, the rewrite. */
+/** check_reply while it runs: the reply, with the reviewer reading it. */
+export function checkReplyPending(args) {
+  return h('div', null,
+    heading('VETTING check', 'Reviewing the reply', { class: 'outcome waiting' }, h('p', null, 'The reviewer is reading it.')),
+    str(args.message).trim() ? h('section', { class: 'asked' }, h('h2', null, 'The learner’s message'), quote(args.message)) : null,
+    h('section', null, h('h2', null, 'The reply'), h('div', { class: 'draft v-reading' }, quote(args.reply, 'Waiting for the reply.'))));
+}
+
+/** check_reply: whether the reply is checked, each round as a marked-up draft that plays in order, the rewrite. */
 export function checkReplyView(data, args) {
   const outcome = Object.hasOwn(OUTCOMES, String(data.outcome)) ? data.outcome : 'unverified';
   const [label, why] = OUTCOMES[outcome];
@@ -62,72 +59,59 @@ export function checkReplyView(data, args) {
   // As check_reply reviews: against the question and its answer key when one is given, else the guideline.
   const against = (str(args.answer_key).trim() ? [['The question (its answer key isn’t shown here)', args.question]] : [['The guideline', args.guideline]]).filter(([, text]) => str(text).trim());
   return h('div', null,
-    heading('check_reply', label, { class: `outcome ${outcome}` },
+    heading('VETTING check', mark(MARKS[outcome], label), { class: `outcome ${outcome}` },
       h('p', null, passed
         ? `Checked: ${why}.${data.revised ? ' It was rewritten: use the rewritten reply, not the original.' : ''}`
         : `Not checked: ${stop}. Don’t show it to the learner as checked.`)),
-    str(args.message).trim() ? h('section', null, h('h2', null, 'The learner’s message'), quote(args.message)) : null,
+    str(args.message).trim() ? h('section', { class: 'asked' }, h('h2', null, 'The learner’s message'), quote(args.message)) : null,
     against.length ? h('section', null, h('h2', null, 'Checked against'), h('dl', null, ...against.flatMap(([name, text]) => [h('dt', null, name), h('dd', null, str(text))]))) : null,
     h('section', null,
       h('h2', null, rounds.length === 1 ? 'The review' : `${rounds.length} review rounds`),
-      h('ol', { class: 'rounds' }, ...rounds.map((round, i) => {
-        const verdict = Object.hasOwn(VERDICTS, String(round?.verdict)) ? round.verdict : 'error';
-        return h('li', { class: `round ${verdict}` },
-          h('h3', null, `Round ${str(round?.attempt ?? i + 1)}, ${round?.source === 'draft' ? 'the reply as given' : 'a rewrite'}: `, h('span', { class: 'verdict' }, VERDICTS[verdict])),
-          quote(round?.reply, round?.reply == null ? 'No reply: it couldn’t be written.' : 'An empty reply.'),
-          str(round?.feedback).trim() ? h('p', null, h('strong', null, verdict === 'error' ? 'What went wrong: ' : 'The reviewer’s reason: '), str(round.feedback)) : null);
-      }))),
-    data.revised ? h('section', null, h('h2', null, passed ? 'The checked reply, rewritten' : 'The last rewrite, not checked'), quote(data.reply, 'No reply.')) : null,
-    h('footer', null, [data.reviewer ? `Reviewer: ${str(data.reviewer)}` : '', data.model_calls != null ? `Model calls: ${str(data.model_calls)}` : ''].filter(Boolean).join('. ')));
+      vettingRounds(rounds, { watch: true })),
+    data.revised ? h('section', { class: 'after' }, h('h2', null, passed ? 'The checked reply, rewritten' : 'The last rewrite, not checked'), quote(data.reply, 'No reply.')) : null,
+    h('footer', { class: 'after' }, [data.reviewer ? `Reviewer: ${str(data.reviewer)}` : '', data.model_calls != null ? `Model calls: ${str(data.model_calls)}` : ''].filter(Boolean).join('. ')));
 }
 
-/** run_agent_tests: the counts, then each case with its verdict, the judge's reason, the case and the reply. */
+/** run_agent_tests while it runs: the cases, waiting for their marks. */
+export function agentTestsPending(args) {
+  const cases = casesOf(args);
+  return h('div', null,
+    heading('Agent tests', cases.length ? `Running ${cases.length} case${cases.length === 1 ? '' : 's'}` : 'Running the cases', { class: 'outcome waiting' }, h('p', null, 'Each case asks the agent, and a judge reads its reply.')),
+    cases.length ? h('ul', { class: 'cases waiting v-reading' }, ...cases.map((item) => h('li', { class: 'case-waiting' }, str(item?.name)))) : null);
+}
+
+/** run_agent_tests: the counts, then each case, with its verdict, the judge's reason, the case and the reply. */
 export function agentTestsView(data, args) {
   const results = Array.isArray(data.results) ? data.results : [];
-  const cases = Array.isArray(args.cases) ? args.cases : Array.isArray(args.cases?.cases) ? args.cases.cases : [];
+  const cases = casesOf(args);
   return h('div', null,
-    heading('run_agent_tests', 'Agent tests', null,
+    heading('Agent tests', `${str(data.passed ?? 0)} of ${results.length} passed`, { class: `outcome ${data.failed || data.errors || !results.length ? 'mixed' : 'passed'}` },
       h('p', null, data.judge_component ? `Judge component: ${str(data.judge_component)}` : `Judge model: ${str(data.judge_model)}`)),
-    h('dl', { class: 'counts' }, ...[['pass', 'Passed', data.passed], ['fail', 'Failed', data.failed], ['error', 'Errors', data.errors]]
-      .map(([key, name, count]) => h('div', { class: key }, h('dt', null, name), h('dd', null, str(count ?? 0))))),
+    h('dl', { class: 'counts' }, ...[['pass', 'Passed', data.passed], ['fail', 'Failed', data.failed], ['unverified', 'Errors', data.errors]]
+      .map(([key, name, count]) => h('div', null, h('dt', { class: `v-mark ${key}` }, name), h('dd', null, str(count ?? 0))))),
     h('p', { class: 'note' }, 'Each verdict is one model’s judgment of one reply, not a measure of learning. An error is a case that couldn’t be run or judged, not a fail.'),
-    results.length ? h('ul', { class: 'cases' }, ...results.map((result, i) => {
-      const verdict = Object.hasOwn(TEST_VERDICTS, String(result?.verdict)) ? result.verdict : 'error';
-      // Results come back in the cases' order.
-      const item = cases[i]?.name === result?.name ? cases[i] : null;
-      const message = item?.message ?? (Array.isArray(item?.messages) ? item.messages.at(-1)?.content : null);
-      const part = (name, value) => (str(value).trim() ? [h('dt', null, name), h('dd', null, str(value))] : []);
-      return h('li', null, h('details', { class: `case ${verdict}`, open: verdict !== 'pass' },
-        h('summary', null, h('span', { class: 'badge' }, TEST_VERDICTS[verdict]), ' ', str(result?.name)),
-        h('dl', null,
-          ...part(verdict === 'error' ? 'What went wrong' : 'The judge’s reason', result?.reason),
-          ...(str(message).trim() ? [h('dt', null, 'The learner’s message'), h('dd', null, quote(message))] : []),
-          ...part('What a good reply does', item?.rubric),
-          ...part('What it must not do', item?.must_not),
-          h('dt', null, 'The agent’s reply'),
-          h('dd', null, quote(result?.reply, result?.reply == null ? 'No reply: the run failed.' : 'The agent gave no reply.')))));
-    })) : h('p', { class: 'muted' }, 'No cases ran.'));
+    // Results come back in the cases' order.
+    results.length ? h('ul', { class: 'cases landing' }, ...results.map((result, i) => testCase(result, cases[i]?.name === result?.name ? cases[i] : null))) : h('p', { class: 'muted' }, 'No cases ran.'));
 }
 
-/** suggest_changes: each suggestion with why, its evidence and what it proposes; or the settings once one is accepted. */
-export function suggestionsView(data) {
+/** suggest_changes while it runs. */
+export function suggestionsPending() {
+  return h('div', null, heading('Suggested changes', 'Reading the evidence', { class: 'outcome waiting v-reading' }, h('p', null, 'Rules over the runs and records given, with no model.')));
+}
+
+/** suggest_changes: each suggestion, as on the teacher's page; or the settings once one is accepted. */
+export function suggestionsView(data, args = {}) {
   if (!Array.isArray(data.suggestions)) {
     return h('div', null,
-      heading('suggest_changes', 'The settings with the change accepted', null,
+      heading('Suggested changes', 'The settings with the change accepted', { class: 'outcome passed' },
         h('p', null, 'The activity’s teaching settings with the accepted change. This server keeps nothing: save them where the activity is kept.')),
-      h('pre', null, h('code', null, JSON.stringify(data.teaching ?? null, null, 2))));
+      h('pre', { class: 'v-code' }, h('code', null, JSON.stringify(data.teaching ?? null, null, 2))));
   }
   const list = data.suggestions;
   return h('div', null,
-    heading('suggest_changes', list.length ? `${list.length} suggested change${list.length === 1 ? '' : 's'}` : 'No suggested changes', null,
-      h('p', { class: 'note' }, 'Rules over the runs and records given, with no model. Each says what the records show, never what learners learned. The teacher decides.')),
-    ...list.map((item) => h('article', { class: 'card' },
-      h('h2', null, str(item?.change)),
-      str(item?.why).trim() ? h('p', null, str(item.why)) : null,
-      h('h3', null, 'Evidence'),
-      Array.isArray(item?.evidence) && item.evidence.length ? h('ul', null, ...item.evidence.map((entry) => h('li', null, str(entry)))) : h('p', { class: 'muted' }, 'None given.'),
-      h('p', null, item?.patch ? 'Proposes: ' : 'Proposes no setting: it asks the teacher to look at the evidence.', item?.patch ? h('code', null, JSON.stringify(item.patch)) : null),
-      h('p', { class: 'muted' }, 'To accept it, its id: ', h('code', null, str(item?.id))))));
+    heading('Suggested changes', list.length ? `${list.length} change${list.length === 1 ? '' : 's'} to decide on` : 'No suggested changes', { class: 'outcome waiting' },
+      h('p', null, 'Rules over the runs and records given, with no model. Each says what the records show, never what learners learned. The teacher decides.')),
+    ...list.map((item) => suggestion(item, { level: 2, settings: args.teaching, after: h('p', { class: 'note' }, 'To accept it, ask the assistant to accept ', h('code', null, str(item?.id)), '.') })));
 }
 
 /** What a view shows for a tool result: the render function's tree, or what went wrong. */
@@ -141,26 +125,19 @@ export function resultView(render, result, args) {
 }
 
 // The page's side of the protocol (browser only).
-function main(render, appInfo) {
+function main(render, waiting, appInfo) {
   const html = document.documentElement;
   const root = document.getElementById('view');
   let args = {};
+  let answered = false;
   const post = (message) => window.parent.postMessage({ jsonrpc: '2.0', ...message }, '*');
-  const build = (node) => {
-    if (!Array.isArray(node)) return document.createTextNode(String(node));
-    const [tag, attrs, ...children] = node;
-    if (!TAGS.includes(tag)) throw new Error(`A view has no ${tag} element.`);
-    const element = document.createElement(tag);
-    for (const [name, value] of Object.entries(attrs || {})) {
-      if (ATTRIBUTES.includes(name) && value != null && value !== false) element.setAttribute(name, value === true ? '' : String(value));
-    }
-    for (const child of children) if (child != null && child !== false) element.append(build(child));
-    return element;
-  };
-  const show = (tree) => root.replaceChildren(build(tree));
+  const show = (tree) => root.replaceChildren(treeDom(tree));
   // The host's theme and its CSS variables, when it sends them; else the page follows the system's.
   const apply = (context) => {
-    if (context?.theme === 'light' || context?.theme === 'dark') html.style.colorScheme = context.theme;
+    if (context?.theme === 'light' || context?.theme === 'dark') {
+      html.style.colorScheme = context.theme;
+      html.setAttribute('data-theme', context.theme);
+    }
     for (const [name, value] of Object.entries(context?.styles?.variables || {})) {
       if (name.startsWith('--') && typeof value === 'string') html.style.setProperty(name, value);
     }
@@ -192,8 +169,13 @@ function main(render, appInfo) {
       return;
     }
     const { id, method, params } = message;
-    if (method === 'ui/notifications/tool-input') args = params?.arguments || {};
-    else if (method === 'ui/notifications/tool-result') show(resultView(render, params, args));
+    if (method === 'ui/notifications/tool-input') {
+      args = params?.arguments || {};
+      if (!answered) show(waiting(args));
+    } else if (method === 'ui/notifications/tool-result') {
+      answered = true;
+      show(resultView(render, params, args));
+    }
     else if (method === 'ui/notifications/tool-cancelled') show(h('p', { role: 'alert', class: 'problem' }, `The call was cancelled.${params?.reason ? ` ${str(params.reason)}` : ''}`));
     else if (method === 'ui/notifications/host-context-changed') apply(params);
     if (id !== undefined) post(method === 'ui/resource-teardown' || method === 'ping' ? { id, result: {} } : { id, error: { code: -32601, message: `Method not found: ${method}` } });
@@ -201,62 +183,80 @@ function main(render, appInfo) {
   post({ id: 1, method: 'ui/initialize', params: { protocolVersion: APPS_PROTOCOL, appInfo, appCapabilities: { availableDisplayModes: ['inline'] } } });
 }
 
-// The host's variables (SEP-1865's standard names) first, else colours of the page's own in light and dark.
-const STYLE = `:root{color-scheme:light dark;
---bg:var(--color-background-primary,light-dark(#fff,#0d1117));--soft:var(--color-background-secondary,light-dark(#f6f8fa,#161b22));
---fg:var(--color-text-primary,light-dark(#1f2328,#e6edf3));--muted:var(--color-text-secondary,light-dark(#59636e,#9da7b3));
---line:var(--color-border-primary,light-dark(#d1d9e0,#3d444d));--radius:var(--border-radius-md,8px);
---good:var(--color-text-success,light-dark(#116329,#56d364));--warn:var(--color-text-warning,light-dark(#7a4a00,#e3b341));--bad:var(--color-text-danger,light-dark(#a40e26,#ff8e86))}
-*{box-sizing:border-box}
-html,body{background:var(--bg)}
-body{margin:0;padding:12px 16px 16px;color:var(--fg);font-family:var(--font-sans,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif);font-size:var(--font-text-md-size,15px);line-height:var(--font-text-md-line-height,1.5);overflow-wrap:anywhere}
-h1{font-size:var(--font-heading-md-size,1.25rem);line-height:1.25;margin:0 0 .25rem}
-h2{font-size:var(--font-heading-sm-size,1rem);margin:1.25rem 0 .5rem}
-h3{font-size:1rem;margin:0 0 .35rem}
-p{margin:.25rem 0}
-code,pre,.eyebrow{font-family:var(--font-mono,ui-monospace,SFMono-Regular,Menlo,monospace)}
-code{font-size:.9em}
-pre{white-space:pre-wrap;background:var(--soft);padding:.5rem .75rem;border-radius:var(--radius);margin:.5rem 0}
-blockquote{margin:.35rem 0;padding:.5rem .75rem;background:var(--soft);border-left:3px solid var(--line);border-radius:0 var(--radius) var(--radius) 0;white-space:pre-wrap}
-.eyebrow{font-size:.8rem;margin:0}
-.eyebrow,.muted,.note,footer,.counts dt{color:var(--muted)}
-.passed,.pass{--status:var(--good)}.unverified,.error{--status:var(--warn)}.attention,.fail,.safety{--status:var(--bad)}
-header{border-left:4px solid var(--status,var(--line));padding-left:.75rem}
-header.outcome h1,.verdict,.badge{color:var(--status)}
-.badge{font-weight:600}
-ol.rounds,ul.cases{list-style:none;padding:0;margin:0}
-ul{padding-left:1.25rem}
-.round,.case,.card,.counts div,.problem{border:1px solid var(--line);border-left:4px solid var(--status,var(--line));border-radius:var(--radius);padding:.6rem .75rem;margin:.5rem 0}
-.problem{--status:var(--bad)}
-.card>:first-child,.problem>:first-child{margin-top:0}
-.card h3{margin-top:.75rem}
-summary{cursor:pointer;font-weight:600}
-summary .badge{margin-right:.25rem}
-.case dl{margin:.5rem 0 0}
-dt{font-weight:600;margin-top:.5rem}
-dd{margin:0}
-.counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem;margin:.75rem 0}
-.counts div{margin:0}
-.counts dt{font-weight:normal;font-size:.85rem;margin:0}
-.counts dd{font-size:1.5rem;font-weight:600;font-variant-numeric:tabular-nums}
-footer{margin-top:1rem;font-size:.85rem}`;
+// The host's variables (SEP-1865's standard names) win, token by token. No fonts inlined: the protocol's
+// default frame policy doesn't allow them, so a view has the host's font, else the system's.
+const HOST_VARIABLES = {
+  surface: '--color-background-primary', 'public-page': '--color-background-primary',
+  'field-mist': '--color-background-secondary', 'field-sage': '--color-background-secondary', 'field-stone': '--color-background-secondary', 'field-lilac': '--color-background-secondary',
+  'public-ink': '--color-text-primary', 'public-text': '--color-text-primary', muted: '--color-text-secondary',
+  'public-rule': '--color-border-primary', 'public-rule-strong': '--color-border-primary',
+  'ink-blue': '--color-text-info', 'pass-green': '--color-text-success', 'pencil-red': '--color-text-danger', 'query-ochre': '--color-text-warning',
+  'pass-soft': '--color-background-success', 'pencil-soft': '--color-background-danger', 'query-soft': '--color-background-warning',
+  radius: '--border-radius-md', 'font-public': '--font-sans', 'font-public-mono': '--font-mono'
+};
+const STYLE = `body{padding:0 18px 18px;font-size:var(--font-text-md-size,15px);line-height:var(--font-text-md-line-height,1.5);overflow-wrap:anywhere}
+.eyebrow{margin:0 0 6px;color:var(--muted);font-size:.8125rem;font-weight:600}
+h1{font-size:var(--font-heading-md-size,clamp(1.5rem,6vw,2rem));font-weight:300;line-height:1.12;letter-spacing:-.03em}
+.outcome{margin:0 -18px 16px;padding:16px 18px;background:var(--field-mist)}
+.outcome.passed{background:var(--pass-soft)}.outcome.unverified,.outcome.mixed{background:var(--query-soft)}.outcome.attention{background:var(--pencil-soft)}
+.outcome h1 .v-mark{font:inherit;letter-spacing:inherit}
+.outcome h1 .v-mark::before{width:.9em;height:.9em}
+.outcome>p:last-child{margin:8px 0 0;color:var(--public-ink)}
+section{margin-top:18px}
+section h2{margin:0 0 6px;color:var(--muted);font-size:.8125rem;font-weight:600;line-height:1.5;letter-spacing:0}
+blockquote{margin:0;white-space:pre-wrap}
+section dl{margin:0}
+section dt{color:var(--public-ink);font-weight:600}
+section dd{margin:0}
+.asked blockquote{color:var(--public-ink);font-size:1.125rem;font-weight:300;line-height:1.4;letter-spacing:-.01em}
+.after blockquote{padding:10px 12px;border-radius:var(--radius-sm);background:var(--field-mist);color:var(--public-ink)}
+footer{margin-top:16px;padding-top:10px;border-top:1px solid var(--public-rule);color:var(--muted);font-size:.8125rem}
+.counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:0 0 12px;border-bottom:1px solid var(--public-rule)}
+.counts div{padding:0 10px 10px 0}
+.counts div+div{padding-left:12px;border-left:1px solid var(--public-rule)}
+.counts dt{display:flex;font-size:.8125rem}
+.counts dd{margin:2px 0 0;color:var(--public-ink);font-size:1.625rem;font-weight:300;line-height:1.1;font-variant-numeric:tabular-nums}
+.cases{margin-top:12px}
+.case-waiting{padding:10px 0;color:var(--muted)}
+.suggestion{margin-top:12px;padding:16px 18px;grid-template-columns:minmax(0,1fr);gap:14px;border:1px solid var(--public-rule);box-shadow:none}
+.change>:first-child{font-size:1.25rem}
+.v-code{white-space:pre-wrap;overflow-wrap:anywhere}
+.problem{margin:16px 0 0;padding:12px 14px;border-radius:var(--radius-sm);background:var(--pencil-soft);color:var(--pencil-red)}
+.problem h1{font-size:1.125rem;font-weight:500;letter-spacing:0;color:inherit}
+.problem p{margin:6px 0 0}
+#view>p:first-child{margin:16px 0 0}
+@media (prefers-reduced-motion:no-preference){
+main:has(.watch){--end:1.4s}
+main:has(.round:nth-child(2)){--end:3.1s}
+main:has(.round:nth-child(3)){--end:4.8s}
+main:has(.round:nth-child(4)){--end:6.5s}
+main:has(.round:nth-child(5)){--end:8.2s}
+main:has(.watch) .outcome{animation:view-band .5s ease var(--end) both}
+main:has(.watch) .outcome h1{position:relative}
+main:has(.watch) .outcome h1::after{content:"Reviewing the reply"/"";position:absolute;top:0;left:0;color:var(--public-ink);animation:view-out .2s linear var(--end) both}
+main:has(.watch) .outcome h1 .v-mark{animation:part-land .5s var(--ease-out) var(--end) both}
+main:has(.watch) .outcome>p:last-child,main:has(.watch) .after{animation:part-in .45s var(--ease-out) calc(var(--end) + .1s) both}
+@keyframes view-band{from{background:var(--field-mist)}}
+@keyframes view-out{to{opacity:0}}
+.landing>li{animation:part-in .4s var(--ease-out) both}
+${[...Array(10)].map((_, i) => `.landing>li:nth-child(${i + 2}){animation-delay:${(i + 1) * 90}ms}`).join('')}.landing>li:nth-child(n+12){animation-delay:990ms}}`;
 
 export const VIEWS = [
-  { uri: 'ui://viable-harness/check-reply', name: 'check-reply', title: 'VETTING check', tool: 'check_reply', render: checkReplyView,
+  { uri: 'ui://viable-harness/check-reply', name: 'check-reply', title: 'VETTING check', tool: 'check_reply', render: checkReplyView, pending: checkReplyPending,
     description: 'check_reply’s result: the outcome and whether the reply is checked, each review round’s verdict and the reviewer’s reason, and the rewritten reply.' },
-  { uri: 'ui://viable-harness/agent-tests', name: 'agent-tests', title: 'Agent tests', tool: 'run_agent_tests', render: agentTestsView,
+  { uri: 'ui://viable-harness/agent-tests', name: 'agent-tests', title: 'Agent tests', tool: 'run_agent_tests', render: agentTestsView, pending: agentTestsPending,
     description: 'run_agent_tests’ result: how many cases passed, failed and couldn’t be judged, and each case with the judge’s reason and the agent’s reply.' },
-  { uri: 'ui://viable-harness/suggestions', name: 'suggestions', title: 'Suggested changes', tool: 'suggest_changes', render: suggestionsView,
+  { uri: 'ui://viable-harness/suggestions', name: 'suggestions', title: 'Suggested changes', tool: 'suggest_changes', render: suggestionsView, pending: suggestionsPending,
     description: 'suggest_changes’ result: each suggested change with why, its evidence and the setting it proposes, or the settings once one is accepted.' }
 ];
 
 /** One view's page: self-contained HTML that loads nothing. appInfo is { name, version } for ui/initialize. */
 export function viewHtml(view, appInfo) {
-  const constants = { APPS_PROTOCOL, TAGS, ATTRIBUTES, OUTCOMES, VERDICTS, STOPS, TEST_VERDICTS };
+  const called = (fn) => String(fn).match(/^function\s+([\w$]+)/)[1];
   const script = [
-    ...Object.entries(constants).map(([name, value]) => `const ${name} = ${JSON.stringify(value)};`),
-    ...[h, str, quote, heading, resultData, resultView, view.render, main].map(String),
-    `main(${view.render.name}, ${JSON.stringify(appInfo)});`
+    PARTS_SCRIPT,
+    asSource({ APPS_PROTOCOL, STOPS, ATTRIBUTES, MARKS, OUTCOMES, TAGS }, [heading, casesOf, resultData, resultView, view.pending, view.render, main]),
+    `${called(main)}(${called(view.render)}, ${called(view.pending)}, ${JSON.stringify(appInfo)});`
   ].join('\n').replace(/<\//g, '<\\/');
   return `<!doctype html>
 <html lang="en">
@@ -265,11 +265,13 @@ export function viewHtml(view, appInfo) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${view.title}</title>
 <style>
+${themeCss({ fonts: 'none', host: HOST_VARIABLES })}
+${PARTS_CSS}
 ${STYLE}
 </style>
 </head>
 <body>
-<main id="view"><p class="muted">Waiting for the result…</p></main>
+<main id="view" aria-live="polite"><p class="muted">Waiting for the result…</p></main>
 <script>
 ${script}
 </script>

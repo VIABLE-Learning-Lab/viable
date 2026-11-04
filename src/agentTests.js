@@ -89,10 +89,17 @@ export function judgeMessages(item, reply, output = null) {
 
 const parseJson = (value, fallback) => { try { return JSON.parse(value); } catch { return fallback; } };
 
-export function readVerdict(content) {
+/** A model's answer read as a JSON object, from inside a code fence or other words if need be; null when there is none. */
+export function readJsonAnswer(content) {
   const text = String(content || '').trim().replace(/^```(?:json)?\s*|\s*```$/g, '');
-  let value = parseJson(text, null);
-  if (!value) { const match = text.match(/\{[\s\S]*\}/); value = match ? parseJson(match[0], null) : null; }
+  const value = parseJson(text, null);
+  if (value) return value;
+  const match = text.match(/\{[\s\S]*\}/);
+  return match ? parseJson(match[0], null) : null;
+}
+
+export function readVerdict(content) {
+  const value = readJsonAnswer(content);
   const verdict = String(value?.verdict || '').toLowerCase();
   if (!['pass', 'fail'].includes(verdict)) return null;
   return { verdict, reason: String(value.reason || '').trim().slice(0, 600) || null };

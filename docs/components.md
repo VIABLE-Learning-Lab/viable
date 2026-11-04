@@ -66,7 +66,9 @@ two implementations of one method share fixtures, which decide when they disagre
 `callComponent(manifest, payload, options)` calls an `http` or `mcp` component with `payload`, an
 object of the fields `receives` may name, and returns its answer as its slot reads it (below).
 `viable-harness component <manifest.json> --input payload.json [--json]` does the same from the
-command line, and says which fields it left out.
+command line, and says which fields it left out. Both are for a manifest you point at yourself. A
+component step in an agent file or a package is someone else's choice, and is
+[held to more](#a-component-in-a-document).
 
 - **http**: the harness POSTs the payload as JSON to `runs.entry` and reads JSON back. The entry
   is an `https` address (`http` only on `localhost` or `127.0.0.1`) without credentials, on a host
@@ -102,9 +104,9 @@ and `overHttp`, adding its own address rules (`checkEntry`). `call.js` adds the 
 
 What it can't enforce:
 
-- What an MCP server does on its own. It runs on your machine with your user's rights, so it can
-  read your files and reach hosts its `sends_to` doesn't list. Run servers you've reviewed, or in a
-  container.
+- What an MCP server does on its own, once you have named it. It runs on your machine with your user's
+  rights, so it can read your files and reach hosts its `sends_to` doesn't list. Run servers you've
+  reviewed, or in a container.
 - What an HTTP component does with a payload once it has it: keep it, or pass it on. `sends_to`,
   `risk` and the review checklist say what it may do; the harness can't check.
 - What a field holds. The harness checks which fields go, not their text: keep learners' names and
@@ -141,7 +143,7 @@ A `component` step holds a step component's manifest inline and calls it once pe
 ```
 
 - **Checked when the graph is**: the manifest fits the schema, its slot is `step`, it runs `http` or
-  `mcp` (a host may allow fewer: VIABLE runs `http` only), an HTTP entry is on a host in `sends_to`,
+  `mcp` (a host may allow fewer: VIABLE runs `http` only, and a run allows `mcp` only [by name](#a-component-in-a-document)), an HTTP entry is on a host in `sends_to`,
   and `inputs` names only fields the manifest receives.
 - **Sends** each field of `inputs`, a template worked out like any step's setting (a lone
   `{{…}}` keeps its value's type, so `{{history}}` goes as a list). A field `inputs` leaves out isn't
@@ -155,10 +157,34 @@ A `component` step holds a step component's manifest inline and calls it once pe
   Reply's `{{ hint.status == "failed" ? … : hint.output }}`, decides what the learner sees.
 - **Time**: the call's 30 seconds, or less when the run has less time left.
 - **Hosts**: the engine calls `services.callComponent(manifest, payload, { timeoutMs })`; a run
-  without one fails saying so. `runAgent` and `viable-harness run` pass `callComponent` (HTTP, and MCP
-  servers started in the agent file's folder). VIABLE passes an HTTP-only one under its Fetch URL
-  step's address rules: public HTTPS on port 443, no IP addresses or local names, and the
-  deployment's allowlist.
+  without one fails saying so. `runAgent`, `run`, `serve`, `test` and a Node scaffold pass
+  `documentComponents`, below. VIABLE passes an HTTP-only one under its Fetch URL step's address rules:
+  public HTTPS on port 443, no IP addresses or local names, and the deployment's allowlist.
+
+### A component in a document
+
+A package or an agent file is a file someone sent you, so opening one must not run their program. A
+component step in a document may use only `http` components, at a public address (HTTPS on port 443, a
+name that doesn't resolve to a private address), by default (`componentRuns: ['http']`).
+
+An MCP component starts only when the person running it names its ID:
+
+```sh
+viable-harness inspect course.viable.zip      # says what each component step would contact or start
+viable-harness run course.viable.zip --input "..." --allow-component acme/fraction-hints
+viable-harness serve course.viable.zip --allow-component acme/fraction-hints
+```
+
+A Node scaffold reads the same list from `VIABLE_HARNESS_ALLOW_COMPONENTS` (comma-separated). The `run_agent`
+and `run_agent_tests` MCP tools never allow one: whoever calls a tool, it isn't the person at the keyboard
+choosing. A name lifts the address rule for that component too, for one on your own machine.
+
+The name is the ID the file claims, so it says "I trust this file's component called that", not who wrote
+it. Read what `inspect` shows it starts, each time you take a new copy of a file. Without the name the step
+fails with `component_refused`, and nothing is started or sent.
+
+A connector can bring a judge's prompts without a component (`judgePrompt`, [resources.md](resources.md)):
+they are data the harness's own judge call sends, so no outside code runs.
 
 Planned, not built:
 

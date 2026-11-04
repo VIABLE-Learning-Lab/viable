@@ -34,5 +34,11 @@
     "how": "Its real answer sequences could check mastery measures, and its students' wrong answers could test which errors a simulated learner reproduces."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Gated: a form reviewed weekly, for non-commercial research and education. A connector can't fetch it for you."
+  },
   "verified_at": "2026-11-03"
 }

@@ -27,9 +27,19 @@
   "cite": "Crossley, S. A., Baffour, P., Burleigh, L., & King, J. (2025). A large-scale corpus for assessing source-based writing quality: ASAP 2.0. Assessing Writing, 65, 100954. https://doi.org/10.1016/j.asw.2025.100954",
   "status": "released",
   "fits": {
-    "slots": [],
-    "how": "No slot yet: its scored essays could be the learner's work in agent test cases for a writing feedback agent."
+    "slots": [
+      "judge"
+    ],
+    "how": "Its scored essays and rubric are a set to check a model's reading of writing against trained raters."
   },
   "in_harness": null,
+  "connect": {
+    "level": 2,
+    "as": [
+      "calibration-set"
+    ],
+    "command": "viable-harness calibrate --set asap-2 --judge-model <model> --limit 30",
+    "note": "Does a model reading an essay land on the same side of \"adequate mastery\" as trained raters? The same number of essays from each score, with their rubric. A pass or fail on one line, so it isn't the score agreement papers report. Writers' demographics are dropped at download. It says nothing about whether feedback helps. These are real students' essays, masked by their makers: running this sends them to the model you name, so use one whose terms you accept."
+  },
   "verified_at": "2026-11-03"
 }

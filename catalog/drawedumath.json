@@ -38,5 +38,11 @@
     "how": "No slot yet: it could test whether a model reads a picture of a learner's work correctly, in agent tests that start with pictures, for non-commercial use."
   },
   "in_harness": null,
+  "connect": {
+    "level": 1,
+    "as": [],
+    "command": "viable-harness resources get drawedumath",
+    "note": "Comes down as its CSV of questions about pictures of students' work. Agent tests can start with pictures, but a model reading one isn't what they rate yet, so nothing is made from it. Non-commercial: asks you to accept its license first."
+  },
   "verified_at": "2026-11-03"
 }

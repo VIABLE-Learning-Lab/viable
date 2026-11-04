@@ -34,5 +34,11 @@
     "how": "Its discourse annotations could check a detector that marks moments in classroom or tutoring talk, for research."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "By request: each person agrees to terms that limit it to research and forbid sharing. A connector can't fetch it for you."
+  },
   "verified_at": "2026-11-03"
 }

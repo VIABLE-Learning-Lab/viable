@@ -32,8 +32,16 @@
     "slots": [
       "context"
     ],
-    "how": "A guide's recommendations could be knowledge for tutors, in How the AI helps or a Knowledge step."
+    "how": "Each guide's recommendations and evidence ratings become a knowledge folder a Knowledge step searches."
   },
   "in_harness": null,
+  "connect": {
+    "level": 2,
+    "as": [
+      "knowledge-folder"
+    ],
+    "command": "viable-harness run agent.json --input \"...\" --knowledge <kb-id>=resource:wwc-practice-guides",
+    "note": "Each guide's recommendations with their evidence ratings, as files a Knowledge step searches and cites. Not the guides' full text, which is in PDFs a local run doesn't read. It lets an agent say what the guides recommend; whether its replies improve is yours to test."
+  },
   "verified_at": "2026-11-03"
 }

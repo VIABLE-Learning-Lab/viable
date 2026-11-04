@@ -36,5 +36,11 @@
     "how": "Its chapters could be an activity's readings or a Knowledge step's sources; most current editions only for non-commercial use."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Books as web pages and PDFs, with a different license by edition, most now non-commercial. Not connected until a book can be fetched as text with its license checked book by book."
+  },
   "verified_at": "2026-11-03"
 }

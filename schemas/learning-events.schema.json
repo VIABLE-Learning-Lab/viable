@@ -750,6 +750,11 @@
           "minimum": 1,
           "description": "Its place in its conversation, from 1."
         },
+        "words": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Words in the message, for a record kept without its text."
+        },
         "first_output_ms": {
           "type": [
             "number",

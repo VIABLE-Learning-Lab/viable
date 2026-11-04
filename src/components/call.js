@@ -6,7 +6,9 @@
  */
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { CALL_LIMITS, callOut, checkManifest, failed, overHttp, parse, text } from './contract.js';
+import { publicUrl } from '../agents/http.js';
+import { publicFetch } from '../server/publicFetch.js';
+import { CALL_LIMITS, callOut, checkManifest, failed, overHttp, parse, refused, text } from './contract.js';
 
 export { CALL_LIMITS, checkManifest };
 
@@ -77,9 +79,26 @@ function overMcp(manifest, payload, { signal, maxBytes, dir, env }) {
  * read by its slot. Errors carry code component_refused (nothing was sent), component_failed or
  * component_timeout. An MCP server starts in dir with only PATH and env from the environment.
  */
-export async function callComponent(manifest, payload, { timeoutMs, maxBytes, fetch = globalThis.fetch, dir = process.cwd(), env = {} } = {}) {
-  const transport = (component, sent, call) => (component.runs.kind === 'http' ? overHttp(component, sent, { ...call, fetch }) : overMcp(component, sent, { ...call, dir, env }));
+export async function callComponent(manifest, payload, { timeoutMs, maxBytes, fetch = globalThis.fetch, checkEntry = null, dir = process.cwd(), env = {} } = {}) {
+  const transport = (component, sent, call) => (component.runs.kind === 'http' ? overHttp(component, sent, { ...call, fetch, checkEntry }) : overMcp(component, sent, { ...call, dir, env }));
   return callOut(manifest, payload, transport, { timeoutMs, maxBytes });
+}
+
+/**
+ * The callComponent service for steps in a document. A package or an agent file is someone else's until
+ * its reader says otherwise, so a step may use only the kinds in componentRuns, at a public address (as
+ * VIABLE's hosted platform allows). allowComponents lifts both for the IDs the person running it named,
+ * which is the only way a document starts a program; the person chooses, never the document or a tool's
+ * caller. callComponent itself stays for a manifest a person points at deliberately.
+ */
+export function documentComponents({ componentRuns = ['http'], allowComponents = [], fetch, lookup, dir, env } = {}) {
+  const outward = publicFetch(fetch, lookup ? { lookup } : {});
+  return async (manifest, payload, options) => {
+    checkManifest(manifest);
+    const named = allowComponents.includes(manifest.id);
+    if (!named && !componentRuns.includes(manifest.runs.kind)) throw refused(`${manifest.id} would start a program on this computer, which a document can't ask for. Read what it starts with viable-harness inspect, and if you trust it, run it with --allow-component ${manifest.id}.`);
+    return callComponent(manifest, payload, { ...options, dir, env, fetch: named ? fetch : outward, checkEntry: named ? null : (url) => publicUrl(url.href) });
+  };
 }
 
 // A record's events and turns; its pseudonymous id and the rest stay with the host.

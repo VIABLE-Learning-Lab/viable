@@ -38,5 +38,13 @@
     "how": "An activity can aim at a skill and a level instead of a standard; the harness carries its own copy."
   },
   "in_harness": "carnegie/skills-progressions",
+  "connect": {
+    "level": 3,
+    "as": [
+      "context-lookup"
+    ],
+    "command": "viable-harness run agent.json --teaching teaching.json --input \"...\"",
+    "note": "In the core, with no download: an activity's teaching settings can aim at a skill and a level instead of a standard, and the AI is told what that level asks. Its license is unclear on the Carnegie Foundation's side, as the entry says."
+  },
   "verified_at": "2026-11-03"
 }

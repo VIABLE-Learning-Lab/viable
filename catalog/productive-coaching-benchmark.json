@@ -32,5 +32,11 @@
     "how": "Its rubric and scoring could rate coaching replies in agent tests."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Not released yet, so there is nothing to fetch or check."
+  },
   "verified_at": "2026-11-03"
 }

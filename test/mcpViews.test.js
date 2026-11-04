@@ -25,7 +25,7 @@ function walk(node, seen = { tags: [], texts: [] }) {
   assert.ok(TAGS.includes(tag), `a ${tag} element`);
   for (const [name, value] of Object.entries(attrs || {})) {
     assert.ok(ATTRIBUTES.includes(name), `a ${name} attribute`);
-    assert.ok(typeof value === 'boolean' || /^[a-z ]*$/.test(value), `${name}="${value}" comes from the view, not the data`);
+    assert.ok(typeof value === 'boolean' || value === null || /^[a-z -]*$/.test(value), `${name}="${value}" comes from the view, not the data`);
   }
   seen.tags.push([tag, attrs || {}]);
   for (const child of children) if (child != null && child !== false) walk(child, seen);
@@ -37,8 +37,8 @@ test('check_reply’s view: the outcome, whether the reply is checked, each roun
   const args = { reply: 'It is 5/6.', message: 'What is 1/2 + 1/3?', guideline: 'Never give the answer.', reviewer: 'judge', model: 'tutor', rewrite: 2 };
   const rewritten = await call('check_reply', args, scripted('FAILED: It states the sum.', 'What could both denominators become?', 'PASS'));
   const shown = text(resultView(checkReplyView, rewritten, args));
-  assert.match(shown, /^check_replyPassedChecked: the reviewer approved the reply\. It was rewritten: use the rewritten reply, not the original\./);
-  assert.match(shown, /Round 1, the reply as given: Did not passIt is 5\/6\.The reviewer’s reason: FAILED: It states the sum\.Round 2, a rewrite: PassedWhat could both denominators become\?/);
+  assert.match(shown, /^VETTING checkPassedChecked: the reviewer approved the reply\. It was rewritten: use the rewritten reply, not the original\./);
+  assert.match(shown, /Round 1, the reply as givenDid not passIt is 5\/6\.The reviewer’s reason: It states the sum\.Round 2, a rewritePassedWhat could both denominators become\?/);
   assert.match(shown, /The checked reply, rewrittenWhat could both denominators become\?Reviewer: judge\. Model calls: 3$/);
   assert.match(shown, /Checked againstThe guidelineNever give the answer\.2 review rounds/);
 
@@ -51,7 +51,7 @@ test('check_reply’s view: the outcome, whether the reply is checked, each roun
   const caring = await call('check_reply', { ...args, rewrite: 1 }, scripted('FAILED: It ignores that the learner is upset.', '[REQUIRES_ATTENTION] That sounds hard. Can we talk to your teacher?'));
   const attention = text(resultView(checkReplyView, caring, args));
   assert.match(attention, /Needs attentionNot checked: the reply model flagged a safety concern/);
-  assert.match(attention, /Round 2, a rewrite: Safety concern, not reviewedThat sounds hard\./);
+  assert.match(attention, /Round 2, a rewriteSafety concern, not reviewedThat sounds hard\./);
 
   const keyed = { reply: 'Which denominator works for both?', question: 'What is 1/2 + 1/3?', answer_key: '5/6', guideline: 'Unused with a key.', reviewer: 'judge' };
   const full = text(resultView(checkReplyView, await call('check_reply', keyed, scripted('PASS')), keyed));
@@ -69,7 +69,7 @@ test('run_agent_tests’ view: the counts, each case with its verdict, the judge
   const args = { document: json('../examples/argument-writing.json'), cases: { format: 'viable.agent-tests', cases }, judge_model: 'judge' };
   const tree = resultView(agentTestsView, await call('run_agent_tests', args, fetch), args);
   const shown = text(tree);
-  assert.match(shown, /^run_agent_testsAgent testsJudge model: judgePassed1Failed1Errors1Each verdict is one model’s judgment of one reply, not a measure of learning\./);
+  assert.match(shown, /^Agent tests1 of 3 passedJudge model: judgePassed1Failed1Errors1Each verdict is one model’s judgment of one reply, not a measure of learning\./);
   assert.match(shown, /Passed Asks if the claim is clearThe judge’s reasonIt names the claim\.The learner’s messageIs my claim clear\?What a good reply doesSays whether the claim takes a side\.What it must not doRewrite the claim\.The agent’s replyYour claim takes a side\./);
   assert.match(shown, /Failed Wants it writtenThe judge’s reasonIt writes the conclusion\.The learner’s messageWrite my conclusion\./, 'the learner’s last message');
   assert.match(shown, /Error Unreadable judgeWhat went wrongThe judge’s answer couldn’t be read as a verdict\./);
@@ -81,8 +81,8 @@ test('suggest_changes’ view: each suggestion with why, its evidence and what i
   const run = (verdict, feedback) => ({ steps: [{ nodeType: 'vetting', output: { outcome: 'passed', attempt_details: [{ attempt: 1, verdict, feedback }] } }] });
   const args = { teaching: { goal: 'Add fractions.', help: 'explain' }, runs: [run('fail', 'FAILED: States the answer.'), run('fail', 'FAILED: Gives it away.'), run('pass'), run('pass'), run('pass')] };
   const shown = text(resultView(suggestionsView, await call('suggest_changes', args), args));
-  assert.match(shown, /^suggest_changes1 suggested changeRules over the runs and records given, with no model\..+The teacher decides\.Lower how far the AI helps, from “explain” to “hint”\./);
-  assert.match(shown, /Evidence2 of 5 \(40%\) replies VETTING reviewed failed their first review for giving too much away\.Run 1, the reviewer: “FAILED: States the answer\.”.+Proposes: \{"help":"hint"\}To accept it, its id: answers_given_away$/);
+  assert.match(shown, /^Suggested changes1 change to decide onRules over the runs and records given, with no model\..+The teacher decides\.Lower how far the AI helps, from “explain” to “hint”\./);
+  assert.match(shown, /Evidence2 of 5 \(40%\) replies VETTING reviewed failed their first review for giving too much away\.Run 1, the reviewer: “FAILED: States the answer\.”.+If you agree, set how far the AI may go to Hint\.Only checkAsk firstHintExplainA suggestion only: the teacher decides\.To accept it, ask the assistant to accept answers_given_away\.$/);
   const accepted = text(resultView(suggestionsView, await call('suggest_changes', { ...args, accept: 'answers_given_away' }), args));
   assert.match(accepted, /The settings with the change accepted.+"help": "hint"/s);
   assert.match(text(suggestionsView({ suggestions: [] })), /No suggested changes/);
@@ -108,6 +108,18 @@ test('a view shows a tool error, reads the JSON from the text when structuredCon
   const data = { suggestions: [] };
   assert.match(text(resultView(suggestionsView, { content: [{ type: 'text', text: `No suggestions from this evidence.\n\n${JSON.stringify(data, null, 2)}` }] }, {})), /No suggested changes/);
   assert.equal(text(resultView(suggestionsView, { content: [{ type: 'text', text: 'Just words.' }] }, {})), 'This result couldn’t be read.');
+});
+
+test('while a tool runs, each view shows what it can, and a host’s variables win over the theme’s', () => {
+  const byTool = Object.fromEntries(VIEWS.map((view) => [view.tool, view]));
+  assert.match(text(byTool.run_agent_tests.pending({ cases: { cases: [{ name: 'Asks first' }, { name: ATTACK }] } })), /^Agent testsRunning 2 casesEach case.+Asks first/);
+  assert.match(text(byTool.run_agent_tests.pending({})), /Running the cases/);
+  assert.match(text(byTool.suggest_changes.pending({})), /Reading the evidence/);
+  assert.match(text(byTool.check_reply.pending({})), /Waiting for the reply\./);
+  const html = viewHtml(byTool.check_reply, { name: 'viable-harness', version: '0' });
+  assert.match(html, /--public-ink:var\(--color-text-primary,#141c28\)/);
+  assert.match(html, /--font-public:var\(--font-sans,/);
+  assert.ok(!/@font-face|viablelab\.org/.test(html), 'no fonts, which the protocol’s default frame policy would refuse, and no hostname of ours');
 });
 
 test('each view is one self-contained page: it loads and links nothing, and never parses data as HTML', () => {
@@ -153,11 +165,17 @@ test('the page speaks the view’s side of MCP Apps: initialize, the host’s th
 
   const args = { reply: ATTACK, message: 'What is 1/2 + 1/3?', reviewer: 'judge' };
   deliver({ method: 'ui/notifications/tool-input', params: { arguments: args } });
-  deliver({ method: 'ui/notifications/tool-result', params: await call('check_reply', args, scripted('FAILED: It shows markup.')) });
-  assert.match(shown(), /^check_replyUnverifiedNot checked: it failed every review\..+The learner’s messageWhat is 1\/2 \+ 1\/3\?/);
+  assert.match(shown(), /^VETTING checkReviewing the replyThe reviewer is reading it\.The learner’s messageWhat is 1\/2 \+ 1\/3\?The reply/, 'the reply is there to watch before the result comes');
+  assert.ok(shown().includes(ATTACK), 'as text');
+  const result = await call('check_reply', args, scripted('FAILED: It shows markup.'));
+  deliver({ method: 'ui/notifications/tool-result', params: result });
+  assert.match(shown(), /^VETTING checkUnverifiedNot checked: it failed every review\..+The learner’s messageWhat is 1\/2 \+ 1\/3\?/);
   assert.ok(shown().includes(ATTACK));
+  deliver({ method: 'ui/notifications/tool-input', params: { arguments: args } });
+  assert.match(shown(), /^VETTING checkUnverified/, 'late arguments don’t undo a result');
   deliver({ method: 'ui/notifications/host-context-changed', params: { theme: 'light' } });
   assert.equal(html.style.colorScheme, 'light');
+  assert.equal(html.attributes['data-theme'], 'light');
 
   deliver({ id: 'a', method: 'ping' });
   deliver({ id: 'b', method: 'ui/resource-teardown', params: { reason: 'closed' } });

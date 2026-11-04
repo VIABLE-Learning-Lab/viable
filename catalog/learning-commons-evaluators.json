@@ -38,8 +38,17 @@
     "slots": [
       "judge"
     ],
-    "how": "Its prompts and rubrics, Withholding Answers and Tone Appropriateness among them, could rate replies in agent tests, checked against people's ratings before their scores are shown."
+    "how": "Its prompts rate replies in agent tests, one quality each, Withholding Answers and Tone Appropriateness among them, and their fixtures check a judge model against its experts first."
   },
   "in_harness": null,
+  "connect": {
+    "level": 2,
+    "as": [
+      "judge",
+      "calibration-set"
+    ],
+    "command": "viable-harness test agent.json cases.json --judge learning-commons-evaluators/withholding-answers --judge-model <model>",
+    "note": "Rates replies with its makers' prompts on your judge model, one quality each, such as Withholding Answers and Tone. Check it first against their experts: viable-harness calibrate --set learning-commons-evaluators --judge-model <model>. Their prompts are built for writing feedback in grades 6-12 and tuned on one model, so another subject or model is worth checking again."
+  },
   "verified_at": "2026-11-03"
 }

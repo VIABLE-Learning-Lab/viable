@@ -37,5 +37,11 @@
     "how": "Its teaching tasks and reward model could rate replies in agent tests, once its license is confirmed."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Its license is unclear and it runs as a Python benchmark. Its dialogues come from MathDial and Bridge, which are connected."
+  },
   "verified_at": "2026-11-03"
 }

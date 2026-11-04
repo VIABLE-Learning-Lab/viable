@@ -33,5 +33,11 @@
     "how": "No slot yet: its essays could be the learner's work in agent test cases for a writing feedback agent."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Its files are behind Google Drive links with no stable address to pin. ASAP 2.0 holds about half of its essays with the same kind of score, and is connected."
+  },
   "verified_at": "2026-11-03"
 }

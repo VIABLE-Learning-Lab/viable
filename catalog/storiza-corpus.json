@@ -32,5 +32,11 @@
     "how": "No slot yet: the harness passes no audio to components."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Not released yet, its audio is to be restricted, and the harness passes no audio to components."
+  },
   "verified_at": "2026-11-03"
 }

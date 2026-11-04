@@ -13,12 +13,42 @@
     "./schemas/*": "./schemas/*",
     "./*": "./src/*"
   },
-  "bin": { "viable-harness": "./bin/viable-harness.mjs" },
-  "files": ["bin", "src", "schemas", "conformance", "examples", "skills", "docs", "README.md", "CHANGELOG.md", "LICENSE", "NOTICE"],
-  "engines": { "node": ">=22" },
-  "repository": { "type": "git", "url": "git+https://github.com/VIABLE-Learning-Lab/viable-harness.git" },
+  "bin": {
+    "viable-harness": "./bin/viable-harness.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "dist",
+    "schemas",
+    "conformance",
+    "examples",
+    "skills",
+    "docs",
+    "deploy",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VIABLE-Learning-Lab/viable-harness.git"
+  },
   "dependencies": {
     "entities": "^9.0.0"
+  },
+  "devDependencies": {
+    "dompurify": "3.4.17",
+    "esbuild": "0.28.2",
+    "highlight.js": "11.12.0",
+    "marked": "18.0.14",
+    "mermaid": "12.3.0",
+    "pdfjs-dist": "6.4.299",
+    "temml": "0.13.5"
   },
   "scripts": {
     "test": "node --import ./test/no-network.js --test test/*.test.js",
@@ -26,6 +56,10 @@
     "check:pr-title": "node scripts/check-pr-title.mjs",
     "xapi:build": "node scripts/build-xapi-profile.mjs",
     "components:build": "node scripts/build-component-pages.mjs",
-    "catalog:build": "node scripts/build-catalog-page.mjs"
+    "catalog:build": "node scripts/build-catalog-page.mjs",
+    "fonts:build": "node scripts/build-fonts.mjs",
+    "build:assets": "node scripts/build-learner-assets.mjs",
+    "prepack": "node scripts/build-learner-assets.mjs",
+    "prepare": "node scripts/prepare.mjs"
   }
 }

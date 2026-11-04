@@ -28,8 +28,16 @@
     "slots": [
       "measure"
     ],
-    "how": "Could compute mastery from learning events out of process (it is Python), beside the harness's own mastery streak."
+    "how": "Computes mastery from learning events out of process (it is Python), beside the harness's own mastery streak, from a template the harness writes."
   },
   "in_harness": null,
+  "connect": {
+    "level": 2,
+    "as": [
+      "measure"
+    ],
+    "command": "viable-harness resources get pybkt",
+    "note": "Writes a measure from a template: fit Bayesian Knowledge Tracing on a class's records with pyBKT (which needs Python 3.12 and older packages), then viable-harness measure record.json --component manifest.json gives mastery per skill, beside the harness's own streak. It needs many attempts per skill. Not compared with the streak on real learners."
+  },
   "verified_at": "2026-11-03"
 }

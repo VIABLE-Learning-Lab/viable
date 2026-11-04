@@ -1,0 +1,4 @@
+# Copy to .dev.vars for wrangler dev. In production these are secrets (see README.md).
+# Any long random text will do: openssl rand -hex 32
+VIABLE_HARNESS_TOKEN=
+OPENAI_API_KEY=

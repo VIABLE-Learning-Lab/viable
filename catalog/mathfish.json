@@ -34,5 +34,11 @@
     "how": "No slot yet: it could test whether a problem an agent writes fits the standard in an activity's teaching settings."
   },
   "in_harness": null,
+  "connect": {
+    "level": 1,
+    "as": [],
+    "command": "viable-harness resources get mathfish",
+    "note": "Comes down as its JSONL. It tests whether a problem fits a standard, which needs an agent that writes problems and a check of its own, so nothing is made from it yet. Part is non-commercial: asks you to accept its license first."
+  },
   "verified_at": "2026-11-03"
 }

@@ -32,5 +32,11 @@
     "how": "Its units could be an activity's readings for non-commercial use. The Learning Commons Knowledge Graph lists it as a gated dataset."
   },
   "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Web pages under a non-commercial license, and its commercial terms prohibit training AI models. Not connected: no clean way to hold it apart from uses its terms rule out."
+  },
   "verified_at": "2026-11-03"
 }
