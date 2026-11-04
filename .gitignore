@@ -4,3 +4,4 @@ dist/
 # Copied in when the Harness is packed.
 harness/LICENSE
 harness/NOTICE
+harness/examples/

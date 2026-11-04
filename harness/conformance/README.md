@@ -13,6 +13,8 @@ node bin/viable-harness.mjs conformance          # pass or FAIL per case; exit c
 node bin/viable-harness.mjs conformance vetting  # one suite
 ```
 
+A case with `"only": "engine"` needs the graph checks, so `viable-engine conformance` runs it and `viable-harness conformance` leaves it out.
+
 From code, `runConformance(['vetting'])` (all suites without an argument) and `runSuite(doc)`, for a
 suite file you read yourself, from `src/conformance.js`. Each returns
 `{ suite, cases: [{ id, description, passed, problems }] }`.

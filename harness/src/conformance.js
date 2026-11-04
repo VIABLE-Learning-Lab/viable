@@ -3,7 +3,7 @@
  * harness. The fixtures are the reference: another implementation of VIABLE's formats, expressions,
  * teaching layer, VETTING, measures or xAPI profile runs the same cases and should get the same results.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { readReview, vettingPromptSet, withTeacher } from './checks/vetting.js';
 import { parseSafetyPrefix, parseSimpleVerificationResult, parseVerificationResult } from './checks/vettingPrompts.js';
 import { teacherNote, teachingContext } from './utils/teaching.js';
@@ -15,6 +15,8 @@ const ROOT = new URL('../', import.meta.url);
 const REPOSITORY = new URL('../../', import.meta.url);
 export const SUITES = ['formats', 'teaching', 'vetting', 'measures', 'xapi'];
 
+// examples/ is beside this folder in the repository, and inside it in the package.
+const fixture = (file) => { const here = new URL(file, ROOT); return file.startsWith('examples/') && !existsSync(here) ? new URL(file, REPOSITORY) : here; };
 const failure = (error) => ({ error: true, message: String(error?.message || error) });
 const NO_USAGE = { prompt: 0, completion: 0, total: 0 };
 
@@ -35,7 +37,7 @@ const reviewInstructions = async (config, teaching) => {
 // Each suite turns a case's input into the result its expectations are checked against.
 export const RUN = {
   formats({ kind, document, file }) {
-    const doc = file ? JSON.parse(readFileSync(new URL(file, file.startsWith('examples/') ? REPOSITORY : ROOT), 'utf8')) : document;
+    const doc = file ? JSON.parse(readFileSync(fixture(file), 'utf8')) : document;
     const { errors } = validateDocument(doc, kind);
     return { valid: !errors.length, errors: [...new Set(errors.map((error) => error.slice(0, error.indexOf(': '))))].sort() };
   },
@@ -131,6 +133,9 @@ export async function runSuite(doc, { run = RUN, exact = EXACT } = {}) {
 /** Runs the named suites (all of them by default) from conformance/. */
 export async function runConformance(names = SUITES) {
   const results = [];
-  for (const name of names) results.push(await runSuite(loadSuite(name)));
+  for (const name of names) {
+    const doc = loadSuite(name);
+    results.push(await runSuite({ ...doc, cases: doc.cases.filter((item) => item.only !== 'engine') }));
+  }
   return results;
 }

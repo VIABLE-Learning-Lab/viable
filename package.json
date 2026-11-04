@@ -34,6 +34,7 @@
     "harness/skills",
     "harness/docs",
     "harness/README.md",
+    "harness/package.json",
     "examples",
     "README.md",
     "CHANGELOG.md",

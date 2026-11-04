@@ -5,14 +5,14 @@
  * never imports it.
  */
 import { spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import { publicUrl } from '../net/publicUrl.js';
 import { publicFetch } from '../net/publicFetch.js';
 import { CALL_LIMITS, callOut, checkManifest, failed, overHttp, parse, refused, text } from './contract.js';
+import PACKAGE from '../../package.json' with { type: 'json' };
 
 export { CALL_LIMITS, checkManifest };
 
-const VERSION = JSON.parse(readFileSync(new URL('../../../package.json', import.meta.url), 'utf8')).version;
+const VERSION = PACKAGE.version;
 // The version mcp.js serves first; importing it from there would loop back through testRuns.js.
 const PROTOCOL_VERSION = '2025-06-18';
 

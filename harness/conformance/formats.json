@@ -38,7 +38,7 @@
       "expect": { "valid": false, "errors": ["$.graph.run_limits.max_model_calls"] }
     },
     {
-      "id": "agent-graph-checks", "description": "Once the shape fits, the engine's own graph checks run, and their error is at the graph.",
+      "id": "agent-graph-checks", "only": "engine", "description": "Once the shape fits, the engine's own graph checks run, and their error is at the graph.",
       "input": { "kind": "agent", "document": { "format": "viable.agent", "format_version": 1, "name": "Echo", "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "nowhere" }, { "id": "out", "type": "output" }] } } },
       "expect": { "valid": false, "errors": ["$.graph"] }
     },
@@ -69,7 +69,7 @@
       "expect": { "valid": false, "errors": ["$.course.activities[0].agent_ref"] }
     },
     {
-      "id": "package-agent-graph-checks", "description": "Each agent's graph gets the engine's graph checks, with the error at that graph.",
+      "id": "package-agent-graph-checks", "only": "engine", "description": "Each agent's graph gets the engine's graph checks, with the error at that graph.",
       "input": { "kind": "course-package", "document": { "format": "viable.course-package", "version": 1, "agents": [{ "ref": "tutor", "name": "Tutor", "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input" }] } }], "course": { "title": "Fractions" } } },
       "expect": { "valid": false, "errors": ["$.agents[0].graph"] }
     },
