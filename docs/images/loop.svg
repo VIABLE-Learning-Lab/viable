@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" role="img" aria-label="The teaching loop. During a turn, How the AI helps reaches the reply step, VETTING checks the draft and a failed draft is rewritten; only a passed reply reaches the learner. After the turn, the evidence is kept with the versions that produced it, rules turn it into suggested changes, and the teacher decides; an accepted change is the activity's next version. After every change, agent tests run again and versions are compared. Dashed pills mark where other teams' components plug in.">
+  <style>
+    .t { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; }
+    .fg { fill: #1f2328; } .mu { fill: #59636e; } .ac { fill: #0969da; }
+    .box { fill: #ffffff; stroke: #d1d9e0; stroke-width: 1.5; }
+    .key { fill: #ddf4ff; stroke: #0969da; stroke-width: 1.5; }
+    .slot { fill: none; stroke: #8c959f; stroke-dasharray: 4 3; }
+    .ln { stroke: #59636e; stroke-width: 1.6; fill: none; }
+    .hd { fill: #59636e; }
+    @media (prefers-color-scheme: dark) {
+      .fg { fill: #f0f6fc; } .mu { fill: #9198a1; } .ac { fill: #4493f8; }
+      .box { fill: #0d1117; stroke: #3d444d; }
+      .key { fill: #12233d; stroke: #4493f8; }
+      .slot { stroke: #656c76; }
+      .ln { stroke: #9198a1; } .hd { fill: #9198a1; }
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="hd" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+
+  <g class="t">
+    <text class="ac" x="1148" y="60" font-size="12" font-weight="600" letter-spacing="1.4" text-anchor="end">DURING A TURN</text>
+    <text class="ac" x="1148" y="236" font-size="12" font-weight="600" letter-spacing="1.4" text-anchor="end">AFTER THE TURN</text>
+    <text class="ac" x="1148" y="412" font-size="12" font-weight="600" letter-spacing="1.4" text-anchor="end">AFTER EVERY CHANGE</text>
+
+    <!-- During a turn -->
+    <rect class="box" x="40" y="72" width="220" height="100" rx="12"/>
+    <text class="fg" x="56" y="98" font-size="14" font-weight="700">1  How the AI helps</text>
+    <text class="mu" x="56" y="120" font-size="12.5">goal, standard or skill;</text>
+    <text class="mu" x="56" y="138" font-size="12.5">how far the AI may help;</text>
+    <text class="mu" x="56" y="156" font-size="12.5">misconceptions to listen for</text>
+    <rect class="slot" x="40" y="180" width="54" height="20" rx="10"/>
+    <text class="mu" x="67" y="194" font-size="11" text-anchor="middle">context</text>
+
+    <rect class="box" x="336" y="72" width="220" height="100" rx="12"/>
+    <text class="fg" x="352" y="98" font-size="14" font-weight="700">Reply step</text>
+    <text class="mu" x="352" y="120" font-size="12.5">the AI drafts a reply with</text>
+    <text class="mu" x="352" y="138" font-size="12.5">the teacher’s instructions</text>
+    <text class="mu" x="352" y="156" font-size="12.5">and the conversation</text>
+    <rect class="slot" x="336" y="180" width="40" height="20" rx="10"/>
+    <text class="mu" x="356" y="194" font-size="11" text-anchor="middle">step</text>
+
+    <rect class="key" x="632" y="72" width="220" height="100" rx="12"/>
+    <text class="fg" x="648" y="98" font-size="14" font-weight="700">2  VETTING</text>
+    <text class="mu" x="648" y="120" font-size="12.5">a second model checks the</text>
+    <text class="mu" x="648" y="138" font-size="12.5">draft against the intent</text>
+    <text class="mu" x="648" y="156" font-size="12.5">or a question’s answer key</text>
+    <rect class="slot" x="632" y="180" width="40" height="20" rx="10"/>
+    <text class="mu" x="652" y="194" font-size="11" text-anchor="middle">step</text>
+
+    <rect class="box" x="928" y="72" width="220" height="100" rx="12"/>
+    <text class="fg" x="944" y="98" font-size="14" font-weight="700">Learner</text>
+    <text class="mu" x="944" y="120" font-size="12.5">sees a reply that passed;</text>
+    <text class="mu" x="944" y="138" font-size="12.5">otherwise the agent’s fallback,</text>
+    <text class="mu" x="944" y="156" font-size="12.5">and the teacher sees a flag</text>
+
+    <text class="mu" x="298" y="114" font-size="12" text-anchor="middle">every turn</text>
+    <text class="mu" x="594" y="114" font-size="12" text-anchor="middle">draft</text>
+    <text class="mu" x="890" y="114" font-size="12" text-anchor="middle">passes</text>
+    <text class="mu" x="594" y="40" font-size="12" text-anchor="middle">fails: rewritten, then checked again</text>
+
+    <!-- After the turn -->
+    <rect class="box" x="928" y="248" width="220" height="100" rx="12"/>
+    <text class="fg" x="944" y="274" font-size="14" font-weight="700">3  Evidence</text>
+    <text class="mu" x="944" y="296" font-size="12.5">turns, VETTING’s rounds, flags</text>
+    <text class="mu" x="944" y="314" font-size="12.5">and measures, each tied to the</text>
+    <text class="mu" x="944" y="332" font-size="12.5">agent and activity version</text>
+
+    <rect class="key" x="632" y="248" width="220" height="100" rx="12"/>
+    <text class="fg" x="648" y="274" font-size="14" font-weight="700">4  Suggested change</text>
+    <text class="mu" x="648" y="296" font-size="12.5">rules over the evidence;</text>
+    <text class="mu" x="648" y="314" font-size="12.5">each suggestion carries the</text>
+    <text class="mu" x="648" y="332" font-size="12.5">evidence that made it</text>
+
+    <rect class="box" x="336" y="248" width="220" height="100" rx="12"/>
+    <text class="fg" x="352" y="274" font-size="14" font-weight="700">The teacher decides</text>
+    <text class="mu" x="352" y="296" font-size="12.5">accept, edit or decline;</text>
+    <text class="mu" x="352" y="314" font-size="12.5">an accepted change is the</text>
+    <text class="mu" x="352" y="332" font-size="12.5">activity’s next version</text>
+
+    <rect class="slot" x="928" y="356" width="64" height="20" rx="10"/>
+    <text class="mu" x="960" y="370" font-size="11" text-anchor="middle">detector</text>
+    <rect class="slot" x="1000" y="356" width="62" height="20" rx="10"/>
+    <text class="mu" x="1031" y="370" font-size="11" text-anchor="middle">measure</text>
+
+    <text class="mu" x="990" y="214" font-size="12">kept</text>
+    <text class="mu" x="890" y="290" font-size="12" text-anchor="middle">rules</text>
+    <text class="mu" x="594" y="290" font-size="12" text-anchor="middle">shown</text>
+    <text class="mu" x="160" y="240" font-size="12">next version</text>
+
+    <!-- After every change -->
+    <rect class="box" x="40" y="424" width="516" height="96" rx="12"/>
+    <text class="fg" x="56" y="450" font-size="14" font-weight="700">5  Agent tests</text>
+    <text class="mu" x="56" y="472" font-size="12.5">cases written from the intent and from past turns, run against each version</text>
+    <text class="mu" x="56" y="490" font-size="12.5">and rated by a judge whose agreement with people is measured</text>
+    <rect class="slot" x="384" y="434" width="48" height="20" rx="10"/>
+    <text class="mu" x="408" y="448" font-size="11" text-anchor="middle">judge</text>
+    <rect class="slot" x="438" y="434" width="108" height="20" rx="10"/>
+    <text class="mu" x="492" y="448" font-size="11" text-anchor="middle">simulated learner</text>
+
+    <rect class="box" x="632" y="424" width="220" height="96" rx="12"/>
+    <text class="fg" x="648" y="450" font-size="14" font-weight="700">Versions compared</text>
+    <text class="mu" x="648" y="472" font-size="12.5">which cases pass before</text>
+    <text class="mu" x="648" y="490" font-size="12.5">and after the change</text>
+
+    <text class="mu" x="456" y="392" font-size="12">after every change</text>
+    <text class="mu" x="594" y="462" font-size="12" text-anchor="middle">results</text>
+
+    <rect class="slot" x="928" y="440" width="44" height="20" rx="10"/>
+    <text class="mu" x="984" y="455" font-size="12">where another team’s</text>
+    <text class="mu" x="928" y="476" font-size="12">component plugs in, described by a</text>
+    <text class="mu" x="928" y="494" font-size="12">manifest (docs/components.md)</text>
+  </g>
+
+  <path class="ln" d="M260,122 H334" marker-end="url(#a)"/>
+  <path class="ln" d="M556,122 H630" marker-end="url(#a)"/>
+  <path class="ln" d="M852,122 H926" marker-end="url(#a)"/>
+  <path class="ln" d="M700,72 V48 H486 V70" marker-end="url(#a)"/>
+  <path class="ln" d="M980,172 V246" marker-end="url(#a)"/>
+  <path class="ln" d="M928,298 H854" marker-end="url(#a)"/>
+  <path class="ln" d="M632,298 H558" marker-end="url(#a)"/>
+  <path class="ln" d="M336,298 H150 V174" marker-end="url(#a)"/>
+  <path class="ln" d="M446,348 V422" marker-end="url(#a)"/>
+  <path class="ln" d="M556,472 H630" marker-end="url(#a)"/>
+</svg>

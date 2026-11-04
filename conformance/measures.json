@@ -1,0 +1,148 @@
+{
+  "suite": "measures",
+  "version": 1,
+  "cases": [
+    {
+      "id": "empty", "description": "No turns and no answers: counts are 0 and shares are null, never 0.",
+      "input": { "events": [], "turns": [] },
+      "expect": { "metrics": { "turns": 0, "conversations": 0, "sessions": 0, "days_active": 0, "turns_per_session": null, "attempts": 0, "accuracy": null, "skills_mastered": null, "wheel_spinning": null, "starter_share": null, "median_think_s": null } }
+    },
+    {
+      "id": "sessions", "description": "A gap of 30 minutes or more between messages starts a new session; 29 doesn't.",
+      "input": { "events": [], "turns": [
+        { "started_at": "2026-10-29T10:00:00Z", "conversation_id": "c1", "turn_index": 1 },
+        { "started_at": "2026-10-29T10:29:00Z", "conversation_id": "c1", "turn_index": 2 },
+        { "started_at": "2026-10-29T10:59:00Z", "conversation_id": "c2", "turn_index": 1 },
+        { "started_at": "2026-10-30T09:00:00Z", "conversation_id": null, "turn_index": 1 }
+      ] },
+      "expect": { "metrics": { "turns": 4, "conversations": 2, "sessions": 3, "days_active": 2, "turns_per_session": 1.3 } }
+    },
+    {
+      "id": "think-time", "description": "Think time is the median over turns after a conversation's first; a hesitant one takes at least 10 s and twice the median.",
+      "input": { "events": [], "turns": [
+        { "started_at": "2026-10-29T10:00:00Z", "conversation_id": "c1", "turn_index": 1, "signals": { "source": "typed", "think_ms": 60000 } },
+        { "started_at": "2026-10-29T10:01:00Z", "conversation_id": "c1", "turn_index": 2, "signals": { "source": "typed", "think_ms": 5000 } },
+        { "started_at": "2026-10-29T10:02:00Z", "conversation_id": "c1", "turn_index": 3, "signals": { "source": "typed", "think_ms": 6000 } },
+        { "started_at": "2026-10-29T10:03:00Z", "conversation_id": "c1", "turn_index": 4, "signals": { "source": "typed", "think_ms": 4000 } },
+        { "started_at": "2026-10-29T10:04:00Z", "conversation_id": "c1", "turn_index": 5, "signals": { "source": "typed", "think_ms": 30000 } }
+      ] },
+      "expect": { "metrics": { "median_think_s": 5.5, "hesitant_share": 0.25 } }
+    },
+    {
+      "id": "how-sent", "description": "Shares of messages by how they were sent, over the messages that say.",
+      "input": { "events": [], "turns": [
+        { "started_at": "2026-10-29T10:00:00Z", "signals": { "source": "starter" } },
+        { "started_at": "2026-10-29T10:01:00Z", "signals": { "source": "typed" } },
+        { "started_at": "2026-10-29T10:02:00Z", "signals": { "source": "voice" } },
+        { "started_at": "2026-10-29T10:03:00Z", "signals": { "source": "dictated" } },
+        { "started_at": "2026-10-29T10:04:00Z" }
+      ] },
+      "expect": { "metrics": { "starter_share": 0.25, "spoken_share": 0.5 } }
+    },
+    {
+      "id": "typing", "description": "Revision is deletions over keys in typed messages; a message counts as pasted when pasted characters reach 80% of its length.",
+      "input": { "events": [], "turns": [
+        { "started_at": "2026-10-29T10:00:00Z", "message": "abcdefghij", "signals": { "source": "typed", "keys": 10, "deleted": 2, "pasted": 0 } },
+        { "started_at": "2026-10-29T10:01:00Z", "message": "abcdefghijklmnopqrst", "signals": { "source": "typed", "keys": 0, "deleted": 0, "pasted": 16 } },
+        { "started_at": "2026-10-29T10:02:00Z", "message": "abcdefghij", "signals": { "source": "typed", "keys": 4, "deleted": 0, "pasted": 6 } }
+      ] },
+      "expect": { "metrics": { "revision_ratio": 0.14, "pasted_share": 0.333 } }
+    },
+    {
+      "id": "words-wait-active", "description": "Median words per message, median wait for the answer in seconds, and active time in minutes.",
+      "input": { "events": [], "turns": [
+        { "started_at": "2026-10-29T10:00:00Z", "message": "one two three", "first_output_ms": 900, "signals": { "active_2m_ms": 60000 } },
+        { "started_at": "2026-10-29T10:01:00Z", "message": "one", "first_output_ms": 1100, "signals": { "active_2m_ms": 30000 } },
+        { "started_at": "2026-10-29T10:02:00Z", "message": "one two three four five", "first_output_ms": 1000 }
+      ] },
+      "expect": { "metrics": { "words_per_message": 3, "median_wait_s": 1, "active_minutes": 1.5 } }
+    },
+    {
+      "id": "interrupted", "description": "The share of later messages, with signals, sent after stopping the previous answer.",
+      "input": { "events": [], "turns": [
+        { "started_at": "2026-10-29T10:00:00Z", "conversation_id": "c1", "turn_index": 1, "signals": { "interrupted": true } },
+        { "started_at": "2026-10-29T10:01:00Z", "conversation_id": "c1", "turn_index": 2, "signals": { "interrupted": true } },
+        { "started_at": "2026-10-29T10:02:00Z", "conversation_id": "c1", "turn_index": 3, "signals": { "source": "typed" } }
+      ] },
+      "expect": { "metrics": { "interrupted_share": 0.5 } }
+    },
+    {
+      "id": "attempts", "description": "Graded attempts are graded Questions answers and answers an agent graded; ungraded answers aren't.",
+      "input": {
+        "events": [
+          { "type": "questions.answer", "item": "q1", "at": "2026-10-29T10:00:00Z", "data": { "response": "B", "correct": false, "skill": "Claims" } },
+          { "type": "questions.answer", "item": "q2", "at": "2026-10-29T10:01:00Z", "data": { "response": "A", "correct": true, "skill": "Claims" } },
+          { "type": "questions.answer", "item": "q3", "at": "2026-10-29T10:02:00Z", "data": { "response": "An essay answer, not graded." } },
+          { "type": "questions.answer", "item": "q4", "at": "2026-10-29T10:03:00Z", "data": { "correct": true, "set": "qs_1" } },
+          { "type": "questions.answer", "item": "q5", "at": "2026-10-29T10:04:00Z", "data": { "correct": true } }
+        ],
+        "turns": [
+          { "started_at": "2026-10-29T10:05:00Z", "assessment": { "skill": "Counterargument", "correct": true } },
+          { "started_at": "2026-10-29T10:06:00Z", "assessment": [{ "skill": "Counterargument", "correct": false }, { "skill": "Claims", "correct": true }] }
+        ]
+      },
+      "expect": {
+        "metrics": { "attempts": 7, "accuracy": 0.714 },
+        "skills": {
+          "Claims": { "attempts": 3, "correct": 2 },
+          "Counterargument": { "attempts": 2, "correct": 1 },
+          "qs_1": { "attempts": 1, "correct": 1 },
+          "questions": { "attempts": 1, "correct": 1 }
+        }
+      }
+    },
+    {
+      "id": "mastery", "description": "Mastery is 3 correct in a row, in time order; errors after it are counted.",
+      "input": { "events": [
+        { "type": "questions.answer", "at": "2026-10-29T10:00:00Z", "data": { "correct": false, "skill": "Fractions" } },
+        { "type": "questions.answer", "at": "2026-10-29T10:01:00Z", "data": { "correct": true, "skill": "Fractions" } },
+        { "type": "questions.answer", "at": "2026-10-29T10:02:00Z", "data": { "correct": true, "skill": "Fractions" } },
+        { "type": "questions.answer", "at": "2026-10-29T10:05:00Z", "data": { "correct": false, "skill": "Fractions" } },
+        { "type": "questions.answer", "at": "2026-10-29T10:03:00Z", "data": { "correct": true, "skill": "Fractions" } },
+        { "type": "questions.answer", "at": "2026-10-29T10:04:00Z", "data": { "correct": true, "skill": "Fractions" } }
+      ] },
+      "expect": {
+        "metrics": { "attempts": 6, "skills_mastered": 1, "wheel_spinning": 0, "errors_after_mastery": 0.5 },
+        "skills": { "Fractions": { "attempts": 6, "correct": 4, "accuracy": 0.667, "mastered": true, "mastered_at_attempt": 4, "mastered_at": "2026-10-29T10:03:00Z", "after": 2, "errors_after": 1, "wheel_spinning": false } }
+      }
+    },
+    {
+      "id": "wheel-spinning", "description": "10 or more attempts at a skill without mastery is wheel-spinning.",
+      "input": { "events": [
+        { "type": "questions.answer", "at": "2026-10-29T10:00:00Z", "data": { "correct": true, "skill": "Ratios" } },
+        { "type": "questions.answer", "at": "2026-10-29T10:01:00Z", "data": { "correct": false, "skill": "Ratios" } },
+        { "type": "questions.answer", "at": "2026-10-29T10:02:00Z", "data": { "correct": true, "skill": "Ratios" } },
+        { "type": "questions.answer", "at": "2026-10-29T10:03:00Z", "data": { "correct": true, "skill": "Ratios" } },
+        { "type": "questions.answer", "at": "2026-10-29T10:04:00Z", "data": { "correct": false, "skill": "Ratios" } },
+        { "type": "questions.answer", "at": "2026-10-29T10:05:00Z", "data": { "correct": true, "skill": "Ratios" } },
+        { "type": "questions.answer", "at": "2026-10-29T10:06:00Z", "data": { "correct": false, "skill": "Ratios" } },
+        { "type": "questions.answer", "at": "2026-10-29T10:07:00Z", "data": { "correct": true, "skill": "Ratios" } },
+        { "type": "questions.answer", "at": "2026-10-29T10:08:00Z", "data": { "correct": true, "skill": "Ratios" } },
+        { "type": "questions.answer", "at": "2026-10-29T10:09:00Z", "data": { "correct": false, "skill": "Ratios" } }
+      ] },
+      "expect": {
+        "metrics": { "attempts": 10, "skills_mastered": 0, "wheel_spinning": 1, "errors_after_mastery": null },
+        "skills": { "Ratios": { "attempts": 10, "correct": 6, "mastered": false, "mastered_at_attempt": null, "wheel_spinning": true } }
+      }
+    },
+    {
+      "id": "writing", "description": "Writing is summed per panel and field; words and length come from the latest event that reports them.",
+      "input": { "events": [
+        { "type": "panel.view", "panel": "essay", "at": "2026-10-29T10:00:30Z", "data": { "visible_ms": 30000 } },
+        { "type": "writing.start", "panel": "essay", "at": "2026-10-29T10:01:00Z", "data": { "field": "draft" } },
+        { "type": "writing.progress", "panel": "essay", "at": "2026-10-29T10:03:00Z", "data": { "field": "draft", "keys": 100, "deleted": 10, "pasted": 0, "p_bursts": 2, "burst_chars": 100, "longest_pause_ms": 3000, "words": 15, "chars": 90 } },
+        { "type": "writing.rubric", "panel": "essay", "at": "2026-10-29T10:04:00Z", "data": { "visible_ms": 20000 } },
+        { "type": "writing.snapshot", "panel": "essay", "at": "2026-10-29T10:05:00Z", "data": { "field": "draft", "text": "A synthetic draft.", "words": 3 } },
+        { "type": "writing.progress", "panel": "essay", "at": "2026-10-29T10:06:00Z", "data": { "field": "draft", "keys": 50, "deleted": 0, "pasted": 30, "pastes": 1, "p_bursts": 1, "burst_chars": 50, "longest_pause_ms": 5000, "words": 28, "chars": 160 } },
+        { "type": "writing.rubric", "panel": "essay", "at": "2026-10-29T10:07:00Z", "data": { "visible_ms": 10000 } },
+        { "type": "writing.progress", "panel": "essay", "at": "2026-10-29T10:08:00Z", "data": { "field": "plan", "keys": 20 } }
+      ] },
+      "expect": {
+        "writing": {
+          "essay/draft": { "keys": 150, "deleted": 10, "pasted": 30, "pastes": 1, "p_bursts": 3, "longest_pause_ms": 5000, "snapshots": 1, "words": 28, "mean_burst_chars": 50, "product_process": 0.889, "started_after_ms": 60000, "rubric_views": 2, "rubric_ms": 30000 },
+          "essay/plan": { "keys": 20, "words": null, "product_process": null, "started_after_ms": null, "rubric_views": 2 }
+        }
+      }
+    }
+  ]
+}

@@ -1264,7 +1264,7 @@ const HANDLERS = {
         verdict = full ? parseVerificationResult(verified.content) : (() => { const r = parseSimpleVerificationResult(verified.content); return { passed: r.passed, verificationOutput: r.passed ? 'PASS' : r.failureReason, reason: r.reason }; })();
       } catch (error) {
         const reason = String(error?.message || error);
-        attempts.push(round({ passed: false, verification: `Verification Error: ${reason.slice(0, 300)}`, reply: clip(response, 4000), verdict: 'error', feedback: reason.slice(0, 1000) }));
+        attempts.push(round({ passed: false, verification: `Verification Error: ${reason.length > 300 ? `${reason.slice(0, 300).replace(/\s+\S*$/, '')}…` : reason}`, reply: clip(response, 4000), verdict: 'error', feedback: reason.slice(0, 1000) }));
         stopReason = 'VERIFICATION_ERROR';
         break;
       }

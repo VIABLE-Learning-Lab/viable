@@ -1,0 +1,22 @@
+{
+  "id": "fixture/echo",
+  "version": "1.0.0",
+  "slot": "step",
+  "label": "Echo (test fixture)",
+  "summary": "Answers with what it received, so tests can see what the harness sent.",
+  "runs": { "kind": "mcp", "entry": "echo", "server": { "command": "node", "args": ["mcp-server.mjs", "echo"] } },
+  "receives": ["reply", "conversation"],
+  "sends_to": [],
+  "uses_models": false,
+  "license": { "code": "MIT" },
+  "authors": ["VIABLE Lab"],
+  "cite": "VIABLE harness, test/fixtures/components.",
+  "evidence": {
+    "original": "None: a test fixture that answers with its input.",
+    "integration": "Used by test/componentCalls.test.js to check what callComponent sends.",
+    "unknown": "Nothing to show: it does nothing with what it receives."
+  },
+  "risk": "low",
+  "maintainer": { "name": "VIABLE Lab" },
+  "harness": ">=0.2.0 <1.0.0"
+}

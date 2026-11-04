@@ -1,0 +1,29 @@
+name: Feature request
+description: Something the harness should do for a teacher, a researcher or a developer.
+labels: [enhancement, needs triage]
+body:
+  - type: textarea
+    id: who
+    attributes:
+      label: Who needs it, and what for
+      description: The teacher, learner, researcher or developer, and what they're trying to do today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you'd like
+      description: The behavior, command, format change or function you have in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you've tried instead
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Fit
+      options:
+        - label: It works without VIABLE's hosted platform (the harness never depends on it).
+        - label: It sends no learner's name or identifier to a model.

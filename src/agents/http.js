@@ -104,6 +104,7 @@ export function embedLine(src, title, label) {
  */
 export async function htmlToSource(html, sourceUrl, toMarkdown, signal, { knowledge = false } = {}) {
   if (!toMarkdown) throw failure('HTML conversion requires the Workers AI binding.', 'http_markdown_unavailable');
+  if (typeof HTMLRewriter === 'undefined') return patternSource(html, sourceUrl, toMarkdown);
   let base = sourceUrl;
   let foundBase = false;
   let activeLink;
@@ -223,6 +224,39 @@ export async function htmlToSource(html, sourceUrl, toMarkdown, signal, { knowle
       ...(knowledge && guide.length ? { guide_pages: [...new Set(guide)] } : {})
     };
   } finally { if (abort) signal.removeEventListener('abort', abort); }
+}
+
+// Outside Workers (the harness on Node) there is no HTMLRewriter: the page goes to toMarkdown whole,
+// which drops scripts, styles and site chrome itself (src/markdown.js), and its title, links and
+// images are read with patterns.
+// shortcut: no LibGuides guide_pages, embed lines or 256 KiB inventory cap; port them if a local run needs them.
+async function patternSource(html, sourceUrl, toMarkdown) {
+  const attribute = (tag, name) => {
+    const match = new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i').exec(tag);
+    return match ? decodeHTMLAttribute(match[1] ?? match[2] ?? match[3]) : '';
+  };
+  const absolute = (value, base) => {
+    try {
+      const url = new URL(value, base);
+      return value && ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : null;
+    } catch { return null; }
+  };
+  const page = String(html).replace(/<!--[\s\S]*?-->|<(script|style|template)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '');
+  const base = absolute(attribute(/<base\b[^>]*>/i.exec(page)?.[0] || '', 'href'), sourceUrl) || sourceUrl;
+  const text = (value) => decodeHTML(value.replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
+  const links = [...page.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi)].map(([, attrs, inner]) => ({ url: absolute(attribute(attrs, 'href'), base), text: text(inner) })).filter((link) => link.url);
+  const images = [...page.matchAll(/<img\b[^>]*>/gi)].map(([tag]) => ({ url: absolute(attribute(tag, 'data-src') || attribute(tag, 'src'), base), alt: attribute(tag, 'alt') })).filter((image) => image.url);
+  const selector = /<main[\s>]/i.test(page) ? 'main' : /\srole\s*=\s*["']?main\b/i.test(page) ? '[role="main"]' : null;
+  const result = await toMarkdown({ name: 'source.html', blob: new Blob([page], { type: 'text/html' }) }, { conversionOptions: { html: { hostname: base, ...(selector ? { cssSelector: selector } : {}) } } });
+  if (result?.format !== 'markdown' || typeof result.data !== 'string') {
+    throw failure('The webpage could not be converted to Markdown. Try again or choose another source.', 'http_markdown_failed');
+  }
+  return {
+    markdown: result.data,
+    links: [...new Map(links.map((link) => [link.url, link])).values()],
+    images: [...new Map(images.map((image) => [JSON.stringify(image), image])).values()],
+    title: text(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i.exec(page)?.[1] || '')
+  };
 }
 
 // `knowledge` skips converting error pages; `acceptXml` and `maxTextBytes` let knowledge

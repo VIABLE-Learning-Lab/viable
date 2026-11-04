@@ -69,13 +69,15 @@ function misconceptionsOf(value) {
     seen.add(id);
     const source = item.source && typeof item.source === 'object' ? item.source : {};
     const attribution = list(source.attribution, TEACHING_LIMITS.attribution).map((entry) => text(entry, 600)).filter(Boolean);
+    const named = line(source.name, 80);
     return {
       id, description, construct: { id: String(construct.id).toLowerCase(), description: hinders },
       source: {
-        name: line(source.name, 80) || MISCONCEPTIONS_SOURCE.name,
+        name: named || MISCONCEPTIONS_SOURCE.name,
         license: line(source.license, 120) || MISCONCEPTIONS_SOURCE.license,
         attribution: attribution.length ? attribution : [MISCONCEPTIONS_SOURCE.attribution],
-        modified: line(source.modified, 20) || null
+        // The release's date goes with its name when the item names no source of its own.
+        modified: line(source.modified, 20) || (named ? null : MISCONCEPTIONS_SOURCE.modified)
       }
     };
   }).filter(Boolean);

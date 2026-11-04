@@ -1,0 +1,243 @@
+# Using the harness
+
+The reference for the command line, what a local run does, the services a host passes in, the open
+formats and the measures. The [README](../README.md) is the overview; [components.md](components.md),
+[mcp.md](mcp.md), [xapi.md](xapi.md) and [step-manifests.md](step-manifests.md) go deeper.
+
+## The command line
+
+```sh
+viable-harness run <agent.json | package.json> --input "..." [--teaching teaching.json] [--section id]
+                   [--context context.json] [--model id] [--agent ref] [--no-teaching] [--json]
+                   [--speech-model id] [--image-model id] [--media-dir dir] [--no-speech]
+                   [--memory-dir dir --learner id]
+viable-harness check --reply "..." [--message "..."] (--guideline "..." | --question "..." --answer-key "...")
+                     [--key-concepts "a, b"] [--teaching teaching.json] [--section id] [--rewrite n]
+                     --model id [--reviewer id] [--json]
+viable-harness test <agent.json | package.json> <cases.json> --judge-model id [--model id] [--agent ref]
+                    [--teaching teaching.json] [--section id] [--json]
+viable-harness draft-tests <package.json | teaching.json> --model id [--count n] [--section id] [--out cases.json]
+viable-harness tests-from-records <record.json...> [--teaching teaching.json | package.json] [--count n] [--out cases.json]
+viable-harness calibrate <results.json> <labels.json> [--json]
+viable-harness validate <file> [--kind agent|course-package|learning-events|teaching|component]
+viable-harness measure <events.json>
+viable-harness misconceptions "<a few words, or a standard's text>" [--json]
+viable-harness components [--json]
+viable-harness component <manifest.json> --input payload.json [--json]
+viable-harness suggest <record.json | run.json | package.json...> [--teaching teaching.json] [--json]
+viable-harness view <record.json | run.json | package.json...> [--teaching teaching.json] [--out report.html]
+viable-harness xapi <events.json> --home-page url [--activity-base url] [--include-text]
+viable-harness conformance [suite]
+viable-harness mcp
+```
+
+(`node bin/viable-harness.mjs` until the package is published; `npm link` puts `viable-harness` on
+your path.)
+
+- **run**: from a course package, the first agent (or `--agent <ref>`) with the teaching settings of
+  the first activity that uses it. `--teaching` replaces them with a file
+  (`schemas/teaching.schema.json`), `--section` applies a section's own help level and note,
+  `--no-teaching` runs without any. With `--context` holding `{ "question": "...", "answer_key": "..." }`,
+  VETTING reviews against the answer key. Speech and Image steps save their audio and pictures in
+  `--media-dir` (`--audio-dir` still works; default: a new folder in the system's temp folder), and
+  the steps list prints each file's path. `--speech-model` and `--image-model` replace every speech
+  and image model, and `--no-speech` lets Speech steps pass on without reading aloud. With
+  `--memory-dir <dir> --learner <id>` (a pseudonymous ID, never a name), Memory steps and an Agent
+  step's memory tools keep what they save in `<dir>/<id>.json`; delete it to forget the learner.
+  Without them, Memory steps are skipped.
+- **check**: VETTING on one reply your own app wrote, against a guideline or a question's answer key
+  and the activity's teaching settings; `--rewrite n` lets the reply model rewrite a failed reply up
+  to n times. The exit code is 1 unless the reply passed.
+- **test**: each case in a file of agent tests (`viable.agent-tests`) through the agent, the reply
+  rated pass or fail with a reason by `--judge-model`.
+- **validate**: the open formats' schemas, then the engine's own graph checks and that a package's
+  refs resolve. Model names aren't checked: a local run sends them to your endpoint.
+- **measure**: the research export's learner measures from a list of learning events and turns.
+- **misconceptions** and **components**: Eedi's misconceptions for a goal or a standard's text, with
+  their attribution; the component manifests.
+- **suggest**: suggested changes to How the AI helps from learner records and runs (below).
+- **view**: the teacher's page (below) from learner records and `run --json` traces, each file
+  recognized by its shape; a course package supplies its first activity's teaching settings, and
+  `--teaching` replaces them. It prints the page, or writes it to `--out`.
+
+## What runs locally
+
+| Steps | In a local run |
+| --- | --- |
+| Input, LLM, Condition, Router, Agent, VETTING, Guardrail, Transform, State, Loop, For each, Parallel, Ask, Reply (output), Note | Run as on VIABLE. An Agent step's memory tools work as Memory steps do; in a course package it searches the package's knowledge bases (`search_knowledge`, not browsing or reading whole documents) and calls its other agents. |
+| Fetch URL (http) | Reads JSON, text and HTML pages, which become Markdown (headings, paragraphs, lists, links, images, table rows) without scripts, styles or site chrome. |
+| Knowledge | In a course package: searches the files its knowledge bases name, by keywords (BM25, Chinese and Japanese by character pairs), as VIABLE searches a keyword-only knowledge base, with sources the Reply cites. Files are text, Markdown, CSV, JSON or HTML, by `path` in the package's folder or downloaded from their `url`, and must match their `bytes` and `sha256`. A PDF or Office file, a website, or an agent file's knowledge bases fail with a message saying so. |
+| Sub-agent | In a course package: another of its agents, by its ref or its name as a slug, run as VIABLE runs a sub-agent (the message only, without the activity's teaching settings, within the run's budgets, two levels deep). Any other agent fails with a message saying so. |
+| Speech | Calls your endpoint's `/audio/speech` (OpenAI's shape) and saves the audio to a file. A Kokoro voice (`af_heart`) goes as it is to a Kokoro model, else as OpenAI's `nova` (female) or `onyx` (male). |
+| Memory | With `--memory-dir` and `--learner`: one JSON file per learner in that folder, holding each fact, its id and when it was saved, recalled by keywords. Skipped otherwise, with its reason in the trace. |
+| Transcribe | Skipped: a local run sends no recording. |
+| Image | Calls your endpoint's `/images/generations`, or `/images/edits` for a step that changes a picture, and saves each picture to a file. Its prompt (the learner's and the models' text, as the step writes it) goes to that endpoint. A refusal by the endpoint's safety system is marked blocked, as on VIABLE. Pictures saved as files aren't kept by number for later turns. |
+
+## From code
+
+```js
+import { runAgent, validateDocument, measureLearner, teachingContext, SKILLS } from '@viable-lab/harness';
+
+const result = await runAgent(agentFile, { input: 'Help me start', teaching, model: 'llama3.1', baseUrl: 'http://localhost:11434/v1' });
+result.output.text;   // the reply
+result.steps;         // the trace, VETTING rounds in each review step's output.attempt_details
+```
+
+### Services
+
+The engine takes whatever only a host has as services, so a host decides where models, knowledge,
+memory and media come from: `runAgent(doc, { services: { callChatModel, searchKnowledge, memory,
+resolveSubAgent, generateImage, generateSpeech, transcribeAudio, toMarkdown, models } })`, with the
+shapes `src/agents/engine.js` calls. A local run brings its own for models
+(`openAICompatible({ baseUrl, apiKey, model, fetch })`), speech and pictures (`openAISpeech({ baseUrl, apiKey,
+model, fetch, save })` and `openAIImages({ baseUrl, apiKey, model, fetch, save })`, saving with
+`mediaFiles(dir)`), memory when asked for (`memoryFiles(dir)` in `src/memory.js`), HTML pages (`toMarkdown` in `src/markdown.js`)
+and, for a course package, its knowledge and agents (`packageKnowledge(pkg, { dir, fetch })` in
+`src/knowledge.js`, `packageAgents(pkg)`); yours replace them, and `null` turns one off, so its steps
+fail as without it. Without `models` (a model catalog), every model gets a 128,000-token
+window, `max_tokens` and JSON mode. A step whose service is missing fails with a message saying so.
+Budgets follow the agent's own `run_limits`; without them a local run gets 20 model calls and 5
+minutes. The harness doesn't price calls: cost is always 0.
+
+## In another harness or assistant
+
+For a host that keeps its own harness, assistant or agent SDK:
+
+- **An MCP server.** `viable-harness mcp` serves eleven tools over stdio: `check_reply`,
+  `teaching_instructions`, `find_misconceptions`, `compute_measures`, `validate_document`,
+  `run_agent`, `run_agent_tests`, `draft_tests`, `calibrate_judge`, `suggest_changes` and
+  `list_components`. A client starts it as
+  `node /path/to/viable-harness/bin/viable-harness.mjs mcp`, with `OPENAI_BASE_URL` and
+  `OPENAI_API_KEY` for the tools that call models. The host decides whether a reply is checked and
+  what is kept; only an agent the harness runs is guaranteed its VETTING steps
+  ([mcp.md](mcp.md)).
+- **Agent Skills.** `skills/` holds four, a folder with a `SKILL.md` each, for assistants that load
+  skills: `writing-how-the-ai-helps`, `checking-replies-with-vetting`, `writing-agent-tests` and
+  `reading-learning-evidence`. Each uses the tools and commands above; copy a folder to where your
+  assistant reads skills from.
+
+## The open formats
+
+JSON Schema (draft 2020-12) in `schemas/`, each with an example and published at its `$id`,
+`https://developers.viablelab.org/schemas/<name>.schema.json`:
+
+| Schema | What | Example |
+| --- | --- | --- |
+| `agent.schema.json` | An exported agent (`.agent.json`, format `viable.agent`): its graph, profile and what it requires | `schemas/examples/agent.example.json` |
+| `course-package.schema.json` | A course with its agents and question sets (`viable.course-package`) | the six files in `examples/` |
+| `learning-events.schema.json` | One learner's events and turns | `schemas/examples/learning-events.example.json` |
+| `teaching.schema.json` | An activity's teaching settings, with its standard or skill, misconceptions and sections | `schemas/examples/teaching.example.json` |
+| `component.schema.json` | A component's manifest: its slot, the learner data it receives and the hosts it calls, its license, citation and evidence | `src/components/` |
+
+`schemas/steps.json` describes each step type an agent graph can use: its settings (with their
+tips, defaults and bounds), outputs, flow and the plain-language sentence VIABLE's editor shows. It is
+written from the step manifests in `src/agents/steps/` by `npm run steps:build`, never by hand
+([step-manifests.md](step-manifests.md)).
+
+## The measures
+
+`measureLearner({ events, turns })` returns the research export's learner metrics (messages,
+sessions, think time, revision, pasting, accuracy, mastery, wheel-spinning, ...), mastery per skill,
+and how the learner wrote in each writing panel. Each metric's definition, computation, rationale,
+caveats and sources are exported as `METRICS`, `WRITING`, `PANELS` and `CITATIONS`, from the same
+file VIABLE's export and dashboard use (`src/utils/researchMetrics.js`).
+
+## The teacher view
+
+`viable-harness view` (or `teacherView({ teaching, records, runs, title, suggestions })`) makes one
+HTML page for a teacher who doesn't read JSON: How the AI helps as it was set, with each section's
+own level and note; what VETTING did, with every reply that didn't pass, its rounds and the
+reviewer's reasons; each learner's measures, by the ID their record carries, with the definitions and
+caveats above; misconceptions heard, where a turn's `misconceptions` or an event's
+`data.misconception` names them; and, when given, suggested changes with their evidence, for the
+teacher to decide on. It is self-contained (no scripts, nothing loaded from the internet), escapes
+everything learners and models wrote, and prints.
+
+```sh
+node bin/viable-harness.mjs view learner-*.json run-*.json examples/fractions-practice.json --out class.html
+```
+
+## Suggested changes
+
+The loop's fourth step: `viable-harness suggest <records and runs...>` (or `suggestChanges({ teaching,
+runs, records })`) proposes changes to How the AI helps from the evidence, each with the evidence
+beside it, and the teacher view shows them. Rules, no model, so each one says exactly why:
+
+| Rule | When | Proposes |
+| --- | --- | --- |
+| Answers given away | at least 30% of 5 or more reviewed replies failed their first VETTING review for giving too much away | one step less help (from explain to hint, ...) |
+| Replies unverified | at least 20% of 5 or more replies never passed review | nothing: the teacher reads those replies |
+| Misconception heard | a misconception named in the records of 3 or more learners isn't listened for | adding it, with the construct it hinders |
+| Stuck on a skill | at least 40% of the learners who answered a skill, and 3 or more, are wheel-spinning on it | one step more help, for their section when they share one |
+
+`applySuggestion(teaching, suggestion)` gives the settings with one accepted; on VIABLE, accepted
+settings become the activity's next version. A suggestion describes what the records show and what
+to try; it never says what learners learned, and the thresholds are first values to revisit with
+teachers (`SUGGESTION_THRESHOLDS`).
+
+## Components
+
+Other teams' work joins the harness as a component in one of six slots, with a manifest saying what
+learner data it receives, where it sends it, its license, citation and evidence
+([components.md](components.md); each built-in component has a page in `docs/components/`). A
+component that runs out of process, as an HTTP endpoint or a stdio MCP server, is called with
+`callComponent(manifest, payload)` or `viable-harness component <manifest.json> --input
+payload.json`. The harness sends only the fields `receives` lists, calls an HTTP entry only on a host
+in `sends_to`, and stops at a timeout or an oversized answer; what an MCP server does on its own
+machine it can't control. A judge component rates agent tests (`runAgentTests(doc, cases, {
+judgeComponent })`), and `detect`, `measure` and `lookup` call a detector, a measure or a context
+component. Start one from `integrations/_template/`.
+
+## Agent tests
+
+The loop's fifth step: cases written from the teacher's intent, run again after every change.
+`viable-harness draft-tests <package.json | teaching.json> --model <id>` (or `draftCases`, or the
+`draft_tests` MCP tool) has a model draft cases from How the AI helps (asking for the answer, a
+listed misconception, a section's own level, distress, unsafe and off-topic requests), each checked
+like a saved case, with malformed drafts listed and the reason; a person reads every draft before it
+runs. `viable-harness tests-from-records <record.json...>` (`casesFromTurns`) takes cases from
+learners' past turns without a model, with the rubric from the teaching settings; reusing learners'
+words needs their consent. `viable-harness test` runs the cases and a judge model rates each reply;
+`viable-harness calibrate <results.json> <labels.json>` (`calibrateJudge`, `calibrate_judge`)
+compares its verdicts with a person's, with agreement and Cohen's kappa from 10 labelled cases. A
+verdict is one model's reading of one reply, never a learning result
+([agent-tests.md](agent-tests.md)).
+
+## Conformance and xAPI
+
+`conformance/` holds language-neutral JSON fixtures: documents in each format, graphs, expressions,
+teaching settings, VETTING's reviewer outputs and prompts, and learning records, each with what the
+harness does with it. Another implementation, such as a port of VETTING or an engine that reads
+VIABLE's formats, runs the same cases to show it agrees; the fixtures decide when two disagree
+([conformance/README.md](../conformance/README.md)). `npm test` runs them against the harness,
+`viable-harness conformance [suite]` prints pass or FAIL per case (exit code 1 on a failure), and
+`runConformance()` runs them from code.
+
+`toStatements(record, { homePage })` turns one learner's events and turns into xAPI 1.0.3 statements
+for a school's learning record store: the learner as a pseudonymous account, ADL verbs where one fits,
+ids that stay the same when a record is exported again, and no learner text or AI reply unless
+`includeText` is set. `viable-harness xapi <events.json> --home-page <url> [--activity-base <url>]
+[--include-text]` prints them. The deployer posts them to the LRS; the harness sends nothing
+([xapi.md](xapi.md)). The vocabulary is also an xAPI Profile in JSON-LD (`schemas/xapi-profile.jsonld`, written by
+`npm run xapi:build`), published at `https://developers.viablelab.org/xapi`, which answers every
+verb, activity type and extension IRI under it.
+
+## The examples
+
+`examples/` holds six course packages: fractions practice, a PDF reading with a Socratic tutor,
+argument writing, English speaking practice, a density lab on an embedded page, and a library
+research desk. All six run locally as they are (`test/examples.test.js` runs each on a scripted
+endpoint): the library desk downloads its four guides and answers from them with citations, and the
+English partner's reply is read aloud on your endpoint's `/audio/speech`; its Transcribe step is
+skipped, since a local run sends typed text, not a recording. On VIABLE the reading tutor and the
+density lab coach also see what the learner has open (the page and highlights, the lab's trials); a
+local run gives them only what you pass with `--context`.
+
+## How it relates to the VIABLE Developer Platform
+
+The [VIABLE Developer Platform](https://developers.viablelab.org) runs this same engine, teaching
+layer and measures, and adds what a classroom needs on a server: accounts, courses, class lists,
+sections, knowledge bases, studies with consent, coding and the research export; learners open its
+activities on the [VIABLE Learning Platform](https://viablelearning.org). It passes its own services
+(model calls on its provider keys, media, billing fields, its model catalog) and runs exactly the code
+in this repository.

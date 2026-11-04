@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://developers.viablelab.org/schemas/learning-events.schema.json",
   "title": "VIABLE learning events and turns",
   "description": "One learner's record, as the kit's measures read it: events (what POST /v1/learning/events takes and the research export's workspace_events.csv keeps) and, optionally, turns (messages to the AI, with how each was written). Each event kind keeps only its own fields in data; the server drops the rest, and this schema rejects them so typos show. Never keystrokes.",
   "type": "object",

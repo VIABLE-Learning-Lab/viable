@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" role="img" aria-label="VIABLE harness: a teacher's intent reaches every AI reply, a second model checks each reply before the learner sees it, and the evidence comes back to the teacher as suggested changes.">
+  <style>
+    .t { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; }
+    .bg { fill: #f6f8fa; stroke: #d1d9e0; }
+    .fg { fill: #1f2328; } .mu { fill: #59636e; } .ac { fill: #0969da; }
+    .box { fill: #ffffff; stroke: #d1d9e0; stroke-width: 1.5; }
+    .key { fill: #ddf4ff; stroke: #0969da; stroke-width: 1.5; }
+    .pill { fill: #ffffff; stroke: #d1d9e0; }
+    .ln { stroke: #59636e; stroke-width: 1.6; fill: none; }
+    .hd { fill: #59636e; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #151b23; stroke: #3d444d; }
+      .fg { fill: #f0f6fc; } .mu { fill: #9198a1; } .ac { fill: #4493f8; }
+      .box { fill: #0d1117; stroke: #3d444d; }
+      .key { fill: #12233d; stroke: #4493f8; }
+      .pill { fill: #0d1117; stroke: #3d444d; }
+      .ln { stroke: #9198a1; } .hd { fill: #9198a1; }
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="hd" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+  <rect class="bg" x="0.5" y="0.5" width="1199" height="319" rx="20"/>
+
+  <g class="t">
+    <text class="ac" x="56" y="74" font-size="13" font-weight="600" letter-spacing="1.6">OPEN EDUCATION HARNESS</text>
+    <text class="fg" x="56" y="128" font-size="46" font-weight="700">VIABLE harness</text>
+    <text class="mu" x="56" y="168" font-size="18">Carries a teacher’s intent to every AI reply,</text>
+    <text class="mu" x="56" y="194" font-size="18">checks each reply before a learner sees it,</text>
+    <text class="mu" x="56" y="220" font-size="18">and keeps the evidence of what happened.</text>
+
+    <rect class="pill" x="56" y="250" width="112" height="30" rx="15"/>
+    <text class="fg" x="112" y="270" font-size="13" text-anchor="middle">MIT licensed</text>
+    <rect class="pill" x="180" y="250" width="246" height="30" rx="15"/>
+    <text class="fg" x="303" y="270" font-size="13" text-anchor="middle">Your keys or open-weight models</text>
+    <rect class="pill" x="438" y="250" width="190" height="30" rx="15"/>
+    <text class="fg" x="533" y="270" font-size="13" text-anchor="middle">CLI · MCP · Agent Skills</text>
+
+    <rect class="box" x="660" y="92" width="130" height="56" rx="10"/>
+    <text class="fg" x="725" y="116" font-size="13" font-weight="600" text-anchor="middle">How the AI helps</text>
+    <text class="mu" x="725" y="134" font-size="12" text-anchor="middle">teacher’s intent</text>
+
+    <rect class="box" x="830" y="92" width="130" height="56" rx="10"/>
+    <text class="fg" x="895" y="116" font-size="13" font-weight="600" text-anchor="middle">Draft reply</text>
+    <text class="mu" x="895" y="134" font-size="12" text-anchor="middle">by the AI model</text>
+
+    <rect class="key" x="1000" y="92" width="130" height="56" rx="10"/>
+    <text class="fg" x="1065" y="116" font-size="13" font-weight="700" text-anchor="middle">VETTING</text>
+    <text class="mu" x="1065" y="134" font-size="12" text-anchor="middle">second model checks</text>
+
+    <rect class="box" x="1000" y="220" width="130" height="56" rx="10"/>
+    <text class="fg" x="1065" y="244" font-size="13" font-weight="600" text-anchor="middle">Learner</text>
+    <text class="mu" x="1065" y="262" font-size="12" text-anchor="middle">sees passed replies</text>
+
+    <rect class="box" x="830" y="220" width="130" height="56" rx="10"/>
+    <text class="fg" x="895" y="244" font-size="13" font-weight="600" text-anchor="middle">Evidence</text>
+    <text class="mu" x="895" y="262" font-size="12" text-anchor="middle">tied to versions</text>
+
+    <text class="mu" x="810" y="84" font-size="11" text-anchor="middle">every turn</text>
+    <text class="mu" x="980" y="84" font-size="11" text-anchor="middle">draft</text>
+    <text class="mu" x="958" y="60" font-size="12" text-anchor="middle">fails: rewrite</text>
+    <text class="mu" x="1075" y="188" font-size="12">passes</text>
+    <text class="mu" x="980" y="212" font-size="11" text-anchor="middle">kept</text>
+    <text class="mu" x="715" y="198" font-size="12" text-anchor="end">suggested change;</text>
+    <text class="mu" x="715" y="214" font-size="12" text-anchor="end">the teacher decides</text>
+  </g>
+
+  <path class="ln" d="M790,120 H828" marker-end="url(#a)"/>
+  <path class="ln" d="M960,120 H998" marker-end="url(#a)"/>
+  <path class="ln" d="M1040,92 V70 H920 V90" marker-end="url(#a)"/>
+  <path class="ln" d="M1065,148 V218" marker-end="url(#a)"/>
+  <path class="ln" d="M1000,248 H962" marker-end="url(#a)"/>
+  <path class="ln" d="M830,248 H725 V150" marker-end="url(#a)"/>
+</svg>

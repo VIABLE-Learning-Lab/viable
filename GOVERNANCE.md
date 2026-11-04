@@ -15,5 +15,4 @@ back for VIABLE's hosted platform: whatever a teacher's setting means is compute
 "runs on the VIABLE harness" or "reads VIABLE's formats" when it passes the conformance fixtures.
 
 **Succession.** If the lab can no longer look after the project, the repository and the names go to
-a successor the lab names (to be decided before the first public release), and the last release
-keeps working with no hosted service.
+a successor the lab names here, and the last release keeps working with no hosted service.

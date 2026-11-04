@@ -1,0 +1,108 @@
+{
+  "suite": "graph",
+  "version": 1,
+  "cases": [
+    {
+      "id": "minimal", "description": "An input step joined to a reply is a whole agent.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "out" }, { "id": "out", "type": "output", "config": { "text": "{{input}}" } }] } },
+      "expect": { "valid": true }
+    },
+    {
+      "id": "tutor-with-vetting", "description": "A VETTING step in simple mode needs only its reply model.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "vet" }, { "id": "vet", "type": "vetting", "config": { "model": "tutor-model", "guideline": "Don't give the answer." }, "next": "out" }, { "id": "out", "type": "output", "config": { "text": "{{vet.content}}" } }] } },
+      "expect": { "valid": true }
+    },
+    {
+      "id": "condition-branches", "description": "A condition with a field branches to two replies.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "check" }, { "id": "check", "type": "condition", "config": { "field": "input", "op": "contains", "value": "hint" }, "branches": { "true": "hint", "false": "plain" } }, { "id": "hint", "type": "output", "config": { "text": "Here is a hint." } }, { "id": "plain", "type": "output", "config": { "text": "Tell me more." } }] } },
+      "expect": { "valid": true }
+    },
+    { "id": "not-an-object", "description": "A graph is a JSON object.", "input": { "graph": [] }, "expect": { "valid": false, "code": "invalid_graph" } },
+    { "id": "no-nodes", "description": "A graph has at least one step.", "input": { "graph": { "entry": "in", "nodes": [] } }, "expect": { "valid": false, "code": "invalid_graph", "includes": ["node"] } },
+    {
+      "id": "entry-must-exist", "description": "entry names one of the graph's steps.",
+      "input": { "graph": { "entry": "start", "nodes": [{ "id": "in", "type": "input", "next": "out" }, { "id": "out", "type": "output" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["entry"] }
+    },
+    {
+      "id": "next-must-exist", "description": "A step's next names a step that exists; the error names the missing one.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "nowhere" }, { "id": "out", "type": "output" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["nowhere"] }
+    },
+    {
+      "id": "branch-must-exist", "description": "Branches name steps that exist too.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "check" }, { "id": "check", "type": "condition", "config": { "field": "input" }, "branches": { "true": "out", "false": "elsewhere" } }, { "id": "out", "type": "output" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["elsewhere"] }
+    },
+    {
+      "id": "duplicate-ids", "description": "Step ids are unique; the error names the repeated one.",
+      "input": { "graph": { "entry": "twice", "nodes": [{ "id": "twice", "type": "input", "next": "out" }, { "id": "twice", "type": "note" }, { "id": "out", "type": "output" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["twice"] }
+    },
+    {
+      "id": "unknown-type", "description": "A step type the engine doesn't have; the error names it.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "warp" }, { "id": "warp", "type": "teleport", "next": "out" }, { "id": "out", "type": "output" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["teleport"] }
+    },
+    {
+      "id": "needs-a-reply", "description": "A graph has a reply (output) step.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["output"] }
+    },
+    {
+      "id": "reply-reachable", "description": "The entry can reach a reply step.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": null }, { "id": "out", "type": "output" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["reach"] }
+    },
+    {
+      "id": "llm-needs-model", "description": "An LLM step names its model; the error names the step.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "tutor" }, { "id": "tutor", "type": "llm", "config": { "system": "You are a tutor." }, "next": "out" }, { "id": "out", "type": "output" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["tutor", "model"] }
+    },
+    {
+      "id": "vetting-full-needs-answer-key", "description": "VETTING in full mode reviews against a question and its answer key.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "vet" }, { "id": "vet", "type": "vetting", "config": { "model": "tutor-model", "mode": "full", "question": "What is 1/2 + 1/3?" }, "next": "out" }, { "id": "out", "type": "output" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["vet", "answer_key"] }
+    },
+    {
+      "id": "vetting-attempts-bounded", "description": "VETTING tries at most 10 replies.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "vet" }, { "id": "vet", "type": "vetting", "config": { "model": "tutor-model", "max_attempts": 11 }, "next": "out" }, { "id": "out", "type": "output" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["max_attempts"] }
+    },
+    {
+      "id": "router-needs-routes", "description": "A router lists its routes.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "pick" }, { "id": "pick", "type": "router", "config": { "model": "router-model" }, "next": "out" }, { "id": "out", "type": "output" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["pick", "routes"] }
+    },
+    {
+      "id": "parallel-needs-two-paths", "description": "A parallel step runs 2 to 6 paths.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "both" }, { "id": "both", "type": "parallel", "config": { "paths": ["a"] }, "branches": { "a": "out", "join": "out" } }, { "id": "out", "type": "output" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["both", "paths"] }
+    },
+    {
+      "id": "condition-needs-field", "description": "A condition says what it branches on.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "check" }, { "id": "check", "type": "condition", "branches": { "true": "out", "false": "out" } }, { "id": "out", "type": "output" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["check"] }
+    },
+    {
+      "id": "guardrail-known-checks", "description": "A guardrail's checks are pii, jailbreak, moderation, off_topic or custom.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "guard" }, { "id": "guard", "type": "guardrail", "config": { "checks": ["spam"] }, "branches": { "pass": "out", "fail": "out" } }, { "id": "out", "type": "output" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["guard", "checks"] }
+    },
+    {
+      "id": "state-scope", "description": "A state step keeps variables for the run or the conversation.",
+      "input": { "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "keep" }, { "id": "keep", "type": "state", "config": { "scope": "forever", "assignments": [{ "name": "count", "value": "1" }] }, "next": "out" }, { "id": "out", "type": "output" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["keep", "scope"] }
+    },
+    {
+      "id": "run-limits", "description": "An agent's own run limits are whole numbers within bounds.",
+      "input": { "graph": { "entry": "in", "run_limits": { "max_model_calls": 100 }, "nodes": [{ "id": "in", "type": "input", "next": "out" }, { "id": "out", "type": "output" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["run_limits"] }
+    },
+    {
+      "id": "groups-name-steps", "description": "A canvas group holds steps the graph has.",
+      "input": { "graph": { "entry": "in", "groups": [{ "id": "g", "nodes": ["ghost"] }], "nodes": [{ "id": "in", "type": "input", "next": "out" }, { "id": "out", "type": "output" }] } },
+      "expect": { "valid": false, "code": "invalid_graph", "includes": ["groups"] }
+    }
+  ]
+}

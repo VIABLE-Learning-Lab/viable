@@ -1,155 +1,187 @@
-# VIABLE harness
+<p align="center">
+  <img src="docs/images/hero.svg" width="100%" alt="VIABLE harness: a teacher's intent reaches every AI reply, a second model checks each reply before the learner sees it, and the evidence comes back to the teacher as suggested changes.">
+</p>
 
-The open core of [VIABLE](https://viablelab.org): the layer between AI models and learners that turns
-what a teacher intends into what the AI does with each learner, and keeps the evidence.
+<p align="center">
+  <a href="https://github.com/VIABLE-Learning-Lab/viable-harness/actions/workflows/test.yml"><img alt="Tests" src="https://github.com/VIABLE-Learning-Lab/viable-harness/actions/workflows/test.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="Code: MIT" src="https://img.shields.io/badge/code-MIT-0969da"></a>
+  <a href="NOTICE"><img alt="Data: CC BY 4.0" src="https://img.shields.io/badge/data-CC%20BY%204.0-59636e"></a>
+  <img alt="Node 22 or later" src="https://img.shields.io/badge/node-22%2B-1a7f37">
+  <a href="docs/mcp.md"><img alt="MCP server" src="https://img.shields.io/badge/MCP-server-8250df"></a>
+  <a href="skills/"><img alt="Agent Skills" src="https://img.shields.io/badge/Agent%20Skills-4-8250df"></a>
+</p>
 
-- **The teacher's intent reaches the AI on every turn.** How the AI helps (a goal, a K-12 standard or
-  durable skill, how far the AI may go, misconceptions to listen for, a section's own level and note)
-  becomes part of the instructions of every step that writes a reply.
-- **A second model checks each reply before the learner sees it.** VETTING (Li, Zhang & Botelho,
-  2026) keeps the reviewer's rules apart from the reply model, so a learner can't talk the reviewer
-  out of them; a failed review rewrites the draft, and a reply that can't be verified is flagged.
-- **The evidence is tied to the version that produced it**, and the research measures over it are
-  defined in the open, with their caveats and sources.
+<p align="center">
+  <a href="#quick-start"><b>Quick start</b></a> ·
+  <a href="docs/guide.md"><b>Guide</b></a> ·
+  <a href="docs/components.md"><b>Components</b></a> ·
+  <a href="docs/mcp.md"><b>MCP</b></a> ·
+  <a href="CONTRIBUTING.md"><b>Contributing</b></a>
+</p>
 
-It runs agent files and course packages on your own model keys or an open-weight model. VIABLE's
-hosted platform runs the same code for teachers and researchers who don't write code, and is never a
-dependency.
+**VIABLE harness** is the open core of the [VIABLE Developer Platform](https://developers.viablelab.org):
+the layer between AI models and learners that turns what a teacher intends into what the AI does with
+each learner, checks what it says before the learner sees it, and keeps the evidence of what
+happened. Use its parts inside the tools you already have, run the whole loop on your own model keys,
+or let the developer platform host it for you.
 
-**Status: 0.2.0, private.** The code is MIT-licensed and will be public once the University of
-Florida approves its release; until then this repository is the lab's.
+## Why
+
+AI tutors and feedback tools now work with students out of their teacher's sight. Teachers rarely
+know what the AI was told, have few ways to steer it, and can't tell whether a change they made
+helped. Education's public goods (standards, misconception data, rubrics, benchmarks) could help,
+but each one takes work to wire in and test. The harness makes them part of one loop that the teacher
+governs, in code anyone can read, run and build on.
+
+## How it works
+
+<p align="center">
+  <img src="docs/images/loop.svg" width="100%" alt="The teaching loop: How the AI helps reaches every reply step; VETTING checks each draft and failed drafts are rewritten; only passed replies reach the learner; the evidence is kept with its versions, turned into suggested changes, and the teacher decides; after every change, agent tests run again.">
+</p>
+
+1. **The teacher's intent reaches the AI on every turn.** How the AI helps (a goal, a K-12 standard
+   or durable skill, how far the AI may go, misconceptions to listen for, a section's own level and
+   note) becomes part of the instructions of every step that writes a reply.
+2. **A second model checks each reply before the learner sees it.** VETTING keeps the reviewer's
+   rules apart from the reply model, so a learner can't talk the reviewer out of them. A failed draft
+   is rewritten and checked again; a reply that never passes becomes the agent's fallback and a flag
+   for the teacher ([Li, Zhang & Botelho, 2026](https://doi.org/10.1016/j.caeai.2026.100646)).
+3. **The evidence is tied to the version that produced it**: turns, VETTING's rounds, flags and
+   twenty research measures, each defined in the open with its caveats and sources.
+4. **The evidence becomes suggested changes**, each carrying the evidence that made it, and the
+   teacher accepts, edits or declines. An accepted change is the activity's next version.
+5. **Tests written from the intent run again after every change**, so a change shows whether it
+   helped before learners meet it.
 
 ## Quick start
 
-Node 22 or later.
+Node 22 or later, and any OpenAI-compatible endpoint: OpenAI, or an open-weight model behind Ollama,
+vLLM, llama.cpp or LM Studio.
 
 ```sh
 git clone https://github.com/VIABLE-Learning-Lab/viable-harness.git
-cd viable-harness
-npm install
-export OPENAI_API_KEY=sk-...
-node bin/viable-harness.mjs run examples/fractions-practice.json --input "What is 1/2 + 1/3?"
+cd viable-harness && npm install && npm link   # npm link puts viable-harness on your path
+export OPENAI_API_KEY=sk-...                    # or OPENAI_BASE_URL=http://localhost:11434/v1 for Ollama
+export MODEL=gpt-4.1-mini                       # any chat model your endpoint serves
 ```
 
-The fractions tutor drafts a reply and a second model reviews it; under the VETTING step the trace
-shows each round's verdict and the reviewer's reason. With an open-weight model instead, for example
-Ollama (`ollama pull llama3.1`):
+**Run a tutor that checks itself.** The fractions tutor drafts a reply and a second model reviews it
+against the question's answer key; the trace shows each round's verdict and the reviewer's reason.
 
 ```sh
-export OPENAI_BASE_URL=http://localhost:11434/v1
-node bin/viable-harness.mjs run examples/argument-writing.json --model llama3.1 \
-  --input "Is my claim clear? Schools should start later because teenagers need sleep."
+echo '{"question": "What is 1/2 + 1/3?", "answer_key": "5/6"}' > question.json
+viable-harness run examples/fractions-practice.json --model "$MODEL" --context question.json \
+  --input "Just tell me the answer"
 ```
 
-`run` calls any OpenAI-compatible `/chat/completions` endpoint (`OPENAI_BASE_URL`, default
-`https://api.openai.com/v1`, and `OPENAI_API_KEY`). `--model` replaces every model the agent names. A
-local run sends nothing to VIABLE: the learner's message, the agent's instructions and any context
-go to the endpoint you chose, and nowhere else.
-
-## The command line
+**Check a reply your own app wrote**, before a learner sees it:
 
 ```sh
-viable-harness run <agent.json | package.json> --input "..." [--teaching teaching.json] [--section id]
-                   [--context context.json] [--model id] [--agent ref] [--no-teaching] [--json]
-viable-harness validate <file> [--kind agent|course-package|learning-events|teaching]
-viable-harness measure <events.json>
+viable-harness check --model "$MODEL" --reply "It's 5/6." \
+  --question "What is 1/2 + 1/3?" --answer-key "5/6"
+# round 1 (draft): fail: … states the answer …
+# outcome: unverified
 ```
 
-(`node bin/viable-harness.mjs` until the package is published; `npm link` puts `viable-harness` on
-your path.)
+**See it as a teacher would.** Keep runs with `--json`, then make one page with How the AI helps,
+what VETTING did, the measures and the suggested changes:
 
-- **run**: from a course package, the first agent (or `--agent <ref>`) with the teaching settings of
-  the first activity that uses it. `--teaching` replaces them with a file
-  (`schemas/teaching.schema.json`), `--section` applies a section's own help level and note,
-  `--no-teaching` runs without any. With `--context` holding `{ "question": "...", "answer_key": "..." }`,
-  VETTING reviews against the answer key.
-- **validate**: the open formats' schemas, then the engine's own graph checks and that a package's
-  refs resolve. Model names aren't checked: a local run sends them to your endpoint.
-- **measure**: the research export's learner measures from a list of learning events and turns.
-
-## What runs locally
-
-| Steps | In a local run |
-| --- | --- |
-| Input, LLM, Condition, Router, Agent, VETTING, Guardrail, Transform, State, Loop, Parallel, Ask, Reply (output), Note | Run as on VIABLE. An Agent step loses its tools for knowledge bases, memory and sub-agents; its Fetch URL tool works as the step below. |
-| Fetch URL (http) | Reads JSON and plain text. An HTML page needs a `toMarkdown` service. |
-| Memory | Skipped, with its reason in the trace: there is no memory store. |
-| Transcribe | Skipped: a local run sends no recording. |
-| Knowledge, Sub-agent, Image, Speech | Fail with a message saying the step needs a service a local run doesn't have. |
-
-## From code
-
-```js
-import { runAgent, validateDocument, measureLearner, teachingContext, SKILLS } from '@viable-lab/harness';
-
-const result = await runAgent(agentFile, { input: 'Help me start', teaching, model: 'llama3.1', baseUrl: 'http://localhost:11434/v1' });
-result.output.text;   // the reply
-result.steps;         // the trace, VETTING rounds in each review step's output.attempt_details
+```sh
+viable-harness run examples/fractions-practice.json --model "$MODEL" --context question.json \
+  --input "Just tell me the answer" --json > run-1.json
+viable-harness view run-1.json examples/fractions-practice.json --out class.html
 ```
 
-### Services
+A local run sends nothing to VIABLE: the learner's message, the agent's instructions and any context
+go to the endpoint you chose (its chat, speech and image routes), and nowhere else. Before learners
+use what you build, read [deploying.md](docs/deploying.md).
 
-The engine takes whatever only a host has as services, so a host decides where models, knowledge,
-memory and media come from: `runAgent(doc, { services: { callChatModel, searchKnowledge, memory,
-resolveSubAgent, generateImage, generateSpeech, transcribeAudio, toMarkdown, models } })`, with the
-shapes `src/agents/engine.js` calls. `openAICompatible({ baseUrl, apiKey, model, fetch })` is the
-model service on its own. Without `models` (a model catalog), every model gets a 128,000-token
-window, `max_tokens` and JSON mode. A step whose service is missing fails with a message saying so.
-Budgets follow the agent's own `run_limits`; without them a local run gets 20 model calls and 5
-minutes. The harness doesn't price calls: cost is always 0.
+## Use it your way
 
-## The open formats
+<p align="center">
+  <img src="docs/images/ways-in.svg" width="100%" alt="One open core used three ways: inside your own stack as JavaScript functions, an MCP server and Agent Skills; as the reference harness on your own keys; and by the VIABLE Developer Platform, which runs the same core with its services passed in. Other teams' research joins as components in six slots.">
+</p>
 
-JSON Schema (draft 2020-12) in `schemas/`, each with an example:
-
-| Schema | What | Example |
+| | Start with | What you can count on |
 | --- | --- | --- |
-| `agent.schema.json` | An exported agent (`.agent.json`, format `viable.agent`): its graph, profile and what it requires | `schemas/examples/agent.example.json` |
-| `course-package.schema.json` | A course with its agents and question sets (`viable.course-package`) | the six files in `examples/` |
-| `learning-events.schema.json` | One learner's events and turns | `schemas/examples/learning-events.example.json` |
-| `teaching.schema.json` | An activity's teaching settings, with its standard or skill, misconceptions and sections | `schemas/examples/teaching.example.json` |
+| **In your own stack** | `npm install github:VIABLE-Learning-Lab/viable-harness`, then `import { checkReply } from '@viable-lab/harness'`; or `viable-harness mcp` in your assistant ([MCP](docs/mcp.md)) and the [Agent Skills](skills/) | the same checks VIABLE runs; your host decides whether they run and what is kept |
+| **The reference harness** | `viable-harness run`, `test`, `view` on agent files and course packages ([guide](docs/guide.md)) | VETTING runs where the graph says; every step is traced; nothing leaves your machine but model calls |
+| **[VIABLE Developer Platform](https://developers.viablelab.org)** | build agents, courses and studies in the browser; learners open activities on the [VIABLE Learning Platform](https://viablelearning.org) | the same core, hosted, with class lists, sections, consent, the research export and support |
 
-`schemas/steps.json` describes each step type an agent graph can use: its settings (with their
-tips, defaults and bounds), outputs, flow and the plain-language sentence VIABLE's editor shows. It is
-written from the step manifests in `src/agents/steps/` by `npm run steps:build`, never by hand
-([docs/step-manifests.md](docs/step-manifests.md)).
+## What's inside
 
-## The measures
+| | What it does | Where |
+| --- | --- | --- |
+| **VETTING** | A second model checks a reply against a guideline or an answer key and the activity's teaching settings; failed drafts are rewritten or flagged. | `checkReply`, `check`, `check_reply` |
+| **How the AI helps** | An activity's goal, standard or skill, help level, misconceptions and sections, turned into the instructions every reply step gets. | [guide](docs/guide.md) |
+| **Graph engine** | Runs agent files and course packages: 22 step types, from LLM, Router and Agent to Knowledge, Speech, Loop and VETTING. | [step manifests](docs/step-manifests.md) |
+| **Agent tests** | Cases drafted from the intent or taken from past turns, run against each version and rated by a judge whose agreement with people you can measure. | [agent tests](docs/agent-tests.md) |
+| **Suggested changes** | Rules over the evidence propose changes to How the AI helps, each with its evidence; the teacher decides. | `suggest`, `suggest_changes` |
+| **Teacher view** | One self-contained page of what the AI did with a class, and why. | `view` |
+| **Learner measures** | Twenty measures over learning events (sessions, think time, revision, pasting, mastery, wheel-spinning…), each with its definition, caveats and sources. | `measure`, `compute_measures` |
+| **Components** | Other teams' work in six slots, each with a manifest that states the learner data it receives, the hosts it calls, its license and its evidence; out-of-process components are called from their manifests, with only the data they list. | [components](docs/components.md), [template](integrations/_template/) |
+| **MCP server and Agent Skills** | Tools and skills for the assistants and agent SDKs people already use. | [MCP](docs/mcp.md), [skills](skills/) |
+| **Open formats** | Agent files, course packages, learning events, teaching settings and component manifests as JSON Schema, with conformance cases another implementation can check itself against. | [conformance](conformance/README.md) |
+| **xAPI profile** | Learning events as xAPI statements for a school's learning record store, with no learner text unless asked for. | [xAPI](docs/xapi.md) |
 
-`measureLearner({ events, turns })` returns the research export's learner metrics (messages,
-sessions, think time, revision, pasting, accuracy, mastery, wheel-spinning, ...), mastery per skill,
-and how the learner wrote in each writing panel. Each metric's definition, computation, rationale,
-caveats and sources are exported as `METRICS`, `WRITING`, `PANELS` and `CITATIONS`, from the same
-file VIABLE's export and dashboard use (`src/utils/researchMetrics.js`).
+## Education's public goods, inside the loop
 
-## The examples
+| Component | Slot | From |
+| --- | --- | --- |
+| VETTING reply check | step | Li, Zhang & Botelho (2026), peer reviewed |
+| Eedi Misconceptions Graph: 8,117 misconceptions, 2,258 constructs | context | Eedi, via Learning Commons (CC BY 4.0) |
+| K-12 standards with their learning components | context | Learning Commons Knowledge Graph (CC BY 4.0) |
+| Carnegie Skills Progressions | context | Carnegie Foundation, via Learning Commons (CC BY 4.0) |
+| Learner measures | measure | the research each measure cites |
+| Agent test judge | judge | VIABLE Lab |
 
-`examples/` holds six course packages: fractions practice, a PDF reading with a Socratic tutor,
-argument writing, English speaking practice, a density lab on an embedded page, and a library
-research desk. Four run locally as they are; the English partner's Speech step and the library
-desk's Knowledge step need services a local run doesn't have yet.
+Each has a page with what its authors showed, what comparisons in the harness showed and what nobody
+has shown yet, kept apart on purpose ([components](docs/components.md)). Built something a teacher's
+AI should use? [Propose a component](../../issues/new?template=component.yml).
 
-## How it relates to the hosted VIABLE
+## Privacy and safety
 
-The hosted VIABLE runs this same engine, teaching layer and measures, and adds what a classroom needs
-on a server: accounts, courses, class lists, sections, knowledge bases, studies with consent, coding
-and the research export. It passes its own services (model calls on its provider keys, media,
-billing fields, its model catalog), and takes each release of this repository as it is: it never
-changes the core in place.
+The harness is used with minors, so its defaults protect them wherever it runs:
 
-## Developing
+- No learner's name or identifier reaches a model from the core. How the AI helps is set per activity
+  or section, never per learner.
+- Every model call goes through one call point a host can record; a local run keeps its trace on the
+  machine.
+- A component receives only the learner data its manifest lists.
+- VETTING's outcomes are explicit (passed, unverified, needs attention): anything but passed is a
+  flag, never a checked reply.
+- What a tool or a fetched page returns is data for the model, never instructions to it.
 
-```sh
-npm test              # the tests, including the boundary test
-npm run steps:build   # after changing a step manifest
-```
+Using the harness doesn't make a deployment compliant with COPPA, FERPA or any other law by itself:
+[deploying.md](docs/deploying.md) lists what a deployer still has to do. Report vulnerabilities
+privately ([SECURITY.md](SECURITY.md)).
 
-`test/boundary.test.js` keeps the harness standing alone: its code imports only Node's built-ins,
-its own files and the npm packages it lists, each under MIT or Apache-2.0 (with `entities`,
-BSD-2-Clause, the one exception), and touches no database, secret or Worker-only API.
+## Status
+
+Version 0.2, a preview. The formats, the command line and the functions above are ready to build on;
+changes to them follow semantic versioning, with a note on moving existing files
+([CHANGELOG](CHANGELOG.md)). Next: step components inside agent graphs, the first components from
+other teams (Learning Commons' Evaluators as judges, then MathTutorBench), and MCP Apps that show a
+VETTING round inside an assistant.
+
+## Contributing
+
+Issues, discussions and pull requests are welcome, from a typo to a new component.
+[CONTRIBUTING.md](CONTRIBUTING.md) covers setting up, testing, proposing a change, and how a pull
+request is reviewed and merged. Look for [good first issues](../../labels/good%20first%20issue), ask
+in [Discussions](../../discussions), and follow the [code of conduct](CODE_OF_CONDUCT.md).
+
+## Citing
+
+If you use the harness in research, cite it with [CITATION.cff](CITATION.cff) (GitHub's "Cite this
+repository"), and cite VETTING as: Li, H., Zhang, S., & Botelho, A. F. (2026). VETTING: A dual-LLM
+framework for in-loop safety verification via policy isolation in educational AI. *Computers and
+Education: Artificial Intelligence, 11*, 100646.
 
 ## License
 
-Code under MIT (`LICENSE`). The data it carries (Learning Commons Knowledge Graph standards, the
-Carnegie Skills Progressions and Eedi's Misconceptions Graph) stays under CC BY 4.0, with the
-attribution statements to keep with it in `NOTICE`.
+Code under [MIT](LICENSE). The data the harness carries (Learning Commons Knowledge Graph standards,
+the Carnegie Skills Progressions and Eedi's Misconceptions Graph) stays under CC BY 4.0, with the
+attribution to keep with it in [NOTICE](NOTICE). The names VIABLE and VETTING: [TRADEMARKS.md](TRADEMARKS.md).
+
+Made by [VIABLE Lab](https://viablelab.org).

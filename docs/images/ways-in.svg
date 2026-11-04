@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 540" role="img" aria-label="One open core used three ways. Other teams' research joins the core as components in six slots, each with a manifest. The core is used inside your own stack as JavaScript functions, an MCP server and Agent Skills; as the reference harness on your own model keys; and by the VIABLE Developer Platform, which runs the same core with its services passed in.">
+  <style>
+    .t { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; }
+    .fg { fill: #1f2328; } .mu { fill: #59636e; } .ac { fill: #0969da; }
+    .box { fill: #ffffff; stroke: #d1d9e0; stroke-width: 1.5; }
+    .core { fill: #ddf4ff; stroke: #0969da; stroke-width: 1.5; }
+    .chip { fill: #ffffff; stroke: #b6d7f5; }
+    .slot { fill: none; stroke: #8c959f; stroke-dasharray: 4 3; }
+    .ln { stroke: #59636e; stroke-width: 1.6; fill: none; }
+    .hd { fill: #59636e; }
+    @media (prefers-color-scheme: dark) {
+      .fg { fill: #f0f6fc; } .mu { fill: #9198a1; } .ac { fill: #4493f8; }
+      .box { fill: #0d1117; stroke: #3d444d; }
+      .core { fill: #12233d; stroke: #4493f8; }
+      .chip { fill: #0d1117; stroke: #2a4a75; }
+      .slot { stroke: #656c76; }
+      .ln { stroke: #9198a1; } .hd { fill: #9198a1; }
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="hd" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+
+  <g class="t">
+    <text class="ac" x="40" y="34" font-size="12" font-weight="600" letter-spacing="1.4">OTHER TEAMS’ RESEARCH, AS COMPONENTS</text>
+    <rect class="slot" x="40" y="48" width="96" height="30" rx="15"/><text class="fg" x="88" y="68" font-size="13" text-anchor="middle">context</text>
+    <rect class="slot" x="146" y="48" width="70" height="30" rx="15"/><text class="fg" x="181" y="68" font-size="13" text-anchor="middle">step</text>
+    <rect class="slot" x="226" y="48" width="96" height="30" rx="15"/><text class="fg" x="274" y="68" font-size="13" text-anchor="middle">detector</text>
+    <rect class="slot" x="332" y="48" width="80" height="30" rx="15"/><text class="fg" x="372" y="68" font-size="13" text-anchor="middle">judge</text>
+    <rect class="slot" x="422" y="48" width="150" height="30" rx="15"/><text class="fg" x="497" y="68" font-size="13" text-anchor="middle">simulated learner</text>
+    <rect class="slot" x="582" y="48" width="96" height="30" rx="15"/><text class="fg" x="630" y="68" font-size="13" text-anchor="middle">measure</text>
+    <text class="mu" x="700" y="60" font-size="12.5">misconception graphs, standards, rubric judges,</text>
+    <text class="mu" x="700" y="77" font-size="12.5">benchmarks, classifiers, simulated students …</text>
+    <text class="mu" x="372" y="118" font-size="12.5">join through a manifest: the learner data each receives, the hosts it calls, its license and evidence</text>
+
+    <rect class="core" x="40" y="140" width="1120" height="150" rx="16"/>
+    <text class="fg" x="64" y="172" font-size="18" font-weight="700">The open core</text>
+    <text class="mu" x="196" y="172" font-size="13">@viable-lab/harness · MIT code, CC BY 4.0 data</text>
+    <rect class="chip" x="64" y="190" width="200" height="34" rx="8"/><text class="fg" x="164" y="212" font-size="13" text-anchor="middle">graph engine and steps</text>
+    <rect class="chip" x="276" y="190" width="200" height="34" rx="8"/><text class="fg" x="376" y="212" font-size="13" font-weight="700" text-anchor="middle">VETTING</text>
+    <rect class="chip" x="488" y="190" width="200" height="34" rx="8"/><text class="fg" x="588" y="212" font-size="13" text-anchor="middle">How the AI helps</text>
+    <rect class="chip" x="700" y="190" width="200" height="34" rx="8"/><text class="fg" x="800" y="212" font-size="13" text-anchor="middle">agent tests and judges</text>
+    <rect class="chip" x="912" y="190" width="224" height="34" rx="8"/><text class="fg" x="1024" y="212" font-size="13" text-anchor="middle">suggested changes</text>
+    <rect class="chip" x="64" y="236" width="200" height="34" rx="8"/><text class="fg" x="164" y="258" font-size="13" text-anchor="middle">learner measures</text>
+    <rect class="chip" x="276" y="236" width="200" height="34" rx="8"/><text class="fg" x="376" y="258" font-size="13" text-anchor="middle">teacher view</text>
+    <rect class="chip" x="488" y="236" width="200" height="34" rx="8"/><text class="fg" x="588" y="258" font-size="13" text-anchor="middle">open formats</text>
+    <rect class="chip" x="700" y="236" width="200" height="34" rx="8"/><text class="fg" x="800" y="258" font-size="13" text-anchor="middle">conformance fixtures</text>
+    <rect class="chip" x="912" y="236" width="224" height="34" rx="8"/><text class="fg" x="1024" y="258" font-size="13" text-anchor="middle">xAPI profile</text>
+
+    <text class="mu" x="227" y="330" font-size="12.5">import functions,</text>
+    <text class="mu" x="227" y="346" font-size="12.5">call MCP tools</text>
+    <text class="mu" x="612" y="330" font-size="12.5">runs agent files</text>
+    <text class="mu" x="612" y="346" font-size="12.5">and course packages</text>
+    <text class="mu" x="997" y="330" font-size="12.5">runs the same core,</text>
+    <text class="mu" x="997" y="346" font-size="12.5">its services passed in</text>
+
+    <rect class="box" x="40" y="376" width="350" height="140" rx="14"/>
+    <text class="fg" x="60" y="406" font-size="16" font-weight="700">In your own stack</text>
+    <text class="mu" x="60" y="430" font-size="13">JavaScript functions, an MCP server</text>
+    <text class="mu" x="60" y="448" font-size="13">and Agent Skills, inside the harness,</text>
+    <text class="mu" x="60" y="466" font-size="13">LMS or assistant you already use</text>
+    <text class="ac" x="60" y="496" font-size="12.5" font-weight="600">For developers with a product</text>
+
+    <rect class="box" x="425" y="376" width="350" height="140" rx="14"/>
+    <text class="fg" x="445" y="406" font-size="16" font-weight="700">The reference harness</text>
+    <text class="mu" x="445" y="430" font-size="13">the viable-harness CLI on your own keys</text>
+    <text class="mu" x="445" y="448" font-size="13">or an open-weight model: VETTING runs</text>
+    <text class="mu" x="445" y="466" font-size="13">as the graph says, every step traced</text>
+    <text class="ac" x="445" y="496" font-size="12.5" font-weight="600">For developers and researchers</text>
+
+    <rect class="box" x="810" y="376" width="350" height="140" rx="14"/>
+    <text class="fg" x="830" y="406" font-size="16" font-weight="700">VIABLE Developer Platform</text>
+    <text class="mu" x="830" y="430" font-size="13">hosted: courses, class lists, sections,</text>
+    <text class="mu" x="830" y="448" font-size="13">studies with consent, the research</text>
+    <text class="mu" x="830" y="466" font-size="13">export, model keys and billing</text>
+    <text class="ac" x="830" y="496" font-size="12.5" font-weight="600">For teachers and researchers who don’t code</text>
+  </g>
+
+  <path class="ln" d="M360,82 V138" marker-end="url(#a)"/>
+  <path class="ln" d="M215,290 V374" marker-end="url(#a)"/>
+  <path class="ln" d="M600,290 V374" marker-end="url(#a)"/>
+  <path class="ln" d="M985,290 V374" marker-end="url(#a)"/>
+</svg>

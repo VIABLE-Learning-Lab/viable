@@ -1,0 +1,43 @@
+name: Bug report
+description: Something in the harness does the wrong thing.
+labels: [bug, needs triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please don't paste a real learner's messages, names or records: make up an example that shows the same thing. Security problems go to a private report (SECURITY.md), never here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to make it happen
+      description: The smallest agent file, package, record or command that shows it. A scripted model reply is ideal.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Harness version
+      description: From package.json, or the commit.
+      placeholder: 0.2.0
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Node version and model endpoint
+      placeholder: Node 22.11, Ollama with llama3.1
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [engine and steps, VETTING, How the AI helps, agent tests, suggested changes, measures, teacher view, components, MCP server, Agent Skills, formats and conformance, xAPI, command line, docs]
+    validations:
+      required: true

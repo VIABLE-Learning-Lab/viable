@@ -8,9 +8,11 @@
 import { readFileSync } from 'node:fs';
 import { graphKnowledgeRefs, linkKnowledgeRefs, validateGraph } from './agents/graph.js';
 
-export const KINDS = ['agent', 'course-package', 'learning-events', 'teaching'];
-const SCHEMAS = Object.fromEntries(KINDS.map((kind) => [`${kind}.schema.json`, JSON.parse(readFileSync(new URL(`../schemas/${kind}.schema.json`, import.meta.url), 'utf8'))]));
-export const schemaFor = (kind) => SCHEMAS[`${kind}.schema.json`];
+export const KINDS = ['agent', 'course-package', 'learning-events', 'teaching', 'component'];
+// Every schema's $id, where the Developer Platform publishes it; a $ref resolves against its schema's $id.
+export const SCHEMA_BASE = 'https://developers.viablelab.org/schemas/';
+const SCHEMAS = Object.fromEntries(KINDS.map((kind) => [`${SCHEMA_BASE}${kind}.schema.json`, JSON.parse(readFileSync(new URL(`../schemas/${kind}.schema.json`, import.meta.url), 'utf8'))]));
+export const schemaFor = (kind) => SCHEMAS[`${SCHEMA_BASE}${kind}.schema.json`];
 
 const typeOf = (value) => (value === null ? 'null' : Array.isArray(value) ? 'array' : Number.isInteger(value) ? 'integer' : typeof value);
 const isType = (value, type) => typeOf(value) === type || (type === 'number' && typeof value === 'number' && Number.isFinite(value));
@@ -18,11 +20,12 @@ const equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 function resolveRef(ref, root) {
   const [file, pointer = ''] = ref.split('#');
-  let target = file ? SCHEMAS[file] : root;
+  const doc = file ? SCHEMAS[new URL(file, root.$id || SCHEMA_BASE).href] : root;
+  let target = doc;
   if (!target) throw new Error(`Unknown schema reference ${ref}.`);
   for (const part of pointer.split('/').filter(Boolean)) target = target[part.replace(/~1/g, '/').replace(/~0/g, '~')];
   if (target === undefined) throw new Error(`Unknown schema reference ${ref}.`);
-  return { schema: target, root: file ? SCHEMAS[file] : root };
+  return { schema: target, root: doc };
 }
 
 /** Errors for value against a schema, each "path: message"; empty when it fits. */
@@ -87,6 +90,7 @@ export function kindOf(doc) {
   if (doc?.format === 'viable.agent') return 'agent';
   if (doc?.format === 'viable.course-package') return 'course-package';
   if (Array.isArray(doc?.events)) return 'learning-events';
+  if (typeof doc?.slot === 'string' && typeof doc?.id === 'string' && doc?.runs) return 'component';
   return 'teaching';
 }
 

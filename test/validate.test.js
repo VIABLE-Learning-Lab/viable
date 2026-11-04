@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { checkSchema, kindOf, schemaFor, validateDocument } from '../src/index.js';
+import { KINDS, checkSchema, kindOf, schemaFor, validateDocument } from '../src/index.js';
+import { SCHEMA_BASE } from '../src/validate.js';
 import { NODE_TYPES } from '../src/agents/graph.js';
 
 const json = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
@@ -14,7 +15,20 @@ test('the six example course packages and an agent file are valid, as are the sc
   assert.deepEqual(validateDocument(json('../schemas/examples/agent.example.json')), { kind: 'agent', errors: [] });
   assert.deepEqual(validateDocument(json('../schemas/examples/learning-events.example.json')), { kind: 'learning-events', errors: [] });
   assert.deepEqual(validateDocument(json('../schemas/examples/teaching.example.json')), { kind: 'teaching', errors: [] });
-  for (const name of ['agent', 'course-package', 'learning-events', 'teaching']) assert.equal(schemaFor(name).$schema, 'https://json-schema.org/draft/2020-12/schema');
+  for (const name of KINDS) {
+    assert.equal(schemaFor(name).$schema, 'https://json-schema.org/draft/2020-12/schema');
+    assert.equal(schemaFor(name).$id, `https://developers.viablelab.org/schemas/${name}.schema.json`, 'where the Developer Platform publishes it');
+  }
+});
+
+test('a $ref resolves against its schema’s $id, relative or absolute (the course package names the agent and teaching schemas relatively)', () => {
+  const teaching = json('../schemas/examples/teaching.example.json');
+  for (const ref of ['teaching.schema.json', `${SCHEMA_BASE}teaching.schema.json`]) {
+    assert.deepEqual(checkSchema({ $ref: ref }, teaching), [], ref);
+    assert.ok(checkSchema({ $ref: ref }, { help: 'shout' }).length, ref);
+  }
+  assert.deepEqual(checkSchema({ $ref: `${SCHEMA_BASE}agent.schema.json#/$defs/graph` }, json('../schemas/examples/agent.example.json').graph), []);
+  assert.throws(() => checkSchema({ $ref: 'https://example.org/schemas/teaching.schema.json' }, teaching), /Unknown schema reference/);
 });
 
 test('what doesn’t fit says where and why', () => {

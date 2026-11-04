@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://developers.viablelab.org/schemas/course-package.schema.json",
   "title": "VIABLE course package",
   "description": "A course with the agents and question sets its activities use, as one JSON file (format viable.course-package, version 1), or as a .viable.zip with that file at its root as package.viable.json and the files it names under files/. Parts refer to each other by ref, never by a project's IDs. Files come by https url or by path in the zip; knowledge bases hold files and websites, Reading panels name a PDF by file_ref, and agents' Knowledge and Agent steps name knowledge bases by knowledge_base_refs. A package never carries learners, class lists, sections, keys, logs or study data; what an export left out it says in notes. Fields other than these (such as an example's guide) are ignored on import. `viable-harness validate` also runs VIABLE's graph checks on each agent and checks that every ref resolves.",
   "type": "object",

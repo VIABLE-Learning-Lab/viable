@@ -1,0 +1,795 @@
+{
+  "@context": "https://w3id.org/xapi/profiles/context",
+  "id": "https://developers.viablelab.org/xapi",
+  "type": "Profile",
+  "conformsTo": "https://w3id.org/xapi/profiles#1.0",
+  "prefLabel": {
+    "en": "VIABLE learning events"
+  },
+  "definition": {
+    "en": "How the VIABLE harness writes one learner’s learning events and messages to the AI as xAPI 1.0.3 statements: VIABLE’s own verbs, activity types and extensions. Statements use ADL’s verbs and its question and objective activity types where they fit. An embedded page’s own verb that ADL lacks, and an app’s own event fields, are named under this profile’s verbs/ and extensions/ too, and are not defined here."
+  },
+  "versions": [
+    {
+      "id": "https://developers.viablelab.org/xapi/v1",
+      "generatedAtTime": "2026-11-03T00:00:00Z"
+    }
+  ],
+  "author": {
+    "type": "Organization",
+    "name": "VIABLE Lab",
+    "url": "https://viablelab.org"
+  },
+  "concepts": [
+    {
+      "id": "https://developers.viablelab.org/xapi/verbs/saved",
+      "type": "Verb",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "saved"
+      },
+      "definition": {
+        "en": "Saved a snapshot of their plan or draft: the text as it stood when they paused writing."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/verbs/checked",
+      "type": "Verb",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "checked"
+      },
+      "definition": {
+        "en": "Ticked a criterion of the rubric as met by their writing."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/verbs/unchecked",
+      "type": "Verb",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "unchecked"
+      },
+      "definition": {
+        "en": "Cleared a rubric criterion they had ticked."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/verbs/highlighted",
+      "type": "Verb",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "highlighted"
+      },
+      "definition": {
+        "en": "Highlighted a passage on a page of a reading."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/verbs/unhighlighted",
+      "type": "Verb",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "unhighlighted"
+      },
+      "definition": {
+        "en": "Removed a highlight from a page of a reading."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/verbs/annotated",
+      "type": "Verb",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "annotated"
+      },
+      "definition": {
+        "en": "Wrote a note on a page of a reading."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/verbs/searched",
+      "type": "Verb",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "searched"
+      },
+      "definition": {
+        "en": "Searched a reading."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/verbs/requested-hint",
+      "type": "Verb",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "requested-hint"
+      },
+      "definition": {
+        "en": "Asked for one of a question’s hints."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/activity-types/activity",
+      "type": "ActivityType",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "activity"
+      },
+      "definition": {
+        "en": "A VIABLE activity: the page a learner works in, with its panels and the AI. Every statement names it as its parent."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/activity-types/panel",
+      "type": "ActivityType",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "panel"
+      },
+      "definition": {
+        "en": "A panel of an activity: writing, questions, a reading, an embedded page or an app."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/activity-types/writing",
+      "type": "ActivityType",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "writing"
+      },
+      "definition": {
+        "en": "A learner’s plan or draft in a writing panel."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/activity-types/rubric",
+      "type": "ActivityType",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "rubric"
+      },
+      "definition": {
+        "en": "The rubric of a writing panel."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/activity-types/rubric-criterion",
+      "type": "ActivityType",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "rubric-criterion"
+      },
+      "definition": {
+        "en": "One criterion of a writing panel’s rubric, by its index from 0."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/activity-types/page",
+      "type": "ActivityType",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "page"
+      },
+      "definition": {
+        "en": "A page of a reading (a PDF), by its number."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/activity-types/embedded-object",
+      "type": "ActivityType",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "embedded-object"
+      },
+      "definition": {
+        "en": "Something inside an embedded page, as the page names it, such as a level."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/activity-types/ai",
+      "type": "ActivityType",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "ai"
+      },
+      "definition": {
+        "en": "The AI in an activity: the agent the learner sends messages to."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/session",
+      "type": "ContextExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "session"
+      },
+      "definition": {
+        "en": "The visit the record comes from, as the record names it."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/seq",
+      "type": "ContextExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "seq"
+      },
+      "definition": {
+        "en": "The event’s order in its session."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/conversation_id",
+      "type": "ContextExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "conversation_id"
+      },
+      "definition": {
+        "en": "The conversation the message belongs to."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/turn_index",
+      "type": "ContextExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "turn_index"
+      },
+      "definition": {
+        "en": "The message’s place in its conversation, from 1."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/agent_version",
+      "type": "ContextExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "agent_version"
+      },
+      "definition": {
+        "en": "The version of the agent that answered."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/activity_version",
+      "type": "ContextExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "activity_version"
+      },
+      "definition": {
+        "en": "The version of the activity the learner worked in."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/vetting",
+      "type": "ContextExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "vetting"
+      },
+      "definition": {
+        "en": "VETTING’s outcome for the reply: passed, unverified (it ran out of tries) or attention (a safety concern). VIABLE flags unverified and attention turns for the teacher."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/vetting_attempts",
+      "type": "ContextExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "vetting_attempts"
+      },
+      "definition": {
+        "en": "How many times VETTING reviewed a draft of the reply."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/visible_ms",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "visible_ms"
+      },
+      "definition": {
+        "en": "Milliseconds the panel, page, question or rubric was on screen."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/active_ms",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "active_ms"
+      },
+      "definition": {
+        "en": "Milliseconds the learner was active there, with gaps between actions capped at 2 minutes."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/keys",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "keys"
+      },
+      "definition": {
+        "en": "Characters typed since the last progress event (text from an input method counts when committed)."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/deleted",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "deleted"
+      },
+      "definition": {
+        "en": "Characters deleted since the last progress event."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/pasted",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "pasted"
+      },
+      "definition": {
+        "en": "Characters pasted since the last progress event."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/pastes",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "pastes"
+      },
+      "definition": {
+        "en": "Times the learner pasted since the last progress event."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/pasted_from_ai",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "pasted_from_ai"
+      },
+      "definition": {
+        "en": "Characters pasted from the AI’s replies since the last progress event."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/pauses",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "pauses"
+      },
+      "definition": {
+        "en": "Gaps of 2 seconds or more between changes to the text."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/pause_ms",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "pause_ms"
+      },
+      "definition": {
+        "en": "Total milliseconds in those pauses."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/longest_pause_ms",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "longest_pause_ms"
+      },
+      "definition": {
+        "en": "The longest of those pauses, in milliseconds."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/p_bursts",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "p_bursts"
+      },
+      "definition": {
+        "en": "Runs of typing between pauses of 2 seconds or more (P-bursts)."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/r_bursts",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "r_bursts"
+      },
+      "definition": {
+        "en": "Bursts in which the writer also deleted text (R-bursts)."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/burst_chars",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "burst_chars"
+      },
+      "definition": {
+        "en": "Characters typed in bursts."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/inside_edits",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "inside_edits"
+      },
+      "definition": {
+        "en": "Changes made away from the end of the text, revising what was already written."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/leading_edits",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "leading_edits"
+      },
+      "definition": {
+        "en": "Changes made at the end of the text, as it was written."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/words",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "words"
+      },
+      "definition": {
+        "en": "Words in the plan or draft."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/chars",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "chars"
+      },
+      "definition": {
+        "en": "Characters: of the plan or draft, a highlighted passage, a note or a search."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/text",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "text"
+      },
+      "definition": {
+        "en": "The plan or draft as it stood. Sent only when the deployer includes text."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/criterion",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "criterion"
+      },
+      "definition": {
+        "en": "The rubric criterion, by its index from 0."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/checked",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "checked"
+      },
+      "definition": {
+        "en": "Whether the criterion is ticked now."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/page",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "page"
+      },
+      "definition": {
+        "en": "The page’s number in the reading."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/color",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "color"
+      },
+      "definition": {
+        "en": "The highlight’s color: yellow, green, blue or pink."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/removed",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "removed"
+      },
+      "definition": {
+        "en": "Whether the highlight was removed."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/results",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "results"
+      },
+      "definition": {
+        "en": "How many matches the search found."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/changes",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "changes"
+      },
+      "definition": {
+        "en": "How often the answer changed before it was sent."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/index",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "index"
+      },
+      "definition": {
+        "en": "Which of the question’s hints was shown, from 0."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/hints_available",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "hints_available"
+      },
+      "definition": {
+        "en": "How many hints the question has."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/set",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "set"
+      },
+      "definition": {
+        "en": "The question set’s id."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/skill",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "skill"
+      },
+      "definition": {
+        "en": "The skill the question practises, or the one the agent graded."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/prompt",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "prompt"
+      },
+      "definition": {
+        "en": "The question as it was asked, for a spoken answer. Sent only when the deployer includes text."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/attempt",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "attempt"
+      },
+      "definition": {
+        "en": "Which attempt at the question the answer was, from 1."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/rt_ms",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "rt_ms"
+      },
+      "definition": {
+        "en": "Milliseconds from first seeing the question to sending the answer."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/hints",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "hints"
+      },
+      "definition": {
+        "en": "Hints the learner saw before the answer."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/ai_before",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "ai_before"
+      },
+      "definition": {
+        "en": "Whether the learner asked the AI before the answer."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/version",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "version"
+      },
+      "definition": {
+        "en": "The version of the question set."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/item_type",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "item_type"
+      },
+      "definition": {
+        "en": "The kind of question: single, multiple, fill, cloze, order, short, open, code or spoken."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/seconds",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "seconds"
+      },
+      "definition": {
+        "en": "A spoken answer’s length in seconds."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/asset_id",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "asset_id"
+      },
+      "definition": {
+        "en": "The id of a spoken answer’s recording."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/content_type",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "content_type"
+      },
+      "definition": {
+        "en": "The media type of a spoken answer’s recording."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/kept",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "kept"
+      },
+      "definition": {
+        "en": "Whether a spoken answer’s recording is kept."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/data",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "data"
+      },
+      "definition": {
+        "en": "An embedded page’s own fields: its numbers and true/false values, and its strings only when the deployer includes text."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/first_output_ms",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "first_output_ms"
+      },
+      "definition": {
+        "en": "Milliseconds from sending the message to the AI’s answer starting to appear."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/signals",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "signals"
+      },
+      "definition": {
+        "en": "How the message was written (source, think_ms, keys, deleted, pasted and the like), as the research export’s turns.csv has them."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/after",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "after"
+      },
+      "definition": {
+        "en": "What the learner did with the AI’s answer."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/message",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "message"
+      },
+      "definition": {
+        "en": "The learner’s message. Sent only when the deployer includes text."
+      }
+    },
+    {
+      "id": "https://developers.viablelab.org/xapi/extensions/reply",
+      "type": "ResultExtension",
+      "inScheme": "https://developers.viablelab.org/xapi/v1",
+      "prefLabel": {
+        "en": "reply"
+      },
+      "definition": {
+        "en": "The AI’s reply. Sent only when the deployer includes text."
+      }
+    }
+  ]
+}

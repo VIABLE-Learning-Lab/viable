@@ -1,0 +1,224 @@
+{
+  "suite": "xapi",
+  "version": 1,
+  "cases": [
+    {
+      "id": "every-event-type", "description": "Each event type the format lists makes its statement, in record order, then each turn and the answers its agent graded; page.layout and embed.state make none.",
+      "input": {
+        "options": { "homePage": "https://school.example.org", "activityBase": "https://school.example.org/viable" },
+        "record": {
+          "user": "learner-0042", "activity": "fractions-week-3", "session": "visit_20261103a",
+          "events": [
+            { "type": "panel.view", "panel": "check", "at": "2026-11-03T10:00:00Z", "seq": 1, "data": { "visible_ms": 30000, "active_ms": 12000 } },
+            { "type": "writing.start", "panel": "essay", "at": "2026-11-03T10:01:00Z", "seq": 2, "data": { "field": "draft" } },
+            { "type": "writing.progress", "panel": "essay", "at": "2026-11-03T10:02:00Z", "seq": 3, "data": { "field": "draft", "keys": 40, "words": 8 } },
+            { "type": "writing.snapshot", "panel": "essay", "at": "2026-11-03T10:03:00Z", "seq": 4, "data": { "field": "draft", "text": "A synthetic draft about fractions.", "words": 5 } },
+            { "type": "writing.rubric", "panel": "essay", "at": "2026-11-03T10:04:00Z", "seq": 5, "data": { "visible_ms": 5000 } },
+            { "type": "writing.rubric_check", "panel": "essay", "at": "2026-11-03T10:05:00Z", "seq": 6, "data": { "criterion": 2, "checked": true } },
+            { "type": "page.layout", "at": "2026-11-03T10:06:00Z", "seq": 7, "data": { "ai_width": 400, "ai_open": true } },
+            { "type": "writing.submit", "panel": "essay", "at": "2026-11-03T10:07:00Z", "seq": 8, "data": { "words": 8, "chars": 40 } },
+            { "type": "embed.event", "panel": "lab", "at": "2026-11-03T10:08:00Z", "seq": 9, "data": { "verb": "answered", "object": "level-2", "success": true, "score": 1, "max_score": 1, "duration_ms": 8200 } },
+            { "type": "embed.state", "panel": "lab", "at": "2026-11-03T10:09:00Z", "seq": 10, "data": { "data": { "level": 2 } } },
+            { "type": "reading.page", "panel": "reading", "at": "2026-11-03T10:10:00Z", "seq": 11, "data": { "page": 3, "visible_ms": 40000 } },
+            { "type": "reading.highlight", "panel": "reading", "at": "2026-11-03T10:11:00Z", "seq": 12, "data": { "page": 3, "color": "yellow", "chars": 42 } },
+            { "type": "reading.note", "panel": "reading", "at": "2026-11-03T10:12:00Z", "seq": 13, "data": { "page": 3, "chars": 18 } },
+            { "type": "reading.search", "panel": "reading", "at": "2026-11-03T10:13:00Z", "seq": 14, "data": { "chars": 5, "results": 2 } },
+            { "type": "questions.view", "panel": "check", "item": "q1", "at": "2026-11-03T10:14:00Z", "seq": 15, "data": { "visible_ms": 9000 } },
+            { "type": "questions.hint", "panel": "check", "item": "q1", "at": "2026-11-03T10:15:00Z", "seq": 16, "data": { "index": 0, "set": "fractions-set", "skill": "Adding fractions", "hints_available": 2 } },
+            { "type": "questions.answer", "panel": "check", "item": "q1", "at": "2026-11-03T10:16:00Z", "seq": 17, "data": { "response": "5/6", "correct": true, "attempt": 1, "rt_ms": 8000, "skill": "Adding fractions" } },
+            { "type": "app.event", "panel": "app", "at": "2026-11-03T10:17:00Z", "seq": 18, "data": { "badge": "first-try", "points": 10 } }
+          ],
+          "turns": [
+            { "message": "How do I add 1/2 and 1/3?", "reply": "What could both denominators become?", "started_at": "2026-11-03T10:18:00Z", "conversation_id": "c1", "turn_index": 1, "first_output_ms": 900, "signals": { "source": "typed", "think_ms": 4000 }, "agent_version": 3, "activity_version": 7, "vetting": "passed", "vetting_attempts": 1, "assessment": { "skill": "Adding fractions", "correct": true, "item": "q1" } }
+          ]
+        }
+      },
+      "expect": {
+        "count": 18,
+        "statements": [
+          { "verb": { "id": "http://adlnet.gov/expapi/verbs/experienced" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/panels/check", "definition": { "type": "https://developers.viablelab.org/xapi/activity-types/panel" } } },
+          { "verb": { "id": "http://adlnet.gov/expapi/verbs/attempted" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/panels/essay/draft", "definition": { "type": "https://developers.viablelab.org/xapi/activity-types/writing" } } },
+          { "verb": { "id": "http://adlnet.gov/expapi/verbs/progressed" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/panels/essay/draft" } },
+          { "verb": { "id": "https://developers.viablelab.org/xapi/verbs/saved" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/panels/essay/draft" } },
+          { "verb": { "id": "http://adlnet.gov/expapi/verbs/experienced" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/panels/essay/rubric", "definition": { "type": "https://developers.viablelab.org/xapi/activity-types/rubric" } } },
+          { "verb": { "id": "https://developers.viablelab.org/xapi/verbs/checked" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/panels/essay/rubric/criteria/2", "definition": { "type": "https://developers.viablelab.org/xapi/activity-types/rubric-criterion" } } },
+          { "verb": { "id": "http://adlnet.gov/expapi/verbs/completed" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/panels/essay" }, "result": { "completion": true } },
+          { "verb": { "id": "http://adlnet.gov/expapi/verbs/answered" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/panels/lab/objects/level-2", "definition": { "type": "https://developers.viablelab.org/xapi/activity-types/embedded-object" } }, "result": { "success": true, "score": { "raw": 1, "min": 0, "max": 1, "scaled": 1 }, "duration": "PT8.2S" } },
+          { "verb": { "id": "http://adlnet.gov/expapi/verbs/experienced" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/panels/reading/pages/3", "definition": { "type": "https://developers.viablelab.org/xapi/activity-types/page" } } },
+          { "verb": { "id": "https://developers.viablelab.org/xapi/verbs/highlighted" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/panels/reading/pages/3" }, "result": { "extensions": { "https://developers.viablelab.org/xapi/extensions/color": "yellow", "https://developers.viablelab.org/xapi/extensions/chars": 42 } } },
+          { "verb": { "id": "https://developers.viablelab.org/xapi/verbs/annotated" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/panels/reading/pages/3" } },
+          { "verb": { "id": "https://developers.viablelab.org/xapi/verbs/searched" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/panels/reading" } },
+          { "verb": { "id": "http://adlnet.gov/expapi/verbs/experienced" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/panels/check/items/q1", "definition": { "type": "http://adlnet.gov/expapi/activities/question" } } },
+          { "verb": { "id": "https://developers.viablelab.org/xapi/verbs/requested-hint" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/panels/check/items/q1" }, "result": { "extensions": { "https://developers.viablelab.org/xapi/extensions/skill": "Adding fractions", "https://developers.viablelab.org/xapi/extensions/set": "fractions-set" } } },
+          { "verb": { "id": "http://adlnet.gov/expapi/verbs/answered" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/panels/check/items/q1" }, "result": { "success": true, "extensions": { "https://developers.viablelab.org/xapi/extensions/rt_ms": 8000 } } },
+          { "verb": { "id": "http://adlnet.gov/expapi/verbs/interacted" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/panels/app" }, "result": { "extensions": { "https://developers.viablelab.org/xapi/extensions/points": 10 } } },
+          {
+            "verb": { "id": "http://adlnet.gov/expapi/verbs/asked" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/ai", "definition": { "type": "https://developers.viablelab.org/xapi/activity-types/ai" } },
+            "result": { "extensions": { "https://developers.viablelab.org/xapi/extensions/first_output_ms": 900, "https://developers.viablelab.org/xapi/extensions/signals": { "source": "typed", "think_ms": 4000 } } },
+            "context": { "extensions": { "https://developers.viablelab.org/xapi/extensions/agent_version": 3, "https://developers.viablelab.org/xapi/extensions/activity_version": 7, "https://developers.viablelab.org/xapi/extensions/vetting": "passed", "https://developers.viablelab.org/xapi/extensions/vetting_attempts": 1, "https://developers.viablelab.org/xapi/extensions/conversation_id": "c1", "https://developers.viablelab.org/xapi/extensions/turn_index": 1 } },
+            "timestamp": "2026-11-03T10:18:00.000Z"
+          },
+          { "verb": { "id": "http://adlnet.gov/expapi/verbs/answered" }, "object": { "id": "https://school.example.org/viable/fractions-week-3/items/q1", "definition": { "type": "http://adlnet.gov/expapi/activities/question" } }, "result": { "success": true }, "context": { "extensions": { "https://developers.viablelab.org/xapi/extensions/agent_version": 3 } } }
+        ]
+      }
+    },
+    {
+      "id": "actor-and-context", "description": "The actor is only an account at homePage named by the record's pseudonymous id: no name, email or OpenID; every statement's parent is the activity, and the session goes along.",
+      "input": { "options": { "homePage": "https://school.example.org" }, "record": { "user": "learner-0042", "activity": "fractions-week-3", "session": "visit_20261103a", "events": [{ "type": "panel.view", "panel": "check", "at": "2026-11-03T10:00:00Z", "seq": 1 }] } },
+      "expect": {
+        "count": 1,
+        "statements": [{
+          "actor": { "objectType": "Agent", "name": null, "mbox": null, "mbox_sha1sum": null, "openid": null, "account": { "homePage": "https://school.example.org", "name": "learner-0042" } },
+          "object": { "objectType": "Activity", "id": "https://school.example.org/fractions-week-3/panels/check" },
+          "context": { "contextActivities": { "parent": [{ "objectType": "Activity", "id": "https://school.example.org/fractions-week-3", "definition": { "type": "https://developers.viablelab.org/xapi/activity-types/activity" } }] }, "extensions": { "https://developers.viablelab.org/xapi/extensions/seq": 1, "https://developers.viablelab.org/xapi/extensions/session": "visit_20261103a" } },
+          "timestamp": "2026-11-03T10:00:00.000Z"
+        }]
+      }
+    },
+    {
+      "id": "id-from-the-event", "description": "A statement's id is UUID v5 (namespace 85904702-c63a-51b6-80a6-6d17f20e12a7) of the sorted-key JSON of [homePage, user, activity, session, { event }].",
+      "input": { "options": { "homePage": "https://school.example.org" }, "record": { "user": "learner-0042", "activity": "fractions-week-3", "session": "visit_20261103a", "events": [{ "type": "questions.answer", "panel": "check", "item": "q1", "at": "2026-11-03T10:16:00Z", "seq": 16, "data": { "response": "5/6", "correct": true, "attempt": 1, "rt_ms": 8000, "skill": "Adding fractions — été" } }] } },
+      "expect": { "statements": [{ "id": "1e0ee4e2-6e26-5dc6-aeee-4efdb85bafa2" }] }
+    },
+    {
+      "id": "id-ignores-key-order", "description": "The same event with its keys in another order has the same id.",
+      "input": { "options": { "homePage": "https://school.example.org" }, "record": { "session": "visit_20261103a", "activity": "fractions-week-3", "user": "learner-0042", "events": [{ "data": { "skill": "Adding fractions — été", "rt_ms": 8000, "attempt": 1, "correct": true, "response": "5/6" }, "seq": 16, "at": "2026-11-03T10:16:00Z", "item": "q1", "panel": "check", "type": "questions.answer" }] } },
+      "expect": { "statements": [{ "id": "1e0ee4e2-6e26-5dc6-aeee-4efdb85bafa2" }] }
+    },
+    {
+      "id": "id-ignores-include-text", "description": "Sending text doesn't change an event's id.",
+      "input": { "options": { "homePage": "https://school.example.org", "includeText": true }, "record": { "user": "learner-0042", "activity": "fractions-week-3", "session": "visit_20261103a", "events": [{ "type": "questions.answer", "panel": "check", "item": "q1", "at": "2026-11-03T10:16:00Z", "seq": 16, "data": { "response": "5/6", "correct": true, "attempt": 1, "rt_ms": 8000, "skill": "Adding fractions — été" } }] } },
+      "expect": { "statements": [{ "id": "1e0ee4e2-6e26-5dc6-aeee-4efdb85bafa2", "result": { "response": "5/6" } }] }
+    },
+    {
+      "id": "identical-events-once", "description": "Two identical events are one statement, since an LRS refuses a batch that repeats an id.",
+      "input": { "options": { "homePage": "https://school.example.org" }, "record": { "user": "learner-0042", "events": [{ "type": "reading.search", "panel": "reading", "at": "2026-11-03T10:13:00Z", "data": { "chars": 5 } }, { "type": "reading.search", "panel": "reading", "at": "2026-11-03T10:13:00Z", "data": { "chars": 5 } }] } },
+      "expect": { "count": 1 }
+    },
+    {
+      "id": "no-text-by-default", "description": "Without includeText no statement carries what the learner wrote, the AI's reply, a question's prompt or an app's own strings.",
+      "input": {
+        "options": { "homePage": "https://school.example.org" },
+        "record": {
+          "user": "learner-0042", "activity": "argument-essay",
+          "events": [
+            { "type": "writing.snapshot", "panel": "essay", "at": "2026-11-03T10:03:00Z", "data": { "field": "draft", "text": "Schools should start later because sleep matters.", "words": 7 } },
+            { "type": "questions.answer", "panel": "check", "item": "q1", "at": "2026-11-03T10:04:00Z", "data": { "prompt": "Which sentence states the claim?", "response": "The first sentence", "correct": true } },
+            { "type": "embed.event", "panel": "lab", "at": "2026-11-03T10:05:00Z", "data": { "verb": "answered", "object": "level-1", "response": "density is mass over volume" } },
+            { "type": "app.event", "panel": "app", "at": "2026-11-03T10:06:00Z", "data": { "nickname_typed": "Captain Ada", "points": 3 } }
+          ],
+          "turns": [{ "message": "Is my claim clear enough?", "reply": "Which sentence do you think states it?", "started_at": "2026-11-03T10:07:00Z" }]
+        }
+      },
+      "expect": {
+        "count": 5,
+        "excludes": ["Schools should start later", "Which sentence states the claim?", "The first sentence", "density is mass over volume", "Captain Ada", "Is my claim clear enough?", "Which sentence do you think states it?", "\"response\""],
+        "statements": [
+          { "result": { "extensions": { "https://developers.viablelab.org/xapi/extensions/words": 7 } } },
+          { "result": { "success": true } },
+          { "verb": { "id": "http://adlnet.gov/expapi/verbs/answered" } },
+          { "result": { "extensions": { "https://developers.viablelab.org/xapi/extensions/points": 3 } } },
+          { "verb": { "id": "http://adlnet.gov/expapi/verbs/asked" } }
+        ]
+      }
+    },
+    {
+      "id": "text-when-asked", "description": "With includeText the statements carry the learner's text, the AI's reply and an app's strings; an answer's text is its result's response.",
+      "input": {
+        "options": { "homePage": "https://school.example.org", "includeText": true },
+        "record": {
+          "user": "learner-0042", "activity": "argument-essay",
+          "events": [
+            { "type": "writing.snapshot", "panel": "essay", "at": "2026-11-03T10:03:00Z", "data": { "field": "draft", "text": "Schools should start later because sleep matters.", "words": 7 } },
+            { "type": "questions.answer", "panel": "check", "item": "q1", "at": "2026-11-03T10:04:00Z", "data": { "prompt": "Which sentence states the claim?", "response": "The first sentence", "correct": true } },
+            { "type": "app.event", "panel": "app", "at": "2026-11-03T10:06:00Z", "data": { "nickname_typed": "Captain Ada", "points": 3 } }
+          ],
+          "turns": [{ "message": "Is my claim clear enough?", "reply": "Which sentence do you think states it?", "started_at": "2026-11-03T10:07:00Z" }]
+        }
+      },
+      "expect": {
+        "count": 4,
+        "statements": [
+          { "result": { "extensions": { "https://developers.viablelab.org/xapi/extensions/text": "Schools should start later because sleep matters." } } },
+          { "result": { "response": "The first sentence", "extensions": { "https://developers.viablelab.org/xapi/extensions/prompt": "Which sentence states the claim?" } } },
+          { "result": { "extensions": { "https://developers.viablelab.org/xapi/extensions/nickname_typed": "Captain Ada" } } },
+          { "result": { "extensions": { "https://developers.viablelab.org/xapi/extensions/message": "Is my claim clear enough?", "https://developers.viablelab.org/xapi/extensions/reply": "Which sentence do you think states it?" } } }
+        ]
+      }
+    },
+    {
+      "id": "scores", "description": "A score within 0..max_score is scaled; one outside it is sent raw alone, as xAPI requires raw between min and max.",
+      "input": { "options": { "homePage": "https://school.example.org" }, "record": { "user": "learner-0042", "events": [
+        { "type": "embed.event", "panel": "lab", "at": "2026-11-03T10:00:00Z", "data": { "verb": "scored", "score": 3, "max_score": 4, "completion": true } },
+        { "type": "embed.event", "panel": "lab", "at": "2026-11-03T10:01:00Z", "data": { "verb": "scored", "score": 5, "max_score": 4 } },
+        { "type": "questions.answer", "panel": "check", "item": "q2", "at": "2026-11-03T10:02:00Z", "data": { "correct": false, "score": 0.5 } }
+      ] } },
+      "expect": { "statements": [
+        { "result": { "score": { "raw": 3, "min": 0, "max": 4, "scaled": 0.75 }, "completion": true } },
+        { "result": { "score": { "raw": 5, "max": null, "scaled": null } } },
+        { "result": { "success": false, "score": { "raw": 0.5 } } }
+      ] }
+    },
+    {
+      "id": "own-and-adl-verbs", "description": "An embedded page's verb is ADL's when ADL has it and VIABLE's otherwise; without one it interacted.",
+      "input": { "options": { "homePage": "https://school.example.org" }, "record": { "user": "learner-0042", "events": [
+        { "type": "embed.event", "panel": "lab", "data": { "verb": "passed", "object": "level-3" } },
+        { "type": "embed.event", "panel": "lab", "data": { "verb": "collected", "object": "coin" } },
+        { "type": "embed.event", "panel": "lab", "data": { "object": "door" } }
+      ] } },
+      "expect": { "statements": [
+        { "verb": { "id": "http://adlnet.gov/expapi/verbs/passed", "display": { "en-US": "passed" } } },
+        { "verb": { "id": "https://developers.viablelab.org/xapi/verbs/collected", "display": { "en-US": "collected" } } },
+        { "verb": { "id": "http://adlnet.gov/expapi/verbs/interacted" } }
+      ] }
+    },
+    {
+      "id": "taken-back", "description": "A highlight removed is unhighlighted; a rubric criterion unticked is unchecked.",
+      "input": { "options": { "homePage": "https://school.example.org" }, "record": { "user": "learner-0042", "events": [
+        { "type": "reading.highlight", "panel": "reading", "data": { "page": 1, "removed": true } },
+        { "type": "writing.rubric_check", "panel": "essay", "data": { "criterion": 0, "checked": false } }
+      ] } },
+      "expect": { "statements": [
+        { "verb": { "id": "https://developers.viablelab.org/xapi/verbs/unhighlighted" } },
+        { "verb": { "id": "https://developers.viablelab.org/xapi/verbs/unchecked" }, "object": { "id": "https://school.example.org/panels/essay/rubric/criteria/0" } }
+      ] }
+    },
+    {
+      "id": "unflagged-and-flagged-turns", "description": "A turn's VETTING outcome goes in its context: unverified when the review ran out of tries, attention for a safety concern.",
+      "input": { "options": { "homePage": "https://school.example.org" }, "record": { "user": "learner-0042", "activity": "fractions-week-3", "events": [], "turns": [
+        { "started_at": "2026-11-03T10:00:00Z", "vetting": "unverified", "vetting_attempts": 3 },
+        { "started_at": "2026-11-03T10:01:00Z", "vetting": "attention", "vetting_attempts": 1 }
+      ] } },
+      "expect": { "count": 2, "statements": [
+        { "context": { "extensions": { "https://developers.viablelab.org/xapi/extensions/vetting": "unverified", "https://developers.viablelab.org/xapi/extensions/vetting_attempts": 3 } } },
+        { "context": { "extensions": { "https://developers.viablelab.org/xapi/extensions/vetting": "attention", "https://developers.viablelab.org/xapi/extensions/vetting_attempts": 1 } } }
+      ] }
+    },
+    {
+      "id": "graded-skill-without-item", "description": "An answer the agent graded without naming an item is an answer to its skill, as an objective.",
+      "input": { "options": { "homePage": "https://school.example.org" }, "record": { "user": "learner-0042", "activity": "argument-essay", "events": [], "turns": [{ "started_at": "2026-11-03T10:00:00Z", "assessment": [{ "skill": "Counter argument", "correct": false }] }] } },
+      "expect": { "count": 2, "statements": [
+        { "verb": { "id": "http://adlnet.gov/expapi/verbs/asked" } },
+        { "object": { "id": "https://school.example.org/argument-essay/skills/Counter%20argument", "definition": { "type": "http://adlnet.gov/expapi/activities/objective" } }, "result": { "success": false } }
+      ] }
+    },
+    {
+      "id": "timestamps", "description": "Timestamps are ISO 8601 in UTC; an event without a time has none, and the LRS stamps it.",
+      "input": { "options": { "homePage": "https://school.example.org" }, "record": { "user": "learner-0042", "events": [
+        { "type": "reading.search", "panel": "reading", "at": "2026-11-03T10:00:00+02:00", "data": { "chars": 4 } },
+        { "type": "reading.search", "panel": "reading", "data": { "chars": 6 } }
+      ] } },
+      "expect": { "statements": [{ "timestamp": "2026-11-03T08:00:00.000Z" }, { "timestamp": null }] }
+    },
+    {
+      "id": "activity-base", "description": "Activity IRIs start at activityBase, without its trailing slash, and their parts are percent-encoded.",
+      "input": { "options": { "homePage": "https://school.example.org", "activityBase": "https://lrs.example.org/activities/" }, "record": { "user": "learner-0042", "activity": "unit 3/fractions", "events": [{ "type": "panel.view", "panel": "check" }] } },
+      "expect": { "statements": [{ "object": { "id": "https://lrs.example.org/activities/unit%203%2Ffractions/panels/check" } }] }
+    },
+    { "id": "needs-user", "description": "A record without a learner id makes no statements.", "input": { "options": { "homePage": "https://school.example.org" }, "record": { "events": [] } }, "expect": { "error": true } },
+    { "id": "never-an-email", "description": "A learner id that looks like an email address is refused.", "input": { "options": { "homePage": "https://school.example.org" }, "record": { "user": "ada.lovelace@school.example.org", "events": [] } }, "expect": { "error": true } },
+    { "id": "needs-home-page", "description": "homePage is required.", "input": { "options": {}, "record": { "user": "learner-0042", "events": [] } }, "expect": { "error": true } },
+    { "id": "home-page-is-a-url", "description": "homePage is an absolute URL.", "input": { "options": { "homePage": "school" }, "record": { "user": "learner-0042", "events": [] } }, "expect": { "error": true } },
+    { "id": "needs-events", "description": "A record without an events list isn't a learning-events record.", "input": { "options": { "homePage": "https://school.example.org" }, "record": { "user": "learner-0042" } }, "expect": { "error": true } }
+  ]
+}

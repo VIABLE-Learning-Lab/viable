@@ -1,0 +1,124 @@
+{
+  "suite": "teaching",
+  "version": 1,
+  "cases": [
+    {
+      "id": "no-teaching", "description": "Without teaching settings the reply step has only its own instructions.",
+      "input": { "teaching": null },
+      "expect": { "includes": ["You are a tutor."], "excludes": ["From the teacher of this activity"] }
+    },
+    {
+      "id": "goal-and-help", "description": "The goal and the help level join the reply step's own instructions.",
+      "input": { "teaching": { "goal": "Add fractions with unlike denominators.", "help": "ask_first" } },
+      "expect": { "includes": ["You are a tutor.", "From the teacher of this activity", "Add fractions with unlike denominators.", "ask what the learner thinks or has tried"] }
+    },
+    {
+      "id": "help-hint", "description": "hint: hints and guiding questions, no answers.",
+      "input": { "teaching": { "help": "hint" } },
+      "expect": { "includes": ["Give hints and guiding questions, one step at a time"], "excludes": ["ask what the learner thinks", "show a worked example", "Only check the"] }
+    },
+    {
+      "id": "help-explain", "description": "explain: explain and show a worked example, then let them try.",
+      "input": { "teaching": { "help": "explain" } },
+      "expect": { "includes": ["explain the idea and show a worked example"] }
+    },
+    {
+      "id": "help-check-only", "description": "check_only: only check the learner's own work.",
+      "input": { "teaching": { "help": "check_only" } },
+      "expect": { "includes": ["Only check the", "own work"] }
+    },
+    {
+      "id": "watch-for-never-reaches-the-ai", "description": "What the teacher wants to hear about stays with the teacher.",
+      "input": { "teaching": { "goal": "Write a clear claim.", "help": "hint", "watch_for": "Learners pasting in text from elsewhere." } },
+      "expect": { "includes": ["Write a clear claim."], "excludes": ["pasting in text from elsewhere"] }
+    },
+    {
+      "id": "watch-for-alone", "description": "Settings that hold only watch_for give the AI nothing.",
+      "input": { "teaching": { "watch_for": "Learners guessing." } },
+      "expect": { "excludes": ["From the teacher of this activity", "guessing"] }
+    },
+    {
+      "id": "unknown-help-level-ignored", "description": "A help level that isn't one of the four is left out, never passed on as written.",
+      "input": { "teaching": { "goal": "Add fractions.", "help": "do_it_for_them" } },
+      "expect": { "includes": ["Add fractions."], "excludes": ["do_it_for_them", "How far to go"] }
+    },
+    {
+      "id": "section-level-replaces", "description": "A section's own help level replaces the activity's for that section's learners.",
+      "input": { "teaching": { "help": "explain", "sections": { "sec_es": { "help": "hint" } } }, "section": "sec_es" },
+      "expect": { "includes": ["Give hints and guiding questions"], "excludes": ["show a worked example"] }
+    },
+    {
+      "id": "section-note", "description": "A section's note reaches its learners' reply step, with the activity's level when the section sets none.",
+      "input": { "teaching": { "help": "explain", "sections": { "sec_es": { "note": "Many in this group are learning English." } } }, "section": "sec_es" },
+      "expect": { "includes": ["Many in this group are learning English.", "show a worked example"] }
+    },
+    {
+      "id": "section-not-others", "description": "Learners outside a section get the activity's own level and never another section's note.",
+      "input": { "teaching": { "help": "explain", "sections": { "sec_es": { "help": "hint", "note": "Many in this group are learning English." } } }, "section": "sec_other" },
+      "expect": { "includes": ["show a worked example"], "excludes": ["learning English", "Give hints"] }
+    },
+    {
+      "id": "section-none", "description": "Without a section, sections don't apply.",
+      "input": { "teaching": { "help": "explain", "sections": { "sec_es": { "help": "hint", "note": "Many in this group are learning English." } } } },
+      "expect": { "includes": ["show a worked example"], "excludes": ["learning English", "Give hints"] }
+    },
+    {
+      "id": "section-alone", "description": "A section's level applies even when the activity sets none.",
+      "input": { "teaching": { "sections": { "sec_es": { "help": "check_only" } } }, "section": "sec_es" },
+      "expect": { "includes": ["Only check the"] }
+    },
+    {
+      "id": "section-id-pattern", "description": "Section keys that aren't section IDs (sec_...) are ignored.",
+      "input": { "teaching": { "help": "explain", "sections": { "period-3": { "help": "hint", "note": "Period three." } } }, "section": "period-3" },
+      "expect": { "includes": ["show a worked example"], "excludes": ["Period three.", "Give hints"] }
+    },
+    {
+      "id": "standard", "description": "A K-12 standard reaches the reply step with its code, grades, parts and the standards before it.",
+      "input": {
+        "teaching": {
+          "standard": {
+            "kind": "standard", "uuid": "0b5e2c1a-6f3d-4e8b-9a7c-1d2e3f4a5b6c", "code": "5.NF.A.1", "jurisdiction": "Multi-State", "grades": ["5"],
+            "description": "Add and subtract fractions with unlike denominators.",
+            "learning_components": [{ "id": "lc1", "description": "Replace fractions with equivalent fractions with a common denominator." }],
+            "prior": [{ "uuid": "1c6f3d2b-7a4e-4f9c-8b1d-2e3f4a5b6c7d", "code": "4.NF.B.3", "description": "Add fractions with like denominators." }]
+          }
+        }
+      },
+      "expect": { "includes": ["5.NF.A.1", "grade 5", "Add and subtract fractions with unlike denominators.", "Replace fractions with equivalent fractions", "4.NF.B.3", "Add fractions with like denominators."] }
+    },
+    {
+      "id": "skill", "description": "A durable skill reaches the reply step with its source, level, what learners do at it and the level before.",
+      "input": {
+        "teaching": {
+          "standard": {
+            "kind": "skill", "uuid": "dc8b48c2-d2cb-5d66-88d7-381fe9655da6", "code": "CT.2.2", "level": { "number": 3, "name": "Integrating" },
+            "description": "Critical Thinking: Evaluate the strength of evidence used to form a conclusion",
+            "learning_components": [{ "id": "lc1", "description": "Distinguishes between weaker and stronger evidence." }],
+            "prior": [{ "uuid": "9e72a5dc-b46d-525d-9524-66ffcc1ae2af", "code": "CT.2.2A.2", "description": "Recognizes when evidence is relevant to a conclusion." }],
+            "source": { "name": "Carnegie Skills Progressions" }
+          }
+        }
+      },
+      "expect": { "includes": ["CT.2.2", "Carnegie Skills Progressions", "level Integrating", "Evaluate the strength of evidence", "Distinguishes between weaker and stronger evidence.", "Recognizes when evidence is relevant to a conclusion."] }
+    },
+    {
+      "id": "standard-needs-uuid", "description": "A standard without its UUID is left out.",
+      "input": { "teaching": { "goal": "Add fractions.", "standard": { "code": "5.NF.A.1", "description": "Add and subtract fractions with unlike denominators." } } },
+      "expect": { "includes": ["Add fractions."], "excludes": ["5.NF.A.1"] }
+    },
+    {
+      "id": "misconceptions", "description": "Misconceptions the teacher chose reach the reply step as things to listen for; the construct each hinders stays out.",
+      "input": {
+        "teaching": {
+          "misconceptions": [{ "id": "2d7a4e3c-8b5f-4a1d-9c2e-3f4a5b6c7d8e", "description": "Adds the numerators and adds the denominators.", "construct": { "id": "3e8b5f4d-9c6a-4b2e-8d3f-4a5b6c7d8e9f", "description": "Add fractions with unlike denominators." } }]
+        }
+      },
+      "expect": { "includes": ["Adds the numerators and adds the denominators."], "excludes": ["Add fractions with unlike denominators."] }
+    },
+    {
+      "id": "misconception-needs-ids", "description": "A misconception without UUIDs for itself and its construct is left out.",
+      "input": { "teaching": { "goal": "Add fractions.", "misconceptions": [{ "id": "m1", "description": "Adds the denominators.", "construct": { "id": "c1", "description": "Fractions." } }] } },
+      "expect": { "includes": ["Add fractions."], "excludes": ["Adds the denominators."] }
+    }
+  ]
+}

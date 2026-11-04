@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: If you use the VIABLE harness in your research, please cite it, and cite VETTING as below.
+title: "VIABLE harness: an open education harness"
+type: software
+version: 0.2.0
+license: MIT
+repository-code: https://github.com/VIABLE-Learning-Lab/viable-harness
+url: https://developers.viablelab.org
+authors:
+  - family-names: Li
+    given-names: Hongming
+  - name: VIABLE Lab
+keywords:
+  - education
+  - AI tutoring
+  - LLM safety
+  - formative assessment
+  - teacher agency
+  - learning analytics
+references:
+  - type: article
+    title: "VETTING: A dual-LLM framework for in-loop safety verification via policy isolation in educational AI"
+    authors:
+      - family-names: Li
+        given-names: Hongming
+      - family-names: Zhang
+        given-names: Shan
+      - family-names: Botelho
+        given-names: Anthony F.
+    journal: "Computers and Education: Artificial Intelligence"
+    volume: 11
+    start: 100646
+    year: 2026
+    doi: 10.1016/j.caeai.2026.100646

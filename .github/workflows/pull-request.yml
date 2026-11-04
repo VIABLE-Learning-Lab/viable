@@ -1,0 +1,35 @@
+name: pull request
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+permissions:
+  contents: read
+concurrency:
+  group: pull-request-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  title:
+    name: Title
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: "The title is type(scope): description"
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          node scripts/check-pr-title.mjs --self-test
+          node scripts/check-pr-title.mjs
+  dco:
+    name: Sign-off
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Every commit is signed off (DCO)
+        run: node scripts/check-dco.mjs ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }}

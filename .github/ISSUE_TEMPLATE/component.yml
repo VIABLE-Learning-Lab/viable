@@ -1,0 +1,48 @@
+name: Component proposal
+description: Bring your research (a dataset, a checker, a judge, a detector, a measure, a simulated learner) into teachers' AI.
+labels: [component, needs triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A component joins the harness in one of six slots, with a manifest that says what learner data it receives, which hosts it calls, its license and its evidence (docs/components.md). We can write the adapter with you; you review it for fidelity to your work.
+  - type: input
+    id: name
+    attributes:
+      label: The work
+      description: Its name, and a link to the paper, dataset or repository.
+    validations:
+      required: true
+  - type: dropdown
+    id: slot
+    attributes:
+      label: Slot
+      options: [context, step, detector, judge, simulated learner, measure, not sure]
+    validations:
+      required: true
+  - type: input
+    id: license
+    attributes:
+      label: Licenses
+      description: Of its code, its data and its dependencies. Code under MIT or Apache-2.0; data under CC BY or more open (non-commercial data can only be opt-in context).
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: Learner data and hosts
+      description: What it needs to see (a reply, the learner's message, the conversation, learning events…) and where it runs or what it calls.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: What the authors showed, and for whom (grades, subjects, tasks). What's still unknown.
+    validations:
+      required: true
+  - type: input
+    id: maintainer
+    attributes:
+      label: Who maintains it
+      description: A person or team who'll answer issues about it.

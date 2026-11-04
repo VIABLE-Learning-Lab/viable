@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HELP_LEVELS, runAgent } from '../src/index.js';
 
@@ -86,10 +88,10 @@ test('a VETTING step’s rounds are in the trace', async () => {
 test('steps that need VIABLE’s services fail clearly or are skipped', async () => {
   const graph = (step) => ({ entry: 's', nodes: [{ id: 's', ...step, next: 'out' }, { id: 'out', type: 'output', config: { text: 'done' } }] });
   await assert.rejects(runAgent(graph({ type: 'knowledge', config: { knowledge_bases: ['kb_1'] } }), { input: 'hi' }), (error) => error.code === 'knowledge_unavailable' && /VIABLE's hosted service/.test(error.message));
-  await assert.rejects(runAgent(graph({ type: 'image', config: { model: 'gpt-image-1' } }), { input: 'a fox' }), (error) => error.code === 'needs_viable' && /Image steps need VIABLE's hosted service/.test(error.message));
+  await assert.rejects(runAgent(graph({ type: 'image', config: { model: 'gpt-image-1' } }), { input: 'a fox', services: { generateImage: null } }), (error) => error.code === 'needs_viable' && /Image steps need VIABLE's hosted service/.test(error.message));
   await assert.rejects(runAgent(graph({ type: 'subagent', config: { slug: 'helper' } }), { input: 'hi' }), { code: 'subagent_disabled' });
-  const memory = await runAgent(graph({ type: 'memory', config: { mode: 'recall' } }), { input: 'hi' });
-  assert.equal(memory.outputs.s.skipped, true);
+  const memory = await runAgent(graph({ type: 'memory', config: { mode: 'recall' } }), { input: 'hi', learner: 's-1' });
+  assert.equal(memory.outputs.s.skipped, true, 'memory is off unless asked for');
   assert.equal(memory.output.text, 'done');
 });
 
@@ -106,7 +108,6 @@ test('the CLI runs an example against a local endpoint and prints the reply and 
   await new Promise((done) => server.listen(0, '127.0.0.1', done));
   try {
     const bin = fileURLToPath(new URL('../bin/viable-harness.mjs', import.meta.url));
-    // The density lab's coach runs locally as it is (the library desk's Knowledge step needs VIABLE).
     const example = fileURLToPath(new URL('../examples/density-lab.json', import.meta.url));
     const env = { ...process.env, OPENAI_BASE_URL: `http://127.0.0.1:${server.address().port}/v1`, OPENAI_API_KEY: 'local' };
     const child = spawn(process.execPath, [bin, 'run', example, '--input', 'Help me narrow my topic', '--model', 'qwen3'], { env });
@@ -123,4 +124,52 @@ test('the CLI runs an example against a local endpoint and prints the reply and 
   } finally {
     server.close();
   }
+});
+
+test('the CLI saves pictures in --media-dir and keeps memory between runs with --memory-dir and --learner', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'viable-harness-test-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const agent = join(dir, 'agent.json');
+  writeFileSync(agent, JSON.stringify({ entry: 'recall', nodes: [
+    { id: 'recall', type: 'memory', config: { mode: 'recall' }, next: 'keep' },
+    { id: 'keep', type: 'memory', config: { mode: 'save', content: 'Asked for {{input}}' }, next: 'draw' },
+    { id: 'draw', type: 'image', config: { model: 'gpt-image-1', prompt: 'A picture of {{input}}' }, next: 'out' },
+    { id: 'out', type: 'output', config: { text: 'Remembered: {{recall.text}}', attachments: '{{draw.urls}}' } }
+  ] }));
+  const asked = [];
+  const server = createServer((req, res) => {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', () => {
+      asked.push({ url: req.url, body: JSON.parse(body) });
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({ data: [{ b64_json: Buffer.from('picture').toString('base64') }] }));
+    });
+  });
+  await new Promise((done) => server.listen(0, '127.0.0.1', done));
+  t.after(() => server.close());
+  const run = (...args) => new Promise((done) => {
+    const bin = fileURLToPath(new URL('../bin/viable-harness.mjs', import.meta.url));
+    const env = { ...process.env, OPENAI_BASE_URL: `http://127.0.0.1:${server.address().port}/v1` };
+    const child = spawn(process.execPath, [bin, 'run', agent, ...args], { env });
+    let out = '';
+    let err = '';
+    child.stdout.on('data', (chunk) => { out += chunk; });
+    child.stderr.on('data', (chunk) => { err += chunk; });
+    child.on('close', (code) => done({ code, out, err }));
+  });
+  const media = join(dir, 'media');
+  const memory = join(dir, 'memory');
+  const first = await run('--input', 'a fox', '--image-model', 'flux', '--media-dir', media, '--memory-dir', memory, '--learner', 's-7');
+  assert.equal(first.code, 0, first.err);
+  const picture = /draw \(image\) completed.*\n {7}picture: (.+\.png)/.exec(first.out)?.[1];
+  assert.ok(picture?.startsWith(media) && readFileSync(picture, 'utf8') === 'picture', first.out);
+  assert.deepEqual(asked[0], { url: '/v1/images/generations', body: { model: 'flux', prompt: 'A picture of a fox' } });
+  assert.ok(existsSync(join(memory, 's-7.json')));
+
+  const second = await run('--input', 'an owl', '--media-dir', media, '--memory-dir', memory, '--learner', 's-7');
+  assert.match(second.out, /^Remembered: - Asked for a fox$/m);
+  const nameless = await run('--input', 'x', '--memory-dir', memory);
+  assert.equal(nameless.code, 1);
+  assert.match(nameless.err, /Memory needs the learner's pseudonymous ID/);
 });

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question or share an idea
+    url: https://github.com/VIABLE-Learning-Lab/viable-harness/discussions
+    about: How to use the harness, what to build next, show and tell. Discussions, not issues.
+  - name: Report a security problem
+    url: https://github.com/VIABLE-Learning-Lab/viable-harness/security/advisories/new
+    about: Privately, never in an issue (SECURITY.md).
+  - name: The VIABLE Developer Platform (hosted courses, keys, billing)
+    url: https://developers.viablelab.org
+    about: For the hosted platform, use its help and support pages; this repository is the open core.

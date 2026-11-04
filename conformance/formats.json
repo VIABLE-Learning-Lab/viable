@@ -1,0 +1,158 @@
+{
+  "suite": "formats",
+  "version": 1,
+  "cases": [
+    { "id": "example-agent", "description": "The agent schema's example is a valid agent file.", "input": { "kind": "agent", "file": "schemas/examples/agent.example.json" }, "expect": { "valid": true, "errors": [] } },
+    { "id": "example-learning-events", "description": "The learning-events schema's example is a valid record.", "input": { "kind": "learning-events", "file": "schemas/examples/learning-events.example.json" }, "expect": { "valid": true, "errors": [] } },
+    { "id": "example-teaching", "description": "The teaching schema's example is valid teaching settings.", "input": { "kind": "teaching", "file": "schemas/examples/teaching.example.json" }, "expect": { "valid": true, "errors": [] } },
+    { "id": "example-argument-writing", "description": "The argument writing course package is valid, refs and graphs included.", "input": { "kind": "course-package", "file": "examples/argument-writing.json" }, "expect": { "valid": true, "errors": [] } },
+    { "id": "example-density-lab", "description": "The density lab course package is valid.", "input": { "kind": "course-package", "file": "examples/density-lab.json" }, "expect": { "valid": true, "errors": [] } },
+    { "id": "example-english-conversation", "description": "The English speaking practice course package is valid.", "input": { "kind": "course-package", "file": "examples/english-conversation.json" }, "expect": { "valid": true, "errors": [] } },
+    { "id": "example-fractions-practice", "description": "The fractions practice course package is valid.", "input": { "kind": "course-package", "file": "examples/fractions-practice.json" }, "expect": { "valid": true, "errors": [] } },
+    { "id": "example-library-research-help", "description": "The library research desk course package is valid, with its knowledge base named by ref.", "input": { "kind": "course-package", "file": "examples/library-research-help.json" }, "expect": { "valid": true, "errors": [] } },
+    { "id": "example-moon-phases-reading", "description": "The moon phases reading course package is valid, with its PDF named by file_ref.", "input": { "kind": "course-package", "file": "examples/moon-phases-reading.json" }, "expect": { "valid": true, "errors": [] } },
+
+    {
+      "id": "agent-minimal", "description": "An agent file needs only its format, version, name and a graph.",
+      "input": { "kind": "agent", "document": { "format": "viable.agent", "format_version": 1, "name": "Echo", "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "out" }, { "id": "out", "type": "output", "config": { "text": "{{input}}" } }] } } },
+      "expect": { "valid": true, "errors": [] }
+    },
+    {
+      "id": "agent-needs-name", "description": "A missing required field is an error at the object that lacks it.",
+      "input": { "kind": "agent", "document": { "format": "viable.agent", "format_version": 1, "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "out" }, { "id": "out", "type": "output" }] } } },
+      "expect": { "valid": false, "errors": ["$"] }
+    },
+    {
+      "id": "agent-format-version", "description": "Only format_version 1 exists.",
+      "input": { "kind": "agent", "document": { "format": "viable.agent", "format_version": 2, "name": "Echo", "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "out" }, { "id": "out", "type": "output" }] } } },
+      "expect": { "valid": false, "errors": ["$.format_version"] }
+    },
+    {
+      "id": "agent-unknown-step-type", "description": "A step type the engine doesn't have is a schema error at the step's type.",
+      "input": { "kind": "agent", "document": { "format": "viable.agent", "format_version": 1, "name": "Echo", "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "out" }, { "id": "out", "type": "teleport" }] } } },
+      "expect": { "valid": false, "errors": ["$.graph.nodes[1].type"] }
+    },
+    {
+      "id": "agent-run-limits", "description": "An agent's own run limits stay within the platform's bounds (at most 60 model calls).",
+      "input": { "kind": "agent", "document": { "format": "viable.agent", "format_version": 1, "name": "Echo", "graph": { "entry": "in", "run_limits": { "max_model_calls": 100 }, "nodes": [{ "id": "in", "type": "input", "next": "out" }, { "id": "out", "type": "output" }] } } },
+      "expect": { "valid": false, "errors": ["$.graph.run_limits.max_model_calls"] }
+    },
+    {
+      "id": "agent-graph-checks", "description": "Once the shape fits, the engine's own graph checks run, and their error is at the graph.",
+      "input": { "kind": "agent", "document": { "format": "viable.agent", "format_version": 1, "name": "Echo", "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "nowhere" }, { "id": "out", "type": "output" }] } } },
+      "expect": { "valid": false, "errors": ["$.graph"] }
+    },
+
+    {
+      "id": "package-minimal", "description": "A course package needs only its format, version and a course with a title.",
+      "input": { "kind": "course-package", "document": { "format": "viable.course-package", "version": 1, "course": { "title": "Fractions" } } },
+      "expect": { "valid": true, "errors": [] }
+    },
+    {
+      "id": "package-unknown-help-level", "description": "An activity's teaching settings are checked against the teaching format.",
+      "input": { "kind": "course-package", "document": { "format": "viable.course-package", "version": 1, "course": { "title": "Fractions", "activities": [{ "title": "Adding fractions", "teaching": { "help": "do_it_for_them" } }] } } },
+      "expect": { "valid": false, "errors": ["$.course.activities[0].teaching.help"] }
+    },
+    {
+      "id": "package-questions-panel-needs-set", "description": "A Questions panel names its question set.",
+      "input": { "kind": "course-package", "document": { "format": "viable.course-package", "version": 1, "course": { "title": "Fractions", "activities": [{ "title": "Check", "workspace": { "panels": [{ "id": "check", "type": "questions" }] } }] } } },
+      "expect": { "valid": false, "errors": ["$.course.activities[0].workspace.panels[0]"] }
+    },
+    {
+      "id": "package-question-set-resolves", "description": "A Questions panel's set_ref must name one of the package's question sets.",
+      "input": { "kind": "course-package", "document": { "format": "viable.course-package", "version": 1, "question_sets": [{ "ref": "check", "title": "Check", "items": [{ "type": "short", "prompt": "What is 1/2 + 1/4?" }] }], "course": { "title": "Fractions", "activities": [{ "title": "Check", "workspace": { "panels": [{ "id": "check", "type": "questions", "set_ref": "gone" }] } }] } } },
+      "expect": { "valid": false, "errors": ["$.course.activities[0].workspace.panels[0].set_ref"] }
+    },
+    {
+      "id": "package-agent-resolves", "description": "An activity's agent_ref must name one of the package's agents.",
+      "input": { "kind": "course-package", "document": { "format": "viable.course-package", "version": 1, "course": { "title": "Fractions", "activities": [{ "title": "Practice", "agent_ref": "tutor" }] } } },
+      "expect": { "valid": false, "errors": ["$.course.activities[0].agent_ref"] }
+    },
+    {
+      "id": "package-agent-graph-checks", "description": "Each agent's graph gets the engine's graph checks, with the error at that graph.",
+      "input": { "kind": "course-package", "document": { "format": "viable.course-package", "version": 1, "agents": [{ "ref": "tutor", "name": "Tutor", "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input" }] } }], "course": { "title": "Fractions" } } },
+      "expect": { "valid": false, "errors": ["$.agents[0].graph"] }
+    },
+    {
+      "id": "package-file-url-https", "description": "A file the package downloads comes by an https address.",
+      "input": { "kind": "course-package", "document": { "format": "viable.course-package", "version": 1, "files": [{ "ref": "reading", "name": "reading.pdf", "url": "http://example.org/reading.pdf" }], "course": { "title": "Moon phases" } } },
+      "expect": { "valid": false, "errors": ["$.files[0].url"] }
+    },
+    {
+      "id": "package-knowledge-base-file-resolves", "description": "A knowledge base's file_refs must name the package's files.",
+      "input": { "kind": "course-package", "document": { "format": "viable.course-package", "version": 1, "files": [{ "ref": "notes", "name": "notes.md", "url": "https://example.org/notes.md" }], "knowledge_bases": [{ "ref": "kb", "name": "Notes", "file_refs": ["notes", "gone"] }], "course": { "title": "Library" } } },
+      "expect": { "valid": false, "errors": ["$.knowledge_bases[0].file_refs[1]"] }
+    },
+    {
+      "id": "package-ref-pattern", "description": "Refs are short names of letters, digits, _, . and -, starting with a letter or digit.",
+      "input": { "kind": "course-package", "document": { "format": "viable.course-package", "version": 1, "agents": [{ "ref": "my tutor", "name": "Tutor", "graph": { "entry": "in", "nodes": [{ "id": "in", "type": "input", "next": "out" }, { "id": "out", "type": "output" }] } }], "course": { "title": "Fractions" } } },
+      "expect": { "valid": false, "errors": ["$.agents[0].ref"] }
+    },
+
+    { "id": "events-minimal", "description": "A record needs only its events, which may be none.", "input": { "kind": "learning-events", "document": { "events": [] } }, "expect": { "valid": true, "errors": [] } },
+    { "id": "events-needs-events", "description": "A record without events isn't one.", "input": { "kind": "learning-events", "document": { "user": "app:1" } }, "expect": { "valid": false, "errors": ["$"] } },
+    { "id": "events-unknown-type", "description": "An event type the format doesn't list is an error at its type.", "input": { "kind": "learning-events", "document": { "events": [{ "type": "mouse.move" }] } }, "expect": { "valid": false, "errors": ["$.events[0].type"] } },
+    {
+      "id": "events-never-keystrokes", "description": "Each event type keeps only its own data fields: keystrokes are never part of the format.",
+      "input": { "kind": "learning-events", "document": { "events": [{ "type": "writing.progress", "data": { "field": "draft", "keys": 12, "keystrokes": "abc" } }] } },
+      "expect": { "valid": false, "errors": ["$.events[0].data.keystrokes"] }
+    },
+    {
+      "id": "events-counts-not-negative", "description": "Counts and milliseconds are at least 0.",
+      "input": { "kind": "learning-events", "document": { "events": [{ "type": "writing.progress", "data": { "field": "draft", "keys": -1, "active_ms": -5 } }] } },
+      "expect": { "valid": false, "errors": ["$.events[0].data.active_ms", "$.events[0].data.keys"] }
+    },
+    {
+      "id": "events-writing-field", "description": "A writing event's field is the plan or the draft.",
+      "input": { "kind": "learning-events", "document": { "events": [{ "type": "writing.start", "data": { "field": "essay" } }] } },
+      "expect": { "valid": false, "errors": ["$.events[0].data.field"] }
+    },
+    {
+      "id": "events-app-data-flat", "description": "An app's own event data is flat: numbers, true/false and short strings.",
+      "input": { "kind": "learning-events", "document": { "events": [{ "type": "app.event", "data": { "badge": "first-draft", "points": 10, "nested": { "a": 1 } } }] } },
+      "expect": { "valid": false, "errors": ["$.events[0].data.nested"] }
+    },
+    { "id": "events-session-pattern", "description": "A session id is 8 to 64 letters, digits, _ or -.", "input": { "kind": "learning-events", "document": { "session": "short", "events": [] } }, "expect": { "valid": false, "errors": ["$.session"] } },
+    { "id": "events-turn-needs-started-at", "description": "A turn says when the message was sent.", "input": { "kind": "learning-events", "document": { "events": [], "turns": [{ "message": "Is my claim clear?" }] } }, "expect": { "valid": false, "errors": ["$.turns[0]"] } },
+    {
+      "id": "events-turn-assessment", "description": "A turn's assessment is one graded answer or a list of them.",
+      "input": { "kind": "learning-events", "document": { "events": [], "turns": [{ "started_at": "2026-10-29T14:02:00Z", "assessment": [{ "skill": "Fractions", "correct": true }, { "skill": "Fractions", "correct": false, "item": "q2" }] }, { "started_at": "2026-10-29T14:03:00Z", "assessment": { "skill": "Fractions", "correct": true } }] } },
+      "expect": { "valid": true, "errors": [] }
+    },
+
+    { "id": "teaching-empty", "description": "Teaching settings may say nothing.", "input": { "kind": "teaching", "document": {} }, "expect": { "valid": true, "errors": [] } },
+    { "id": "teaching-unknown-field", "description": "A field the format doesn't have is an error at it.", "input": { "kind": "teaching", "document": { "goal": "Add fractions", "extra": 1 } }, "expect": { "valid": false, "errors": ["$.extra"] } },
+    { "id": "teaching-unknown-help", "description": "The help level is one of four.", "input": { "kind": "teaching", "document": { "help": "do_it_for_them" } }, "expect": { "valid": false, "errors": ["$.help"] } },
+    {
+      "id": "teaching-section-id", "description": "Sections are keyed by section ID (sec_...); an error about a key's name is at the key, marked (name).",
+      "input": { "kind": "teaching", "document": { "sections": { "period-3": { "help": "hint" } } } },
+      "expect": { "valid": false, "errors": ["$.sections.period-3 (name)"] }
+    },
+    {
+      "id": "teaching-section", "description": "A section's own help level and note.",
+      "input": { "kind": "teaching", "document": { "help": "explain", "sections": { "sec_es": { "help": "hint", "note": "Many in this group are learning English." } } } },
+      "expect": { "valid": true, "errors": [] }
+    },
+    { "id": "teaching-standard-needs-uuid", "description": "A standard is kept with its Learning Commons UUID.", "input": { "kind": "teaching", "document": { "standard": { "description": "Add fractions with unlike denominators." } } }, "expect": { "valid": false, "errors": ["$.standard"] } },
+    {
+      "id": "teaching-misconception-ids", "description": "A misconception and the construct it hinders are named by UUID.",
+      "input": { "kind": "teaching", "document": { "misconceptions": [{ "id": "m1", "description": "Adds the denominators.", "construct": { "id": "c1", "description": "Add fractions with unlike denominators." } }] } },
+      "expect": { "valid": false, "errors": ["$.misconceptions[0].construct.id", "$.misconceptions[0].id"] }
+    },
+    {
+      "id": "teaching-skill-level", "description": "A durable skill's level is 1 to 4.",
+      "input": { "kind": "teaching", "document": { "standard": { "kind": "skill", "uuid": "dc8b48c2-d2cb-5d66-88d7-381fe9655da6", "description": "Evaluate the strength of evidence.", "level": { "number": 5, "name": "Beyond" } } } },
+      "expect": { "valid": false, "errors": ["$.standard.level.number"] }
+    },
+    {
+      "id": "component-valid", "description": "An out-of-process component’s manifest, with its learner data, hosts and evidence.",
+      "input": {"kind": "component", "document": {"id": "acme/fraction-hints", "version": "0.1.0", "slot": "step", "label": "Fraction hints", "summary": "Writes one hint for a fraction problem.", "runs": {"kind": "http", "entry": "https://hints.example.org/v1/hint"}, "receives": ["learner_message", "teaching_settings"], "sends_to": ["hints.example.org"], "uses_models": false, "license": {"code": "Apache-2.0"}, "authors": ["Example Lab"], "cite": "Example Lab (2027). Fraction hints.", "evidence": {"original": "Synthetic: what the authors showed would go here.", "integration": "Synthetic: not yet compared with and without.", "unknown": "Synthetic: effects on learning."}, "risk": "high", "maintainer": {"name": "Example Lab"}, "harness": ">=0.2.0 <1.0.0"}},
+      "expect": {"valid": true, "errors": []}
+    },
+    {
+      "id": "component-invalid", "description": "A manifest with a malformed id, an unknown slot, learner data no slot may receive, and no evidence.",
+      "input": {"kind": "component", "document": {"id": "Fraction Hints", "version": "0.1.0", "slot": "plugin", "label": "Fraction hints", "summary": "Writes one hint for a fraction problem.", "runs": {"kind": "http", "entry": "https://hints.example.org/v1/hint"}, "receives": ["learner_name"], "sends_to": ["hints.example.org"], "uses_models": false, "license": {"code": "Apache-2.0"}, "authors": ["Example Lab"], "cite": "Example Lab (2027). Fraction hints.", "risk": "high", "maintainer": {"name": "Example Lab"}, "harness": ">=0.2.0 <1.0.0"}},
+      "expect": {"valid": false, "errors": ["$", "$.id", "$.receives[0]", "$.slot"]}
+    }
+  ]
+}

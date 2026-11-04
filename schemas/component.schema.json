@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://developers.viablelab.org/schemas/component.schema.json",
+  "title": "A component of the VIABLE harness",
+  "description": "What another team's work (or VIABLE's own) does in the loop, what learner data it receives, where it sends it, its license and citation, and its evidence in three parts. docs/components.md explains each field.",
+  "type": "object",
+  "required": ["id", "version", "slot", "label", "summary", "runs", "receives", "sends_to", "uses_models", "license", "authors", "cite", "evidence", "risk", "maintainer", "harness"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$", "description": "owner/name, never reused" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "description": "the component's own version; agents pin it" },
+    "slot": { "enum": ["context", "step", "detector", "judge", "simulated-learner", "measure"] },
+    "label": { "type": "string", "minLength": 1, "maxLength": 60 },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 280 },
+    "runs": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["core", "mcp", "http"], "description": "core: JavaScript in this repository; mcp or http: out of process" },
+        "entry": { "type": "string", "minLength": 1, "description": "core: the export that runs it, such as checkReply; mcp: the tool's name; http: the endpoint's URL, which the harness POSTs JSON to" },
+        "server": {
+          "type": "object",
+          "required": ["command"],
+          "additionalProperties": false,
+          "description": "mcp: the command and arguments that start its stdio MCP server, run without a shell",
+          "properties": { "command": { "type": "string", "minLength": 1 }, "args": { "type": "array", "items": { "type": "string" } } }
+        },
+        "step_type": { "type": "string", "description": "the graph step type that runs it, when one does" }
+      },
+      "allOf": [
+        { "if": { "properties": { "kind": { "const": "mcp" } } }, "then": { "required": ["entry", "server"] } },
+        { "if": { "properties": { "kind": { "const": "http" } } }, "then": { "required": ["entry"] } }
+      ]
+    },
+    "receives": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["reply", "learner_message", "conversation", "guideline", "answer_key", "reference", "teaching_settings", "learning_events", "case", "teacher_text"] },
+      "description": "the only learner data passed to it; never a learner's name or identifier beyond the pseudonymous id learning events carry"
+    },
+    "sends_to": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9.-]+$" }, "description": "every host it contacts itself, besides the host's own model endpoint" },
+    "uses_models": { "type": "boolean", "description": "whether it calls models: in process through the host's model service, out of process on its own (its model's host then in sends_to)" },
+    "license": {
+      "type": "object",
+      "required": ["code"],
+      "additionalProperties": false,
+      "properties": { "code": { "type": "string" }, "data": { "type": "string" } }
+    },
+    "authors": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "cite": { "type": "string", "minLength": 1 },
+    "attribution": { "type": "string", "description": "carried into every package that uses it" },
+    "evidence": {
+      "type": "object",
+      "required": ["original", "integration", "unknown"],
+      "additionalProperties": false,
+      "properties": {
+        "original": { "type": "string", "minLength": 1, "description": "what its authors showed, and for whom" },
+        "integration": { "type": "string", "minLength": 1, "description": "what comparisons with and without it in the harness showed, with the runs" },
+        "unknown": { "type": "string", "minLength": 1, "description": "what nobody has shown yet, such as effects on learning" }
+      }
+    },
+    "risk": { "enum": ["low", "medium", "high"] },
+    "risk_notes": { "type": "string" },
+    "maintainer": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": { "name": { "type": "string", "minLength": 1 }, "issues": { "type": "string" } }
+    },
+    "harness": { "type": "string", "minLength": 1, "description": "harness versions its fixtures pass on, as a semver range" },
+    "fixtures": { "type": "string", "description": "where its inputs and expected outputs are, for the conformance run" }
+  }
+}

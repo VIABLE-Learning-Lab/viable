@@ -1,39 +1,98 @@
 # Contributing
 
-Thank you for helping. The harness is used with minors, so every change is held to what a teacher,
-a researcher and a developer would each need from it.
+Thanks for helping. The harness is used with minors, so every change is held to what a teacher, a
+researcher and a developer would each need from it. This page covers how to get set up, how to make
+a change, and how it gets reviewed and merged.
 
-## Before you start
+## Ways to help
 
-- Open an issue for anything larger than a fix, so we can agree on where it belongs: in the core,
-  as a component (`integrations/`), or as an example.
-- English only, in code, comments, docs and examples' own text (an example may teach another
-  language).
-- Copy promises only what is built: a README line, a step's tip or a component's page says what the
-  code does today, and marks the rest as planned.
+- **Report a bug or ask for a feature** with an [issue](https://github.com/VIABLE-Learning-Lab/viable-harness/issues/new/choose).
+- **Ask, answer or show what you built** in [Discussions](https://github.com/VIABLE-Learning-Lab/viable-harness/discussions).
+- **Improve the docs or an example**: small fixes are the best first pull request.
+- **Bring your research in as a component**: open a [component proposal](https://github.com/VIABLE-Learning-Lab/viable-harness/issues/new?template=component.yml) first, then see [docs/components.md](docs/components.md).
+- **Fix or build something**: look for [good first issues](https://github.com/VIABLE-Learning-Lab/viable-harness/labels/good%20first%20issue) and [help wanted](https://github.com/VIABLE-Learning-Lab/viable-harness/labels/help%20wanted); for anything larger than a fix, open an issue first so we can agree on where it belongs.
 
-## The change itself
+## Set up
 
-- `npm test` passes, including `test/boundary.test.js`: the code imports only Node's built-ins, its
-  own files and the npm packages listed there, each under MIT or Apache-2.0. A new dependency needs a
-  reason a few lines of code can't meet.
-- A new or changed step type changes its manifest in `src/agents/steps/`, then
-  `npm run steps:build` ([docs/step-manifests.md](docs/step-manifests.md)).
-- A change to a format (`schemas/`) or to what a setting means is at least a minor version, with a
-  note on moving existing files.
-- No learner's name or identifier ever reaches a model from the core, and fixtures hold no real
-  learner's data: write synthetic ones.
-- AI-assisted contributions are welcome when a person has read, run and tested them, and says so.
+Node 22 or later. No model key is needed for the tests: they script the model's replies and fail if
+anything reaches the network.
 
-## Sign-off (DCO)
+```sh
+git clone https://github.com/VIABLE-Learning-Lab/viable-harness.git
+cd viable-harness
+npm ci
+npm test
+```
 
-Each commit carries a `Signed-off-by:` line (`git commit -s`), certifying the
-[Developer Certificate of Origin](https://developercertificate.org): that you wrote the change or
-otherwise may submit it under the project's license (MIT for code, CC BY 4.0 for data and docs).
-There is no contributor license agreement, and the project's licenses won't change.
+| Where | What |
+| --- | --- |
+| `src/agents/` | the graph engine (`engine.js`), its checks (`graph.js`), expressions, VETTING's prompts, and one manifest per step type in `steps/` |
+| `src/utils/` | How the AI helps (`teaching.js`), the research measures, the misconception search and the data copies |
+| `src/` | the public functions: `run.js`, `check.js`, `agentTests.js` and `testRuns.js`, `suggest.js`, `view.js`, `mcp.js`, `xapi.js`, `conformance.js`, `validate.js` |
+| `src/components/` | the built-in components' manifests |
+| `schemas/`, `conformance/` | the open formats, and the fixtures another implementation checks itself against |
+| `examples/`, `skills/`, `docs/` | course packages, Agent Skills, documentation |
+| `bin/viable-harness.mjs` | the command line |
+| `test/` | the tests; `boundary.test.js` keeps the harness standing alone |
 
-## Review
+## Making a change
 
-A maintainer (MAINTAINERS.md) reviews every pull request. Components are also reviewed against the
-checklist in [docs/components.md](docs/components.md) once it exists; until then, open an issue
-first.
+- **Keep the harness standing alone.** Code imports only Node's built-ins, its own files and the npm
+  packages `test/boundary.test.js` lists. Dependencies are under MIT or Apache-2.0; the one exception,
+  `entities` (BSD-2-Clause), is named there. A new dependency needs a reason a few lines of code
+  can't meet. Modules a host bundles for a server or a browser (the engine,
+  `agentTests.js`, `suggest.js`) import no `node:` built-ins; local-only code (`run.js`,
+  `knowledge.js`) may.
+- **Protect learners.** No learner's name or identifier is ever sent to a model, and fixtures, tests
+  and examples hold no real learner's data: write synthetic ones.
+- **Say only what is built.** README lines, step tips, component pages and docs describe what the code
+  does today and mark the rest as planned.
+- **Formats and settings.** A change to a schema or to what a setting means is at least a minor
+  version, with a note in CHANGELOG.md on moving existing files. A changed step manifest needs
+  `npm run steps:build`.
+- **Tests.** New behavior comes with a test; a bug fix with the test that would have caught it.
+- **English** in code, comments and docs (an example may teach another language).
+- **AI-assisted contributions** are welcome when a person has read, run and tested them, and says so.
+
+## Pull requests
+
+1. Branch from `main` (`fix/empty-reply`, `feat/judge-component`), and keep a pull request to one
+   change.
+2. Give it a title in Conventional Commits form, `type(scope): description`, with `feat`, `fix`,
+   `docs`, `refactor`, `test`, `perf`, `chore` or `ci`; the scope is optional and `!` marks a breaking
+   change (`npm run check:pr-title -- "your title"`). The title becomes the commit's subject.
+3. **Sign off every commit** (`git commit -s`): it certifies the [Developer Certificate of
+   Origin](https://developercertificate.org), that you wrote the change or may submit it under the
+   project's licenses (MIT for code, CC BY 4.0 for data and docs). There is no contributor license
+   agreement, and the project's licenses won't change. Forgot? `git rebase --signoff main`.
+4. Fill in the template: what and why, how you checked it.
+
+### How a pull request lands
+
+Checks run on every pull request: the tests on Node 22 and 24, the title and the sign-off. A
+maintainer reviews it (CODEOWNERS), usually within a week, and squash-merges it, so you are the
+author of the commit on `main`.
+
+The harness is also developed inside VIABLE's platform repository, which runs this exact code. A
+maintainer brings your commit into it, under `harness/`, keeping you as its author and recording
+which commit here it came from; it goes through that repository's review and tests like any other
+change, and when it is merged there, the next publication recognises it as already here and adds
+nothing. Changes made in the platform repository arrive here as commits whose
+`Viablelab-Api-Commit:` line names the commit they came from.
+
+## Components
+
+A component is another team's work in one of six slots (context, step, detector, judge, simulated
+learner, measure), with a manifest stating the learner data it receives, the hosts it calls, its
+license and its evidence. [docs/components.md](docs/components.md) has the format, the review
+checklist and how to add one; we write the adapter with its authors where we can.
+
+## Releases
+
+Maintainers cut releases from `main`: the version in `package.json`, a CHANGELOG entry, a `vX.Y.Z`
+tag and a GitHub release with the changelog's notes.
+
+## Conduct and security
+
+Everyone here follows the [code of conduct](CODE_OF_CONDUCT.md). Report security problems privately
+([SECURITY.md](SECURITY.md)), never in an issue.

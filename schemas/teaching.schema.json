@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://developers.viablelab.org/schemas/teaching.schema.json",
   "title": "VIABLE teaching settings (How the AI helps)",
   "description": "An activity's teaching settings: the teacher's goal, a K-12 standard or a durable skill as it was chosen, how far the AI may go, what the teacher wants to hear about, misconceptions to listen for, and a section's own help level and note. The agent is given the goal, the standard and the help level as instructions with its reply steps (VETTING's reviewer checks them too) and as context.workspace.teaching; watch_for stays with the teacher. An instruction, not a guarantee.",
   "type": "object",

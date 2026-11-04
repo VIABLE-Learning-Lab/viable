@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://developers.viablelab.org/schemas/agent.schema.json",
   "title": "VIABLE agent file (.agent.json)",
   "description": "An exported agent: its workflow (graph) and profile, and what it depends on by reference (models, knowledge bases by their settings and website sources, published sub-agents), so another project or account can rebuild it. Uploaded files, pasted text and an uploaded avatar stay behind. `viable-harness validate` also runs VIABLE's own graph checks (src/agents/graph.js validateGraph) on the graph.",
   "type": "object",

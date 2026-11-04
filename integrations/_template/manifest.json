@@ -1,0 +1,24 @@
+{
+  "id": "example/answer-requests",
+  "version": "0.1.0",
+  "slot": "detector",
+  "label": "Answer requests (template)",
+  "summary": "Marks the turns where a learner asks for the answer instead of help. A template: copy it to start a component of your own.",
+  "runs": { "kind": "http", "entry": "http://127.0.0.1:8787/detect" },
+  "receives": ["learning_events"],
+  "sends_to": ["127.0.0.1"],
+  "uses_models": false,
+  "license": { "code": "MIT" },
+  "authors": ["VIABLE Lab"],
+  "cite": "VIABLE harness, integrations/_template.",
+  "evidence": {
+    "original": "None: it matches a few phrases, and was written to show the shape of a component.",
+    "integration": "Its fixtures pass through callComponent in the harness's tests; its marks have not been compared with teachers' labels.",
+    "unknown": "Whether these phrases find the turns a teacher would mark. A real detector reports its agreement with teachers' labels on a sample."
+  },
+  "risk": "medium",
+  "risk_notes": "A wrong mark misleads a teacher. It runs on this machine, calls no model and sends nothing elsewhere.",
+  "maintainer": { "name": "VIABLE Lab" },
+  "harness": ">=0.2.0 <1.0.0",
+  "fixtures": "fixtures/"
+}
