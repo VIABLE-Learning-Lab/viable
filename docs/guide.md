@@ -170,8 +170,10 @@ beside it, and the teacher view shows them. Rules, no model, so each one says ex
 | Misconception heard | a misconception named in the records of 3 or more learners isn't listened for | adding it, with the construct it hinders |
 | Stuck on a skill | at least 40% of the learners who answered a skill, and 3 or more, are wheel-spinning on it | one step more help, for their section when they share one |
 
-`applySuggestion(teaching, suggestion)` gives the settings with one accepted; on VIABLE, accepted
-settings become the activity's next version. A suggestion describes what the records show and what
+A run's `label`, when it has one, names it in the evidence (a host that keeps its runs names them
+its own way); otherwise it is "Run 1", "Run 2" in the order given. `applySuggestion(teaching,
+suggestion)` gives the settings with one accepted; on VIABLE, accepted settings become the
+activity's next version. A suggestion describes what the records show and what
 to try; it never says what learners learned, and the thresholds are first values to revisit with
 teachers (`SUGGESTION_THRESHOLDS`).
 

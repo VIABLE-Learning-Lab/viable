@@ -20,14 +20,15 @@ const clip = (value, max = 200) => { const text = String(value || '').replace(/\
 const share = (part, whole) => `${part} of ${whole} (${Math.round((100 * part) / whole)}%)`;
 const levelName = (level) => (level ? `“${level.replace('_', ' ')}”` : 'none set');
 
-// The VETTING steps of each run that had one: its first round, its last outcome.
+// The VETTING steps of each run that had one: its first round, its last outcome. A run's label names it
+// in the evidence (a host that keeps runs itself names them its own way); else its place in the list.
 function reviews(runs) {
   return runs.map((run, index) => {
     const steps = (run?.steps || []).filter((step) => step?.nodeType === 'vetting' && step.output);
     if (!steps.length) return null;
     const rounds = steps.flatMap((step) => step.output.attempt_details || []);
     const message = steps[0].input?.message ?? run.steps.find((step) => step?.nodeType === 'input')?.output?.message;
-    return { index, first: rounds[0] || null, outcome: steps.at(-1).output.outcome, message: typeof message === 'string' ? message : null };
+    return { label: typeof run.label === 'string' && run.label.trim() ? clip(run.label, 80) : `Run ${index + 1}`, first: rounds[0] || null, outcome: steps.at(-1).output.outcome, message: typeof message === 'string' ? message : null };
   }).filter(Boolean);
 }
 
@@ -69,7 +70,7 @@ function answersGivenAway(settings, checked, limits) {
   const lower = current ? HELP_ORDER[HELP_ORDER.indexOf(current) - 1] : 'hint';
   const evidence = [
     `${share(away.length, checked.length)} replies VETTING reviewed failed their first review for giving too much away.`,
-    ...away.slice(0, 3).map((item) => `Run ${item.index + 1}, the reviewer: “${clip(item.first.feedback)}”`)
+    ...away.slice(0, 3).map((item) => `${item.label}, the reviewer: “${clip(item.first.feedback)}”`)
   ];
   if (!lower) {
     return [{ id: 'answers_given_away', rule: 'answers_given_away', patch: null, evidence,
@@ -88,7 +89,7 @@ function repliesUnverified(checked, limits) {
   return [{ id: 'replies_unverified', rule: 'replies_unverified', patch: null,
     change: 'Read the replies that never passed review, and decide what to change.',
     why: 'When no draft passes, the learner gets the agent’s fallback instead of help. The rounds show whether the guideline, the help level or the questions asked are the cause.',
-    evidence: [`${share(failed.length, checked.length)} replies ended unverified.`, ...failed.slice(0, 3).map((item) => `Run ${item.index + 1}${item.message ? `, “${clip(item.message, 120)}”` : ''}`)] }];
+    evidence: [`${share(failed.length, checked.length)} replies ended unverified.`, ...failed.slice(0, 3).map((item) => `${item.label}${item.message ? `, “${clip(item.message, 120)}”` : ''}`)] }];
 }
 
 function misconceptionsHeard(settings, learners, limits) {
@@ -147,9 +148,9 @@ function stuckOnASkill(settings, learners, limits) {
 
 /**
  * Suggested changes to an activity's teaching settings from runs (run --json traces: their VETTING
- * rounds) and learner records (misconceptions they name, skill measures). Returns
- * [{ id, rule, change, why, evidence: [...], patch }]; patch is null when the suggestion asks the
- * teacher to look rather than proposing a setting.
+ * rounds; an optional label names each in the evidence) and learner records (misconceptions they
+ * name, skill measures). Returns [{ id, rule, change, why, evidence: [...], patch }]; patch is null
+ * when the suggestion asks the teacher to look rather than proposing a setting.
  */
 export function suggestChanges({ teaching = null, runs = [], records = [] } = {}, thresholds = {}) {
   const limits = { ...SUGGESTION_THRESHOLDS, ...thresholds };

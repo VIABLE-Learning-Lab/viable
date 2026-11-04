@@ -20,6 +20,8 @@ test('drafts that keep giving answers away suggest asking the AI for less help',
   assert.deepEqual(applySuggestion({ goal, help: 'explain' }, suggestion), { goal, help: 'hint', watch_for: null, standard: null });
   assert.deepEqual(suggestChanges({ teaching: { goal, help: 'explain' }, runs: runs.slice(0, 4) }), [], 'too few runs to say');
   assert.equal(suggestChanges({ teaching: { goal, help: 'check_only' }, runs })[0].patch, null, 'nothing lower than check only');
+  const labelled = suggestChanges({ teaching: { goal, help: 'explain' }, runs: runs.map((item, i) => ({ ...item, label: `L-AAAA0${i} on Nov 2` })) })[0];
+  assert.match(labelled.evidence[1], /^L-AAAA00 on Nov 2, the reviewer:/, 'a host names its runs its own way');
 });
 
 test('replies that never pass review ask the teacher to look, proposing nothing', () => {
