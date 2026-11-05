@@ -1,0 +1,43 @@
+{
+  "id": "convolearn",
+  "name": "ConvoLearn",
+  "kind": "dataset",
+  "summary": "2,134 conversations between 323 credentialed teachers and a simulated seventh grader on Earth science, labeled for how they build knowledge.",
+  "subjects": [
+    "science"
+  ],
+  "grades": "7",
+  "url": "https://huggingface.co/datasets/masharma/convolearn",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "MIT"
+    ],
+    "source": "https://huggingface.co/datasets/masharma/convolearn"
+  },
+  "access": "open download",
+  "formats": [
+    "Parquet"
+  ],
+  "made_by": [
+    "Mayank Sharma",
+    "Roy Pea",
+    "Hari Subramonyam"
+  ],
+  "cite": "Sharma, M., Pea, R., & Subramonyam, H. (2026). ConvoLearn: A Dataset for Fine-Tuning Dialogic AI Tutors. Under review. Hugging Face: masharma/convolearn.",
+  "fits": {
+    "slots": [
+      "judge"
+    ],
+    "how": "Test cases, and ratings to calibrate a judge against. New, with little track record, and the student is simulated by a model."
+  },
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Listed. Nothing here fetches it yet."
+  },
+  "status": "released",
+  "in_harness": null,
+  "verified_at": "2026-11-04"
+}

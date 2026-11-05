@@ -1,0 +1,42 @@
+{
+  "id": "unesco-ai-competency-students",
+  "name": "AI competency framework for students (UNESCO)",
+  "kind": "standards",
+  "summary": "What students should be able to do with AI, as a framework a school can set goals from.",
+  "subjects": [
+    "durable-skills"
+  ],
+  "grades": "school",
+  "url": "https://unesdoc.unesco.org/ark:/48223/pf0000391105",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-SA-3.0-IGO"
+    ],
+    "source": "https://unesdoc.unesco.org/ark:/48223/pf0000391105",
+    "note": "Share-alike applies to what you adapt from it, and UNESCO marks some images as outside the license."
+  },
+  "access": "open download",
+  "formats": [
+    "PDF"
+  ],
+  "made_by": [
+    "UNESCO"
+  ],
+  "cite": "UNESCO (2024). AI competency framework for students. https://unesdoc.unesco.org/ark:/48223/pf0000391105",
+  "fits": {
+    "slots": [
+      "context"
+    ],
+    "how": "Goals for an activity on AI literacy."
+  },
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Listed. Read it and write a goal from it."
+  },
+  "status": "released",
+  "in_harness": null,
+  "verified_at": "2026-11-04"
+}

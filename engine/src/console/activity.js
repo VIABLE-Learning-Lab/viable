@@ -4,7 +4,8 @@
  * message, and what it would be told at a moment the teacher types, from the same code a run uses. No
  * Node built-ins.
  */
-import { teachingContext, teachingSettings } from '../../../harness/src/utils/teaching.js';
+import { guidanceFrom } from '../../../harness/src/components/contract.js';
+import { TEACHING_LIMITS, teachingContext, teachingSettings } from '../../../harness/src/utils/teaching.js';
 import { ITEM_TYPES, normalizeItems } from '../learner/questions.js';
 import { forgetActivity, sectionsOf } from '../server/classList.js';
 import { activityKeys } from '../server/library.js';
@@ -14,6 +15,7 @@ import { choose, esc, oneOf, say, text, toggle, withForms } from './forms.js';
 // Large data, loaded when a page asks for it, so a server that never opens these starts small.
 const misconceptions = () => import('../../../harness/src/utils/misconceptions.js');
 const skills = () => import('../../../harness/src/utils/skills.js');
+const research = () => import('../../../harness/src/components/guidance.js');
 const refused = (message, status = 400, code = 'invalid_activity') => Object.assign(new Error(message), { status, code });
 const clean = (value, limit) => String(value ?? '').trim().slice(0, limit);
 const FORM = 'activity';
@@ -107,11 +109,26 @@ ${say()}
 </div>`;
 }
 
-// Guidance comes with a package or from viable-harness component add. Here it is shown, as it goes into what the AI reads.
-const guidanceBlock = (activity) => {
+// What research says to do at each moment, for a person to choose from: the AI gets only what is chosen, and at most two pieces with each message.
+const MOMENT_FOR = { attempt: 'giving an answer', asks_answer: 'asking for the answer', stuck: 'stuck', repeated: 'still not there after trying' };
+function guidanceBlock(activity, api, locked, frameworks) {
   const chosen = activity.teaching?.guidance || [];
-  return chosen.length ? `<div class="part" id="guidance"><h3>Guidance from research <small>each turn takes at most two that fit the moment</small></h3>
-<ul class="picked">${chosen.map((item) => `<li><p>${esc(item.text)}${item.source ? `<small>${esc(item.source)}</small>` : ''}</p></li>`).join('')}</ul></div>` : '';
+  const held = new Set(chosen.map((item) => item.text));
+  const full = chosen.length >= TEACHING_LIMITS.guidance;
+  const piece = (framework) => (item, index) => `<li><p>${esc(item.text)}<small>${esc([item.when ? `For a learner ${item.when.map((moment) => MOMENT_FOR[moment]).join(' or ')}` : 'When what they say calls for it', item.source].filter(Boolean).join(' · '))}</small></p>${held.has(item.text) ? '<span class="v-note">Chosen</span>' : full ? '' : `<button class="v-btn is-small" type="button" data-api="POST ${api}/guidance" data-body='${esc(JSON.stringify({ component: framework.id, item: index + 1 }))}' data-said="Added.">Add</button>`}</li>`;
+  return `<div class="part" id="guidance" data-say-box>
+<h3>Guidance from research <small>optional · with each message it gets at most two pieces that fit the moment</small></h3>
+${chosen.length ? `<ul class="picked">${chosen.map((item, index) => `<li><p>${esc(item.text)}${item.source ? `<small>${esc(item.source)}</small>` : ''}</p>${locked ? '' : `<button class="v-btn is-small" type="button" data-api="DELETE ${api}/guidance/${index}" data-said="Removed.">Remove</button>`}</li>`).join('')}</ul>` : ''}
+${locked ? '' : `<details class="library" id="guidance-library"><summary>${chosen.length ? 'Choose more' : 'Choose from what research says'}</summary>
+<p class="v-note">A sentence or two for the AI, in our words, each naming the studies it draws on. Most of the research is on human tutors, so each topic says what isn’t known. Up to ${TEACHING_LIMITS.guidance}.</p>
+${frameworks.map((framework) => `<details class="framework" id="g-${esc(framework.id.split('/')[1])}"><summary><strong>${esc(framework.label)}</strong> <small>${framework.runs.items.length}</small></summary>
+<p class="v-note">${esc(framework.summary)}</p>
+<details class="shows" id="s-${esc(framework.id.split('/')[1])}"><summary>What the research shows, and what isn’t known</summary><p>${esc(framework.evidence.original)}</p><p>${esc(framework.evidence.unknown)}</p></details>
+<ul class="picked">${framework.runs.items.map(piece(framework)).join('')}</ul>
+</details>`).join('')}
+</details>`}
+${say()}
+</div>`;
 };
 
 function misconceptionsBlock(activity, api, locked) {
@@ -219,7 +236,7 @@ ${onForm(toggle('files_on', 'Attach PDFs', Boolean(reads.files) && activity.atta
 </div>
 ${standardBlock(activity, api, locked)}
 ${misconceptionsBlock(activity, api, locked)}
-${guidanceBlock(activity)}
+${guidanceBlock(activity, api, locked, (await research()).GUIDANCE)}
 </section>
 <section class="block" aria-labelledby="open-title">
 <h2 id="open-title">When it is open</h2>
@@ -274,6 +291,13 @@ const ACTIVITY_CSS = `.two-sides{display:grid;grid-template-columns:minmax(0,1fr
 .picked li{display:flex;gap:12px;justify-content:space-between;align-items:start;padding:10px 12px;border-radius:var(--radius-sm);background:var(--field-mist)}
 .picked p{margin:0;font-size:.9375rem;line-height:1.45}
 .picked small{display:block;color:var(--muted);font-size:.8125rem}
+.library{display:grid;gap:10px}
+.library summary,.framework summary,.shows summary{color:var(--ink-blue);font-size:.9375rem;cursor:pointer}
+.framework{margin-top:10px}
+.framework summary strong{color:var(--public-ink);font-weight:600}
+.framework summary small{color:var(--muted)}
+.framework>.v-note,.shows{margin:8px 0}
+.shows p{margin:6px 0 0;color:var(--public-text);font-size:.875rem;line-height:1.5}
 .tools{display:grid;gap:10px}
 .kind-fields{display:grid;gap:14px;padding:14px 16px;border-left:2px solid var(--public-rule)}
 .kind-fields[hidden]{display:none}
@@ -530,6 +554,24 @@ export const activityPages = [
       }],
       ['DELETE', /^courses\/([\w-]+)\/activities\/([\w-]+)\/misconceptions\/([\w-]+)$/, async ({ library }, match) => {
         await changeCourse(library, match[1], null, (doc) => { const { activity } = activityIn(doc, match[2]); withTeaching(activity, { misconceptions: (activity.teaching?.misconceptions || []).filter((item) => item.id !== match[3]) }); }, 'Removed a misconception');
+        return { said: 'Removed.' };
+      }],
+      ['POST', /^courses\/([\w-]+)\/activities\/([\w-]+)\/guidance$/, async ({ library }, match, body) => {
+        const framework = (await research()).GUIDANCE.find((item) => item.id === body?.component);
+        const number = Number(body?.item);
+        if (!framework || !Number.isInteger(number) || number < 1 || number > framework.runs.items.length) throw refused('That guidance isn’t here.', 404, 'guidance_not_found');
+        const [taken] = guidanceFrom(framework, { chosen: [number] });
+        await changeCourse(library, match[1], null, (doc) => {
+          const { activity } = activityIn(doc, match[2]);
+          const held = activity.teaching?.guidance || [];
+          if (held.some((item) => item.text === taken.text)) return;
+          if (held.length >= TEACHING_LIMITS.guidance) throw refused(`An activity keeps at most ${TEACHING_LIMITS.guidance} pieces of guidance. Remove one first.`);
+          withTeaching(activity, { guidance: [...held, taken] });
+        }, 'Chose guidance from research');
+        return { said: 'Added.' };
+      }],
+      ['DELETE', /^courses\/([\w-]+)\/activities\/([\w-]+)\/guidance\/(\d+)$/, async ({ library }, match) => {
+        await changeCourse(library, match[1], null, (doc) => { const { activity } = activityIn(doc, match[2]); withTeaching(activity, { guidance: (activity.teaching?.guidance || []).filter((_, index) => index !== Number(match[3])) }); }, 'Removed guidance');
         return { said: 'Removed.' };
       }],
       ['POST', /^courses\/([\w-]+)\/activities\/([\w-]+)\/standard$/, async ({ library }, match, body) => {

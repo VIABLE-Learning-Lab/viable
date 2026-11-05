@@ -78,15 +78,14 @@ function byWords(items, terms, limit) {
 
 // Guidance fits a moment it names, in the order its author gave, or else shares two words with what was said.
 // about, where it has one, says what it applies to: the activity's goal counts for that, as well as what was said.
-function guidanceFor(items, moment, terms, goal) {
+// Those for a moment take turns as the conversation goes on, so a learner doesn't get the same two every time.
+function guidanceFor(items, moment, terms, goal, turn = 0) {
   const inPlay = new Set([...terms, ...searchTerms(goal)]);
   const shared = (item, words) => searchTerms(item.about || item.text).filter((word) => words.has(word)).length;
-  return items
-    .filter((item) => (item.when ? item.when.includes(moment) && (!item.about || shared(item, inPlay) >= 1) : shared(item, terms) >= 2))
-    .map((item, index) => ({ item, index, score: item.when ? 100 + (item.about ? shared(item, inPlay) : 0) : shared(item, terms) }))
-    .sort((a, b) => b.score - a.score || a.index - b.index)
-    .slice(0, BRIEF_LIMITS.guidance)
-    .map((entry) => entry.item);
+  const forMoment = items.filter((item) => item.when?.includes(moment) && (!item.about || shared(item, inPlay) >= 1));
+  const start = forMoment.length ? turn % forMoment.length : 0;
+  const byWords = items.filter((item) => !item.when && shared(item, terms) >= 2).sort((a, b) => shared(b, terms) - shared(a, terms));
+  return [...forMoment.slice(start), ...forMoment.slice(0, start), ...byWords].slice(0, BRIEF_LIMITS.guidance);
 }
 
 function pickByWords(candidates, message, history, goal) {
@@ -98,7 +97,7 @@ function pickByWords(candidates, message, history, goal) {
     misconceptions: byWords(candidates.misconceptions, terms, BRIEF_LIMITS.misconceptions),
     components: byWords(candidates.components, terms, BRIEF_LIMITS.components),
     prior: [],
-    guidance: guidanceFor(candidates.guidance, moment, terms, goal)
+    guidance: guidanceFor(candidates.guidance, moment, terms, goal, Math.floor(history.length / 2))
   };
 }
 

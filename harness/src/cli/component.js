@@ -7,11 +7,12 @@ import { parseArgs } from 'node:util';
 import { turnBrief } from '../brief.js';
 import { lookup } from '../components/call.js';
 import { checkManifest, guidanceFrom } from '../components/contract.js';
+import { component } from '../components/index.js';
 import { TEACHING_LIMITS, teachingSettings } from '../utils/teaching.js';
 
 export const COMPONENT_USAGE = `  viable-harness component new <owner/name> [--slot context|detector] [--out <folder>]
-  viable-harness component try <manifest.json> --teaching teaching.json --message "..." [--items 1,2] [--history history.json]
-  viable-harness component add <manifest.json> --teaching teaching.json [--items 1,2] [--out teaching.json]`;
+  viable-harness component try <manifest.json or an id, such as viable/feedback> --teaching teaching.json --message "..." [--items 1,2] [--history history.json]
+  viable-harness component add <manifest.json or an id> --teaching teaching.json [--items 1,2] [--out teaching.json]`;
 const TEMPLATES = { context: '_template-context', detector: '_template' };
 const ID = /^[a-z0-9][a-z0-9-]*\/[a-z0-9][a-z0-9-]*$/;
 const readJson = (path) => {
@@ -39,9 +40,12 @@ async function guidanceIn(manifest, teaching, numbers, dir) {
   return guidanceFrom(manifest, { items, chosen: numbers });
 }
 
+// What the harness carries, by its id, or a manifest in a file.
+const manifestOf = (target) => (!existsSync(target) && component(target)) || readJson(target);
+
 async function tryIt(file, values) {
   if (!values.teaching || !values.message) throw new Error(`Give --teaching teaching.json and --message "...".\n\nUsage:\n${COMPONENT_USAGE}`);
-  const manifest = readJson(file);
+  const manifest = manifestOf(file);
   const teaching = readJson(values.teaching);
   const taken = await guidanceIn(manifest, teaching, numbersOf(values.items), join(file, '..'));
   const turn = { message: values.message, history: values.history ? readJson(values.history) : [] };
@@ -56,7 +60,7 @@ async function tryIt(file, values) {
 
 async function addIt(file, values) {
   if (!values.teaching) throw new Error(`Give --teaching teaching.json.\n\nUsage:\n${COMPONENT_USAGE}`);
-  const manifest = readJson(file);
+  const manifest = manifestOf(file);
   const teaching = readJson(values.teaching);
   const taken = await guidanceIn(manifest, teaching, numbersOf(values.items), join(file, '..'));
   const guidance = [...(teaching.guidance ?? []), ...taken];

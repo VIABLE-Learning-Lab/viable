@@ -1,0 +1,41 @@
+{
+  "id": "eef-toolkit",
+  "name": "EEF Teaching and Learning Toolkit",
+  "kind": "content",
+  "summary": "What evidence says about teaching approaches, with cost and strength of evidence, from the Education Endowment Foundation.",
+  "subjects": [
+    "any"
+  ],
+  "grades": "5-16",
+  "url": "https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit",
+  "repository": null,
+  "license": {
+    "spdx": [],
+    "source": "https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit",
+    "note": "All rights reserved. Read and cite it, and paraphrase its findings: its text can’t go in a package."
+  },
+  "access": "open download",
+  "formats": [
+    "HTML",
+    "PDF"
+  ],
+  "made_by": [
+    "Education Endowment Foundation"
+  ],
+  "cite": "Education Endowment Foundation. Teaching and Learning Toolkit. https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit",
+  "fits": {
+    "slots": [
+      "context"
+    ],
+    "how": "Findings to read when choosing what to do. VIABLE’s guidance on metacognition draws on it, in its own words."
+  },
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Listed, to read. Nothing here copies it."
+  },
+  "status": "released",
+  "in_harness": null,
+  "verified_at": "2026-11-04"
+}

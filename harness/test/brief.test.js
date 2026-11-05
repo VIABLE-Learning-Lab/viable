@@ -115,8 +115,8 @@ test('guidance a person chose comes when it fits the moment, at most two, with i
   ];
   const teaching = { goal: 'Add fractions with unlike denominators.', help: 'hint', guidance };
   const attempt = await turnBrief(teaching, { message: 'i got 2/5' });
-  assert.deepEqual(attempt.guidance.map((item) => item.text), ['Ask what fractions need in common before adding.', 'Ask how they got it before correcting.'], 'about-words first, then the author\'s order, two at most');
-  assert.match(attempt.text, /From research, where it fits:\n- Ask what fractions need in common before adding\.\n- Ask how they got it before correcting\. \(A framework\)/);
+  assert.deepEqual(attempt.guidance.map((item) => item.text), ['Ask how they got it before correcting.', 'Ask what fractions need in common before adding.'], 'in the author\'s order, two at most');
+  assert.match(attempt.text, /From research, where it fits:\n- Ask how they got it before correcting\. \(A framework\)\n- Ask what fractions need in common before adding\./);
   assert.ok(!attempt.text.includes('poem'), 'not about this');
   const asks = await turnBrief(teaching, { message: 'just tell me the answer' });
   assert.deepEqual(asks.guidance.map((item) => item.text), ['Offer the smallest next step.']);

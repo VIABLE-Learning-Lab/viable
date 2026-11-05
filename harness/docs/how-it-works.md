@@ -28,7 +28,7 @@ turn.chosen;         // which misconceptions, skill components and guidance it t
 
 | Stage | Who | From | To | When |
 | --- | --- | --- | --- | --- |
-| Choosing for an activity | A teacher, or an assistant working with one | Every state's standards, 8,117 misconceptions, a framework's 200 pieces of guidance | One standard, up to 8 misconceptions, up to 20 pieces of guidance, kept in the activity | Once, before class |
+| Choosing for an activity | A teacher, or an assistant working with one | Every state's standards, 8,117 misconceptions, 77 pieces of guidance and whatever others publish | One standard, up to 8 misconceptions, up to 20 pieces of guidance, kept in the activity | Once, before class |
 | Choosing for a turn | Rules, or a small model | That short list | One move, and at most 2 of each kind | Every message |
 
 What is chosen for an activity is kept as it was, with where it came from. A run never waits on a far-off service, and a
@@ -43,14 +43,15 @@ record can say exactly what the AI was given.
 | Misconceptions ([Eedi](https://www.eedi.com)) | 8,117, under 2,258 skills, 1.2 MB | In the package | The teacher ticks up to 8, or words search the skills | At most 2 |
 | Durable skills (Carnegie) | 60 KB | In the package | The teacher picks one | Its level |
 | Standards ([Learning Commons](https://learningcommons.org)) | About 1 GB for every state | Not in the package. Hosted: `find_standards`. Yours: `viable-harness resources` downloads the release and keeps one state's | The teacher picks one, kept with its learning components | At most 2 components, 1 earlier standard |
-| [Guidance from others' research](components.md) | Up to 500 items in a component's file | That file, and up to 20 copied into an activity | A person, then the moment | At most 2 |
+| [Guidance from research](components.md) | 77 pieces on 8 topics, each naming its studies, in the package; anyone's own, up to 500 in a component's file | In the package or that file, and up to 20 copied into an activity | A person, then the moment | At most 2 |
 | Your own documents | Whatever you have | Not in the Harness: your agent's retrieval, or the Engine's knowledge | Search | What search finds |
-| [The catalog](catalog.md) | 41 public goods, described | Descriptions in the package. Data comes from its makers when you fetch it | You | Nothing directly. It becomes test suites, judges and knowledge |
+| [The catalog](catalog.md) | 54 public goods, described | Descriptions in the package. Data comes from its makers when you fetch it | You | Nothing directly. It becomes test suites, judges and knowledge |
 
 ## How a turn chooses
 
 **By rules, with no model call and no cost.** Patterns read the moment, in English. A list item is taken when it shares at
-least two words with what was just said, the closest first. Guidance can name its moments, and then it comes at those.
+least two words with what was just said, the closest first. Guidance can name its moments, and then those for the moment take
+turns as the conversation goes on, so a learner doesn't hear the same two every time.
 
 **By a small model, for one more call a turn** (`pickerModel`). It reads the conversation and the numbered list, and answers
 which to take. It reads any language, and more of the moments. If it fails or takes too long, rules decide.

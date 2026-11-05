@@ -104,6 +104,90 @@ export const CATALOG = [
     "verified_at": "2026-11-03"
   },
   {
+    "id": "unesco-ai-competency-students",
+    "name": "AI competency framework for students (UNESCO)",
+    "kind": "standards",
+    "summary": "What students should be able to do with AI, as a framework a school can set goals from.",
+    "subjects": [
+      "durable-skills"
+    ],
+    "grades": "school",
+    "url": "https://unesdoc.unesco.org/ark:/48223/pf0000391105",
+    "repository": null,
+    "license": {
+      "spdx": [
+        "CC-BY-SA-3.0-IGO"
+      ],
+      "source": "https://unesdoc.unesco.org/ark:/48223/pf0000391105",
+      "note": "Share-alike applies to what you adapt from it, and UNESCO marks some images as outside the license."
+    },
+    "access": "open download",
+    "formats": [
+      "PDF"
+    ],
+    "made_by": [
+      "UNESCO"
+    ],
+    "cite": "UNESCO (2024). AI competency framework for students. https://unesdoc.unesco.org/ark:/48223/pf0000391105",
+    "fits": {
+      "slots": [
+        "context"
+      ],
+      "how": "Goals for an activity on AI literacy."
+    },
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Listed. Read it and write a goal from it."
+    },
+    "status": "released",
+    "in_harness": null,
+    "verified_at": "2026-11-04"
+  },
+  {
+    "id": "unesco-ai-competency-teachers",
+    "name": "AI competency framework for teachers (UNESCO)",
+    "kind": "standards",
+    "summary": "What teachers should be able to do with AI, for professional learning and for reading what a tool asks of them.",
+    "subjects": [
+      "durable-skills"
+    ],
+    "grades": "teachers",
+    "url": "https://unesdoc.unesco.org/ark:/48223/pf0000391104",
+    "repository": null,
+    "license": {
+      "spdx": [
+        "CC-BY-SA-3.0-IGO"
+      ],
+      "source": "https://unesdoc.unesco.org/ark:/48223/pf0000391104",
+      "note": "Share-alike applies to what you adapt from it, and UNESCO marks some images as outside the license."
+    },
+    "access": "open download",
+    "formats": [
+      "PDF"
+    ],
+    "made_by": [
+      "UNESCO"
+    ],
+    "cite": "UNESCO (2024). AI competency framework for teachers. https://unesdoc.unesco.org/ark:/48223/pf0000391104",
+    "fits": {
+      "slots": [
+        "context"
+      ],
+      "how": "Goals for a course for teachers."
+    },
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Listed. Read it and write a goal from it."
+    },
+    "status": "released",
+    "in_harness": null,
+    "verified_at": "2026-11-04"
+  },
+  {
     "id": "carnegie-skills-progressions",
     "name": "Carnegie Skills Progressions",
     "kind": "standards",
@@ -194,6 +278,90 @@ export const CATALOG = [
       "note": "Comes down as its PDF, which a local run doesn't read as knowledge, so nothing is made from it. Non-commercial and share-alike: asks you to accept its license first."
     },
     "verified_at": "2026-11-03"
+  },
+  {
+    "id": "ngss",
+    "name": "Next Generation Science Standards",
+    "kind": "standards",
+    "summary": "K-12 science standards, adopted or adapted by many U.S. states.",
+    "subjects": [
+      "science"
+    ],
+    "grades": "K-12",
+    "url": "https://www.nextgenscience.org/",
+    "repository": null,
+    "license": {
+      "spdx": [
+        "LicenseRef-NGSS-public-license"
+      ],
+      "source": "https://www.nextgenscience.org/ngss-trademarks-and-copyright/ngss-trademarks-and-copyright",
+      "note": "States, districts, schools, teachers and non-profit education entities may copy and adapt them without permission. A commercial user needs to look further, and the name NGSS has its own rules."
+    },
+    "access": "open download",
+    "formats": [
+      "PDF",
+      "HTML"
+    ],
+    "made_by": [
+      "NGSS Lead States"
+    ],
+    "cite": "NGSS Lead States (2013). Next Generation Science Standards: For States, By States. National Academies Press.",
+    "fits": {
+      "slots": [
+        "context"
+      ],
+      "how": "A standard for an activity, in a teacher’s own words or through a standards search."
+    },
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Listed. A teacher can write a standard into a goal; the search here finds what Learning Commons carries."
+    },
+    "status": "released",
+    "in_harness": null,
+    "verified_at": "2026-11-04"
+  },
+  {
+    "id": "eef-toolkit",
+    "name": "EEF Teaching and Learning Toolkit",
+    "kind": "content",
+    "summary": "What evidence says about teaching approaches, with cost and strength of evidence, from the Education Endowment Foundation.",
+    "subjects": [
+      "any"
+    ],
+    "grades": "5-16",
+    "url": "https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit",
+    "repository": null,
+    "license": {
+      "spdx": [],
+      "source": "https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit",
+      "note": "All rights reserved. Read and cite it, and paraphrase its findings: its text can’t go in a package."
+    },
+    "access": "open download",
+    "formats": [
+      "HTML",
+      "PDF"
+    ],
+    "made_by": [
+      "Education Endowment Foundation"
+    ],
+    "cite": "Education Endowment Foundation. Teaching and Learning Toolkit. https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit",
+    "fits": {
+      "slots": [
+        "context"
+      ],
+      "how": "Findings to read when choosing what to do. VIABLE’s guidance on metacognition draws on it, in its own words."
+    },
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Listed, to read. Nothing here copies it."
+    },
+    "status": "released",
+    "in_harness": null,
+    "verified_at": "2026-11-04"
   },
   {
     "id": "illustrative-mathematics",
@@ -328,6 +496,93 @@ export const CATALOG = [
       "note": "Books as web pages and PDFs, with a different license by edition, most now non-commercial. Not connected until a book can be fetched as text with its license checked book by book."
     },
     "verified_at": "2026-11-03"
+  },
+  {
+    "id": "tutor-move-taxonomy",
+    "name": "Tutor Move Taxonomy",
+    "kind": "content",
+    "summary": "A coding scheme for tutors’ moves, from the National Tutoring Observatory: tutoring, learning, social-emotional and logistical support.",
+    "subjects": [
+      "any"
+    ],
+    "grades": "not stated",
+    "url": "https://arxiv.org/abs/2603.05778",
+    "repository": null,
+    "license": {
+      "spdx": [
+        "CC-BY-4.0"
+      ],
+      "source": "https://arxiv.org/abs/2603.05778",
+      "note": "The license covers the paper; the related TutorMoveLib repository has none."
+    },
+    "access": "open download",
+    "formats": [
+      "PDF"
+    ],
+    "made_by": [
+      "Zhuqian Zhou",
+      "Kirk Vanacore",
+      "Tamisha Thompson",
+      "Jennifer St John",
+      "Rene Kizilcec"
+    ],
+    "cite": "Zhou, Z., Vanacore, K., Thompson, T., St John, J., & Kizilcec, R. (2026). Tutor Move Taxonomy: A Theory-Aligned Framework for Analyzing Instructional Moves in Tutoring. https://arxiv.org/abs/2603.05778",
+    "fits": {
+      "slots": [
+        "judge",
+        "detector"
+      ],
+      "how": "A rubric for a judge, and labels for a detector. A preprint."
+    },
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Listed. Nothing here fetches it yet."
+    },
+    "status": "released",
+    "in_harness": null,
+    "verified_at": "2026-11-04"
+  },
+  {
+    "id": "udl-guidelines",
+    "name": "Universal Design for Learning Guidelines",
+    "kind": "content",
+    "summary": "CAST’s guidelines for designing learning for everyone: ways of engaging, of representing, and of acting and expressing.",
+    "subjects": [
+      "any"
+    ],
+    "grades": "any",
+    "url": "https://udlguidelines.cast.org/",
+    "repository": null,
+    "license": {
+      "spdx": [],
+      "source": "https://www.cast.org/terms-of-use/",
+      "note": "No copying without written consent, unless a license on the site allows it, and none was found on the guidelines. Read and cite them."
+    },
+    "access": "open download",
+    "formats": [
+      "HTML"
+    ],
+    "made_by": [
+      "CAST"
+    ],
+    "cite": "CAST (2024). Universal Design for Learning Guidelines version 3.0. https://udlguidelines.cast.org/",
+    "fits": {
+      "slots": [
+        "context"
+      ],
+      "how": "A way to think about access when writing how the AI helps."
+    },
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Listed, to read. Nothing here copies it."
+    },
+    "status": "released",
+    "in_harness": null,
+    "verified_at": "2026-11-04"
   },
   {
     "id": "wwc-practice-guides",
@@ -511,6 +766,48 @@ export const CATALOG = [
     "verified_at": "2026-11-03"
   },
   {
+    "id": "cima",
+    "name": "CIMA",
+    "kind": "dataset",
+    "summary": "Tutoring conversations role-played by crowdworkers, with several tutor replies to each input and labels for tutor actions.",
+    "subjects": [
+      "english-language-development"
+    ],
+    "grades": "not stated",
+    "url": "https://github.com/kstats/CIMA",
+    "repository": null,
+    "license": {
+      "spdx": [
+        "CC-BY-2.5"
+      ],
+      "source": "https://github.com/kstats/CIMA",
+      "note": "Stated in the README. The repository has no LICENSE file."
+    },
+    "access": "open download",
+    "formats": [
+      "JSON"
+    ],
+    "made_by": [
+      "Katherine Stasaski, Kimberly Kao, Marti A. Hearst"
+    ],
+    "cite": "Stasaski, K., Kao, K., & Hearst, M. A. (2020). CIMA: A Large Open Access Dialogue Dataset for Tutoring. BEA Workshop. https://doi.org/10.18653/v1/2020.bea-1.5",
+    "fits": {
+      "slots": [
+        "judge"
+      ],
+      "how": "Test cases, with several human replies to compare a tutor against. Nobody in it is a real learner or a trained tutor."
+    },
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Listed. Nothing here fetches it yet."
+    },
+    "status": "released",
+    "in_harness": null,
+    "verified_at": "2026-11-04"
+  },
+  {
     "id": "clear-corpus",
     "name": "CLEAR corpus (CommonLit Ease of Readability)",
     "kind": "dataset",
@@ -552,6 +849,49 @@ export const CATALOG = [
       "note": "Comes down as its spreadsheet. XLSX, which the harness doesn't read, and each passage has its own license, so nothing is made from it. Asks you to accept its unclear license first."
     },
     "verified_at": "2026-11-03"
+  },
+  {
+    "id": "convolearn",
+    "name": "ConvoLearn",
+    "kind": "dataset",
+    "summary": "2,134 conversations between 323 credentialed teachers and a simulated seventh grader on Earth science, labeled for how they build knowledge.",
+    "subjects": [
+      "science"
+    ],
+    "grades": "7",
+    "url": "https://huggingface.co/datasets/masharma/convolearn",
+    "repository": null,
+    "license": {
+      "spdx": [
+        "MIT"
+      ],
+      "source": "https://huggingface.co/datasets/masharma/convolearn"
+    },
+    "access": "open download",
+    "formats": [
+      "Parquet"
+    ],
+    "made_by": [
+      "Mayank Sharma",
+      "Roy Pea",
+      "Hari Subramonyam"
+    ],
+    "cite": "Sharma, M., Pea, R., & Subramonyam, H. (2026). ConvoLearn: A Dataset for Fine-Tuning Dialogic AI Tutors. Under review. Hugging Face: masharma/convolearn.",
+    "fits": {
+      "slots": [
+        "judge"
+      ],
+      "how": "Test cases, and ratings to calibrate a judge against. New, with little track record, and the student is simulated by a model."
+    },
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Listed. Nothing here fetches it yet."
+    },
+    "status": "released",
+    "in_harness": null,
+    "verified_at": "2026-11-04"
   },
   {
     "id": "ellipse",
@@ -789,6 +1129,49 @@ export const CATALOG = [
     "verified_at": "2026-11-03"
   },
   {
+    "id": "oulad",
+    "name": "Open University Learning Analytics Dataset",
+    "kind": "dataset",
+    "summary": "More than 30,000 students’ records across seven modules, with what they did in the learning platform.",
+    "subjects": [
+      "any"
+    ],
+    "grades": "university, distance learners",
+    "url": "https://archive.ics.uci.edu/dataset/349/open+university+learning+analytics+dataset",
+    "repository": null,
+    "license": {
+      "spdx": [
+        "CC-BY-4.0"
+      ],
+      "source": "https://archive.ics.uci.edu/dataset/349/open+university+learning+analytics+dataset"
+    },
+    "access": "open download",
+    "formats": [
+      "CSV"
+    ],
+    "made_by": [
+      "Jakub Kuzilek",
+      "Martin Hlosta",
+      "Zdenek Zdrahal"
+    ],
+    "cite": "Kuzilek, J., Hlosta, M., & Zdrahal, Z. (2017). Open University Learning Analytics dataset. Scientific Data, 4, 170171. https://doi.org/10.1038/sdata.2017.171",
+    "fits": {
+      "slots": [
+        "measure"
+      ],
+      "how": "Real records to check measures of engagement and mastery against. It holds no tutoring talk."
+    },
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Listed. Nothing here fetches it yet."
+    },
+    "status": "released",
+    "in_harness": null,
+    "verified_at": "2026-11-04"
+  },
+  {
     "id": "persuade-2",
     "name": "PERSUADE 2.0",
     "kind": "dataset",
@@ -872,6 +1255,50 @@ export const CATALOG = [
       "note": "Not released yet, its audio is to be restricted, and the harness passes no audio to components."
     },
     "verified_at": "2026-11-03"
+  },
+  {
+    "id": "studychat",
+    "name": "StudyChat",
+    "kind": "dataset",
+    "summary": "Real students’ dialogues with ChatGPT in an AI course, with dialogue-act labels and the scores of those who consented.",
+    "subjects": [
+      "computer-science"
+    ],
+    "grades": "university",
+    "url": "https://huggingface.co/datasets/wmcnicho/StudyChat",
+    "repository": null,
+    "license": {
+      "spdx": [
+        "CC-BY-4.0"
+      ],
+      "source": "https://huggingface.co/datasets/wmcnicho/StudyChat"
+    },
+    "access": "account",
+    "access_note": "Gated on Hugging Face.",
+    "formats": [
+      "JSON"
+    ],
+    "made_by": [
+      "Hunter McNichols",
+      "Fareya Ikram",
+      "Andrew Lan"
+    ],
+    "cite": "McNichols, H., Ikram, F., & Lan, A. (2025). The StudyChat Dataset: Analyzing Student Dialogues With ChatGPT in an Artificial Intelligence Course. https://arxiv.org/abs/2503.07928",
+    "fits": {
+      "slots": [
+        "detector"
+      ],
+      "how": "Real messages for a detector or test cases. One course, and its labels were made by a model."
+    },
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Listed. Nothing here fetches it yet."
+    },
+    "status": "released",
+    "in_harness": null,
+    "verified_at": "2026-11-04"
   },
   {
     "id": "talkmoves",
@@ -1228,6 +1655,49 @@ export const CATALOG = [
     "verified_at": "2026-11-03"
   },
   {
+    "id": "minorbench",
+    "name": "MinorBench",
+    "kind": "benchmark",
+    "summary": "299 prompts in six risk categories, with four system prompts, for checking a teaching assistant meant for children.",
+    "subjects": [
+      "any"
+    ],
+    "grades": "children",
+    "url": "https://huggingface.co/datasets/govtech/MinorBench",
+    "repository": null,
+    "license": {
+      "spdx": [
+        "MIT"
+      ],
+      "source": "https://huggingface.co/datasets/govtech/MinorBench"
+    },
+    "access": "open download",
+    "formats": [
+      "Parquet"
+    ],
+    "made_by": [
+      "Shaun Khoo",
+      "Gabriel Chua",
+      "Rachel Shong"
+    ],
+    "cite": "Khoo, S., Chua, G., & Shong, R. (2025). MinorBench: A hand-built benchmark for content-based risks for children. https://arxiv.org/abs/2503.10242",
+    "fits": {
+      "slots": [
+        "judge"
+      ],
+      "how": "Test cases for safety with children. It measures refusals, not teaching, and holds sensitive prompts, so handle fixtures with care."
+    },
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Listed. Nothing here fetches it yet."
+    },
+    "status": "released",
+    "in_harness": null,
+    "verified_at": "2026-11-04"
+  },
+  {
     "id": "mrbench",
     "name": "MRBench and the BEA 2025 shared task data",
     "kind": "benchmark",
@@ -1271,6 +1741,49 @@ export const CATALOG = [
       "note": "Checks your judge model against trained annotators, with no labels of your own, on tutors' replies to learners' math mistakes: confusion table, agreement and kappa, half Yes and half No. It describes this model on these replies and this rubric (--dimension), not your agent. Its license is unclear for commercial use: asks you to accept it first. These are real tutoring conversations from its sources: running this sends them to the model you name, so use one whose terms you accept."
     },
     "verified_at": "2026-11-03"
+  },
+  {
+    "id": "pedagogy-benchmark",
+    "name": "Pedagogy Benchmark",
+    "kind": "benchmark",
+    "summary": "1,143 multiple-choice questions from teacher training exams, on general pedagogy and special educational needs, with public leaderboards.",
+    "subjects": [
+      "any"
+    ],
+    "grades": "teacher training",
+    "url": "https://huggingface.co/datasets/AI-for-Education/pedagogy-benchmark",
+    "repository": "https://github.com/AI-for-Education/pedagogy-benchmark",
+    "license": {
+      "spdx": [
+        "MIT"
+      ],
+      "source": "https://huggingface.co/datasets/AI-for-Education/pedagogy-benchmark",
+      "note": "The tag doesn’t say who holds the rights in the exam questions, and its makers ask that examples not be shown online."
+    },
+    "access": "account",
+    "access_note": "Gated on Hugging Face: accept its terms to get it.",
+    "formats": [
+      "Parquet"
+    ],
+    "made_by": [
+      "AI-for-Education.org"
+    ],
+    "cite": "Lelièvre, M., Waldock, A., Liu, M., Valdés Aspillaga, N., Mackintosh, A., Ogando Portela, M. J., Lee, J., Atherton, P., et al. (2025). Benchmarking the Pedagogical Knowledge of Large Language Models. https://arxiv.org/abs/2506.18710",
+    "fits": {
+      "slots": [
+        "judge"
+      ],
+      "how": "Tests what a model knows about pedagogy, not how it teaches."
+    },
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Listed. Nothing here fetches it yet."
+    },
+    "status": "released",
+    "in_harness": null,
+    "verified_at": "2026-11-04"
   },
   {
     "id": "productive-coaching-benchmark",
@@ -1618,6 +2131,54 @@ export const CATALOG = [
       "note": "Python code to clone and run yourself. It would play the learner, and no agent test uses a simulated learner yet."
     },
     "verified_at": "2026-11-03"
+  },
+  {
+    "id": "oatutor",
+    "name": "OATutor",
+    "kind": "tool",
+    "summary": "An open adaptive tutoring system with a library of problems, hints and scaffolds, from college algebra, statistics and calculus texts.",
+    "subjects": [
+      "math"
+    ],
+    "grades": "college",
+    "url": "https://github.com/CAHLR/OATutor",
+    "repository": null,
+    "license": {
+      "spdx": [
+        "MIT",
+        "CC-BY-4.0"
+      ],
+      "source": "https://github.com/CAHLR/OATutor",
+      "note": "Code under MIT; content under CC BY 4.0, and each file names its own source and license."
+    },
+    "access": "open download",
+    "formats": [
+      "JSON",
+      "JavaScript"
+    ],
+    "made_by": [
+      "Zachary A. Pardos",
+      "Matthew Tang",
+      "Ioannis Anastasopoulos",
+      "Shreya K. Sheel",
+      "Ethan Zhang"
+    ],
+    "cite": "Pardos, Z. A., Tang, M., Anastasopoulos, I., Sheel, S. K., & Zhang, E. (2023). OATutor: An Open-source Adaptive Tutoring System and Curated Content Library for Learning Sciences Research. CHI 2023. https://doi.org/10.1145/3544548.3581574",
+    "fits": {
+      "slots": [
+        "judge"
+      ],
+      "how": "Its problems with worked hints could become test cases for a tutor, and its content a knowledge base. College texts, not K-12."
+    },
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Listed. Nothing here fetches it yet."
+    },
+    "status": "released",
+    "in_harness": null,
+    "verified_at": "2026-11-04"
   },
   {
     "id": "pybkt",

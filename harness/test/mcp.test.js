@@ -10,7 +10,7 @@ import { handleMcpMessage } from '../src/mcpProtocol.js';
 import { mcpTools } from '../src/mcpTools.js';
 
 const json = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
-const TOOL_NAMES = ['check_reply', 'prepare_task', 'teaching_instructions', 'find_misconceptions', 'compute_measures', 'validate_document', 'run_agent', 'draft_tests', 'run_agent_tests', 'calibrate_judge', 'suggest_changes', 'list_components', 'find_public_goods'];
+const TOOL_NAMES = ['check_reply', 'prepare_task', 'teaching_instructions', 'find_misconceptions', 'find_guidance', 'compute_measures', 'validate_document', 'run_agent', 'draft_tests', 'run_agent_tests', 'calibrate_judge', 'suggest_changes', 'list_components', 'find_public_goods'];
 
 // A scripted OpenAI-compatible endpoint: each call takes the next reply (the last one repeats).
 function scripted(...replies) {
@@ -374,4 +374,11 @@ test('with no runtimes, a host gets the tools that need none, and only the views
   assert.deepEqual(asked.result.serverInfo, { name: 'hosted', version: '1' });
   assert.equal(asked.result.instructions, undefined);
   assert.equal((await handleMcpMessage(request('tools/list'), { tools: pure })).result.tools.length, pure.length, 'with no session, as a new connection');
+});
+
+test('find_guidance gives what research says for a moment, each piece with its source and each topic with what isn\'t known', async () => {
+  const stuck = (await call(mcpServer(), 'find_guidance', { moment: 'stuck', topic: 'worked examples' })).structuredContent;
+  assert.ok(stuck.topics.length >= 1);
+  assert.ok(stuck.topics.every((topic) => topic.unknown && topic.pieces.length && topic.pieces.every((piece) => piece.source && (!piece.when || piece.when.includes('stuck')))));
+  assert.equal((await call(mcpServer(), 'find_guidance', {})).structuredContent.topics.length, 8);
 });

@@ -9,10 +9,10 @@ the AIs people are using, with your name on it, without each of them building it
 
 | You have | Its slot | What you write | What happens then |
 | --- | --- | --- | --- |
-| Guidance, a framework, moves, a list of what goes wrong | `context` | One JSON file. No server, and no learner's data reaches you | Someone adds pieces to an activity, and each turn takes those that fit the moment, with your name beside them |
+| Guidance, a framework, moves, a list of what goes wrong | `context` | One JSON file. No server, and no learner's data reaches you | Someone adds pieces to an activity, on a screen or from a file, and each turn takes those that fit the moment, with your name beside them |
 | A method that writes or checks a reply | `step` | A manifest, and an address or an MCP tool that runs it | A builder puts it in a workflow as a Component step, on the Developer Platform or the Engine |
 | A way to rate replies | `judge` | The same | Agent tests rate replies with it, and say so in the result |
-| A method that reads what happened | `detector` or `measure` | The same | `detect` and `measure` return its marks and numbers, from code or `viable-harness measure --component`. They aren't on a teacher's Progress yet |
+| A method that reads what happened | `detector` or `measure` | The same | `detect` and `measure` return its marks and numbers, from code or `viable-harness measure --component`. On the Engine, a teacher adds a detector on What to look at and runs it there, and its marks show beside the class |
 | A dataset or a benchmark | None: an entry in the [catalog](catalog.md), and a connector | An entry | `viable-engine test --suite` runs it against an agent |
 
 ## A context component in five minutes
@@ -55,11 +55,12 @@ settings go, since they travel with the activity: `prepare`, the gateway, the En
 - **Your credit travels:** your citation goes with every copy, and a record says which pieces went into a reply.
 - **A way to show what it does:** compare replies with and without it in agent tests, and report that apart from what your
   own studies showed.
-- **A page** with what it does, what it receives, its license, its evidence and how to cite it, once it is reviewed.
+- **A page** with what it does, what it receives, its license, its evidence and how to cite it, once it is reviewed, and how many
+  replies on the Developer Platform it went into in the last 30 days. Servers of one's own report nothing.
 - **Help with the first ones.** VIABLE writes the adapter for early partners, and you review it.
 
-Not built yet: choosing guidance on a screen (the Engine's console and the Developer Platform take it in the settings, by
-file or API), a detector's marks on Progress, a reviewed catalog of components, and telling authors how much theirs was used.
+Not built yet: a reviewed catalog of outside components, and a detector's marks on the Developer Platform, where they would send
+minors' data to someone else (the Engine's Progress shows them).
 
 ## The six slots
 
@@ -87,6 +88,14 @@ written by `npm run components:build` (`npm test` checks the pages are current).
 | [`carnegie/skills-progressions`](components/carnegie-skills-progressions.md) | context | `SKILLS`, the copy in `src/utils/skillsData.js` |
 | [`viable/learner-measures`](components/viable-learner-measures.md) | measure | `measureLearner` |
 | [`viable/reply-judge`](components/viable-reply-judge.md) | judge | `runAgentTests` |
+| [`viable/scaffolding`](components/viable-scaffolding.md) | context | 10 pieces of guidance from research |
+| [`viable/feedback`](components/viable-feedback.md) | context | 10 pieces of guidance from research |
+| [`viable/tutoring-talk`](components/viable-tutoring-talk.md) | context | 10 pieces of guidance from research |
+| [`viable/self-explanation`](components/viable-self-explanation.md) | context | 9 pieces of guidance from research |
+| [`viable/worked-examples`](components/viable-worked-examples.md) | context | 10 pieces of guidance from research |
+| [`viable/productive-struggle`](components/viable-productive-struggle.md) | context | 10 pieces of guidance from research |
+| [`viable/retrieval-and-spacing`](components/viable-retrieval-and-spacing.md) | context | 8 pieces of guidance from research |
+| [`viable/metacognition-and-motivation`](components/viable-metacognition-and-motivation.md) | context | 10 pieces of guidance from research |
 
 ## The manifest
 

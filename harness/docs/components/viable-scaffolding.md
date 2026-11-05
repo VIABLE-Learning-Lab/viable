@@ -1,0 +1,79 @@
+# Scaffolding and fading
+
+<!-- Written from the manifest in src/components/ by npm run components:build; don’t edit by hand. -->
+
+How much help to give and when to withdraw it: help fitted to what the learner just did, the least that keeps them moving, and less of it as they improve.
+
+| | |
+| --- | --- |
+| Id | `viable/scaffolding`, version 0.1.0 |
+| Slot | context |
+| Runs | Nothing runs: its guidance is in this file, and an activity keeps the pieces chosen for it. |
+| Receives | nothing |
+| Sends it to | no other host |
+| Models | calls none |
+| License | data CC-BY-4.0 |
+| Authors | VIABLE Lab |
+| Risk | low: Its text goes to a model as guidance. Nothing runs and nothing about a learner goes anywhere. What the teacher set for how far to go comes first. Most of the research is about human tutors, so a piece can still misfit a learner or a moment. |
+| Maintainer | VIABLE Lab |
+| Harness | `>=0.3.0 <1.0.0` |
+
+## How to cite
+
+VIABLE Lab (2026). Scaffolding and fading: guidance from research. The wording is VIABLE Lab's; each piece names the studies it draws on.
+
+## Attribution
+
+Wording by VIABLE Lab, CC BY 4.0. The findings belong to the researchers each piece cites.
+
+## Evidence
+
+**What its authors showed.** The idea comes from a descriptive study of an adult tutoring children aged 3 to 5 on a block-building task (Wood et al., 1976), not a trial. A review of a decade of classroom research named fitting help to the learner, fading it and handing over responsibility as the core, and found few effectiveness studies (van de Pol et al., 2010). A meta-analysis of 144 experiments on computer-based scaffolding in STEM, primary to adult, found g = 0.46 on cognitive outcomes, with no detectable difference from fading or adding support (Belland et al., 2017). In one classroom experiment with 768 students aged 12-15, better fitted help won only when groups also had long stretches of independent work (van de Pol et al., 2015). Help that suits beginners can lose its value or backfire as they gain expertise (Kalyuga et al., 2003). How much to give and withhold is an open problem (Koedinger & Aleven, 2007). Gaming hints went with lower test scores in one classroom study (Baker et al., 2004), and teaching better help use changed the behavior but not learning (Aleven et al., 2016). Concreteness fading rests on a review of math and science work that argues mainly from theory (Fyfe et al., 2014).
+
+**What comparisons in the harness showed.** Not yet compared in VIABLE.
+
+**What nobody has shown yet.** Almost all of this is about human tutors, teachers and rule-based tutoring software, not language models. No study has tested these moves given to a model one or two at a time. Whether fading adds anything over steady, well-fitted support is unsettled, and how to judge from a short chat what a learner can do alone is unknown.
+
+## Its guidance
+
+What a model is told, and when it fits. A turn takes at most two pieces from what an activity keeps.
+
+1. Find out what they can already do on this step before you help, then fit the help to that rather than to the next item in your plan.
+
+   *For a learner stuck, with nothing tried, or asking for the answer.* van de Pol, J., Volman, M., & Beishuizen, J. (2010). Scaffolding in teacher-student interaction: A decade of research. Educational Psychology Review, 22(3), 271-296. https://doi.org/10.1007/s10648-010-9127-6 Wood, D., Bruner, J. S., & Ross, G. (1976). The role of tutoring in problem solving. Journal of Child Psychology and Psychiatry, 17(2), 89-100. https://doi.org/10.1111/j.1469-7610.1976.tb00381.x
+
+2. Give the least help that lets them take the next step themselves: a nudge to look again first, then a pointer to the part that matters, and a fuller hint only if that fails.
+
+   *For a learner stuck, with nothing tried, or asking for the answer, or still not there after trying.* Wood, D., Bruner, J. S., & Ross, G. (1976). The role of tutoring in problem solving. Journal of Child Psychology and Psychiatry, 17(2), 89-100. https://doi.org/10.1111/j.1469-7610.1976.tb00381.x Koedinger, K. R., & Aleven, V. (2007). Exploring the assistance dilemma in experiments with Cognitive Tutors. Educational Psychology Review, 19(3), 239-264. https://doi.org/10.1007/s10648-007-9049-0
+
+3. Draw their attention to the feature of the problem that matters, and let them work out what to do about it.
+
+   *For a learner stuck, with nothing tried, or still not there after trying.* Wood, D., Bruner, J. S., & Ross, G. (1976). The role of tutoring in problem solving. Journal of Child Psychology and Psychiatry, 17(2), 89-100. https://doi.org/10.1111/j.1469-7610.1976.tb00381.x
+
+4. If they have lost the thread, remind them what they are trying to find and how this step serves it.
+
+   *For a learner stuck, with nothing tried.* Wood, D., Bruner, J. S., & Ross, G. (1976). The role of tutoring in problem solving. Journal of Child Psychology and Psychiatry, 17(2), 89-100. https://doi.org/10.1111/j.1469-7610.1976.tb00381.x
+
+5. If frustration is building, make the task smaller for now, such as handling one routine part yourself, and say you will hand it back.
+
+   *For a learner still not there after trying.* Wood, D., Bruner, J. S., & Ross, G. (1976). The role of tutoring in problem solving. Journal of Child Psychology and Psychiatry, 17(2), 89-100. https://doi.org/10.1111/j.1469-7610.1976.tb00381.x
+
+6. Let them work before you step in again: ask them to try the step alone and come back with what they found, instead of stacking more prompts.
+
+   *For a learner giving an answer or some working, or stuck, with nothing tried.* van de Pol, J., Volman, M., Oort, F., & Beishuizen, J. (2015). The effects of scaffolding in the classroom: Support contingency and student independent working time in relation to student achievement, task effort and appreciation of support. Instructional Science, 43(5), 615-641. https://doi.org/10.1007/s11251-015-9351-z
+
+7. Once they have done a step with help, ask them to do the next similar one with less: drop the prompt you used last time, and add it back only if they stall.
+
+   *For a learner giving an answer or some working.* van de Pol, J., Volman, M., & Beishuizen, J. (2010). Scaffolding in teacher-student interaction: A decade of research. Educational Psychology Review, 22(3), 271-296. https://doi.org/10.1007/s10648-010-9127-6 Renkl, A., & Atkinson, R. K. (2003). Structuring the transition from example study to problem solving in cognitive skill acquisition: A cognitive load perspective. Educational Psychologist, 38(1), 15-22. https://doi.org/10.1207/S15326985EP3801_3
+
+8. When they get one right unaided, hand over more of the work: let them plan the next step or choose the method rather than prompting each move.
+
+   *For a learner giving an answer or some working.* van de Pol, J., Volman, M., & Beishuizen, J. (2010). Scaffolding in teacher-student interaction: A decade of research. Educational Psychology Review, 22(3), 271-296. https://doi.org/10.1007/s10648-010-9127-6 Kalyuga, S., Ayres, P., Chandler, P., & Sweller, J. (2003). The expertise reversal effect. Educational Psychologist, 38(1), 23-31. https://doi.org/10.1207/S15326985EP3801_4
+
+9. If they keep asking for hints without trying, stop the hints leading to the answer: ask for one attempt, even a guess, before you give more.
+
+   *For a learner asking for the answer, or still not there after trying.* Shute, V. J. (2008). Focus on formative feedback. Review of Educational Research, 78(1), 153-189. https://doi.org/10.3102/0034654307313795 Baker, R. S., Corbett, A. T., Koedinger, K. R., & Wagner, A. Z. (2004). Off-task behavior in the Cognitive Tutor classroom: When students "game the system". Proceedings of the SIGCHI Conference on Human Factors in Computing Systems, 383-390. https://doi.org/10.1145/985692.985741
+
+10. Start from a case they can picture or handle, link it to the symbols step by step, then drop the picture once the symbols make sense.
+
+   *For a learner stuck, with nothing tried, or still not there after trying.* *When the subject is: math mathematics maths algebra equation fraction decimal geometry arithmetic ratio percent calculus statistics science graph.* Fyfe, E. R., McNeil, N. M., Son, J. Y., & Goldstone, R. L. (2014). Concreteness fading in mathematics and science instruction: A systematic review. Educational Psychology Review, 26(1), 9-25. https://doi.org/10.1007/s10648-014-9249-3

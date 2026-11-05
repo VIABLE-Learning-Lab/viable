@@ -1,0 +1,40 @@
+{
+  "id": "udl-guidelines",
+  "name": "Universal Design for Learning Guidelines",
+  "kind": "content",
+  "summary": "CAST’s guidelines for designing learning for everyone: ways of engaging, of representing, and of acting and expressing.",
+  "subjects": [
+    "any"
+  ],
+  "grades": "any",
+  "url": "https://udlguidelines.cast.org/",
+  "repository": null,
+  "license": {
+    "spdx": [],
+    "source": "https://www.cast.org/terms-of-use/",
+    "note": "No copying without written consent, unless a license on the site allows it, and none was found on the guidelines. Read and cite them."
+  },
+  "access": "open download",
+  "formats": [
+    "HTML"
+  ],
+  "made_by": [
+    "CAST"
+  ],
+  "cite": "CAST (2024). Universal Design for Learning Guidelines version 3.0. https://udlguidelines.cast.org/",
+  "fits": {
+    "slots": [
+      "context"
+    ],
+    "how": "A way to think about access when writing how the AI helps."
+  },
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Listed, to read. Nothing here copies it."
+  },
+  "status": "released",
+  "in_harness": null,
+  "verified_at": "2026-11-04"
+}

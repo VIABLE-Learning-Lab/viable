@@ -1,0 +1,44 @@
+{
+  "id": "studychat",
+  "name": "StudyChat",
+  "kind": "dataset",
+  "summary": "Real students’ dialogues with ChatGPT in an AI course, with dialogue-act labels and the scores of those who consented.",
+  "subjects": [
+    "computer-science"
+  ],
+  "grades": "university",
+  "url": "https://huggingface.co/datasets/wmcnicho/StudyChat",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-4.0"
+    ],
+    "source": "https://huggingface.co/datasets/wmcnicho/StudyChat"
+  },
+  "access": "account",
+  "access_note": "Gated on Hugging Face.",
+  "formats": [
+    "JSON"
+  ],
+  "made_by": [
+    "Hunter McNichols",
+    "Fareya Ikram",
+    "Andrew Lan"
+  ],
+  "cite": "McNichols, H., Ikram, F., & Lan, A. (2025). The StudyChat Dataset: Analyzing Student Dialogues With ChatGPT in an Artificial Intelligence Course. https://arxiv.org/abs/2503.07928",
+  "fits": {
+    "slots": [
+      "detector"
+    ],
+    "how": "Real messages for a detector or test cases. One course, and its labels were made by a model."
+  },
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Listed. Nothing here fetches it yet."
+  },
+  "status": "released",
+  "in_harness": null,
+  "verified_at": "2026-11-04"
+}

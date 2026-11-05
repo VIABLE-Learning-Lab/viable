@@ -1,0 +1,47 @@
+{
+  "id": "tutor-move-taxonomy",
+  "name": "Tutor Move Taxonomy",
+  "kind": "content",
+  "summary": "A coding scheme for tutors’ moves, from the National Tutoring Observatory: tutoring, learning, social-emotional and logistical support.",
+  "subjects": [
+    "any"
+  ],
+  "grades": "not stated",
+  "url": "https://arxiv.org/abs/2603.05778",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-4.0"
+    ],
+    "source": "https://arxiv.org/abs/2603.05778",
+    "note": "The license covers the paper; the related TutorMoveLib repository has none."
+  },
+  "access": "open download",
+  "formats": [
+    "PDF"
+  ],
+  "made_by": [
+    "Zhuqian Zhou",
+    "Kirk Vanacore",
+    "Tamisha Thompson",
+    "Jennifer St John",
+    "Rene Kizilcec"
+  ],
+  "cite": "Zhou, Z., Vanacore, K., Thompson, T., St John, J., & Kizilcec, R. (2026). Tutor Move Taxonomy: A Theory-Aligned Framework for Analyzing Instructional Moves in Tutoring. https://arxiv.org/abs/2603.05778",
+  "fits": {
+    "slots": [
+      "judge",
+      "detector"
+    ],
+    "how": "A rubric for a judge, and labels for a detector. A preprint."
+  },
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Listed. Nothing here fetches it yet."
+  },
+  "status": "released",
+  "in_harness": null,
+  "verified_at": "2026-11-04"
+}

@@ -10,7 +10,7 @@ import { teachingContext, teachingSettings } from './teaching.js';
 import { KINDS, validateDocument } from './validate.js';
 import { CITATIONS, MASTERY_STREAK, METRICS, SESSION_GAP_MINUTES, WHEEL_SPIN_ATTEMPTS, WRITING, measureLearner } from './measures.js';
 import { findMisconceptions } from './utils/misconceptions.js';
-import { COMPONENTS, SLOTS } from './components/index.js';
+import { COMPONENTS, GUIDANCE, SLOTS } from './components/index.js';
 import { CATALOG_KINDS, searchCatalog } from './catalog.js';
 import { SUGGESTION_THRESHOLDS, applySuggestion, suggestChanges } from './suggest.js';
 import { prepare } from './harness.js';
@@ -127,6 +127,23 @@ export function mcpTools({ checkReply, runAgent, draftCases, runAgentTests, endp
           ? `${found.data.length} construct${found.data.length === 1 ? '' : 's'} ${found.match === 'every_word' ? 'with every word' : 'sharing the most words'}. Keep source.attribution with anything you copy (CC BY 4.0).`
           : 'No construct matched. Try other words, such as the operation and the kind of number.';
         return { summary, data: found };
+      }
+    },
+    {
+      name: 'find_guidance',
+      description: 'What research says to do at a moment in tutoring, as instructions a model can act on, each naming the studies it draws on (the harness\'s own copy: no network, no model). Topics: scaffolding, feedback, tutoring talk, self-explanation, worked examples, productive struggle, recall and spacing, metacognition. Use the pieces in teaching.guidance, or in a system prompt. Most of this research is on human tutors: each topic says what isn\'t known.',
+      inputSchema: object({
+        moment: { enum: ['attempt', 'asks_answer', 'stuck', 'repeated'], description: 'Only what fits this moment: the learner gave an answer or working, asks for the answer, is stuck with nothing tried, or has tried more than once.' },
+        topic: text(200, 'A few words, such as worked examples or feedback; leave it out for every topic.')
+      }),
+      async run(a) {
+        const words = String(a.topic ?? '').toLowerCase().split(/\W+/).filter(Boolean);
+        const topics = GUIDANCE.filter((framework) => !words.length || words.some((word) => `${framework.id} ${framework.label} ${framework.summary}`.toLowerCase().includes(word)));
+        const found = topics.map((framework) => ({
+          component: framework.id, label: framework.label, shown: framework.evidence.original, unknown: framework.evidence.unknown,
+          pieces: framework.runs.items.map((item, index) => ({ item: index + 1, text: item.text, when: item.when ?? null, about: item.about ?? null, source: item.source })).filter((item) => !a.moment || !item.when || item.when.includes(a.moment))
+        }));
+        return { summary: `${found.reduce((total, topic) => total + topic.pieces.length, 0)} pieces from ${found.length} topics. Keep each one's source with it.`, data: { topics: found } };
       }
     },
     {

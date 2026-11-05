@@ -1,0 +1,43 @@
+{
+  "id": "pedagogy-benchmark",
+  "name": "Pedagogy Benchmark",
+  "kind": "benchmark",
+  "summary": "1,143 multiple-choice questions from teacher training exams, on general pedagogy and special educational needs, with public leaderboards.",
+  "subjects": [
+    "any"
+  ],
+  "grades": "teacher training",
+  "url": "https://huggingface.co/datasets/AI-for-Education/pedagogy-benchmark",
+  "repository": "https://github.com/AI-for-Education/pedagogy-benchmark",
+  "license": {
+    "spdx": [
+      "MIT"
+    ],
+    "source": "https://huggingface.co/datasets/AI-for-Education/pedagogy-benchmark",
+    "note": "The tag doesn’t say who holds the rights in the exam questions, and its makers ask that examples not be shown online."
+  },
+  "access": "account",
+  "access_note": "Gated on Hugging Face: accept its terms to get it.",
+  "formats": [
+    "Parquet"
+  ],
+  "made_by": [
+    "AI-for-Education.org"
+  ],
+  "cite": "Lelièvre, M., Waldock, A., Liu, M., Valdés Aspillaga, N., Mackintosh, A., Ogando Portela, M. J., Lee, J., Atherton, P., et al. (2025). Benchmarking the Pedagogical Knowledge of Large Language Models. https://arxiv.org/abs/2506.18710",
+  "fits": {
+    "slots": [
+      "judge"
+    ],
+    "how": "Tests what a model knows about pedagogy, not how it teaches."
+  },
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Listed. Nothing here fetches it yet."
+  },
+  "status": "released",
+  "in_harness": null,
+  "verified_at": "2026-11-04"
+}

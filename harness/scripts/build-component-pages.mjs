@@ -12,8 +12,20 @@ const code = (value) => `\`${value}\``;
 const RUNS = {
   core: (runs) => `In the harness's own process, through ${code(runs.entry)}${runs.step_type ? ` and the graph's ${code(runs.step_type)} step` : ''}.`,
   http: (runs) => `Out of process: the harness POSTs JSON to ${runs.entry}.`,
+  data: () => 'Nothing runs: its guidance is in this file, and an activity keeps the pieces chosen for it.',
   mcp: (runs) => `Out of process: the tool ${code(runs.entry)} of a stdio MCP server started as ${code([runs.server.command, ...(runs.server.args || [])].join(' '))}.`
 };
+
+const MOMENTS = { attempt: 'giving an answer or some working', asks_answer: 'asking for the answer', stuck: 'stuck, with nothing tried', repeated: 'still not there after trying' };
+
+function guidancePart(items) {
+  return ['## Its guidance', '', 'What a model is told, and when it fits. A turn takes at most two pieces from what an activity keeps.', '', ...items.flatMap((item, index) => [
+    `${index + 1}. ${item.text}`,
+    '',
+    `   ${item.when ? `*For a learner ${item.when.map((moment) => MOMENTS[moment]).join(', or ')}.* ` : ''}${item.about ? `*When the subject is: ${item.about}.* ` : ''}${item.attribution || item.source || ''}`,
+    ''
+  ])];
+}
 
 export function componentPage(manifest) {
   const rows = [
@@ -23,7 +35,7 @@ export function componentPage(manifest) {
     ['Receives', manifest.receives.map(code).join(', ') || 'nothing'],
     ['Sends it to', manifest.sends_to.join(', ') || 'no other host'],
     ['Models', manifest.uses_models ? 'calls models, through the host’s model service' : 'calls none'],
-    ['License', `code ${manifest.license.code}${manifest.license.data ? `, data ${manifest.license.data}` : ''}`],
+    ['License', [manifest.license.code ? `code ${manifest.license.code}` : '', manifest.license.data ? `data ${manifest.license.data}` : ''].filter(Boolean).join(', ')],
     ['Authors', manifest.authors.join(', ')],
     ['Risk', `${manifest.risk}${manifest.risk_notes ? `: ${manifest.risk_notes}` : ''}`],
     ['Maintainer', `${manifest.maintainer.name}${manifest.maintainer.issues ? ` (${manifest.maintainer.issues})` : ''}`],
@@ -53,7 +65,8 @@ export function componentPage(manifest) {
     `**What comparisons in the harness showed.** ${manifest.evidence.integration}`,
     '',
     `**What nobody has shown yet.** ${manifest.evidence.unknown}`,
-    ''
+    '',
+    ...(manifest.runs.items ? guidancePart(manifest.runs.items) : [])
   ].join('\n');
 }
 

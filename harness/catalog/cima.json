@@ -1,0 +1,42 @@
+{
+  "id": "cima",
+  "name": "CIMA",
+  "kind": "dataset",
+  "summary": "Tutoring conversations role-played by crowdworkers, with several tutor replies to each input and labels for tutor actions.",
+  "subjects": [
+    "english-language-development"
+  ],
+  "grades": "not stated",
+  "url": "https://github.com/kstats/CIMA",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-2.5"
+    ],
+    "source": "https://github.com/kstats/CIMA",
+    "note": "Stated in the README. The repository has no LICENSE file."
+  },
+  "access": "open download",
+  "formats": [
+    "JSON"
+  ],
+  "made_by": [
+    "Katherine Stasaski, Kimberly Kao, Marti A. Hearst"
+  ],
+  "cite": "Stasaski, K., Kao, K., & Hearst, M. A. (2020). CIMA: A Large Open Access Dialogue Dataset for Tutoring. BEA Workshop. https://doi.org/10.18653/v1/2020.bea-1.5",
+  "fits": {
+    "slots": [
+      "judge"
+    ],
+    "how": "Test cases, with several human replies to compare a tutor against. Nobody in it is a real learner or a trained tutor."
+  },
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Listed. Nothing here fetches it yet."
+  },
+  "status": "released",
+  "in_harness": null,
+  "verified_at": "2026-11-04"
+}

@@ -1,7 +1,7 @@
 {
   "teaching": { "goal": "Learners add fractions with unlike denominators.", "help": "hint" },
   "cases": [
-    { "message": "i got 2/5", "chooses": [4, 1] },
+    { "message": "i got 2/5", "chooses": [1, 4] },
     { "message": "just tell me the answer", "chooses": [2] },
     { "message": "hello", "chooses": [] }
   ]

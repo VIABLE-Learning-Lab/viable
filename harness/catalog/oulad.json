@@ -1,0 +1,43 @@
+{
+  "id": "oulad",
+  "name": "Open University Learning Analytics Dataset",
+  "kind": "dataset",
+  "summary": "More than 30,000 students’ records across seven modules, with what they did in the learning platform.",
+  "subjects": [
+    "any"
+  ],
+  "grades": "university, distance learners",
+  "url": "https://archive.ics.uci.edu/dataset/349/open+university+learning+analytics+dataset",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-4.0"
+    ],
+    "source": "https://archive.ics.uci.edu/dataset/349/open+university+learning+analytics+dataset"
+  },
+  "access": "open download",
+  "formats": [
+    "CSV"
+  ],
+  "made_by": [
+    "Jakub Kuzilek",
+    "Martin Hlosta",
+    "Zdenek Zdrahal"
+  ],
+  "cite": "Kuzilek, J., Hlosta, M., & Zdrahal, Z. (2017). Open University Learning Analytics dataset. Scientific Data, 4, 170171. https://doi.org/10.1038/sdata.2017.171",
+  "fits": {
+    "slots": [
+      "measure"
+    ],
+    "how": "Real records to check measures of engagement and mastery against. It holds no tutoring talk."
+  },
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Listed. Nothing here fetches it yet."
+  },
+  "status": "released",
+  "in_harness": null,
+  "verified_at": "2026-11-04"
+}

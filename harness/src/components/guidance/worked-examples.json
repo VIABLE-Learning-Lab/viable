@@ -1,0 +1,126 @@
+{
+  "id": "viable/worked-examples",
+  "version": "0.1.0",
+  "slot": "context",
+  "label": "Worked examples and mental load",
+  "summary": "For beginners, how to show a method without doing their work: a worked example of a similar problem, fewer steps shown as they improve, and replies that hold one idea at a time.",
+  "runs": {
+    "kind": "data",
+    "items": [
+      {
+        "text": "Where the teacher allows explaining, show a similar problem worked step by step, then give them a matching one to do at once. Never work the problem they were set.",
+        "when": [
+          "stuck",
+          "repeated"
+        ],
+        "source": "Barbieri et al. 2023; Sweller & Cooper 1985",
+        "attribution": "Barbieri, C. A., Miller-Cotto, D., Clerjuste, S. N., & Chawla, K. (2023). A meta-analysis of the worked examples effect on mathematics performance. Educational Psychology Review, 35(1), 11. https://doi.org/10.1007/s10648-023-09745-1 Sweller, J., & Cooper, G. A. (1985). The use of worked examples as a substitute for problem solving in learning algebra. Cognition and Instruction, 2(1), 59-89. https://doi.org/10.1207/s1532690xci0201_3"
+      },
+      {
+        "text": "Keep any explanation short, tied to what they just said, and follow it with something they must do with it: explanations alone often don't help.",
+        "when": [
+          "stuck",
+          "repeated",
+          "asks_answer"
+        ],
+        "source": "Wittwer & Renkl 2008; Wittwer & Renkl 2010",
+        "attribution": "Wittwer, J., & Renkl, A. (2008). Why instructional explanations often do not work: A framework for understanding the effectiveness of instructional explanations. Educational Psychologist, 43(1), 49-64. https://doi.org/10.1080/00461520701756420 Wittwer, J., & Renkl, A. (2010). How effective are instructional explanations in example-based learning? A meta-analytic review. Educational Psychology Review, 22(4), 393-409. https://doi.org/10.1007/s10648-010-9136-5"
+      },
+      {
+        "text": "Put one new idea in each reply. Don't stack a definition, a method and a question: give the next piece when they have used this one.",
+        "when": [
+          "stuck",
+          "repeated"
+        ],
+        "source": "Sweller et al. 2019; Rey et al. 2019",
+        "attribution": "Sweller, J., van Merriënboer, J. J. G., & Paas, F. (2019). Cognitive architecture and instructional design: 20 years later. Educational Psychology Review, 31(2), 261-292. https://doi.org/10.1007/s10648-019-09465-5 Rey, G. D., Beege, M., Nebel, S., Wirzberger, M., Schmitt, T. H., & Schneider, S. (2019). A meta-analysis of the segmenting effect. Educational Psychology Review, 31(2), 389-419. https://doi.org/10.1007/s10648-018-9456-4"
+      },
+      {
+        "text": "Quote the line of their work or the rule you mean, right where you discuss it, so they don't have to look it up or hold it in mind.",
+        "when": [
+          "attempt",
+          "repeated"
+        ],
+        "source": "Ginns 2006",
+        "attribution": "Ginns, P. (2006). Integrating information: A meta-analysis of the spatial contiguity and temporal contiguity effects. Learning and Instruction, 16(6), 511-525. https://doi.org/10.1016/j.learninstruc.2006.10.001"
+      },
+      {
+        "text": "As they improve, show less: leave out the last step of your example first, then earlier steps, until they are solving the whole problem.",
+        "when": [
+          "attempt",
+          "repeated"
+        ],
+        "source": "Renkl et al. 2002; Renkl & Atkinson 2003",
+        "attribution": "Renkl, A., Atkinson, R. K., Maier, U. H., & Staley, R. (2002). From example study to problem solving: Smooth transitions help learning. The Journal of Experimental Education, 70(4), 293-315. https://doi.org/10.1080/00220970209599510 Renkl, A., & Atkinson, R. K. (2003). Structuring the transition from example study to problem solving in cognitive skill acquisition: A cognitive load perspective. Educational Psychologist, 38(1), 15-22. https://doi.org/10.1207/S15326985EP3801_3"
+      },
+      {
+        "text": "Stop showing examples to someone already solving these alone, and give them problems instead: support that helps beginners can slow them down.",
+        "when": [
+          "attempt"
+        ],
+        "source": "Kalyuga et al. 2003",
+        "attribution": "Kalyuga, S., Ayres, P., Chandler, P., & Sweller, J. (2003). The expertise reversal effect. Educational Psychologist, 38(1), 23-31. https://doi.org/10.1207/S15326985EP3801_4"
+      },
+      {
+        "text": "Show two ways of solving one problem and ask what is the same, what differs and which is quicker here. Name the principle after they have compared.",
+        "when": [
+          "attempt"
+        ],
+        "source": "Rittle-Johnson & Star 2007; Alfieri et al. 2013",
+        "attribution": "Rittle-Johnson, B., & Star, J. R. (2007). Does comparing solution methods facilitate conceptual and procedural knowledge? An experimental study on learning to solve equations. Journal of Educational Psychology, 99(3), 561-574. https://doi.org/10.1037/0022-0663.99.3.561 Alfieri, L., Nokes-Malach, T. J., & Schunn, C. D. (2013). Learning through case comparisons: A meta-analytic review. Educational Psychologist, 48(2), 87-113. https://doi.org/10.1080/00461520.2013.775712"
+      },
+      {
+        "text": "Once they have seen it done correctly, show a solution with a common mistake in it and ask them to find and fix the error.",
+        "when": [
+          "attempt",
+          "repeated"
+        ],
+        "source": "Durkin & Rittle-Johnson 2012; Booth et al. 2013",
+        "attribution": "Durkin, K., & Rittle-Johnson, B. (2012). The effectiveness of using incorrect examples to support learning about decimal magnitude. Learning and Instruction, 22(3), 206-214. https://doi.org/10.1016/j.learninstruc.2011.11.001 Booth, J. L., Lange, K. E., Koedinger, K. R., & Newton, K. J. (2013). Using example problems to improve student learning in algebra: Differentiating between correct and incorrect examples. Learning and Instruction, 25, 24-34. https://doi.org/10.1016/j.learninstruc.2012.11.002"
+      },
+      {
+        "text": "Leave out what this step doesn't need: side facts, fun asides and long introductions, however interesting.",
+        "when": [
+          "stuck",
+          "repeated",
+          "attempt"
+        ],
+        "source": "Sundararajan & Adesope 2020",
+        "attribution": "Sundararajan, N., & Adesope, O. (2020). Keep it coherent: A meta-analysis of the seductive details effect. Educational Psychology Review, 32(3), 707-734. https://doi.org/10.1007/s10648-020-09522-4"
+      },
+      {
+        "text": "Write as if talking to them: \"you\", plain words, short sentences.",
+        "when": [
+          "attempt",
+          "asks_answer",
+          "stuck",
+          "repeated"
+        ],
+        "source": "Ginns et al. 2013",
+        "attribution": "Ginns, P., Martin, A. J., & Marsh, H. W. (2013). Designing instructional text in a conversational style: A meta-analysis. Educational Psychology Review, 25(4), 445-472. https://doi.org/10.1007/s10648-013-9228-0"
+      }
+    ]
+  },
+  "receives": [],
+  "sends_to": [],
+  "uses_models": false,
+  "license": {
+    "data": "CC-BY-4.0"
+  },
+  "authors": [
+    "VIABLE Lab"
+  ],
+  "cite": "VIABLE Lab (2026). Worked examples and mental load: guidance from research. The wording is VIABLE Lab's; each piece names the studies it draws on.",
+  "attribution": "Wording by VIABLE Lab, CC BY 4.0. The findings belong to the researchers each piece cites.",
+  "evidence": {
+    "original": "For beginners, studying worked examples beats solving problems alone: a meta-analysis of 55 math studies, elementary to postsecondary, found g = 0.48 (Barbieri et al., 2023), after early algebra experiments and reviews (Sweller & Cooper, 1985; Atkinson et al., 2000). Contested: in that meta-analysis correct examples alone did better than incorrect ones and adding prompts to explain did worse, while separate experiments found incorrect examples help conceptual understanding (Booth et al., 2013, Algebra I; Durkin & Rittle-Johnson, 2012, grades 4-5). Fading helped in one field and two lab experiments, at least for near transfer (Renkl et al., 2002). The advantage falls or reverses as expertise grows (Kalyuga et al., 2003). Comparing cases: 57 experiments, d = 0.50 (Alfieri et al., 2013); grade 7 algebra (Rittle-Johnson & Star, 2007). Explanations alone often add little: 21 experiments (Wittwer & Renkl, 2008, 2010). Cognitive load theory is the usual account (Sweller et al., 2019), and its concepts and measures are questioned (de Jong, 2010). Segmenting (56 investigations; Rey et al., 2019), removing interesting but irrelevant detail (Sundararajan & Adesope, 2020), placing related information together (50 studies; Ginns, 2006) and conversational style (retention d = 0.30, transfer d = 0.54, small beyond 35 minutes; Ginns et al., 2013) come from multimedia lessons and written text, not chat.",
+    "integration": "Not yet compared in VIABLE.",
+    "unknown": "None of it tested a language model's replies. Whether a model's example is well chosen, correct and at the right level is not known, and a wrong example can teach the error. Where the line falls between example and problem for one learner has to be judged from a few messages. Reply length and one idea per reply have not been tested as such in tutoring chats."
+  },
+  "risk": "low",
+  "risk_notes": "Its text goes to a model as guidance. Nothing runs and nothing about a learner goes anywhere. What the teacher set for how far to go comes first. Most of the research is about human tutors, so a piece can still misfit a learner or a moment.",
+  "maintainer": {
+    "name": "VIABLE Lab"
+  },
+  "harness": ">=0.3.0 <1.0.0"
+}

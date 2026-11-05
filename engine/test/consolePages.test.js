@@ -35,13 +35,15 @@ function provider(answer = () => 'From the guides [1].') {
 // A made-up website, behind what stands for the server's public-only fetch.
 function site(pages) {
   const asked = [];
-  const fetch = async (url) => {
+  const made = { asked };
+  const fetch = async (url, init) => {
+    if (made.respond) return made.respond(url, init);
     asked.push(String(url));
     const page = pages[url];
     if (page === undefined) return new Response('nothing here', { status: 404, headers: { 'content-type': 'text/plain' } });
     return new Response(page, { status: 200, headers: { 'content-type': url.endsWith('.txt') ? 'text/plain' : 'text/html' } });
   };
-  return { asked, fetch };
+  return Object.assign(made, { fetch });
 }
 const htmlPage = (title, words, links = []) => `<html><head><title>${title}</title></head><body><main><h1>${title}</h1><p>${words}</p>${links.map((href) => `<a href="${href}">link</a>`).join('')}</main></body></html>`;
 
@@ -688,4 +690,78 @@ test('guidance in an activity shows in the console, and saving the page keeps it
   const { course } = await s.ok('GET', 'courses/with-guidance/download');
   assert.equal(course.activities[0].teaching.goal, 'Add fractions well.');
   assert.deepEqual(course.activities[0].teaching.guidance.map((item) => item.text), ['Ask how they got it.']);
+});
+
+test('guidance from research: browsed by topic with what isn\'t known, chosen once each, up to the limit, and removed', async () => {
+  const { GUIDANCE } = await import('../../harness/src/components/guidance.js');
+  const { ok, call, page } = await server();
+  const { go } = await ok('POST', 'courses', { title: 'Fractions' });
+  const code = go.split('/').at(-1);
+  const added = await ok('POST', `courses/${code}/activities`, { title: 'Practice', kind: 'chat' });
+  const key = added.go.split('/').at(-1);
+  const api = `courses/${code}/activities/${key}`;
+  const shown = await page(`courses/${code}/activities/${key}`);
+  assert.match(shown, /Choose from what research says/);
+  for (const framework of GUIDANCE) assert.ok(shown.includes(framework.label), framework.label);
+  assert.ok(GUIDANCE.every((framework) => framework.evidence.unknown), 'each says what isn’t known');
+
+  const framework = GUIDANCE[0];
+  await ok('POST', `${api}/guidance`, { component: framework.id, item: 1 });
+  await ok('POST', `${api}/guidance`, { component: framework.id, item: 1 });
+  const after = await page(`courses/${code}/activities/${key}`);
+  assert.ok(after.includes('Chosen'));
+  assert.ok(after.includes(`DELETE ${api}/guidance/0`));
+  assert.ok(!after.includes(`DELETE ${api}/guidance/1`), 'chosen once');
+
+  assert.equal((await call('POST', `${api}/guidance`, { component: 'nobody/nothing', item: 1 })).status, 404);
+  assert.equal((await call('POST', `${api}/guidance`, { component: framework.id, item: 99 })).status, 404);
+
+  let items = 1;
+  for (const each of GUIDANCE) for (let number = 1; number <= each.runs.items.length && items < 20; number += 1) {
+    if (each === framework && number === 1) continue;
+    await ok('POST', `${api}/guidance`, { component: each.id, item: number });
+    items += 1;
+  }
+  const full = await call('POST', `${api}/guidance`, { component: GUIDANCE.at(-1).id, item: GUIDANCE.at(-1).runs.items.length });
+  assert.equal(full.status, 400);
+  await ok('DELETE', `${api}/guidance/0`, {});
+  assert.ok(!(await page(`courses/${code}/activities/${key}`)).includes(`DELETE ${api}/guidance/19`));
+});
+
+test('a detector: nothing is sent until someone asks, no names go, its marks come back joined to the class, and only https is taken', async () => {
+  const asked = [];
+  const answers = { marks: [{ turn_index: 0, label: 'Gaming the hints', evidence: 'Asked for the next hint at once, three times.' }] };
+  const store = memoryStore();
+  const s = await server({ store, answer: () => 'A reply.' });
+  const { go } = await s.ok('POST', 'courses', { title: 'Marks' });
+  const code = go.split('/').at(-1);
+  const added = await s.ok('POST', `courses/${code}/activities`, { title: 'Talk', kind: 'chat' });
+  const key = added.go.split('/').at(-1);
+  await s.ok('POST', `courses/${code}/activities/${key}/release`, { release: 'open' });
+  await s.ok('POST', `courses/${code}/people`, { name: 'Ada Lovelace' });
+  const manifest = { id: 'lab/hints', version: '1.0.0', slot: 'detector', label: 'Hint use', summary: 'Marks hints asked for without trying.', runs: { kind: 'http', entry: 'https://lab.example/detect' }, receives: ['learning_events'], sends_to: ['lab.example'], uses_models: false, license: { code: 'MIT' }, authors: ['A Lab'], cite: 'A Lab (2026).', evidence: { original: 'x', integration: 'y', unknown: 'z' }, risk: 'medium', maintainer: { name: 'A Lab' }, harness: '>=0.3.0 <1.0.0' };
+  const before = await s.upload(`courses/${code}/detectors`, 'manifest.json', JSON.stringify(manifest));
+  assert.equal(before.status, 200, await before.clone().text());
+  const local = await s.upload(`courses/${code}/detectors`, 'manifest.json', JSON.stringify({ ...manifest, id: 'lab/local', runs: { kind: 'mcp', entry: 'tool', server: { command: 'node', args: ['x.js'] } } }));
+  assert.equal(local.status, 400, 'this page can’t start a program');
+  const shown = await s.page(`courses/${code}/progress/look`);
+  assert.match(shown, /From detectors/);
+  assert.match(shown, /to lab\.example/);
+  assert.equal(s.web.asked.length, 0, 'adding one sends nothing');
+  // A learner, with a turn on record.
+  const people = await store.list(`courses/${code}/learners/`);
+  const learner = await store.get(people[0]);
+  await store.put(`courses/${code}/turns/${learner.id}/2026-11-05T10:00:00.000Z-a`, { activity: key, conversation_id: 'agtc_aaaaaaaaaaaa', run_id: 'agtr_a', message: 'give me the hint', reply: 'What did you try?', at: '2026-11-05T10:00:00.000Z' });
+  s.web.respond = (url, init) => { asked.push({ url: String(url), body: JSON.parse(init.body) }); return new Response(JSON.stringify(answers), { status: 200, headers: { 'content-type': 'application/json' } }); };
+  const ran = await s.ok('POST', `courses/${code}/detectors/lab--hints/run`, {});
+  assert.match(ran.said, /1 mark from 1 record/);
+  assert.equal(asked.length, 1);
+  assert.equal(asked[0].url, 'https://lab.example/detect');
+  assert.ok(!JSON.stringify(asked[0].body).includes('Ada'), 'no name goes');
+  assert.ok(!JSON.stringify(asked[0].body).includes(learner.code), 'no code goes');
+  const after = await s.page(`courses/${code}/progress/look`);
+  assert.match(after, /Ada Lovelace/);
+  assert.match(after, /Gaming the hints/);
+  await s.ok('DELETE', `courses/${code}/detectors/lab--hints`, {});
+  assert.doesNotMatch(await s.page(`courses/${code}/progress/look`), /Gaming the hints/);
 });

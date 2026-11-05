@@ -1,0 +1,43 @@
+{
+  "id": "ngss",
+  "name": "Next Generation Science Standards",
+  "kind": "standards",
+  "summary": "K-12 science standards, adopted or adapted by many U.S. states.",
+  "subjects": [
+    "science"
+  ],
+  "grades": "K-12",
+  "url": "https://www.nextgenscience.org/",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "LicenseRef-NGSS-public-license"
+    ],
+    "source": "https://www.nextgenscience.org/ngss-trademarks-and-copyright/ngss-trademarks-and-copyright",
+    "note": "States, districts, schools, teachers and non-profit education entities may copy and adapt them without permission. A commercial user needs to look further, and the name NGSS has its own rules."
+  },
+  "access": "open download",
+  "formats": [
+    "PDF",
+    "HTML"
+  ],
+  "made_by": [
+    "NGSS Lead States"
+  ],
+  "cite": "NGSS Lead States (2013). Next Generation Science Standards: For States, By States. National Academies Press.",
+  "fits": {
+    "slots": [
+      "context"
+    ],
+    "how": "A standard for an activity, in a teacher’s own words or through a standards search."
+  },
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Listed. A teacher can write a standard into a goal; the search here finds what Learning Commons carries."
+  },
+  "status": "released",
+  "in_harness": null,
+  "verified_at": "2026-11-04"
+}

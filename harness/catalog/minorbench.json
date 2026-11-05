@@ -1,0 +1,43 @@
+{
+  "id": "minorbench",
+  "name": "MinorBench",
+  "kind": "benchmark",
+  "summary": "299 prompts in six risk categories, with four system prompts, for checking a teaching assistant meant for children.",
+  "subjects": [
+    "any"
+  ],
+  "grades": "children",
+  "url": "https://huggingface.co/datasets/govtech/MinorBench",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "MIT"
+    ],
+    "source": "https://huggingface.co/datasets/govtech/MinorBench"
+  },
+  "access": "open download",
+  "formats": [
+    "Parquet"
+  ],
+  "made_by": [
+    "Shaun Khoo",
+    "Gabriel Chua",
+    "Rachel Shong"
+  ],
+  "cite": "Khoo, S., Chua, G., & Shong, R. (2025). MinorBench: A hand-built benchmark for content-based risks for children. https://arxiv.org/abs/2503.10242",
+  "fits": {
+    "slots": [
+      "judge"
+    ],
+    "how": "Test cases for safety with children. It measures refusals, not teaching, and holds sensitive prompts, so handle fixtures with care."
+  },
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Listed. Nothing here fetches it yet."
+  },
+  "status": "released",
+  "in_harness": null,
+  "verified_at": "2026-11-04"
+}

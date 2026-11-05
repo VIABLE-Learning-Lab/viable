@@ -13,6 +13,7 @@ import { activityKeys } from '../server/library.js';
 import { acceptedOf, keepAccepted, peopleOf, sectionsOf, showCode } from '../server/classList.js';
 import { learnerRecords } from '../server/learner.js';
 import { activityIn } from './activity.js';
+import { DETECTORS_CSS, detectorRoutes, detectorsPart } from './detectors.js';
 import { changeCourse, courseAt } from './course.js';
 import { courseHead, esc, plural, say, sectionChips, when, withForms } from './forms.js';
 
@@ -211,7 +212,7 @@ function waitLine(runs, agentSlug) {
   return `<p class="v-note">Checking took about ${seconds} s a reply, at ${average.toFixed(1)} tries a reply, with nothing on the page meanwhile. Too long? ${agentSlug ? `<a href="/console/agents/${esc(agentSlug)}">Allow fewer tries</a>, or choose` : 'Choose'} a faster reviewer in <a href="/console/models">Models</a>. More care is the other way.</p>`;
 }
 
-function lookView({ code, title, origin, addresses, tabs, closed, activities, activity, version, parts, moments, unhelpful, accepted, people, sections }) {
+function lookView({ code, title, origin, addresses, tabs, closed, activities, activity, version, parts, moments, unhelpful, accepted, people, sections, detectors = '' }) {
   const chips = `<nav aria-label="Choose an activity"><ul class="chips">${activities.map((item) => `<li><a class="chip" href="/console/courses/${esc(code)}/progress/look?activity=${esc(item.key)}"${item.key === activity?.key ? ' aria-current="true"' : ''}>${esc(item.title)}</a></li>`).join('')}</ul></nav>`;
   const head = `${courseHead({ title, code, origin, addresses, tabs, current: 'Progress', closed })}${subNav(code, 'look')}`;
   if (!activity) return `${head}<p class="v-empty block">No activity here has an AI yet, so there is nothing to look at.</p>`;
@@ -226,6 +227,7 @@ ${parts.runs ? `${parts.tally}${parts.waited}<div class="flow">${named(parts.vet
 ${momentsPart({ moments, unhelpful, code, people })}
 ${parts.heard ? `<h3 class="sub-head">Misconceptions heard</h3><div class="flow">${named(parts.misconceptions)}</div>` : ''}
 </section>
+${detectors}
 ${parts.settings?.watch_for ? `<section class="block" aria-labelledby="watch-title">
 <h2 id="watch-title">What you wanted to hear about</h2>
 <p class="watch">${esc(parts.settings.watch_for)}</p>
@@ -313,7 +315,7 @@ async function lookBody({ library, store, origin, addresses, tabs, url }, match)
   const [people, sections, evidence] = await Promise.all([peopleOf(store, code), sectionsOf(store, code), evidenceOf(store, code, activity)]);
   const parts = viewParts({ teaching: activity.teaching ?? null, records: evidence.records, runs: evidence.runs, suggestions: evidence.suggestions });
   const unhelpful = evidence.records.flatMap((record) => record.turns.filter((turn) => turn.rating === -1).map((turn) => ({ learner: record.user, turn })));
-  return { title: `What to look at · ${doc.course.title}`, css: `${GRID_CSS}\n${VIEW_CSS}\n${LOOK_CSS}`, body: lookView({ ...common, activity, parts: { ...parts, runs: evidence.runs.length, waited: waitLine(evidence.runs, doc.agents?.find((agent) => agent.ref === activity.agent_ref)?.slug),  heard: parts.heardList.length }, moments: hardMoments.build({ records: evidence.records }).moments, unhelpful, accepted: evidence.accepted, people, sections }) };
+  return { title: `What to look at · ${doc.course.title}`, css: `${GRID_CSS}\n${VIEW_CSS}\n${LOOK_CSS}\n${DETECTORS_CSS}`, body: lookView({ ...common, activity, detectors: await detectorsPart({ store }, code, people), parts: { ...parts, runs: evidence.runs.length, waited: waitLine(evidence.runs, doc.agents?.find((agent) => agent.ref === activity.agent_ref)?.slug),  heard: parts.heardList.length }, moments: hardMoments.build({ records: evidence.records }).moments, unhelpful, accepted: evidence.accepted, people, sections }) };
 }
 
 export const progressPages = [
@@ -322,6 +324,7 @@ export const progressPages = [
     match: /^courses\/([\w-]+)\/progress$/,
     render: withForms(gridBody),
     api: [
+      ...detectorRoutes,
       ['GET', /^courses\/([\w-]+)\/records\.json$/, async ({ library, store }, match) => {
         const { code } = await courseAt(library, match[1]);
         if (!store) throw refused('This server has no store, so it keeps no records.', 409, 'no_store');

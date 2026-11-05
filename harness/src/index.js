@@ -16,7 +16,7 @@ export { AGENT_TEST_LIMITS, judgeMessages, readAgentTests, readJsonAnswer, readV
 export { agentAt, draftCases, judgeReplies, runAgentTests } from './testRuns.js';
 export { CALIBRATION_MIN_CASES, DRAFT_KINDS, TURN_KINDS, calibrateJudge, casesFromTurns, draftMessages, readDrafts } from './testCases.js';
 export { findMisconceptions, misconceptionTerms } from './utils/misconceptions.js';
-export { COMPONENTS, SLOTS, component } from './components/index.js';
+export { COMPONENTS, GUIDANCE, SLOTS, component } from './components/index.js';
 export { CATALOG, CATALOG_KINDS, licenseLimits, openForAnyUse, searchCatalog } from './catalog.js';
 export { CONNECTORS, getResource, listResources, resourceJudge, resourcesHome, useResource } from './resources/index.js';
 export { CALL_LIMITS, callComponent, checkManifest, detect, documentComponents, lookup, measure } from './components/call.js';

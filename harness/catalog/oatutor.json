@@ -1,0 +1,48 @@
+{
+  "id": "oatutor",
+  "name": "OATutor",
+  "kind": "tool",
+  "summary": "An open adaptive tutoring system with a library of problems, hints and scaffolds, from college algebra, statistics and calculus texts.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "college",
+  "url": "https://github.com/CAHLR/OATutor",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "MIT",
+      "CC-BY-4.0"
+    ],
+    "source": "https://github.com/CAHLR/OATutor",
+    "note": "Code under MIT; content under CC BY 4.0, and each file names its own source and license."
+  },
+  "access": "open download",
+  "formats": [
+    "JSON",
+    "JavaScript"
+  ],
+  "made_by": [
+    "Zachary A. Pardos",
+    "Matthew Tang",
+    "Ioannis Anastasopoulos",
+    "Shreya K. Sheel",
+    "Ethan Zhang"
+  ],
+  "cite": "Pardos, Z. A., Tang, M., Anastasopoulos, I., Sheel, S. K., & Zhang, E. (2023). OATutor: An Open-source Adaptive Tutoring System and Curated Content Library for Learning Sciences Research. CHI 2023. https://doi.org/10.1145/3544548.3581574",
+  "fits": {
+    "slots": [
+      "judge"
+    ],
+    "how": "Its problems with worked hints could become test cases for a tutor, and its content a knowledge base. College texts, not K-12."
+  },
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Listed. Nothing here fetches it yet."
+  },
+  "status": "released",
+  "in_harness": null,
+  "verified_at": "2026-11-04"
+}
