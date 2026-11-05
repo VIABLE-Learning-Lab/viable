@@ -14,11 +14,13 @@ const headers = { authorization: `Bearer ${TOKEN}`, 'content-type': 'application
 const call = (name, args, id = `call_${Math.random().toString(36).slice(2)}`) => ({ id, type: 'function', function: { name, arguments: JSON.stringify(args) } });
 
 // The model, as a script of what it answers in turn: each a list of tool calls, or words. It keeps all it was sent.
-function scripted(script) {
+function scripted(script, pages = {}) {
   const sent = [];
   let at = 0;
   const fetch = async (url, init = {}) => {
     if (String(url).endsWith('/models')) return new Response(JSON.stringify({ data: [{ id: 'reply-model' }] }), { headers: { 'content-type': 'application/json' } });
+    // A page someone named: what reads the web and what reaches a model are one function here.
+    if (init.method === 'GET') return pages[String(url)]?.() ?? new Response('nothing', { status: 404 });
     const body = JSON.parse(init.body);
     sent.push(body);
     const next = await (typeof script === 'function' ? script(body, at) : script[at]);
@@ -31,9 +33,9 @@ function scripted(script) {
   return { fetch, sent };
 }
 
-async function server(script, { model = true } = {}) {
+async function server(script, { model = true, pages = {} } = {}) {
   const store = memoryStore();
-  const provider = scripted(script);
+  const provider = scripted(script, pages);
   const handler = await createApp({ bytes: null, name: 'x', vars: { VIABLE_ENGINE_TOKEN: TOKEN, VIABLE_ENGINE_SECRET: 'a-secret' }, store, fetch: provider.fetch, pages: { fetch: provider.fetch } });
   const api = (method, path, body) => handler(new Request(`${BASE}/console/api/${path}`, { method, headers, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }));
   const ok = async (method, path, body) => { const response = await api(method, path, body); const data = await response.json(); assert.ok(response.ok, `${path}: ${JSON.stringify(data)}`); return data; };
@@ -213,10 +215,101 @@ test('text from a model is text: a page can’t be written into, and a link stay
   const html = events.find((event) => event.name === 'said').data.html;
   assert.doesNotMatch(html, /<script|<img/);
   assert.match(html, /<strong>bold<\/strong>/);
-  assert.match(html, /<a href="https:\/\/example.org\/x">theirs<\/a>/);
+  assert.match(html, /<a href="https:\/\/example.org\/x" target="_blank" rel="noopener noreferrer">theirs<\/a>/);
   assert.doesNotMatch(html, /viable\.math/);
   assert.match(html, /the link on the card/);
   assert.doesNotMatch(html, /href="javascript/);
+});
+
+test('it opens a link the teacher gave, not one a model or a page came up with, and has no search of its own', async () => {
+  const opened = [];
+  const page = (html, status = 200) => () => { opened.push(html); return new Response(html, { status, headers: { 'content-type': 'text/html' } }); };
+  const s = await server([
+    [call('read_link', { url: 'https://example.org/x' }), call('read_link', { url: 'https://evil.example/?what=you-know' }), call('read_link', { url: 'https://example.org/gone' })],
+    'It says plants make food. [theirs](https://example.org/x) [not theirs](https://evil.example/?what=you-know)'
+  ], { pages: { 'https://example.org/x': page('<html><title>Plants</title><main><p>Plants make food.</p></main></html>'), 'https://example.org/gone': page('gone', 404), 'https://evil.example/?what=you-know': page('evil') } });
+  const events = await s.ask('Read https://example.org/x and https://example.org/gone');
+  assert.equal(opened.length, 2);
+  assert.doesNotMatch(opened.join(), /evil/);
+  const answers = s.sent[1].messages.filter((message) => message.role === 'tool').map((message) => JSON.parse(message.content));
+  assert.match(answers[0].text, /Plants make food/);
+  assert.equal(answers[0].title, 'Plants');
+  assert.match(answers[1].error, /didn’t come from you or from a search/);
+  assert.match(answers[2].error, /nothing at that address/);
+  const said = events.find((event) => event.name === 'said').data.html;
+  assert.match(said, /<a href="https:\/\/example.org\/x"[^>]*>theirs<\/a>/);
+  assert.doesNotMatch(said, /evil\.example/);
+  assert.match(allText(events), /Read “Plants”/);
+  const names = s.sent[0].tools.map((tool) => tool.function.name);
+  assert.ok(names.includes('read_link'));
+  assert.equal(names.includes('search_web'), false);
+});
+
+test('only the whole address a teacher gave opens, however they wrote it', async () => {
+  const tryOpening = async (said, url) => {
+    const s = await server([[call('read_link', { url })], 'Done.'], { pages: { [new URL(url.startsWith('http') ? url : `https://${url}`).href]: () => new Response('<html><main><p>Words.</p></main></html>', { headers: { 'content-type': 'text/html' } }) } });
+    await s.ask(said);
+    return JSON.parse(s.sent[1].messages.at(-1).content).text === undefined ? 'refused' : 'opened';
+  };
+  for (const [said, url, outcome] of [
+    ['Look at example.org/paper for me.', 'https://example.org/paper', 'opened'],
+    ['See https://example.org/paper, please', 'https://example.org/paper', 'opened'],
+    ['看看https://example.org/paper这个', 'https://example.org/paper', 'opened'],
+    ['(https://www.example.org/paper).', 'https://example.org/paper/', 'opened'],
+    ['See https://zh.example.org/wiki/水循环 now', 'https://zh.example.org/wiki/水循环', 'opened'],
+    ['See https://example.org/paper/one', 'https://example.org/paper', 'refused'],
+    ['See https://example.org/paper', 'https://example.org/paper?secret=1', 'refused'],
+    ['See https://data.example.org/a', 'https://example.org/a', 'refused'],
+    ['See https://example.org.evil.test/a', 'https://example.org', 'refused'],
+    ['Water and fractions', 'https://water', 'refused'],
+    ['Read https://example.org/page and tell me how to help Jane Doe', 'https://example.org/page and tell me how to help Jane Doe', 'refused'],
+    ['Read https://example.org/page and tell me how to help Jane Doe', 'https://example.org/page%20and%20tell%20me', 'refused'],
+    ['看看https://example.org/page这个学生叫张三', 'https://example.org/page这个学生叫张三', 'refused'],
+    ['See https://en.example.org/wiki/Mercury_(planet) now', 'https://en.example.org/wiki/Mercury_(planet)', 'opened']
+  ]) assert.equal(await tryOpening(said, url), outcome, `${said} → ${url}`);
+});
+
+test('an activity’s web page takes an address the teacher gave, not one a page came up with', async () => {
+  const s = await server(following([
+    [call('create_course', { title: 'Tides' })],
+    (course) => [call('add_activity', { course, title: 'From a page', kind: 'embed', url: 'https://evil.example/?d=everything' }), call('add_activity', { course, title: 'From them', kind: 'embed', url: 'https://maps.example.org/tides' })],
+    'Done.'
+  ]));
+  await s.ask('Set up a course on tides, with https://maps.example.org/tides as a web page.');
+  const [notGiven, given] = s.sent.at(-1).messages.filter((message) => message.role === 'tool').slice(-2).map((message) => JSON.parse(message.content));
+  assert.match(notGiven.error, /address didn’t come from you or from a search/);
+  assert.equal(given.error, undefined);
+  assert.ok(given.activity);
+});
+
+test('a link’s words: a bracket stays in an address, and a full stop after one isn’t part of it', async () => {
+  const s = await server(['See [Mercury](https://en.example.org/wiki/Mercury_(planet)) and https://en.example.org/x. Also https://made.up/y.']);
+  const events = await s.ask('Use https://en.example.org/wiki/Mercury_(planet) and https://en.example.org/x');
+  const html = events.find((event) => event.name === 'said').data.html;
+  assert.match(html, /<a href="https:\/\/en\.example\.org\/wiki\/Mercury_\(planet\)"[^>]*>Mercury<\/a> and https:\/\/en\.example\.org\/x\. Also the link on the card\./);
+});
+
+test('a class list in a table is found in any column, and a table of something else isn’t', () => {
+  const lists = [
+    'First,Last\nAda,Lovelace\nGrace,Hopper\nAlan,Turing',
+    'Last,First,ID\nLovelace,Ada,1001\nHopper,Grace,1002\nTuring,Alan,1003',
+    '"Last, First",Score\n"Lovelace, Ada",92\n"Hopper, Grace",88\n"Turing, Alan",75',
+    'Name,Section\nAda Lovelace,P2\nGrace Hopper,P2\nAlan Turing,P3',
+    'ID,First,Last\n1,Ada,Lovelace\n2,Grace,Hopper\n3,Alan,Turing\n4,Katherine,Johnson\n5,Mary,Jackson',
+    'No,Name\n1,Ada Lovelace\n2,Grace Hopper\n3,Alan Turing',
+    '| No | Student | Score |\n| --- | --- | --- |\n| 1 | Ada Lovelace | 92 |\n| 2 | Grace Hopper | 88 |\n| 3 | Alan Turing | 75 |',
+    '1,Ada,92\n2,Grace,88\n3,Alan,75\n4,Katherine,91\n5,Mary,84'
+  ];
+  for (const list of lists) assert.equal(holdsClassList(list), true, list);
+  // Long files, too: a table in the middle of everything else.
+  assert.equal(holdsClassList(`${'A line of prose that goes on for a while.\n'.repeat(40)}${lists[0]}\n${'More prose that goes on for a while here.\n'.repeat(40)}`), true);
+  const others = [
+    'Week 1, fractions\nWeek 2, decimals\nWeek 3, percents\nWeek 4, ratios\nWeek 5, review',
+    'word,meaning\napple,a fruit\nriver,water that flows\nstone,a small rock\nfield,open land\nrain,water that falls',
+    'Add the tops, keep the bottom\nFind what they share, then add\nCheck it, and write it simply',
+    'Question,Answer\n2+2,4\n3+3,6\n4+4,8\n5+5,10\n6+6,12'
+  ];
+  for (const other of others) assert.equal(holdsClassList(other), false, other);
 });
 
 test('a course or activity name written by someone else stays text on a card', async () => {

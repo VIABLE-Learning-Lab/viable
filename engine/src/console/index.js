@@ -18,6 +18,7 @@ import { modelsPage } from './models.js';
 import { peoplePages } from './people.js';
 import { progressPages } from './progress.js';
 import { sharePages } from './share.js';
+import { webOver } from './web.js';
 
 // A course's tabs come in this order.
 const [courseList, newCourse, activitiesTab, settingsTab] = coursePages;
@@ -116,7 +117,7 @@ export function consoleRoutes({ settings = null, library = null, teacherToken = 
     if (!settings) return async () => null;
     const secret = () => ctx.options.token || teacherToken;
     const session = teacherSession({ secret, now });
-    const tools = { settings, library, classes: storeClasses(ctx.store), records: storeRecords(ctx.store), threads: storeThreads(ctx.store), askModel: settings ? serverAskModel(settings, fetch, ctx.store) : null, now, tryLink: tryHere, fetch, outward, examples, addresses, signIn, store: ctx.store, tabs: TABS, served: ctx.served, runTurn: ctx.runTurn };
+    const tools = { settings, library, classes: storeClasses(ctx.store), records: storeRecords(ctx.store), threads: storeThreads(ctx.store), askModel: settings ? serverAskModel(settings, fetch, ctx.store) : null, web: webOver(outward), now, tryLink: tryHere, fetch, outward, examples, addresses, signIn, store: ctx.store, tabs: TABS, served: ctx.served, runTurn: ctx.runTurn };
 
     const { api, renderPage } = consoleApp({ tools, readBody: ctx.readBody, readJson: ctx.readJson });
 
