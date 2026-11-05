@@ -59,7 +59,7 @@
     "highlight.js": "11.12.0",
     "marked": "18.0.14",
     "mermaid": "12.3.0",
-    "pdfjs-dist": "6.4.299",
+    "pdfjs-dist": "6.5.438",
     "temml": "0.13.5"
   },
   "scripts": {
