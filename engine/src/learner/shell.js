@@ -37,9 +37,9 @@ export const pageHeaders = (nonce, { ancestors = '*', frames = '', media = false
   'Referrer-Policy': 'no-referrer',
   'Cache-Control': 'no-store'
 });
-/** The headers a chat page or an activity is served with. sites: who may frame it (space-separated origins, or *); frames: the sites its embedded activities come from; reads: a Reading panel's pdf.js runs its worker and image decoders (WebAssembly) from this site and loads the document's fonts; fonts: something beside the page takes its type from this site. */
+/** The headers a chat page or an activity is served with. sites: who may frame it (space-separated origins, or *); frames: the sites its embedded activities come from; reads: a Reading panel's pdf.js runs its worker and image decoders (WebAssembly) from this site and loads the document's fonts; fonts: something beside the page takes its type from this site, or 'inline' from the page itself. */
 export const chatPageHeaders = (nonce, { sites = '*', frames = [], reads = false, fonts = false } = {}) => ({
-  'Content-Security-Policy': `default-src 'none'; script-src 'nonce-${nonce}'${reads ? " 'wasm-unsafe-eval'" : ''}; style-src 'nonce-${nonce}'; connect-src 'self'; img-src 'self' https: data: blob:; media-src 'self' https: blob:;${reads ? " worker-src 'self'; font-src 'self' data: blob:;" : fonts ? " font-src 'self';" : ''} frame-src 'self' ${frames.join(' ')}; base-uri 'none'; form-action 'none'; frame-ancestors ${sites}`,
+  'Content-Security-Policy': `default-src 'none'; script-src 'nonce-${nonce}'${reads ? " 'wasm-unsafe-eval'" : ''}; style-src 'nonce-${nonce}'; connect-src 'self'; img-src 'self' https: data: blob:; media-src 'self' https: blob:;${reads ? " worker-src 'self'; font-src 'self' data: blob:;" : fonts === 'inline' ? ' font-src data:;' : fonts ? " font-src 'self';" : ''} frame-src 'self' ${frames.join(' ')}; base-uri 'none'; form-action 'none'; frame-ancestors ${sites}`,
   'X-Robots-Tag': 'noindex',
   'Referrer-Policy': 'no-referrer',
   'Cache-Control': 'no-store'

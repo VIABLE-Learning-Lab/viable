@@ -17,12 +17,13 @@ import { scriptJson } from './shell.js';
 const plain = (text) => String(text ?? '').replace(/^#+\s.*$|^\*[^*\n]+\*$/gm, '').replace(/[*_`]/g, '').replace(/\s+/g, ' ').trim();
 const clipped = (value, limit) => (typeof value === 'string' && value.length > limit ? `${value.slice(0, limit).replace(/\s+\S*$/, '')}…` : value);
 
-/** What the panel says of an activity's settings. What the teacher wants to hear about is for the teacher, and isn't given to the AI. */
-export function settingsShown(teaching) {
+/** What the panel says of an activity's settings, with a section's own help level over them. What the teacher wants to hear about is for the teacher, and isn't given to the AI. */
+export function settingsShown(teaching, section = null) {
   const saved = teachingSettings(teaching);
   if (!saved) return null;
+  const help = (section && saved.sections?.[section]?.help) || saved.help;
   return {
-    goal: saved.goal, help: saved.help, told: saved.help ? HELP_LEVELS[saved.help] : null,
+    goal: saved.goal, help, told: help ? HELP_LEVELS[help] : null,
     standard: saved.standard ? { code: saved.standard.code || null, description: saved.standard.description } : null,
     listens_for: (saved.misconceptions || []).map((item) => item.description)
   };
@@ -73,7 +74,7 @@ function watchPanel(config) {
   logo.innerHTML = config.mark; // Our own drawing, from the server.
   const close = el('button', 'close', 'Close');
   close.type = 'button';
-  close.addEventListener('click', () => { host.classList.remove('open'); opener.focus(); });
+  close.addEventListener('click', () => { host.classList.remove('open'); document.documentElement.classList.add('ai-watch-hidden'); opener.focus(); });
   // A signed-in teacher can end it here, on a computer someone else uses next.
   const signOut = el('button', 'link', 'Sign out');
   signOut.type = 'button';
@@ -93,7 +94,7 @@ function watchPanel(config) {
   scroller.append(empty, turns);
   panel.append(head, settingsPart(), says, scroller);
   root.append(style, panel);
-  opener.addEventListener('click', () => { host.classList.add('open'); close.focus(); });
+  opener.addEventListener('click', () => { document.documentElement.classList.remove('ai-watch-hidden'); host.classList.add('open'); close.focus(); });
 
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const toEnd = () => scroller.scrollTo({ top: scroller.scrollHeight, behavior: reduce ? 'auto' : 'smooth' });
@@ -333,7 +334,7 @@ ${PARTS_CSS}
 .head p{margin:6px 0 0;color:var(--muted);font-size:.875rem;line-height:1.4}
 .head .mode{display:inline-block;padding:1px 10px;border:1px solid var(--public-rule-strong);border-radius:var(--radius-pill);color:var(--public-text);font-size:.8125rem}
 .head .warning{color:var(--pencil-red)}
-.close{display:none;padding:6px 12px;border:1px solid var(--public-rule-strong);border-radius:var(--radius-pill);background:transparent;color:var(--public-ink);font:600 .875rem var(--font-public);cursor:pointer}
+.close{padding:6px 12px;border:1px solid var(--public-rule-strong);border-radius:var(--radius-pill);background:transparent;color:var(--public-ink);font:600 .875rem var(--font-public);cursor:pointer}
 .caption{flex:none;margin:0 22px 10px;padding:10px 14px;border-radius:var(--radius-sm);background:var(--code-bg);color:var(--code-ink);font-size:.9375rem;line-height:1.35}
 .scroll{flex:1;min-height:0;padding:12px 22px 28px;border-top:1px solid var(--public-rule);overflow-y:auto;overscroll-behavior:contain}
 .label{margin:0;color:var(--public-ink);font-size:.8125rem;font-weight:600;line-height:1.4;letter-spacing:0}
@@ -397,15 +398,18 @@ ${PARTS_CSS}
 .turn:last-child .told,.heard:not([hidden]),.passages:not([hidden]),.reached:not([hidden]){animation:part-in .45s var(--ease-out) both}}
 @media (prefers-reduced-motion:reduce){.status::before{animation:none}}
 @media (max-height:640px){.panel{overflow-y:auto}.scroll{flex:none;overflow:visible}}
-@media (max-width:1023px){.panel{border-left:0}.close{display:block}}`;
+@media (max-width:1023px){.panel{border-left:0}}`;
 
 // On the page: room at its side, and on a narrow screen a bar above it that opens the panel over it.
 const INK_BLUE = TOKENS.light['ink-blue'];
-const pageCss = (fontBase) => `${fontFaces({ url: true, base: fontBase })}
+const pageCss = (fontBase) => `${fontFaces(fontBase === null ? {} : { url: true, base: fontBase })}
 :root{--beside:clamp(360px,31vw,480px)}
 html{padding-right:var(--beside)}
 #ai-watch{position:fixed;top:0;right:0;bottom:0;z-index:40;width:var(--beside);display:block}
 #ai-watch-open{display:none}
+html.ai-watch-hidden{padding-right:0;--beside:0px}
+html.ai-watch-hidden #ai-watch{display:none}
+@media (min-width:1024px){html.ai-watch-hidden #ai-watch-open{position:fixed;top:50%;right:0;z-index:30;display:block;padding:14px 7px;border:0;border-radius:10px 0 0 10px;background:${INK_BLUE};color:#fff;font:600 .8125rem/1 ui-sans-serif,system-ui,sans-serif;writing-mode:vertical-rl;transform:translateY(-50%);cursor:pointer}}
 body.ai-corner .app,body.ai-corner .ws-ai{right:calc(var(--beside) + 18px)}
 .crs-stale{left:calc((100vw - var(--beside))/2)}
 @media (max-width:1023px){
@@ -421,7 +425,8 @@ html{padding-top:40px}
  * The panel as a page's slots.beside. Give it only to a request the host has granted it. teaching: the
  * settings as settingsShown says them; note: a few words saying what is answering; warning: what's wrong
  * with this page, if anything; hint: what the empty panel suggests; control: { url, page }, where the settings can be changed for a
- * try-out (POST { page, help?, goal? } answers { teaching }); extra: more of the host's own script.
+ * try-out (POST { page, help?, goal? } answers { teaching }); extra: more of the host's own script;
+ * fontBase: where this host serves the type (fontRoutes), or null to carry it in the page.
  */
 export function watchSlot({ teaching = null, note = null, warning = null, hint = null, control = null, signOut = null, extra = '', fontBase } = {}, nonce) {
   const config = { teaching: settingsShown(teaching), note, warning, hint, control, signOut, css: PANEL_CSS, nonce, mark: markSvg({ size: 24 }) };

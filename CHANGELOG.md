@@ -28,6 +28,7 @@ Two parts, one repository.
 - **Others' research reaches a reply.** A `context` component can be one JSON file (`runs.kind: data`), with nothing to host. Its pieces go in an
   activity's settings (`teaching.guidance`, `guidanceFrom`), and a turn's brief takes at most two that fit the moment, with their source.
   `viable-harness component new`, `try` (what a model is told with and without it) and `add`. [docs/how-it-works.md](harness/docs/how-it-works.md) says how a turn chooses.
+- **What the AI did** closes at any width, so you can see the page as a learner does, and `watchSlot({ fontBase: null })` carries its type in the page for a host that serves none.
 - **`checkReply` no longer runs a graph.** The review is in `checks/vetting.js`, and the graph's VETTING step runs the same one.
 - **`viable-harness test --endpoint`** tests whatever is behind an OpenAI-compatible endpoint.
 - **A course's setting for who its learners are now applies on your own server.** A package with `identify: code` opens only for
