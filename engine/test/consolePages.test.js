@@ -650,7 +650,7 @@ test('the navigation, and the door for someone who only wants a chat page', asyn
   const s = await server();
   const courses = await s.page('courses');
   const nav = /<nav aria-label="The console">(.*?)<\/nav>/s.exec(courses)[1];
-  assert.deepEqual([...nav.matchAll(/>([^<]+)<\/a>/g)].map((match) => match[1]), ['Courses', 'Chat pages', 'Agents', 'Knowledge', 'Models']);
+  assert.deepEqual([...nav.matchAll(/>([^<]+)<\/a>/g)].map((match) => match[1]), ['Ask', 'Courses', 'Chat pages', 'Agents', 'Knowledge', 'Models']);
   assert.match(courses, /href="\/console\/chat-pages">Start with a chat page/);
   await s.ok('POST', 'courses', { title: 'A course' });
   assert.doesNotMatch(await s.page('courses'), /Start with a chat page/);

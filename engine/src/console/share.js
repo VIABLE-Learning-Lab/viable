@@ -2,9 +2,9 @@
  * Sharing a course: its link and each section's, copied or as a QR code, and a poster to print. The address
  * shown is one a class can reach. No Node built-ins.
  */
+import { showCode } from '../server/classList.js';
 import { courseAt } from './course.js';
 import { esc, hereOnly, qrSvg, reachOf, withForms } from './forms.js';
-import { sectionsOf } from '../server/classList.js';
 
 const FROM_WORDS = {
   link: 'Give each class its own link or QR code: a first visit puts them in that section, and people on your class list keep theirs. Someone who comes by the course’s own link is asked which class they’re in, once.',
@@ -15,9 +15,9 @@ const FROM_WORDS = {
 
 const linkRow = (link, name, poster, qr) => `<li class="link-row"><div class="link-what"><strong>${esc(name)}</strong><code>${esc(link)}</code></div><div class="actions"><button class="v-btn is-small" type="button" data-copy="${esc(link)}">Copy link</button>${poster ? `<a class="v-btn is-small" href="${esc(poster)}">Poster</a>` : ''}</div>${qr ? `<details class="link-qr"><summary>QR code</summary>${qrSvg(link, { label: `QR code for ${name}: ${link}` })}</details>` : ''}</li>`;
 
-async function shareBody({ library, store, origin, addresses }, match) {
+async function shareBody({ library, classes, origin, addresses, joinAt }, match) {
   const { doc, meta, code } = await courseAt(library, match[1]);
-  const sections = await sectionsOf(store, code);
+  const sections = await classes.sections(code);
   const reach = reachOf(origin, addresses);
   const link = `${reach.base}/course/${code}`;
   const from = doc.course.sections_from || 'none';
@@ -33,7 +33,8 @@ ${hereOnly(reach, addresses)}
 <h2 id="link-title">The course’s link</h2>
 <p class="v-note">Learners open this every time: from a bookmark, your learning platform or the QR code. What they can open changes as activities open; the link doesn’t.</p>
 <p class="big-link"><code>${esc(link)}</code></p>
-<div class="actions"><button class="v-btn is-small" type="button" data-copy="${esc(link)}">Copy link</button><a class="v-btn is-small" href="/console/courses/${esc(code)}/share/poster">Print a poster</a><a class="v-btn is-small" href="/course/${esc(code)}" target="_blank" rel="noopener">Open</a></div>
+${joinAt ? `<p class="v-note">With no link to hand, they can go to <strong>${esc(joinAt)}</strong> and type <strong>${esc(showCode(code))}</strong>.</p>` : ''}
+<div class="actions"><button class="v-btn is-small" type="button" data-copy="${esc(link)}">Copy link</button><a class="v-btn is-small" href="/console/courses/${esc(code)}/share/poster">Print a poster</a><a class="v-btn is-small" href="${esc(link)}" target="_blank" rel="noopener">Open</a></div>
 <p class="v-note">In a learning platform, add it as a link that opens in a new tab: inside a frame, some browsers forget who a learner is between visits.</p>
 </div>
 ${qrSvg(link, { label: `QR code for ${link}` })}
@@ -71,9 +72,9 @@ const SAY_ON_POSTER = (doc, signIn) => {
   return '';
 };
 
-async function posterBody({ library, store, origin, addresses, signIn, url }, match) {
+async function posterBody({ library, classes, origin, addresses, signIn, url, joinAt }, match) {
   const { doc, code } = await courseAt(library, match[1]);
-  const sections = await sectionsOf(store, code);
+  const sections = await classes.sections(code);
   const section = sections.find((item) => item.key === url.searchParams.get('section')) || null;
   const reach = reachOf(origin, addresses);
   const link = `${reach.base}/course/${code}${section ? `?section=${encodeURIComponent(section.key)}` : ''}`;
@@ -89,6 +90,7 @@ ${section ? `<p class="poster-section">${esc(section.name)}</p>` : ''}
 <p class="poster-say">Scan this with your phone or tablet.</p>
 ${qrSvg(link, { label: `QR code for ${link}` })}
 <p class="poster-link">Or go to <strong>${esc(link.replace(/^https?:\/\//, ''))}</strong></p>
+${joinAt && !section ? `<p class="poster-link">Or go to <strong>${esc(joinAt)}</strong> and type <strong>${esc(showCode(code))}</strong></p>` : ''}
 ${line ? `<p class="poster-say">${esc(line)}</p>` : ''}
 </article>`,
     css: `.poster-do{margin-top:14px}.poster{display:grid;justify-items:center;gap:14px;margin-top:24px;padding:clamp(20px,5vw,48px);border:1px solid var(--public-rule);border-radius:var(--radius);background:var(--surface);text-align:center}.poster h1{font-size:clamp(2rem,6vw,3.4rem);line-height:1.1}.poster-section{margin:0;color:var(--public-ink);font-size:1.5rem}.poster-say{margin:0;color:var(--public-text);font-size:1.25rem}.poster .qr{width:min(100%,380px);height:auto}.poster-link{margin:0;color:var(--public-text);font-size:1.125rem;overflow-wrap:anywhere}.poster-link strong{color:var(--public-ink)}

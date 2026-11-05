@@ -139,7 +139,7 @@ test('the environment wins over what is saved, and says it does', async () => {
 
   const whole = modelSettings({ baseUrl: 'https://env.example/v1', plan: modelPlan({ models: { reply: 'r', transcribe: 't', speech: 's', image: 'i', picker: 'p', meaning: 'e', reads: { r: ['images'] } } }) });
   const { roles: fromFile, reads } = await whole.resolve();
-  assert.deepEqual(Object.fromEntries(Object.entries(fromFile).map(([role, value]) => [role, value?.model ?? null])), { reply: 'r', reviewer: null, picker: 'p', hearing: 't', speaking: 's', drawing: 'i', meaning: 'e' }, 'with no store, a models file can say all of it');
+  assert.deepEqual(Object.fromEntries(Object.entries(fromFile).map(([role, value]) => [role, value?.model ?? null])), { reply: 'r', reviewer: null, picker: 'p', assistant: null, hearing: 't', speaking: 's', drawing: 'i', meaning: 'e' }, 'with no store, a models file can say all of it');
   assert.deepEqual(reads('r'), { images: true, files: false });
   const again = modelPlan({ models: JSON.parse(JSON.stringify(modelPlan({ models: { reply: 'r', picker: 'p', meaning: 'e', reads: { r: ['images', 'files'] } } }))) });
   assert.deepEqual([again.picker, again.meaning, again.reads], ['p', 'e', { r: ['images', 'files'] }], 'a scaffold’s models.json reads back what deploy wrote');

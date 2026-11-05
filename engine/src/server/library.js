@@ -293,6 +293,12 @@ export function courseLibrary({ store = null, given = [], readPath = null, fetch
     entries,
     /** What to serve: every entry that isn't closed. */
     documents: async () => (await entries()).filter((entry) => entry.meta.status !== 'closed'),
+    /** Every course here, each at its address: [{ id, doc, meta, file, code }]. */
+    async courses() {
+      const held = await entries();
+      const codes = courseCodes(held.map((entry) => entry.doc));
+      return held.filter((entry) => entry.doc.course).map((entry) => ({ ...entry, code: codes.get(entry.doc) }));
+    },
     /** What a package names by path, wherever it is held. */
     readPath: async (name, dir) => {
       if (!String(dir ?? '').startsWith(IN_STORE)) { if (!readPath) throw refused('It is named by path, and this server has no folder to find it in.'); return readPath(name, dir); }

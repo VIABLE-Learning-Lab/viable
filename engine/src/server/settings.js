@@ -16,6 +16,7 @@ export const ROLES = Object.freeze({
   reply: { label: 'Writes replies', file: 'reply' },
   reviewer: { label: 'Reviews replies', file: 'reviewer' },
   picker: { label: 'Reads the moment (optional)', file: 'picker' },
+  assistant: { label: 'Works with you in Ask (optional)', file: 'assistant' },
   hearing: { label: 'Hears learners', file: 'transcribe' },
   speaking: { label: 'Reads aloud', file: 'speech' },
   drawing: { label: 'Draws pictures', file: 'image' },

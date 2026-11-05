@@ -10,8 +10,7 @@ import { suggestion, treeHtml } from '../../../harness/src/ui/parts.js';
 import { VIEW_CSS, viewParts } from '../../../harness/src/view.js';
 import { answersSoFar } from '../learner/logic.js';
 import { activityKeys } from '../server/library.js';
-import { acceptedOf, keepAccepted, peopleOf, sectionsOf, showCode } from '../server/classList.js';
-import { learnerRecords } from '../server/learner.js';
+import { showCode } from '../server/classList.js';
 import { activityIn } from './activity.js';
 import { DETECTORS_CSS, detectorRoutes, detectorsPart } from './detectors.js';
 import { changeCourse, courseAt } from './course.js';
@@ -19,7 +18,6 @@ import { courseHead, esc, plural, say, sectionChips, when, withForms } from './f
 
 const refused = (message, status = 400, code = 'invalid_progress') => Object.assign(new Error(message), { status, code });
 const DONE_HOW = { submitted: 'handed in', answered: 'every question answered', completed: 'the page said so', self: 'they said they were done', opened: 'opened' };
-const TURNS_SHOWN = 200;
 
 const activitiesIn = (doc) => { const list = doc.course.activities || []; const keys = activityKeys(list); return list.map((activity, i) => ({ ...activity, key: keys[i] })); };
 // Learners' codes, sections' IDs and moments as a teacher knows them, in text the Harness wrote: this page is behind the token, and the words it joins are all escaped.
@@ -52,7 +50,7 @@ ${activities.map((activity) => { const state = stateOf(mine[activity.key]); cons
 </tr>`;
 }
 
-function progressView({ code, title, origin, addresses, tabs, closed, activities, people, cells, sections, filter, locked }) {
+function progressView({ code, title, origin, addresses, tabs, closed, activities, people, cells, sections, filter, locked, asTable }) {
   const shown = people.filter((person) => (!filter ? true : filter === 'none' ? !person.section : person.section === filter));
   const doneOf = (activity) => shown.filter((person) => cells[person.id]?.[activity.key]?.done_at).length;
   return `${courseHead({ title, code, origin, addresses, tabs, current: 'Progress', closed })}
@@ -70,8 +68,9 @@ ${shown.length ? `<div class="grid-wrap" tabindex="0" role="region" aria-labelle
 </section>
 <section class="block" aria-labelledby="take-title">
 <h2 id="take-title">To take with you</h2>
-<p class="v-note">The records name each learner by their personal code, never by name. The class list is the only file that joins names and codes, so keep the two apart. A code opens that learner’s work, so keep both private.</p>
-<div class="actions take"><a class="v-btn is-small" href="/console/api/courses/${esc(code)}/records.json">Download the records (JSON)</a><a class="v-btn is-small" href="/console/api/courses/${esc(code)}/people.csv">Download the class list (CSV)</a></div>
+${asTable ? `<p class="v-note">A row for each learner: their name, section and what they’ve done. It has their names, so keep it private.</p>
+<div class="actions take"><a class="v-btn is-small" href="/console/api/courses/${esc(code)}/progress.csv">Download progress (CSV)</a></div>` : `<p class="v-note">The records name each learner by their personal code, never by name. The class list is the only file that joins names and codes, so keep the two apart. A code opens that learner’s work, so keep both private.</p>
+<div class="actions take"><a class="v-btn is-small" href="/console/api/courses/${esc(code)}/records.json">Download the records (JSON)</a><a class="v-btn is-small" href="/console/api/courses/${esc(code)}/people.csv">Download the class list (CSV)</a></div>`}
 </section>`;
 }
 
@@ -146,14 +145,14 @@ ${list.map((turn) => `<div class="turn"><p class="by">${esc(who)}</p><div class=
 </details>`).join('')}`;
 }
 
-function learnerView({ code, courseTitle, person, section, activities, sets, work, cut }) {
+function learnerView({ code, courseTitle, person, section, activities, sets, work, cut, shown }) {
   const who = person.name || showCode(person.code);
   const touched = activities.filter((activity) => work.progress[activity.key] || work.turns[activity.key]?.length);
   const untouched = activities.filter((activity) => !touched.includes(activity));
   return `<nav class="crumbs" aria-label="Where you are"><a href="/console/courses">Courses</a> / <a href="/console/courses/${esc(code)}">${esc(courseTitle)}</a> / <a href="/console/courses/${esc(code)}/progress">Progress</a></nav>
 <h1>${esc(who)}</h1>
 <p class="v-note facts">${[person.name ? `Personal code ${esc(showCode(person.code))}` : '', section ? esc(section) : '', person.last_seen_at ? `Last seen ${when(person.last_seen_at)}` : 'Not signed in yet'].filter(Boolean).join(' · ')} · <a href="/console/courses/${esc(code)}/people/${esc(person.id)}">Change on People</a></p>
-${cut ? `<p class="notice">This shows their latest ${TURNS_SHOWN} messages with the AI.</p>` : ''}
+${cut ? `<p class="notice">This shows their latest ${shown} messages with the AI.</p>` : ''}
 ${touched.length ? touched.map((activity) => {
     const row = work.progress[activity.key];
     const state = row?.done_at ? `Done ${when(row.done_at)}${DONE_HOW[row.done_how] ? ` (${DONE_HOW[row.done_how]})` : ''}` : row?.opened_at ? `Started ${when(row.opened_at)}, last worked ${when(row.last_at)}` : '';
@@ -209,6 +208,8 @@ function waitLine(runs, agentSlug) {
   const seconds = Math.round(middle(checked.map((steps) => steps.reduce((sum, step) => sum + (step.durationMs || 0), 0))) / 1000);
   const tries = checked.map((steps) => steps.reduce((sum, step) => sum + (step.output?.attempts || 0), 0));
   const average = tries.reduce((sum, value) => sum + value, 0) / tries.length;
+  // A host whose records don't say how long a check took has nothing to report.
+  if (!seconds && !average) return '';
   return `<p class="v-note">Checking took about ${seconds} s a reply, at ${average.toFixed(1)} tries a reply, with nothing on the page meanwhile. Too long? ${agentSlug ? `<a href="/console/agents/${esc(agentSlug)}">Allow fewer tries</a>, or choose` : 'Choose'} a faster reviewer in <a href="/console/models">Models</a>. More care is the other way.</p>`;
 }
 
@@ -259,63 +260,42 @@ const LOOK_CSS = `.opening{margin:12px 0 0;color:var(--public-ink);font-size:1.0
 
 // --- What it reads -------------------------------------------------------------------------------------
 
-async function gridBody({ library, store, origin, addresses, tabs, url }, match) {
+async function gridBody({ library, classes, records, origin, addresses, tabs, url }, match) {
   const { doc, meta, code } = await courseAt(library, match[1]);
-  const [people, sections] = await Promise.all([peopleOf(store, code), sectionsOf(store, code)]);
-  const cells = {};
-  if (store) for (const key of await store.list(`courses/${code}/progress/`)) { const [id, activity] = key.split('/').slice(-2); (cells[id] ||= {})[activity] = await store.get(key); }
-  return { title: `Progress · ${doc.course.title}`, css: GRID_CSS, body: progressView({ code, title: doc.course.title, origin, addresses, tabs, closed: meta.status === 'closed', activities: activitiesIn(doc), people, cells, sections, filter: url.searchParams.get('section') || '', locked: !store }) };
+  const [people, sections, cells] = await Promise.all([classes.people(code), classes.sections(code), records.cells(code)]);
+  return { title: `Progress · ${doc.course.title}`, css: GRID_CSS, body: progressView({ code, title: doc.course.title, origin, addresses, tabs, closed: meta.status === 'closed', activities: activitiesIn(doc), people, cells, sections, filter: url.searchParams.get('section') || '', asTable: Boolean(records.csv), locked: !records.saving }) };
 }
 
-// What the store holds of one learner, by activity.
-async function workOf(store, code, id) {
-  const under = async (part) => {
-    const found = {};
-    for (const key of await store.list(`courses/${code}/${part}/${id}/`)) { const [activity, panel] = key.split('/').slice(4); ((found[activity] ||= {})[panel] = await store.get(key)); }
-    return found;
-  };
-  const answers = await under('answers');
-  for (const panels of Object.values(answers)) for (const panel of Object.keys(panels)) panels[panel] = panels[panel]?.rows || [];
-  const notes = {};
-  for (const key of await store.list(`courses/${code}/notes/${id}/`)) { const [activity, panel] = key.split('/').slice(4); ((notes[activity] ||= {})[panel] ||= []).push(await store.get(key)); }
-  const progress = {};
-  for (const key of await store.list(`courses/${code}/progress/${id}/`)) progress[key.split('/').at(-1)] = await store.get(key);
-  const turnKeys = await store.list(`courses/${code}/turns/${id}/`);
-  const turns = {};
-  for (const key of turnKeys.slice(-TURNS_SHOWN)) { const turn = await store.get(key); if (turn?.activity) (turns[turn.activity] ||= []).push(turn); }
-  return { work: { drafts: await under('drafts'), answers, notes, progress, turns }, cut: turnKeys.length > TURNS_SHOWN };
-}
-
-async function learnerBody({ library, store }, match) {
+async function learnerBody({ library, classes, records }, match) {
   const { doc, code } = await courseAt(library, match[1]);
-  const person = (await peopleOf(store, code)).find((item) => item.id === match[2]);
+  const person = (await classes.people(code)).find((item) => item.id === match[2]);
   if (!person) throw refused('That learner isn’t in this course anymore.', 404, 'learner_not_found');
-  const section = (await sectionsOf(store, code)).find((item) => item.id === person.section)?.name || null;
-  const { work, cut } = await workOf(store, code, person.id);
-  return { title: `${person.name || showCode(person.code)} · ${doc.course.title}`, css: WORK_CSS, body: learnerView({ code, courseTitle: doc.course.title, person, section, activities: activitiesIn(doc), sets: doc.question_sets || [], work, cut }) };
+  const section = (await classes.sections(code)).find((item) => item.id === person.section)?.name || null;
+  const { work, cut, shown } = await records.work(code, person.id);
+  return { title: `${person.name || showCode(person.code)} · ${doc.course.title}`, css: WORK_CSS, body: learnerView({ code, courseTitle: doc.course.title, person, section, activities: activitiesIn(doc), sets: doc.question_sets || [], work, cut, shown }) };
 }
 
 // An activity's evidence, and what it suggests. What was accepted comes back only on what learners did since.
-async function evidenceOf(store, code, activity) {
-  const accepted = await acceptedOf(store, code, activity.key);
-  const { records, runs } = await learnerRecords(store, code, { activity: activity.key });
+async function evidenceOf({ classes, records }, code, activity) {
+  const accepted = await classes.accepted(code, activity.key);
+  const { records: held, runs } = await records.of(code, { activity: activity.key });
   const teaching = activity.teaching ?? null;
   const done = new Set(accepted.map((item) => item.id));
   const since = accepted.at(-1)?.at;
-  const again = since ? suggestChanges({ teaching, ...await learnerRecords(store, code, { activity: activity.key, since }) }).filter((item) => done.has(item.id)) : [];
-  return { accepted, records, runs, suggestions: [...suggestChanges({ teaching, runs, records }).filter((item) => !done.has(item.id)), ...again] };
+  const again = since ? suggestChanges({ teaching, ...await records.of(code, { activity: activity.key, since }) }).filter((item) => done.has(item.id)) : [];
+  return { accepted, records: held, runs, suggestions: [...suggestChanges({ teaching, runs, records: held }).filter((item) => !done.has(item.id)), ...again] };
 }
 
-async function lookBody({ library, store, origin, addresses, tabs, url }, match) {
+async function lookBody({ library, classes, records, store, origin, addresses, tabs, url, simple }, match) {
   const { doc, meta, code } = await courseAt(library, match[1]);
   const activities = activitiesIn(doc).filter((activity) => activity.agent_ref);
   const activity = activities.find((item) => item.key === url.searchParams.get('activity')) || activities[0] || null;
   const common = { code, title: doc.course.title, origin, addresses, tabs, closed: meta.status === 'closed', activities, version: meta.version };
-  if (!activity || !store) return { title: `What to look at · ${doc.course.title}`, css: GRID_CSS, body: lookView({ ...common, activity: null }) };
-  const [people, sections, evidence] = await Promise.all([peopleOf(store, code), sectionsOf(store, code), evidenceOf(store, code, activity)]);
+  if (!activity || !records.saving) return { title: `What to look at · ${doc.course.title}`, css: GRID_CSS, body: lookView({ ...common, activity: null }) };
+  const [people, sections, evidence] = await Promise.all([classes.people(code), classes.sections(code), evidenceOf({ classes, records }, code, activity)]);
   const parts = viewParts({ teaching: activity.teaching ?? null, records: evidence.records, runs: evidence.runs, suggestions: evidence.suggestions });
   const unhelpful = evidence.records.flatMap((record) => record.turns.filter((turn) => turn.rating === -1).map((turn) => ({ learner: record.user, turn })));
-  return { title: `What to look at · ${doc.course.title}`, css: `${GRID_CSS}\n${VIEW_CSS}\n${LOOK_CSS}\n${DETECTORS_CSS}`, body: lookView({ ...common, activity, detectors: await detectorsPart({ store }, code, people), parts: { ...parts, runs: evidence.runs.length, waited: waitLine(evidence.runs, doc.agents?.find((agent) => agent.ref === activity.agent_ref)?.slug),  heard: parts.heardList.length }, moments: hardMoments.build({ records: evidence.records }).moments, unhelpful, accepted: evidence.accepted, people, sections }) };
+  return { title: `What to look at · ${doc.course.title}`, css: `${GRID_CSS}\n${VIEW_CSS}\n${LOOK_CSS}\n${DETECTORS_CSS}`, body: lookView({ ...common, activity, detectors: store ? await detectorsPart({ store }, code, people) : '', parts: { ...parts, runs: evidence.runs.length, waited: waitLine(evidence.runs, simple ? null : doc.agents?.find((agent) => agent.ref === activity.agent_ref)?.slug),  heard: parts.heardList.length }, moments: hardMoments.build({ records: evidence.records }).moments, unhelpful, accepted: evidence.accepted, people, sections }) };
 }
 
 export const progressPages = [
@@ -325,22 +305,29 @@ export const progressPages = [
     render: withForms(gridBody),
     api: [
       ...detectorRoutes,
-      ['GET', /^courses\/([\w-]+)\/records\.json$/, async ({ library, store }, match) => {
+      // A host that keeps its own table of who has done what offers that instead of the records.
+      ['GET', /^courses\/([\w-]+)\/progress\.csv$/, async ({ library, records }, match) => {
         const { code } = await courseAt(library, match[1]);
-        if (!store) throw refused('This server has no store, so it keeps no records.', 409, 'no_store');
-        return new Response(JSON.stringify({ object: 'course.records', course: code, ...await learnerRecords(store, code) }), { status: 200, headers: { 'content-type': 'application/json', 'content-disposition': `attachment; filename="records-${code}.json"`, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
+        if (!records.csv) throw refused('Download the records instead.', 404, 'not_found');
+        const { filename, csv } = await records.csv(code);
+        return new Response(csv, { status: 200, headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="${filename}"`, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
       }],
-      ['POST', /^courses\/([\w-]+)\/activities\/([\w-]+)\/suggestions\/accept$/, async ({ library, store }, match, body) => {
+      ['GET', /^courses\/([\w-]+)\/records\.json$/, async ({ library, records }, match) => {
+        const { code } = await courseAt(library, match[1]);
+        if (!records.saving) throw refused('This server has no store, so it keeps no records.', 409, 'no_store');
+        return new Response(JSON.stringify({ object: 'course.records', course: code, ...await records.of(code) }), { status: 200, headers: { 'content-type': 'application/json', 'content-disposition': `attachment; filename="records-${code}.json"`, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
+      }],
+      ['POST', /^courses\/([\w-]+)\/activities\/([\w-]+)\/suggestions\/accept$/, async ({ library, classes, records }, match, body) => {
         const { doc, code } = await courseAt(library, match[1]);
-        if (!store) throw refused('This server has no store, so nothing can be changed here.', 409, 'no_store');
+        if (!records.saving) throw refused('This server has no store, so nothing can be changed here.', 409, 'no_store');
         const activity = activitiesIn(doc).find((item) => item.key === match[2]);
         if (!activity) throw refused('That activity isn’t in this course anymore.', 404, 'activity_not_found');
-        const { suggestions } = await evidenceOf(store, code, activity);
+        const { suggestions } = await evidenceOf({ classes, records }, code, activity);
         const found = suggestions.find((item) => item.id === body?.id);
         if (!found) throw refused('That suggestion isn’t here anymore. Look again.', 409, 'suggestion_gone');
         if (!found.patch) throw refused('This one changes no setting: read the evidence, then decide.', 400, 'nothing_to_apply');
         await changeCourse(library, code, body.version, (draft) => { const held = activityIn(draft, match[2]).activity; held.teaching = applySuggestion(held.teaching, found); }, 'Accepted a suggested change');
-        await keepAccepted(store, code, match[2], { id: found.id, change: found.change });
+        await classes.keepAccepted(code, match[2], { id: found.id, change: found.change });
         return {};
       }]
     ]

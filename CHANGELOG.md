@@ -4,6 +4,14 @@ Changes that matter to people who build on this. Versions follow semantic versio
 to a format or to what a step's setting means is at least a minor version and says how to move
 existing files.
 
+## Unreleased
+
+- **Ask.** With a model set, the console opens on a conversation: say what you're teaching, and it makes the course, activities and questions through the console's own routes, showing each step, and hands back cards for the link, QR code, class list and progress. What reaches learners waits for a person's click, enforced on the server, and names never reach its model. The role `assistant` is optional.
+- **What reaches learners stays a person's.** Ask won't change teaching or questions on what's open, for everyone or for a section, or add a first section to a course in use. It says why, and where the teacher can do it.
+- **Class lists.** Pasted lists read as lists in any script or case, numbered, with IDs or emails, with a button to send a note that only looks like one. Two columns of first and last names are refused rather than read as sections.
+- **A preview shows everything.** Trying a course opens activities learners can't yet, and says so on each.
+- **For hosts.** `consoleApp` gives a host the console's routes and pages for whoever it has signed in, with `library`, `classes`, `records` and `threads` of its own. `simple` leaves out what such a host decides for teachers.
+
 ## 0.3.0 (2026-11-05)
 
 Two parts, one repository.

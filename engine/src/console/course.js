@@ -3,9 +3,7 @@
  * activities and its settings. A course is a package's document, changed through the library; nothing
  * here keeps anything of its own. No Node built-ins.
  */
-import { activityKeys, courseCodes } from '../server/library.js';
-import { peopleOf, releasesOf, sectionsOf } from '../server/classList.js';
-import { forgetChat, forgetCourse } from '../server/learner.js';
+import { activityKeys } from '../server/library.js';
 import { readPackage } from '../server/runtime.js';
 import { choose, courseHead, esc, FORMS_CSS, oneOf, plural, say, text, toggle, withForms } from './forms.js';
 import { CONSOLE_SCRIPT } from './client.js';
@@ -37,35 +35,30 @@ const blankPackage = (title) => ({ format: 'viable.course-package', version: 1, 
 
 /** What a course's address finds in the library: { id, doc, meta, code }. */
 export async function courseAt(library, code) {
-  const entries = await library.entries();
-  const codes = courseCodes(entries.map((entry) => entry.doc));
-  const found = entries.find((entry) => codes.get(entry.doc) === code);
-  if (!found) throw refused('That course isn’t on this server.', 404, 'course_not_found');
-  return { ...found, code };
+  const found = library.course ? await library.course(code) : (await library.courses()).find((entry) => entry.code === code);
+  if (!found) throw refused('That course isn’t here.', 404, 'course_not_found');
+  return found;
 }
-const learnersIn = async (store, code) => (await peopleOf(store, code)).length;
 // A file can say its chat page is on, and that means anyone can spend this server's keys: here it starts paused, for someone to turn on.
 const paused = (doc) => { for (const agent of [doc, ...(doc?.agents || [])]) if (agent?.chat_page) agent.chat_page = { ...agent.chat_page, status: 'paused' }; return doc; };
 const SAVING = '<p class="notice">This server has no store, so courses can’t be changed here. Start it with a data folder (<code>viable-engine start</code>), or deploy it with a store.</p>';
 
 // --- The list -----------------------------------------------------------------------------------------
 
-async function listBody({ library, store, examples, settings }) {
-  const entries = await library.entries();
-  const codes = courseCodes(entries.map((entry) => entry.doc));
-  const courses = entries.filter((entry) => entry.doc.course);
+async function listBody({ library, classes, examples, settings, simple }) {
+  const courses = await library.courses();
   const cards = await Promise.all(courses.map(async (entry) => {
-    const code = codes.get(entry.doc);
-    const facts = [plural((entry.doc.course.activities || []).length, 'activity', 'activities'), plural(await learnersIn(store, code), 'learner'), ...(entry.meta.status === 'closed' ? ['Closed'] : []), ...(entry.meta.version === 0 ? [`From ${entry.file}`] : [])];
+    const { code } = entry;
+    const facts = [plural((entry.doc.course.activities || []).length, 'activity', 'activities'), plural((await classes.people(code)).length, 'learner'), ...(entry.meta.status === 'closed' ? ['Closed'] : []), ...(entry.meta.version === 0 ? [`From ${entry.file}`] : [])];
     return `<li><a class="course-card v-card" href="/console/courses/${esc(code)}"><strong>${esc(entry.doc.course.title)}</strong><span class="v-note">${esc(facts.join(' · '))}</span></a></li>`;
   }));
-  const saving = Boolean(store);
+  const { saving } = classes;
   const using = settings ? await settings.resolve() : null;
   return `<h1>Courses</h1>
 <p class="v-lead">A course is one link for your learners: its activities, who is in it, and how far the AI may go in each.</p>
 ${saving ? '' : SAVING}
 ${saving && using && !using.roles.reply ? '<p class="notice">No model writes replies yet. <a href="/console/models">Set one up</a> and the AI in your activities starts working. You can build a course first.</p>' : ''}
-${cards.length ? '' : '<p class="v-note first-door">Only want a chat button for a website? <a href="/console/chat-pages">Start with a chat page</a>.</p>'}
+${cards.length || simple ? '' : '<p class="v-note first-door">Only want a chat button for a website? <a href="/console/chat-pages">Start with a chat page</a>.</p>'}
 ${cards.length ? `<ul class="course-list">${cards.join('')}</ul>` : ''}
 ${saving ? `<section class="block" aria-labelledby="start-title">
 <h2 id="start-title">Start a course</h2>
@@ -84,7 +77,7 @@ ${choose('id', 'Which', examples[0].id, examples.map((example) => ({ value: exam
 </form>` : ''}
 <div class="v-card start" id="new-file" data-say-box>
 <h3>From a file</h3>
-<p class="v-note">A package (<code>.viable.zip</code> or <code>.viable.json</code>) from the Developer Platform or another Engine. Learners, class lists and study data don’t travel in one. A chat page in it starts paused.</p>
+<p class="v-note">A package (<code>.viable.zip</code> or <code>.viable.json</code>) from the Developer Platform or another Engine. Learners, class lists and study data don’t travel in one.${simple ? '' : ' A chat page in it starts paused.'}</p>
 <div class="v-form"><label class="v-label" for="package-file">Choose the file</label><input class="v-input" id="package-file" type="file" accept=".zip,.json" data-upload="POST courses/from-file"></div>${say()}
 </div>
 </div>
@@ -139,7 +132,7 @@ function activityRow(activity, code, version, index, count, locked, sections, ow
 <span class="v-pill${open ? ' is-open' : ''}">${esc(stateWords(activity))}</span>
 <div class="actions row-do">
 ${locked ? '' : `<button class="v-btn is-small" type="button" data-api="POST ${api}/release" data-body='${esc(JSON.stringify({ version, release: open ? 'hidden' : 'open' }))}' data-said="${open ? 'Hidden from learners.' : 'Open to learners.'}">${open ? 'Hide' : 'Open'}</button>`}
-<a class="v-btn is-small" href="/course/${esc(code)}/${key}?try=1" target="_blank" rel="noopener">Try it</a>
+<a class="v-btn is-small" href="/console/api/courses/${esc(code)}/try/${key}" target="_blank" rel="noopener">Try it</a>
 ${locked ? '' : `<button class="v-btn is-small icon" type="button" aria-label="Move ${esc(activity.title)} up" data-api="POST ${api}/move" data-body='${esc(JSON.stringify({ version, by: -1 }))}'${index === 0 ? ' disabled' : ''}>↑</button><button class="v-btn is-small icon" type="button" aria-label="Move ${esc(activity.title)} down" data-api="POST ${api}/move" data-body='${esc(JSON.stringify({ version, by: 1 }))}'${index === count - 1 ? ' disabled' : ''}>↓</button>`}
 </div>
 ${locked ? '' : forSections(activity, code, sections, own, open)}
@@ -147,19 +140,19 @@ ${say()}
 </li>`;
 }
 
-async function activitiesBody({ library, store, origin, addresses, signIn, tabs }, match) {
+async function activitiesBody({ library, classes, origin, addresses, signIn, tabs, simple }, match) {
   const entry = await courseAt(library, match[1]);
   const { doc, meta, code } = entry;
   const course = doc.course;
   const held = course.activities || [];
   const keys = activityKeys(held);
   const activities = held.map((activity, i) => ({ ...activity, key: keys[i] }));
-  const locked = !store;
+  const locked = !classes.saving;
   const units = course.units || [];
   const inUnit = (ref) => activities.filter((activity) => (activity.unit_ref || null) === ref);
-  const [sections, releases, people] = await Promise.all([sectionsOf(store, code), releasesOf(store, code), peopleOf(store, code)]);
+  const [sections, releases, people] = await Promise.all([classes.sections(code), classes.releases(code), classes.people(code)]);
   // A course of codes with nobody listed is shut to everyone, and the link gives no hint of it.
-  const shut = store && !signIn && course.identify === 'code' && !people.some((person) => person.listed);
+  const shut = classes.saving && !signIn && course.identify === 'code' && !people.some((person) => person.listed);
   const rows = (list) => list.map((activity) => activityRow(activity, code, meta.version, activities.indexOf(activity), activities.length, locked, sections, releases[activity.key] || {})).join('');
   const groups = [...units.map((unit) => ({ title: unit.title, list: inUnit(unit.ref) })), { title: units.length ? 'Not in a unit' : null, list: activities.filter((activity) => !units.some((unit) => unit.ref === activity.unit_ref)) }].filter((group) => group.title && units.length ? group.list.length || group.title !== 'Not in a unit' : group.list.length);
   return {
@@ -215,11 +208,11 @@ const ACTIVITIES_CSS = `.unit{margin:26px 0 8px;font-size:1.0625rem;font-weight:
 
 // --- A course's settings ------------------------------------------------------------------------------
 
-async function settingsBody({ library, store, origin, addresses, tabs }, match) {
+async function settingsBody({ library, classes, origin, addresses, tabs }, match) {
   const entry = await courseAt(library, match[1]);
   const { doc, meta, code } = entry;
   const course = doc.course;
-  const locked = !store;
+  const locked = !classes.saving;
   const given = meta.version === 0;
   const versions = (meta.versions || []).map((item) => `<li><span>Version ${item.version} · <time datetime="${esc(item.at)}">${esc(item.at.slice(0, 16).replace('T', ' '))} UTC</time>${item.note ? ` · ${esc(item.note)}` : ''}</span>${item.version === meta.version ? '<span class="v-note">This one</span>' : `<button class="v-btn is-small" type="button" data-api="POST courses/${esc(code)}/restore" data-body='${esc(JSON.stringify({ to: item.version }))}' data-confirm="Go back to version ${item.version}? Learners see it at once. Who can sign in, what is open and which chat pages are on stay as they are now. What you have now stays as a version too." data-said="Back to version ${item.version}.">Go back to this</button>`}</li>`).join('');
   return {
@@ -247,7 +240,7 @@ ${text('learner_daily_messages', 'Messages to the AI per learner, per day', cour
 </form>
 <section class="block" aria-labelledby="file-title" data-say-box>
 <h2 id="file-title">The course as a file</h2>
-<p class="v-note">Download it to keep it, or to open it on the Developer Platform (Courses → Import) or another Engine. It holds the activities, the agents and their files. Learners, class lists and their work stay here. On the Developer Platform, models it doesn’t have become its default, and the import says so.</p>
+<p class="v-note">Download it to keep it, or to open it somewhere else: the Developer Platform (Courses → Import), or a server of your own with the Engine. It holds the activities, the agents and their files. Learners, class lists and their work stay here.</p>
 <div class="actions file-actions"><a class="v-btn" href="/console/api/courses/${esc(code)}/download">Download</a></div>
 </section>
 ${versions ? `<section class="block" aria-labelledby="versions-title" data-say-box>
@@ -256,10 +249,10 @@ ${versions ? `<section class="block" aria-labelledby="versions-title" data-say-b
 <ul class="versions">${versions}</ul>${say()}
 </section>` : ''}
 ${locked || given ? '' : `<section class="block" aria-labelledby="end-title" data-say-box>
-<h2 id="end-title">Close or delete</h2>
+<h2 id="end-title">Close or ${library.archives ? 'archive' : 'delete'}</h2>
 <div class="end">
 <div><p class="v-note">Closed, learners can’t open it. Their work stays, and you can open it again.</p><button class="v-btn" type="button" data-api="POST courses/${esc(code)}/status" data-body='${esc(JSON.stringify({ status: meta.status === 'closed' ? 'open' : 'closed' }))}' data-said="${meta.status === 'closed' ? 'Open again.' : 'Closed.'}">${meta.status === 'closed' ? 'Open it again' : 'Close this course'}</button></div>
-<div><p class="v-note">Deleted, the course and its versions are gone from this server, with every learner’s work in it. This can’t be undone. Download it first if you may want it.</p><button class="v-btn danger" type="button" data-api="DELETE courses/${esc(code)}" data-confirm="This deletes “${esc(course.title)}”, its versions and everything its learners did. It can’t be undone." data-type="DELETE" data-yes="Delete">Delete this course</button></div>
+${library.archives ? `<div><p class="v-note">Archived, learners can’t open it and it leaves your list. What they did stays, on the Developer Platform under Learners.</p><button class="v-btn danger" type="button" data-api="DELETE courses/${esc(code)}" data-confirm="This archives “${esc(course.title)}”: learners can’t open it any more." data-yes="Archive">Archive this course</button></div>` : `<div><p class="v-note">Deleted, the course and its versions are gone from this server, with every learner’s work in it. This can’t be undone. Download it first if you may want it.</p><button class="v-btn danger" type="button" data-api="DELETE courses/${esc(code)}" data-confirm="This deletes “${esc(course.title)}”, its versions and everything its learners did. It can’t be undone." data-type="DELETE" data-yes="Delete">Delete this course</button></div>`}
 </div>${say()}
 </section>`}`,
     css: `.settings{display:grid;gap:18px;max-width:640px}.versions{margin:12px 0 0;padding:0;list-style:none;border-top:1px solid var(--public-rule)}.versions li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;padding:10px 0;border-bottom:1px solid var(--public-rule)}.file-actions{margin-top:12px}.end{display:grid;gap:18px;margin-top:12px}.end>div{display:grid;gap:10px;justify-items:start}.danger{border-color:var(--pencil-red);color:var(--pencil-red)}.danger:hover{border-color:var(--pencil-red);background:color-mix(in srgb,var(--pencil-red) 8%,transparent)}`
@@ -319,12 +312,16 @@ export const coursePages = [
         }, 'Settings');
         return { said: 'Saved. Learners see this on their next visit.' };
       }],
-      ['DELETE', /^courses\/([\w-]+)$/, async ({ library, store }, match) => {
+      ['DELETE', /^courses\/([\w-]+)$/, async ({ library, classes }, match) => {
         const entry = await courseAt(library, match[1]);
         await library.remove(entry.id);
-        await forgetCourse(store, entry.code);
-        for (const agent of entry.doc.agents || []) await forgetChat(store, agent.slug || agent.ref);
+        await classes.forgetCourse(entry);
         return go('/console/courses');
+      }],
+      // Trying it as a learner: where that is differs by host, so a page links here and is sent on.
+      ['GET', /^courses\/([\w-]+)\/try(?:\/([\w-]+))?$/, async ({ library, tryLink, url }, match) => {
+        const { code } = await courseAt(library, match[1]);
+        return new Response(null, { status: 302, headers: { location: await tryLink(code, match[2] || null, { section: url.searchParams.get('section') || null, open: url.searchParams.get('open') || null }), 'cache-control': 'no-store' } });
       }],
       ['GET', /^courses\/([\w-]+)\/download$/, async ({ library }, match) => {
         const entry = await courseAt(library, match[1]);

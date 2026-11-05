@@ -4,9 +4,8 @@
  * what it shows and hands plain values to a function that only draws, so another host can use the same
  * pages. No Node built-ins.
  */
-import { forgetLearner } from '../server/learner.js';
 import { activityKeys } from '../server/library.js';
-import { PEOPLE_LIMITS, addLines, addSection, changeLearner, changeSection, cleanEntry, makeLearner, newCodeFor, peopleOf, removeFromList, removeSection, sectionsOf, setRelease, showCode, learnersNamed } from '../server/classList.js';
+import { PEOPLE_LIMITS, cleanEntry, showCode } from '../server/classList.js';
 import { changeCourse, courseAt } from './course.js';
 import { choose, courseHead, esc, hereOnly, oneOf, plural, qrSvg, reachOf, say, sectionChips, text, when, withForms } from './forms.js';
 
@@ -39,18 +38,21 @@ const entryWord = (course) => (course.identify === 'ask' && course.identify_ask 
 
 // --- What it draws ------------------------------------------------------------------------------------
 
-function howBlock({ course, code, version, locked, signIn }) {
+function howBlock({ course, code, version, locked, signIn, simple }) {
   const way = wayOf(course);
-  const summary = way === 'code' ? 'Personal codes on cards. Only codes on your list open the course.' : way === 'ask' ? `They type their ${entryWord(course) === 'Name' ? 'name' : 'student ID'}${course.identify_match === 'roster' ? ', and only those on your list get in.' : '.'}` : 'Nobody signs in: each browser is one learner.';
+  // A way set on the Developer Platform that this page can't express stays as it is, and is changed there.
+  const other = simple && (course.identify === 'link' || (course.identify === 'ask' && !['name', 'student_id', null, undefined].includes(course.identify_ask)));
+  const summary = simple && course.identify === 'link' ? 'They come from another site, with an ID on their link.' : other ? `They type their ${course.identify_ask === 'email' ? 'school email' : 'participant ID'}${course.identify_match === 'roster' ? ', and only those on your list get in.' : '.'}` : way === 'code' ? 'Personal codes on cards. Only codes on your list open the course.' : way === 'ask' ? `They type their ${entryWord(course) === 'Name' ? 'name' : 'student ID'}${course.identify_match === 'roster' ? ', and only those on your list get in.' : '.'}` : 'Nobody signs in: each browser is one learner.';
   return `<section class="v-card set" aria-labelledby="how-title" data-say-box id="how-box">
 <h2 id="how-title">How learners say who they are</h2>
 ${signIn ? `<p class="notice">${esc(SERVER_WAY[signIn])}</p>` : ''}
 <p class="now">${esc(summary)}</p>
-${course.identify === 'link' ? '<p class="v-note">Its package takes an ID from each learner’s link, which this server doesn’t do: each browser is one learner until you choose here.</p>' : ''}
-${locked ? '' : `<details id="how-change"><summary>Change this</summary>
+${course.identify === 'link' && !simple ? '<p class="v-note">Its package takes an ID from each learner’s link, which this server doesn’t do: each browser is one learner until you choose here.</p>' : ''}
+${other ? '<p class="v-note">This is set on the VIABLE Developer Platform. Change it there.</p>' : ''}
+${locked || other ? '' : `<details id="how-change"><summary>Change this</summary>
 <form class="how-form" id="how" data-api="PUT courses/${esc(code)}/people/how">
 <input type="hidden" name="version" value="${version}">
-${oneOf('identify', 'How they sign in', way, IDENTIFY)}
+${oneOf('identify', 'How they sign in', way, simple ? IDENTIFY.map((item) => (item.value === 'browser' ? { ...item, hint: 'Each browser is one learner. Fine for one sitting. On another computer, they are someone new.' } : item)) : IDENTIFY)}
 <div class="kind-fields" data-show-when="identify=ask">
 ${choose('identify_ask', 'What they type', course.identify_ask === 'student_id' ? 'student_id' : 'name', [{ value: 'name', label: 'Their name' }, { value: 'student_id', label: 'Their student ID' }])}
 ${choose('identify_match', 'Who gets in', course.identify_match === 'roster' ? 'roster' : 'any', [{ value: 'any', label: 'Anyone with the link: a new one is shown back to them to check' }, { value: 'roster', label: 'Only those on your class list' }])}
@@ -67,7 +69,7 @@ function personRow(person, { code, sections, locked }) {
   return `<tr>
 <th scope="row" data-label="Name"><a href="/console/courses/${esc(code)}/people/${esc(person.id)}">${esc(who)}</a>${shown}</th>
 ${sections.length ? `<td data-label="Section">${locked ? esc(sections.find((section) => section.id === person.section)?.name || '') : `<label class="sr" for="move-${esc(person.id)}">Section for ${esc(who)}</label><select class="v-input small" id="move-${esc(person.id)}" name="section" data-api="PUT courses/${esc(code)}/people/${esc(person.id)}" data-say-in="list-status"><option value="">No section</option>${sections.map((section) => `<option value="${esc(section.id)}"${section.id === person.section ? ' selected' : ''}>${esc(section.name)}</option>`).join('')}</select>`}</td>` : ''}
-<td data-label="Personal code"><code class="code">${esc(showCode(person.code))}</code></td>
+<td data-label="Personal code">${person.personal === false ? '<span class="v-note">None yet</span>' : `<code class="code">${esc(showCode(person.code))}</code>`}</td>
 <td data-label="Last seen" class="seen">${person.last_seen_at ? when(person.last_seen_at) : '<span class="v-note">Not signed in yet</span>'}</td>
 </tr>`;
 }
@@ -146,11 +148,11 @@ ${oneOf('sections_from', 'Where a learner’s section comes from', shownFrom, FR
 }
 
 /** The whole tab, from plain values. */
-function peopleView({ code, title, origin, addresses, tabs, closed, course, version, people, sections, filter, locked, signIn }) {
+function peopleView({ code, title, origin, addresses, tabs, closed, course, version, people, sections, filter, locked, signIn, simple }) {
   return `${courseHead({ title, code, origin, addresses, tabs, current: 'People', closed })}
 ${locked ? SAVING : ''}
 <div class="set-up">
-${howBlock({ course, code, version, locked, signIn })}
+${howBlock({ course, code, version, locked, signIn, simple })}
 ${sectionsBlock({ code, course, version, sections, people, base: reachOf(origin, addresses).base, locked })}
 </div>
 ${listBlock({ code, course, people, sections, filter, locked, signIn })}`;
@@ -218,9 +220,11 @@ ${choose('section', 'Section', person.section || '', [{ value: '', label: 'No se
 </section>` : ''}
 <section class="block person-part" aria-labelledby="code-title" data-say-box id="code-box">
 <h2 id="code-title">Their personal code</h2>
-<p class="big-code"><code class="code">${esc(showCode(person.code))}</code></p>
+${person.personal === false ? `<p class="v-note">They came by the link, so they have none, and another computer takes them for someone new. A code brings them back anywhere.</p>
+<div class="actions"><button class="v-btn is-small" type="button" data-api="POST ${api}/new-code" data-said="They have a code now.">Give them a code</button></div>${say()}
+</section>` : `<p class="big-code"><code class="code">${esc(showCode(person.code))}</code></p>
 <div class="actions"><button class="v-btn is-small" type="button" data-copy="${esc(showCode(person.code))}">Copy</button><button class="v-btn is-small" type="button" data-copy="${esc(link)}">Copy their personal link</button><button class="v-btn is-small" type="button" data-api="POST ${api}/new-code" data-confirm="Give ${esc(who)} a new code? ${esc(showCode(person.code))} stops working, and any browser signed in with it is signed out. They need the new code to get back in." data-yes="New code" data-said="New code made. The old one no longer works.">New code</button></div>${say()}
-</section>
+</section>`}
 <section class="block person-part" aria-labelledby="end-title" data-say-box id="end-box">
 <h2 id="end-title">Take them off, or delete their work</h2>
 ${person.listed ? `<p class="v-note">Off the list, their name goes and any browser signed in as them is signed out. ${person.last_seen_at ? `Their work stays, under their code${codeOpens ? ', and their code no longer opens the course' : ''}.` : 'They haven’t signed in, so nothing else stays.'}</p>
@@ -273,41 +277,43 @@ const CARDS_CSS = `.cards-do{margin-top:14px}
 
 // --- What it reads and changes ------------------------------------------------------------------------
 
-async function peopleBody({ library, store, origin, addresses, tabs, signIn, url }, match) {
+async function peopleBody({ library, classes, origin, addresses, tabs, signIn, url, simple }, match) {
   const { doc, meta, code } = await courseAt(library, match[1]);
-  const [people, sections] = await Promise.all([peopleOf(store, code), sectionsOf(store, code)]);
-  return { title: `People · ${doc.course.title}`, css: PEOPLE_CSS, body: peopleView({ code, title: doc.course.title, origin, addresses, tabs, closed: meta.status === 'closed', course: doc.course, version: meta.version, people, sections, filter: url.searchParams.get('section') || '', locked: !store, signIn }) };
+  const [people, sections] = await Promise.all([classes.people(code), classes.sections(code)]);
+  return { title: `People · ${doc.course.title}`, css: PEOPLE_CSS, body: peopleView({ code, title: doc.course.title, origin, addresses, tabs, closed: meta.status === 'closed', course: doc.course, version: meta.version, people, sections, simple, filter: url.searchParams.get('section') || '', locked: !classes.saving, signIn }) };
 }
 
-async function personBody({ library, store, origin, addresses }, match) {
+async function personBody({ library, classes, origin, addresses }, match) {
   const { doc, code } = await courseAt(library, match[1]);
-  const person = (await peopleOf(store, code)).find((item) => item.id === match[2]);
+  const person = (await classes.people(code)).find((item) => item.id === match[2]);
   if (!person) throw refused('That learner isn’t in this course anymore.', 404, 'learner_not_found');
-  return { title: `${person.name || showCode(person.code)} · ${doc.course.title}`, css: PERSON_CSS, body: personView({ code, courseTitle: doc.course.title, person, sections: await sectionsOf(store, code), how: wayOf(doc.course), base: reachOf(origin, addresses).base, locked: !store }) };
+  return { title: `${person.name || showCode(person.code)} · ${doc.course.title}`, css: PERSON_CSS, body: personView({ code, courseTitle: doc.course.title, person, sections: await classes.sections(code), how: wayOf(doc.course), base: reachOf(origin, addresses).base, locked: !classes.saving }) };
 }
 
-async function cardsBody({ library, store, origin, addresses, url }, match) {
+async function cardsBody({ library, classes, origin, addresses, url }, match) {
   const { doc, code } = await courseAt(library, match[1]);
   const filter = url.searchParams.get('section') || '';
-  const people = (await peopleOf(store, code)).filter((person) => person.listed && (!filter || (filter === 'none' ? !person.section : person.section === filter)));
-  return { title: `Cards · ${doc.course.title}`, css: CARDS_CSS, body: cardsView({ code, courseTitle: doc.course.title, people, sections: await sectionsOf(store, code), reach: reachOf(origin, addresses), addresses, filter }) };
+  const people = (await classes.people(code)).filter((person) => person.listed && (!filter || (filter === 'none' ? !person.section : person.section === filter)));
+  return { title: `Cards · ${doc.course.title}`, css: CARDS_CSS, body: cardsView({ code, courseTitle: doc.course.title, people, sections: await classes.sections(code), reach: reachOf(origin, addresses), addresses, filter }) };
 }
 
-const needStore = (store) => { if (!store) throw refused('This server has no store, so it can’t keep a class list.', 409, 'no_store'); };
-const known = async ({ library, store }, match) => { needStore(store); return courseAt(library, match[1]); };
+const known = async ({ library, classes }, match) => {
+  if (!classes.saving) throw refused('This server has no store, so it can’t keep a class list.', 409, 'no_store');
+  return courseAt(library, match[1]);
+};
 
 async function addPeople(tools, match, body) {
   const { code, doc } = await known(tools, match);
-  const { store, library } = tools;
+  const { classes, library } = tools;
   if (body?.name != null) {
     const name = cleanEntry(body.name).slice(0, PEOPLE_LIMITS.name);
     if (!name) throw refused('Type a name.');
-    const sections = await sectionsOf(store, code);
-    const twin = (await learnersNamed(store, code, name)).some((person) => person.listed);
-    await makeLearner(store, code, { name, section: sections.some((section) => section.id === body.section) ? body.section : null, listed: true, last_seen_at: null });
+    const sections = await classes.sections(code);
+    const twin = (await classes.named(code, name)).some((person) => person.listed);
+    await classes.add(code, { name, section: sections.some((section) => section.id === body.section) ? body.section : null, listed: true, last_seen_at: null });
     return { said: twin ? `Added. Someone else on the list is called ${name}: if learners type their names, these two need their personal codes.` : `Added ${name}.` };
   }
-  const report = await addLines(store, code, body?.list);
+  const report = await classes.addLines(code, body?.list);
   // A list that names sections says where sections come from, on a course that had none.
   if (report.sections.length && (doc.course.sections_from || 'none') === 'none') await changeCourse(library, code, null, (draft) => { draft.course.sections_from = 'roster'; }, 'Sections from the class list');
   const parts = [
@@ -324,7 +330,7 @@ async function addPeople(tools, match, body) {
 
 async function changePerson(tools, match, body) {
   const { code } = await known(tools, match);
-  const { store } = tools;
+  const { classes } = tools;
   const change = {};
   if (body?.name !== undefined) {
     const name = cleanEntry(body.name).slice(0, PEOPLE_LIMITS.name);
@@ -333,10 +339,10 @@ async function changePerson(tools, match, body) {
   }
   if (body?.section !== undefined) {
     const section = body.section || null;
-    if (section && !(await sectionsOf(store, code)).some((item) => item.id === section)) throw refused('That section isn’t in this course anymore.', 404, 'section_not_found');
+    if (section && !(await classes.sections(code)).some((item) => item.id === section)) throw refused('That section isn’t in this course anymore.', 404, 'section_not_found');
     change.section = section;
   }
-  await changeLearner(store, code, match[2], change);
+  await classes.change(code, match[2], change);
   return { said: change.section !== undefined ? 'Moved. What opens for them follows it from now on. Their work stays as it is.' : 'Saved. Their work and code stay as they were.' };
 }
 
@@ -353,7 +359,7 @@ async function setHow({ library }, match, body) {
 
 async function newSection(tools, match, body) {
   const { code, doc } = await known(tools, match);
-  const { section } = await addSection(tools.store, code, { name: body?.name });
+  const { section } = await tools.classes.addSection(code, { name: body?.name });
   // The first section needs a way in: a link of its own is what most classes want.
   if ((doc.course.sections_from || 'none') === 'none') await changeCourse(tools.library, code, null, (draft) => { draft.course.sections_from = 'link'; }, 'Sections by their links');
   return { said: `Added ${section.name}. Its link is here and on Share.` };
@@ -361,7 +367,7 @@ async function newSection(tools, match, body) {
 
 async function dropSection(tools, match) {
   const { code, doc } = await known(tools, match);
-  const left = await removeSection(tools.store, code, match[2]);
+  const left = await tools.classes.removeSection(code, match[2]);
   // What it set on activities goes with it, and with no sections left, nobody is asked for one.
   const noted = (doc.course.activities || []).some((activity) => activity.teaching?.sections?.[match[2]]);
   if (noted || !left.length) {
@@ -375,20 +381,20 @@ async function dropSection(tools, match) {
 
 async function openFor(tools, match, body) {
   const { code, doc } = await known(tools, match);
-  const section = (await sectionsOf(tools.store, code)).find((item) => item.id === body?.section);
+  const section = (await tools.classes.sections(code)).find((item) => item.id === body?.section);
   if (!section) throw refused('That section isn’t in this course anymore.', 404, 'section_not_found');
   const list = doc.course.activities || [];
   const activity = list[activityKeys(list).indexOf(match[2])];
   if (!activity) throw refused('That activity isn’t in this course anymore.', 404, 'activity_not_found');
   const release = body.release === 'open' || body.release === 'hidden' ? body.release : null;
   // Open from now, until the activity's own close while that is ahead.
-  await setRelease(tools.store, code, match[2], section.id, release, activity.closes_at && Date.parse(activity.closes_at) > Date.now() ? activity.closes_at : null);
+  await tools.classes.setRelease(code, match[2], section.id, release, activity.closes_at && Date.parse(activity.closes_at) > Date.now() ? activity.closes_at : null);
   return { said: release === 'open' ? `Open for ${section.name} now.` : release === 'hidden' ? `Hidden from ${section.name} now.` : `${section.name} follows the course again.` };
 }
 
-async function classListCsv({ library, store, origin, addresses }, match) {
+async function classListCsv({ library, classes, origin, addresses }, match) {
   const { doc, code } = await courseAt(library, match[1]);
-  const [people, sections] = await Promise.all([peopleOf(store, code), sectionsOf(store, code)]);
+  const [people, sections] = await Promise.all([classes.people(code), classes.sections(code)]);
   const { base } = reachOf(origin, addresses);
   const rows = [[entryWord(doc.course), 'Section', 'Personal code', 'Personal link', 'On the list', 'Last seen'], ...people.map((person) => [person.name || '', sections.find((section) => section.id === person.section)?.name || '', showCode(person.code), `${base}/course/${code}?join=${person.code}`, person.listed ? 'yes' : 'no', person.last_seen_at || ''])];
   // The mark at the start tells a spreadsheet it is UTF-8, so a name's accents survive.
@@ -410,16 +416,16 @@ export const peoplePages = [
         return { said: 'Saved.' };
       }],
       ['PUT', /^courses\/([\w-]+)\/people\/(lrn_[\w-]+)$/, changePerson],
-      ['POST', /^courses\/([\w-]+)\/people\/(lrn_[\w-]+)\/new-code$/, async (tools, match) => { const { code } = await known(tools, match); await newCodeFor(tools.store, code, match[2]); return {}; }],
-      ['POST', /^courses\/([\w-]+)\/people\/(lrn_[\w-]+)\/remove$/, async (tools, match) => { const { code } = await known(tools, match); await removeFromList(tools.store, code, match[2]); return { go: `/console/courses/${code}/people` }; }],
+      ['POST', /^courses\/([\w-]+)\/people\/(lrn_[\w-]+)\/new-code$/, async (tools, match) => { const { code } = await known(tools, match); await tools.classes.newCode(code, match[2]); return {}; }],
+      ['POST', /^courses\/([\w-]+)\/people\/(lrn_[\w-]+)\/remove$/, async (tools, match) => { const { code } = await known(tools, match); await tools.classes.takeOff(code, match[2]); return { go: `/console/courses/${code}/people` }; }],
       ['POST', /^courses\/([\w-]+)\/people\/(lrn_[\w-]+)\/forget$/, async (tools, match) => {
         const { code } = await known(tools, match);
-        if (!(await peopleOf(tools.store, code)).some((person) => person.id === match[2])) throw refused('That learner isn’t in this course anymore.', 404, 'learner_not_found');
-        await forgetLearner(tools.store, match[2]);
+        if (!(await tools.classes.people(code)).some((person) => person.id === match[2])) throw refused('That learner isn’t in this course anymore.', 404, 'learner_not_found');
+        await tools.classes.forget(code, match[2]);
         return { go: `/console/courses/${code}/people` };
       }],
       ['POST', /^courses\/([\w-]+)\/sections$/, newSection],
-      ['PUT', /^courses\/([\w-]+)\/sections\/(sec_[\w-]+)$/, async (tools, match, body) => { const { code } = await known(tools, match); await changeSection(tools.store, code, match[2], { name: body?.name, key: body?.key }); return { said: 'Saved.' }; }],
+      ['PUT', /^courses\/([\w-]+)\/sections\/(sec_[\w-]+)$/, async (tools, match, body) => { const { code } = await known(tools, match); await tools.classes.changeSection(code, match[2], { name: body?.name, key: body?.key }); return { said: 'Saved.' }; }],
       ['DELETE', /^courses\/([\w-]+)\/sections\/(sec_[\w-]+)$/, dropSection],
       ['POST', /^courses\/([\w-]+)\/activities\/([\w-]+)\/for-section$/, openFor]
     ]

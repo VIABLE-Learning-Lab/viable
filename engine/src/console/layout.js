@@ -9,7 +9,10 @@ const CONSOLE_CSS = `h1{font-size:clamp(1.9rem,3.4vw,2.6rem)}
 h2{font-size:clamp(1.35rem,2.2vw,1.65rem);font-weight:400;letter-spacing:-.02em}
 .console{display:grid;grid-template-columns:216px minmax(0,1fr);min-height:100vh}
 .side{position:sticky;top:0;display:flex;flex-direction:column;gap:22px;height:100vh;padding:22px 16px;border-right:1px solid var(--public-rule);background:var(--surface)}
-.brand{display:flex;align-items:center;gap:10px;padding:0 8px;color:var(--public-ink);font-weight:600;line-height:1.2}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px;color:var(--public-ink);line-height:1.2}
+.brand-name{display:grid}
+.brand-name strong{font-weight:600}
+.brand-name small{color:var(--muted);font-size:.8125rem}
 .side ul{display:grid;gap:2px;margin:0;padding:0;list-style:none}
 .side a{display:block;padding:8px;border-radius:var(--radius-sm);color:var(--public-text);text-decoration:none}
 .side a:hover{background:var(--field-mist)}
@@ -30,13 +33,13 @@ export const consoleHeaders = (nonce) => ({
 });
 
 /** A page of the console. pages: [{ id, title }], the navigation: only what exists. links: [{ href, title }] beside it. */
-export const consolePage = ({ title, pages, current, body, script = '', css = '', links = [] }, nonce) => `<!doctype html>
+export const consolePage = ({ title, pages, current, body, script = '', css = '', links = [], brand = 'VIABLE Engine', signOut = '/teacher/signout?next=console', notice = '' }, nonce) => `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>${escapeHtml(title)} · VIABLE Engine</title>
+<title>${escapeHtml(title)} · ${escapeHtml(brand)}</title>
 <style nonce="${nonce}">${themeCss()}
 ${CONSOLE_CSS}
 ${css}</style>
@@ -44,11 +47,11 @@ ${css}</style>
 <body>
 <div class="console">
 <header class="side">
-<div class="brand">${markSvg({ size: 28 })}<span>VIABLE Engine</span></div>
+<div class="brand">${markSvg({ size: 28 })}<span class="brand-name"><strong>${escapeHtml(brand.split(' ')[0])}</strong><small>${escapeHtml(brand.split(' ').slice(1).join(' '))}</small></span></div>
 <nav aria-label="The console"><ul>${pages.filter((page) => page.nav !== false).map((page) => `<li><a href="/console/${escapeHtml(page.id)}"${page.id === current ? ' aria-current="page"' : ''}>${escapeHtml(page.title)}</a></li>`).join('')}</ul></nav>
-<div class="side-foot">${links.map((link) => `<a href="${escapeHtml(link.href)}">${escapeHtml(link.title)}</a>`).join('')}<form method="post" action="/teacher/signout?next=console"><button type="submit">Sign out</button></form></div>
+<div class="side-foot">${links.map((link) => `<a href="${escapeHtml(link.href)}">${escapeHtml(link.title)}</a>`).join('')}<form method="post" action="${escapeHtml(signOut)}"><button type="submit">Sign out</button></form></div>
 </header>
-<main class="page" id="main">${body}</main>
+<main class="page" id="main">${notice}${body}</main>
 </div>
 ${script ? `<script nonce="${nonce}">${script}</script>` : ''}
 </body>

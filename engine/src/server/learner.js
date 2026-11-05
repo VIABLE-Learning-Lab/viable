@@ -1090,7 +1090,7 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
         const state = await stateFor(activity, learner);
         if (state.state === 'hidden') continue;
         const mine = await progressOf(activity, learner);
-        cards.push({ unit_id: activity.unit_id, key: activity.key, title: activity.title, summary: activity.summary, role: activity.role, kind: kindOf(activity, { workspace: activity.workspace }), minutes: activity.minutes, ...state, progress: mine?.done_at ? 'done' : mine?.opened_at ? 'started' : 'new' });
+        cards.push({ unit_id: activity.unit_id, key: activity.key, title: activity.title, summary: activity.summary, role: activity.role, kind: kindOf(activity, { workspace: activity.workspace }), minutes: activity.minutes, ...state, progress: mine?.done_at ? 'done' : mine?.opened_at ? 'started' : 'new', ...(activity.not_for_learners ? { not_for_learners: true } : {}) });
       }
       return { ...base, learner: me(learner, sections), needs: null, return_url: null, units: homeUnits(course.units, cards) };
     }
@@ -1162,7 +1162,7 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
     // Who holds the token may open what isn't open yet. They are a learner apart, and left out of what learners did.
     const tryOuts = new WeakMap();
     const tryingOut = (course) => {
-      if (!tryOuts.has(course)) tryOuts.set(course, { ...course, trying: true, activities: new Map([...course.activities].map(([key, activity]) => [key, { ...activity, trying: true, release: 'open', opens_at: null, closes_at: null }])) });
+      if (!tryOuts.has(course)) tryOuts.set(course, { ...course, trying: true, activities: new Map([...course.activities].map(([key, activity]) => [key, { ...activity, trying: true, release: 'open', opens_at: null, closes_at: null, not_for_learners: releaseState(activity).state !== 'open' }])) });
       return tryOuts.get(course);
     };
 

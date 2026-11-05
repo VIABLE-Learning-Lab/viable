@@ -7,7 +7,6 @@
 import { guidanceFrom } from '../../../harness/src/components/contract.js';
 import { TEACHING_LIMITS, teachingContext, teachingSettings } from '../../../harness/src/utils/teaching.js';
 import { ITEM_TYPES, normalizeItems } from '../learner/questions.js';
-import { forgetActivity, sectionsOf } from '../server/classList.js';
 import { activityKeys } from '../server/library.js';
 import { changeCourse, courseAt, kindOfActivity } from './course.js';
 import { choose, esc, oneOf, say, text, toggle, withForms } from './forms.js';
@@ -24,7 +23,7 @@ const HELP = [
   { value: 'hint', label: 'Hints only', hint: 'Hints and guiding questions, a step at a time, never the answer.' },
   { value: 'explain', label: 'Explain when stuck', hint: 'It explains and shows a worked example, then they try one.' },
   { value: 'check_only', label: 'Only check', hint: 'It says what is right and what to look at again in their own work.' },
-  { value: '', label: 'Not set', hint: 'The agent’s own instructions decide.' }
+  { value: '', label: 'Not set', hint: 'The AI’s own instructions decide.' }
 ];
 const MOMENT_WORDS = { attempt: 'They gave an answer or some working', asks_answer: 'They want the answer', stuck: 'They don’t know how to go on', repeated: 'They have tried more than once', other: 'Nothing that calls for a teaching move' };
 const KIND_WORDS = { chat: 'Talk with the AI', questions: 'Questions', writing: 'Writing', reading: 'Reading', embed: 'A web page' };
@@ -45,7 +44,7 @@ export function activityIn(doc, key) {
   if (index < 0) throw refused('That activity isn’t in this course anymore.', 404, 'activity_not_found');
   return { activity: list[index], index, list };
 }
-const withTeaching = (activity, change) => { activity.teaching = teachingSettings({ ...activity.teaching, ...change }); };
+export const withTeaching = (activity, change) => { activity.teaching = teachingSettings({ ...activity.teaching, ...change }); };
 const agentsOf = (doc) => doc.agents || [];
 // What an agent can reach, which is what a teacher can turn off for an activity.
 function toolsOf(agent) {
@@ -63,10 +62,11 @@ function toolsOf(agent) {
 
 // --- The page ------------------------------------------------------------------------------------------
 
-function kindFields(activity, doc, code, locked) {
-  const kind = kindOfActivity(activity);
+function kindFields(activity, doc, code, locked, simple, asked) {
+  // A host that keeps no reading without its PDF is asked for one when the activity opens.
+  const kind = asked === 'reading' && !activity.workspace ? 'reading' : kindOfActivity(activity);
   if (kind === 'several') {
-    return `<p class="notice">This activity has ${activity.workspace.panels.length} panels${activity.workspace.steps?.length ? ` in ${activity.workspace.steps.length} steps` : ''} from its package. They stay as they are here. To change them, change the package on the Developer Platform and add it again.</p>`;
+    return `<p class="notice">This activity has ${activity.workspace.panels.length} panels${activity.workspace.steps?.length ? ` in ${activity.workspace.steps.length} steps` : ''} from its package. They stay as they are here. To change them, ${simple ? 'open this course on the Developer Platform' : 'change the package on the Developer Platform and add it again'}.</p>`;
   }
   const panel = activity.workspace?.panels?.[0] || {};
   const sets = doc.question_sets || [];
@@ -153,7 +153,7 @@ function sectionsBlock(activity, sections, code) {
   const differ = sections.filter((section) => own[section.id]);
   return `<details class="for-sections" id="for-sections"${differ.length ? ' open' : ''}><summary>Different for a section${differ.length ? `: ${esc(differ.map((section) => section.name).join(', '))}` : ''}</summary>
 <small class="v-note">Write about the group, not one learner: notes go to the AI model.</small>
-${sections.map((section) => `<div class="kind-fields"><div class="for-section"><strong>${esc(section.name)}</strong><a href="/course/${esc(code)}?try=1&amp;section=${esc(encodeURIComponent(section.key))}&amp;open=${esc(activity.key)}" target="_blank" rel="noopener">Try it as this group</a></div>
+${sections.map((section) => `<div class="kind-fields"><div class="for-section"><strong>${esc(section.name)}</strong><a href="/console/api/courses/${esc(code)}/try?section=${esc(encodeURIComponent(section.key))}&amp;open=${esc(activity.key)}" target="_blank" rel="noopener">Try it as this group</a></div>
 ${choose(`teaching.sections.${section.id}.help`, 'How far it may go', own[section.id]?.help ?? '', levels, { form: FORM })}
 ${text(`teaching.sections.${section.id}.note`, 'A note the AI reads for this group', own[section.id]?.note, { rows: 2, maxlength: 500, form: FORM })}
 </div>`).join('')}</details>`;
@@ -177,13 +177,13 @@ ${own.map((section) => `<details class="for-group"><summary>For ${esc(section.na
 </aside>`;
 };
 
-async function activityBody({ library, store, settings, origin }, match) {
+async function activityBody({ library, classes, settings, origin, simple, url }, match) {
   const entry = await courseAt(library, match[1]);
   const { doc, meta, code } = entry;
   const found = activityIn(doc, match[2]);
   const activity = { ...found.activity, key: match[2] };
   const api = `courses/${esc(code)}/activities/${esc(activity.key)}`;
-  const locked = !store;
+  const locked = !classes.saving;
   const units = doc.course.units || [];
   const agents = agentsOf(doc);
   const agent = agents.find((item) => item.ref === activity.agent_ref);
@@ -196,12 +196,12 @@ async function activityBody({ library, store, settings, origin }, match) {
   const scheduled = activity.release === 'hidden' && activity.opens_at;
   const release = scheduled ? 'scheduled' : activity.release || 'open';
   const onForm = (markup) => markup.replaceAll('type="radio"', `type="radio" form="${FORM}"`).replaceAll('type="checkbox"', `type="checkbox" form="${FORM}"`);
-  const sections = await sectionsOf(store, code);
+  const sections = await classes.sections(code);
   return {
     title: `${activity.title} · ${doc.course.title}`,
     body: `<nav class="crumbs" aria-label="Where you are"><a href="/console/courses">Courses</a> / <a href="/console/courses/${esc(code)}">${esc(doc.course.title)}</a></nav>
 <h1>${esc(activity.title)}</h1>
-<div class="share-line"><span class="v-pill">${esc({ open: 'Open', hidden: 'Hidden', scheduled: 'Scheduled' }[release])}</span><a class="v-btn is-small" href="/course/${esc(code)}/${esc(activity.key)}?try=1" target="_blank" rel="noopener">Try it</a></div>
+<div class="share-line"><span class="v-pill">${esc({ open: 'Open', hidden: 'Hidden', scheduled: 'Scheduled' }[release])}</span><a class="v-btn is-small" href="/console/api/courses/${esc(code)}/try/${esc(activity.key)}" target="_blank" rel="noopener">Try it</a></div>
 <form id="${FORM}" data-api="PUT ${api}" data-guard data-say-in="save-bar"><input type="hidden" name="version" value="${meta.version}"></form>
 <div class="two-sides">
 <div class="edit">
@@ -214,21 +214,22 @@ ${text('summary', 'A line about it', activity.summary, { maxlength: 600, form: F
 ${text('minutes', 'Minutes it takes', activity.minutes ?? '', { type: 'number', min: 1, max: 600, form: FORM })}
 ${units.length ? choose('unit_ref', 'Unit', activity.unit_ref ?? '', [{ value: '', label: 'None' }, ...units.map((unit) => ({ value: unit.ref, label: unit.title }))], { form: FORM }) : ''}
 </div>
-${kindFields(activity, doc, code, locked)}
+${kindFields(activity, doc, code, locked, simple, url?.searchParams.get('kind'))}
 </div>
 </section>
 <section class="block" aria-labelledby="help-title">
 <h2 id="help-title">How the AI helps</h2>
 <div class="fields">
 ${choose('agent_ref', 'Which AI', activity.agent_ref ?? '', [...(kind === 'chat' ? [] : [{ value: '', label: 'No AI in this activity' }]), ...agents.map((item) => ({ value: item.ref, label: item.name }))], { form: FORM })}
-${agent ? `<small class="v-note"><a href="/console/agents/${esc(agent.slug || agent.ref)}">See or change ${esc(agent.name)}</a></small>` : ''}
+${agent && !simple ? `<small class="v-note"><a href="/console/agents/${esc(agent.slug || agent.ref)}">See or change ${esc(agent.name)}</a></small>` : ''}
+${simple ? agents.filter((item) => item.description).map((item) => `<small class="v-note"><strong>${esc(item.name)}.</strong> ${esc(item.description)}</small>`).join('') : ''}
 ${text('teaching.goal', 'Goal', activity.teaching?.goal, { rows: 2, maxlength: 1000, form: FORM, placeholder: 'e.g. Explain each step of a two-step word problem in their own words.', hint: 'What learners should be able to do by the end.' })}
 ${onForm(oneOf('teaching.help', 'How far it may go', activity.teaching?.help ?? '', HELP, { hint: 'An instruction to the AI, not a lock. To keep it out, choose no AI above.' }))}
 ${onForm(toggle('teaching.turn_brief', 'Give the AI only what each moment needs', activity.teaching?.turn_brief !== false, { hint: 'It reads what the learner just did, then gets your goal and limit, a teaching move, and only the parts of your settings this message calls for. Off, it gets all of them with every message.' }))}
 ${text('teaching.watch_for', 'What you want to hear about', activity.teaching?.watch_for, { rows: 2, maxlength: 500, form: FORM, hint: 'For you, in Progress. It is never sent to the AI.' })}
 ${sectionsBlock(activity, sections, code)}
 ${tools.length ? `<fieldset class="one-of"><legend class="v-label">What the AI may not use here</legend><div class="tools">${tools.map((name) => onForm(toggle('teaching.tools_off', TOOL_WORDS[name], off.includes(name), { value: name }))).join('')}</div></fieldset>` : ''}
-${agent ? `<fieldset class="one-of"><legend class="v-label">How learners may talk to it</legend><div class="tools">
+${agent && !simple ? `<fieldset class="one-of"><legend class="v-label">How learners may talk to it</legend><div class="tools">
 ${onForm(toggle('voice_on', 'Speak to it', hears && activity.voice?.input !== false, { hint: hears ? 'A microphone beside the message box.' : 'Needs a model that hears learners, in Models.', disabled: !hears }))}
 ${onForm(toggle('images_on', 'Attach photos', Boolean(reads.images) && activity.attachments?.images !== false, { hint: reads.images ? 'Such as a photo of their working.' : 'Needs a reply model that reads images, in Models.', disabled: !reads.images }))}
 ${onForm(toggle('files_on', 'Attach PDFs', Boolean(reads.files) && activity.attachments?.files !== false, { hint: reads.files ? 'Up to 8 MB each.' : 'Needs a reply model that reads PDFs, in Models.', disabled: !reads.files }))}
@@ -256,7 +257,7 @@ ${choose('done_when', 'It counts as done', activity.done_when || 'auto', [{ valu
 <h2 id="more-title">More</h2>
 <div class="actions">
 <button class="v-btn is-small" type="button" data-api="POST ${api}/copy" ${locked ? 'disabled' : ''}>Make a copy</button>
-<button class="v-btn is-small danger" type="button" data-api="DELETE ${api}" data-confirm="Remove “${esc(activity.title)}” from the course? What learners did in it stays in their records, and an older version of the course still has it." data-yes="Remove" ${locked ? 'disabled' : ''}>Remove it</button>
+<button class="v-btn is-small danger" type="button" data-api="DELETE ${api}" data-confirm="Remove “${esc(activity.title)}” from the course? What learners did in it stays in their records${library.archives ? '' : ', and an older version of the course still has it'}." data-yes="Remove" ${locked ? 'disabled' : ''}>Remove it</button>
 </div>${say()}
 </section>
 </div>
@@ -492,19 +493,19 @@ export const activityPages = [
           (draft.course.activities ||= []).push(activity);
         }, `Added ${title}`);
         const added = doc.course.activities.at(-1);
-        return { go: pagesPath(match[1], added.key) };
+        return { go: `${pagesPath(match[1], added.key)}${kind === 'reading' && !added.workspace ? '?kind=reading' : ''}` };
       }],
       ['PUT', /^courses\/([\w-]+)\/activities\/([\w-]+)$/, async ({ library }, match, body) => {
         await changeCourse(library, match[1], body?.version, (doc) => applyForm(activityIn(doc, match[2]).activity, body, doc), clean(body?.title, 80));
         return { said: 'Saved. Learners get it on their next message.' };
       }],
-      ['DELETE', /^courses\/([\w-]+)\/activities\/([\w-]+)$/, async ({ library, store }, match) => {
+      ['DELETE', /^courses\/([\w-]+)\/activities\/([\w-]+)$/, async ({ library, classes }, match) => {
         await changeCourse(library, match[1], null, (doc) => { const { index, list } = activityIn(doc, match[2]); list.splice(index, 1); }, 'Removed an activity');
-        await forgetActivity(store, match[1], match[2]);
+        await classes.forgetActivity(match[1], match[2]);
         return { go: `/console/courses/${match[1]}` };
       }],
       ['POST', /^courses\/([\w-]+)\/activities\/([\w-]+)\/release$/, async ({ library }, match, body) => {
-        await changeCourse(library, match[1], body?.version, (doc) => { const { activity } = activityIn(doc, match[2]); activity.release = body.release === 'open' ? 'open' : 'hidden'; activity.opens_at = null; }, body?.release === 'open' ? 'Opened an activity' : 'Hid an activity');
+        await changeCourse(library, match[1], body?.version, (doc) => { const { activity } = activityIn(doc, match[2]); activity.release = body.release === 'open' ? 'open' : 'hidden'; activity.opens_at = null; if (body.release === 'open' && activity.closes_at && Date.parse(activity.closes_at) <= Date.now()) activity.closes_at = null; }, body?.release === 'open' ? 'Opened an activity' : 'Hid an activity');
         return {};
       }],
       ['POST', /^courses\/([\w-]+)\/activities\/([\w-]+)\/move$/, async ({ library }, match, body) => {
@@ -518,7 +519,7 @@ export const activityPages = [
       ['POST', /^courses\/([\w-]+)\/activities\/([\w-]+)\/copy$/, async ({ library }, match) => {
         const { doc } = await changeCourse(library, match[1], null, (draft) => {
           const { activity, index, list } = activityIn(draft, match[2]);
-          const { key: _key, ...rest } = structuredClone(activity);
+          const { key: _key, id: _id, ...rest } = structuredClone(activity);
           list.splice(index + 1, 0, { ...rest, title: `${activity.title} (copy)`.slice(0, 160), release: 'hidden', opens_at: null, closes_at: null });
         }, 'Copied an activity');
         const at = doc.course.activities.findIndex((item) => item.key === match[2]);

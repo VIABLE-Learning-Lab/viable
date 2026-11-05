@@ -334,6 +334,7 @@ const HOME_SCRIPT = String.raw`(() => {
         const body = el('div', 'body'); body.append(el('strong', null, card.title));
         if (card.summary) body.append(el('p', null, card.summary));
         const meta = el('div', 'meta');
+        if (card.not_for_learners) meta.append(el('span', 'chip', 'Not open to learners'));
         if (ROLE[card.role]) meta.append(el('span', 'chip', ROLE[card.role]));
         if (card.minutes) meta.append(el('span', 'chip', 'About ' + card.minutes + ' min'));
         if (card.state === 'open' && card.closes_at && card.progress !== 'done') meta.append(el('span', 'chip', 'Until ' + when(card.closes_at)));

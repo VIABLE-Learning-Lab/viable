@@ -88,7 +88,7 @@ export function courseHead({ title, code, origin, addresses = [], tabs, current,
   const link = `${base}/course/${code}`;
   return `<nav class="crumbs" aria-label="Where you are"><a href="/console/courses">Courses</a></nav>
 <h1>${esc(title)}</h1>
-${closed ? '<p class="notice">This course is closed: learners can’t open it. Open it again in Settings.</p>' : `<div class="share-line"><code>${esc(link)}</code><button class="v-btn is-small" type="button" data-copy="${esc(link)}">Copy link</button><a class="v-btn is-small" href="/console/courses/${esc(code)}/share">Share</a><a class="v-btn is-small" href="/course/${esc(code)}?try=1" target="_blank" rel="noopener">Try it</a></div>
+${closed ? '<p class="notice">This course is closed: learners can’t open it. Open it again in Settings.</p>' : `<div class="share-line"><code>${esc(link)}</code><button class="v-btn is-small" type="button" data-copy="${esc(link)}">Copy link</button><a class="v-btn is-small" href="/console/courses/${esc(code)}/share">Share</a><a class="v-btn is-small" href="/console/api/courses/${esc(code)}/try" target="_blank" rel="noopener">Try it</a></div>
 ${local && !addresses.length ? '<p class="v-note here-only">This address only opens on this computer. <a href="/console/courses/' + esc(code) + '/share">To reach it from elsewhere</a></p>' : ''}`}
 <nav class="tabs" aria-label="This course"><ul>${tabs.map((tab) => `<li><a href="/console/courses/${esc(code)}${tab.tabPath}"${tab.courseTab === current ? ' aria-current="page"' : ''}>${esc(tab.courseTab)}</a></li>`).join('')}</ul></nav>`;
 }

@@ -33,12 +33,15 @@ button.
 
 What you change reaches learners on their next message. There is nothing to restart and nothing to publish.
 
+**Or just say it.** With a model set, the console opens on **Ask**: say what you're teaching, and it makes the course, the activities and the questions, showing each step and what it did, and hands back cards to use, such as the link, its QR code and the class list. It can't open anything to learners or delete anything: that waits for your click, enforced on the server. A class list goes in its own box, and names never reach the model.
+
 ## What each model turns on
 
 | Role | Calls | What it makes possible |
 | --- | --- | --- |
 | Writes replies | `/chat/completions` | Replies, word by word. Photos and PDFs from learners, if you say this model reads them |
 | Reviews replies | `/chat/completions` | A second model in an agent's check step |
+| Sets up classes *(optional)* | `/chat/completions`, with tools | Ask. Otherwise it uses whichever writes replies |
 | Reads the moment *(optional)* | `/chat/completions` | A small model picks what each turn needs. Otherwise rules do, in English |
 | Hears learners | `/audio/transcriptions` | The microphone: a voice message, dictation, a conversation by voice |
 | Reads aloud | `/audio/speech` | Replies read aloud, and an agent's Speech step |

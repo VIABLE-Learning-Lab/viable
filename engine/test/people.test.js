@@ -476,7 +476,7 @@ test('what to look at: how replies went, hard moments, and a suggestion accepted
   const [ada] = await onList(s, code);
   // Six replies the reviewer failed for giving the answer away, as a run keeps them.
   const id = ada.id;
-  const failing = { nodeType: 'vetting', output: { outcome: 'passed', attempt_details: [{ attempt: 1, verdict: 'fail', reply: 'The answer is 5/6.', feedback: 'FAILED: gives the answer away.' }, { attempt: 2, verdict: 'pass', reply: 'What did you try?' }] }, input: { message: 'Tell me.' } };
+  const failing = { nodeType: 'vetting', durationMs: 6000, output: { outcome: 'passed', attempt_details: [{ attempt: 1, verdict: 'fail', reply: 'The answer is 5/6.', feedback: 'FAILED: gives the answer away.' }, { attempt: 2, verdict: 'pass', reply: 'What did you try?' }] }, input: { message: 'Tell me.' } };
   for (let i = 0; i < 6; i += 1) {
     const at = new Date(Date.now() - 60000 + i * 1000).toISOString();
     await s.store.put(`courses/${code}/turns/${id}/${at}-agtr_${i}`, { run_id: `agtr_${i}`, activity: 'practice', conversation_id: 'agtc_one', turn_index: i + 1, started_at: at, message: `Tell me ${i}`, reply: 'What did you try?', rating: i === 0 ? -1 : null, flag: i === 5 ? 'struggling' : undefined, run: { run_id: `agtr_${i}`, label: `Practice, ${at}`, agent: 'Tutor', activity: 'Practice', teaching: null, output: { text: 'What did you try?' }, steps: [failing] } });

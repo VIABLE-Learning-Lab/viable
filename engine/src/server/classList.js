@@ -131,23 +131,32 @@ export function listLines(text) {
  * line gives, and a section the list names that the course hasn't got is made. Returns what happened, for the page to say.
  */
 export const addLines = (store, code, text) => inLine(store, code, () => addLinesNow(store, code, text));
-async function addLinesNow(store, code, text) {
+/**
+ * A pasted list, read and checked before anything changes: its lines, whether its first row was headings, and which sections it names
+ * that the course hasn't got. sections: the course's.
+ */
+export function readClassLines(text, sections) {
   const lines = listLines(text);
   if (!lines.length) throw refused('Paste or type at least one name.');
   if (lines.length > PEOPLE_LIMITS.pasted) throw refused(`Add at most ${PEOPLE_LIMITS.pasted} people at a time.`);
   // A spreadsheet's first row often says what its columns are.
   const headed = /^(?:names?|full name|student(?: id)?|id|learners?)$/i.test(lines[0].name) && (!lines[0].section || /^(?:sections?|class|group|period)$/i.test(lines[0].section));
   if (headed) lines.shift();
-  let sections = await sectionsOf(store, code);
   const named = [];
   for (const { section } of lines) if (section && !named.some((name) => name.toLowerCase() === section.toLowerCase())) named.push(section);
   const fresh = named.filter((name) => !sectionNamed(sections, name));
-  // "Lovelace, Ada" on every line would make a section of everyone's first name.
-  const commas = lines.filter((line) => line.comma && line.section);
-  if (commas.length >= 3 && commas.length === lines.length && new Set(commas.map((line) => line.section.toLowerCase())).size === commas.length && commas.every((line) => fresh.some((name) => name.toLowerCase() === line.section.toLowerCase()))) {
-    throw refused(`These look like “Last, First” names, not sections: “${lines[0].name}, ${lines[0].section}”. Write names as First Last, or put a tab before a section.`);
+  // "Lovelace, Ada" or two columns for first and last names would make a section of everyone's other name, and a section's name goes where a name mustn't.
+  const split = lines.filter((line) => line.section);
+  if (split.length >= 3 && split.length === lines.length && new Set(split.map((line) => line.section.toLowerCase())).size === split.length && split.every((line) => fresh.some((name) => name.toLowerCase() === line.section.toLowerCase()))) {
+    throw refused(lines[0].comma ? `These look like “Last, First” names, not sections: “${lines[0].name}, ${lines[0].section}”. Write names as First Last, or put a tab before a section.` : `These look like first and last names in two columns, not sections: “${lines[0].name}” and “${lines[0].section}”. Put each whole name in one column.`);
   }
   if (sections.length + fresh.length > PEOPLE_LIMITS.sections) throw refused(`A course has at most ${PEOPLE_LIMITS.sections} sections.`);
+  return { lines, headed, fresh };
+}
+
+async function addLinesNow(store, code, text) {
+  let sections = await sectionsOf(store, code);
+  const { lines, headed, fresh } = readClassLines(text, sections);
   for (const name of fresh) sections = (await addSectionNow(store, code, { name })).sections;
   const report = { added: [], moved: [], already: [], too_long: 0, no_name: 0, sections: fresh, headed };
   for (const line of lines) {
