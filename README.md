@@ -73,6 +73,10 @@ Running this doesn't make a deployment compliant with COPPA, FERPA or any other 
 [deploying.md](engine/docs/deploying.md) lists what you still have to do. Report vulnerabilities privately
 ([SECURITY.md](SECURITY.md)).
 
+## Reading the docs
+
+The same documents, easier to read, with [how it works](https://developers.viablelab.org/docs/how-it-works) to try and a [library](https://developers.viablelab.org/docs/library) of what it knows: [developers.viablelab.org/docs](https://developers.viablelab.org/docs). They are written here, and the site is generated from them.
+
 ## Status
 
 Version 0.3, a preview. What each README describes is built and tested. Not yet: the packages on npm (until then, clone this

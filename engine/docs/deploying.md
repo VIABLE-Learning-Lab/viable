@@ -169,6 +169,10 @@ covers public schools and colleges, adopts it): give each picture a text alterna
 gives each picture a `description`), offer the text of anything read aloud, and make sure the
 interface works with a keyboard and a screen reader.
 
+### What a link can spend
+
+Whoever holds a course's link can send messages, and your model key pays for them. An activity answers at most 5,000 messages a day, and each learner at most what you set in a course's Settings. To keep strangers out, use personal codes: then only codes on your class list open the course.
+
 ### A security contact
 
 - Publish how people can report a security or privacy problem in your deployment (a `security.txt`
