@@ -65,7 +65,8 @@ messages, a verdict rather than its wording, a phrase that must or must never re
 | `teaching` | `{ teaching, section }` | `{ text }`: the instructions (system message) of the step that writes the reply, an LLM step whose own instructions are `You are a tutor.`, when an agent of that step runs with these teaching settings for a learner in `section` (null: none). |
 | `vetting` | `{ mode, reviewer }` | `{ passed, reason }`: what the reviewer's output means in `simple` or `full` mode, `reason` null when it passed. |
 | | `{ reply }` | `{ requires_attention, content }`: whether a reply carries the safety prefix, and the reply without it. |
-| | `{ prompt, config, teaching }` | `{ text }`: the system message a VETTING step with this `config` (and these teaching settings) sends in its first round, to the reply model (`prompt: "generation"`) or the reviewer (`"verification"`). |
+| | `{ answer, question, said }` | `{ reached, now, checkable }`: whether the learner's turns, oldest first, hold the answer key's answer, by code, whether their latest does, and whether code can tell at all. |
+| | `{ prompt, config, teaching, message }` | `{ text }`: the system message a VETTING step with this `config` (and these teaching settings) sends in its first round, to the reply model (`prompt: "generation"`) or the reviewer (`"verification"`), when the learner's message is `message`. |
 | `measures` | `{ events, turns }` | `{ metrics, skills, writing }`: one learner's metrics, mastery per skill by the skill's name, and writing rows by `panel/field` (`src/measures.js`). |
 | `xapi` | `{ record, options }` | `{ count, statements, text }`, `text` being the statements as JSON, or an error: the record as xAPI statements ([docs/xapi.md](../docs/xapi.md)). |
 

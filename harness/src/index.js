@@ -20,6 +20,7 @@ export { COMPONENTS, SLOTS, component } from './components/index.js';
 export { CATALOG, CATALOG_KINDS, licenseLimits, openForAnyUse, searchCatalog } from './catalog.js';
 export { CONNECTORS, getResource, listResources, resourceJudge, resourcesHome, useResource } from './resources/index.js';
 export { CALL_LIMITS, callComponent, checkManifest, detect, documentComponents, lookup, measure } from './components/call.js';
+export { guidanceFrom } from './components/contract.js';
 export { teacherView, viewInputs } from './view.js';
 export { SUITES, compare, loadSuite, runConformance, runSuite } from './conformance.js';
 export { SKIPPED, toStatements, uuid5 } from './xapi.js';

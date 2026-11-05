@@ -74,7 +74,8 @@ Skill is advice an assistant may ignore; the gateway, your own calls and the [En
 | After the reply | **Evidence** | What happened, did it help, what should change? | records tied to what went in; [measures](docs/xapi.md) with their definitions; suggested changes a teacher accepts or declines |
 
 A small model can read the moment instead of rules (`pickerModel`), and it reads more of them, in any language, for one more call
-per turn. Without one, or if it fails, rules do.
+per turn. Without one, or if it fails, rules do. [How it works](docs/how-it-works.md) says what it chooses from, where that is kept,
+and why there is no vector store.
 
 ## Not only replies
 
@@ -108,7 +109,7 @@ take from them, credits them, and measures whether it helped. It carries their o
 
 ## Reference
 
-[With your stack](docs/with-your-stack.md) · [MCP](docs/mcp.md) · [Skills](skills/) · [Agent tests](docs/agent-tests.md) ·
+[How it works](docs/how-it-works.md) · [With your stack](docs/with-your-stack.md) · [MCP](docs/mcp.md) · [Skills](skills/) · [Agent tests](docs/agent-tests.md) ·
 [Components](docs/components.md) · [Open resources](docs/resources.md) · [Catalog](docs/catalog.md) · [xAPI](docs/xapi.md) ·
 [Conformance](conformance/README.md)
 

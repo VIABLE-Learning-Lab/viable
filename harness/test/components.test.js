@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import * as harness from '../src/index.js';
-import { COMPONENTS, SLOTS, checkSchema } from '../src/index.js';
+import { COMPONENTS, SLOTS, checkManifest, checkSchema, guidanceFrom, lookup, turnBrief, validateDocument } from '../src/index.js';
 import { NODE_TYPES } from '../../engine/src/agents/graph.js';
 import { componentPages, pagesDir } from '../scripts/build-component-pages.mjs';
 
@@ -38,4 +38,21 @@ test('docs/components/ holds one current page per component, as npm run componen
   for (const [name, text] of pages) assert.equal(readFileSync(`${pagesDir}${name}`, 'utf8'), text, `${name}: run npm run components:build.`);
   const listed = readFileSync(new URL('../docs/components.md', import.meta.url), 'utf8');
   for (const name of pages.keys()) assert.ok(listed.includes(`(components/${name})`), `docs/components.md links ${name}`);
+});
+
+test('the guidance template is a valid component, its fixtures hold, and its items reach an activity with their credit', async () => {
+  const dir = new URL('../integrations/_template-context/', import.meta.url);
+  const manifest = JSON.parse(readFileSync(new URL('manifest.json', dir), 'utf8'));
+  assert.deepEqual(validateDocument(manifest, 'component').errors, []);
+  assert.equal(checkManifest(manifest, 'context'), manifest);
+  assert.deepEqual((await lookup(manifest, 'anything')).items, manifest.runs.items, 'a data component holds its items: nothing is called');
+  const { teaching, cases } = JSON.parse(readFileSync(new URL('fixtures/cases.json', dir), 'utf8'));
+  const guidance = guidanceFrom(manifest);
+  assert.ok(guidance.every((item) => item.component === 'example/feedback-moves@0.1.0' && item.source && item.attribution));
+  for (const { message, chooses } of cases) {
+    const brief = await turnBrief({ ...teaching, guidance }, { message });
+    assert.deepEqual(brief.guidance.map((item) => manifest.runs.items.findIndex((own) => own.text === item.text) + 1), chooses, message);
+  }
+  assert.throws(() => guidanceFrom(manifest, { chosen: [9] }), /no 9/);
+  assert.throws(() => checkManifest({ ...manifest, slot: 'measure' }), /only a context component can/);
 });

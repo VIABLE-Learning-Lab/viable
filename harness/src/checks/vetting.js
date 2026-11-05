@@ -3,7 +3,7 @@
  * rounds of writing, reviewing and rewriting. The Engine's VETTING step and checkReply both run this, so a
  * reply gets the same review wherever it is checked. Calling the models is the caller's. No Node built-ins.
  */
-import { buildChatVettingSystemPrompt, DEFAULT_VETTING_PROMPT, parseSafetyPrefix, parseSimpleVerificationResult, parseVerificationResult, prepareChatPrompt, prepareChatVettingVerificationPrompt, prepareVerificationPrompt, redraftTurns, replyText } from './vettingPrompts.js';
+import { buildChatVettingSystemPrompt, DEFAULT_VETTING_PROMPT, fullFeedback, parseSafetyPrefix, parseSimpleVerificationResult, parseVerificationResult, prepareChatPrompt, prepareChatVettingVerificationPrompt, prepareVerificationPrompt, reachedForReply, reachedForReviewer, redraftTurns, replyText } from './vettingPrompts.js';
 
 export { redraftTurns, replyText };
 
@@ -12,9 +12,10 @@ const clip = (value, limit) => (typeof value === 'string' ? value.slice(0, limit
 /**
  * What the two models are told: { chat, verify, feedback(reason) }. full: against items (a question and its
  * answer key), else against guideline, with reference as what facts are checked against, which only the
- * reviewer sees. chatPrompt and verificationPrompt replace the defaults; null leaves them.
+ * reviewer sees. chatPrompt and verificationPrompt replace the defaults; null leaves them. reached: what
+ * reachedAmong found, so both models know the learner already has the answer.
  */
-export async function vettingPromptSet({ full = false, chatPrompt = null, verificationPrompt = null, items = [], guideline = '', reference = '', requireClosingQuestion, decrypt = null } = {}) {
+export async function vettingPromptSet({ full = false, chatPrompt = null, verificationPrompt = null, items = [], guideline = '', reference = '', requireClosingQuestion, decrypt = null, reached = null } = {}) {
   if (full) {
     const data = {
       mode: 'vetting',
@@ -23,9 +24,9 @@ export async function vettingPromptSet({ full = false, chatPrompt = null, verifi
       context: { items }
     };
     return {
-      chat: await prepareChatPrompt(data, decrypt),
-      verify: await prepareVerificationPrompt(data, decrypt),
-      feedback: (reason) => `Your previous response failed verification for the following reason: ${reason}. Please try again, ensuring you adhere to the pedagogical guidelines (guiding, not revealing the answer or key concepts).`
+      chat: `${await prepareChatPrompt(data, decrypt)}${reached && !reached.none ? `\n\n${reachedForReply(reached, items.length)}` : ''}`,
+      verify: `${await prepareVerificationPrompt(data, decrypt)}${reached ? `\n\n${reachedForReviewer(reached, items.length)}` : ''}`,
+      feedback: (reason) => fullFeedback(reason, reached)
     };
   }
   const rule = String(guideline ?? '').trim() || DEFAULT_VETTING_PROMPT;

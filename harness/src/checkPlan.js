@@ -50,7 +50,7 @@ export function checkPlan({ reply, message = '', history = [], guideline = '', q
 
 /**
  * A finished check's { outcome, passed, reply, revised, stop_reason, rounds, reviewer, usage,
- * model_calls }. outcome is passed, unverified (it failed every review, or couldn't be reviewed:
+ * model_calls, answer_reached? }: answer_reached when the learner had already written the answer. outcome is passed, unverified (it failed every review, or couldn't be reviewed:
  * stop_reason says which) or attention (a rewrite raised a safety concern). Only a passed reply is
  * checked.
  */
@@ -65,6 +65,7 @@ export function checkOutcome(result) {
     rounds: out.attempt_details || [],
     reviewer: out.verification_model,
     usage: result.usage,
-    model_calls: result.modelCalls
+    model_calls: result.modelCalls,
+    ...(out.answer_reached ? { answer_reached: true } : {})
   };
 }

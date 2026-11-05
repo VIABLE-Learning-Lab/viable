@@ -200,6 +200,17 @@ ${item.patch ? `<div class="actions accept"><button class="v-btn is-primary" typ
 </div>`;
 }
 
+// How long the checks made learners wait, with where to change it: care against waiting is theirs to weigh.
+function waitLine(runs, agentSlug) {
+  const checked = runs.map((run) => (run?.steps || []).filter((step) => step.nodeType === 'vetting')).filter((steps) => steps.length);
+  if (!checked.length) return '';
+  const middle = (values) => values.sort((a, b) => a - b)[Math.floor(values.length / 2)];
+  const seconds = Math.round(middle(checked.map((steps) => steps.reduce((sum, step) => sum + (step.durationMs || 0), 0))) / 1000);
+  const tries = checked.map((steps) => steps.reduce((sum, step) => sum + (step.output?.attempts || 0), 0));
+  const average = tries.reduce((sum, value) => sum + value, 0) / tries.length;
+  return `<p class="v-note">Checking took about ${seconds} s a reply, at ${average.toFixed(1)} tries a reply, with nothing on the page meanwhile. Too long? ${agentSlug ? `<a href="/console/agents/${esc(agentSlug)}">Allow fewer tries</a>, or choose` : 'Choose'} a faster reviewer in <a href="/console/models">Models</a>. More care is the other way.</p>`;
+}
+
 function lookView({ code, title, origin, addresses, tabs, closed, activities, activity, version, parts, moments, unhelpful, accepted, people, sections }) {
   const chips = `<nav aria-label="Choose an activity"><ul class="chips">${activities.map((item) => `<li><a class="chip" href="/console/courses/${esc(code)}/progress/look?activity=${esc(item.key)}"${item.key === activity?.key ? ' aria-current="true"' : ''}>${esc(item.title)}</a></li>`).join('')}</ul></nav>`;
   const head = `${courseHead({ title, code, origin, addresses, tabs, current: 'Progress', closed })}${subNav(code, 'look')}`;
@@ -208,7 +219,7 @@ function lookView({ code, title, origin, addresses, tabs, closed, activities, ac
   const body = `<section class="block" aria-labelledby="replies-title">
 <h2 id="replies-title">How replies went</h2>
 ${parts.opening ? `<p class="opening">${parts.opening}</p>` : ''}
-${parts.runs ? `${parts.tally}<div class="flow">${named(parts.vetting)}</div>` : '<p class="v-note">Nothing yet. This fills in as learners talk with the AI.</p>'}
+${parts.runs ? `${parts.tally}${parts.waited}<div class="flow">${named(parts.vetting)}</div>` : '<p class="v-note">Nothing yet. This fills in as learners talk with the AI.</p>'}
 </section>
 <section class="block" aria-labelledby="hard-title">
 <h2 id="hard-title">Hard moments</h2>
@@ -302,7 +313,7 @@ async function lookBody({ library, store, origin, addresses, tabs, url }, match)
   const [people, sections, evidence] = await Promise.all([peopleOf(store, code), sectionsOf(store, code), evidenceOf(store, code, activity)]);
   const parts = viewParts({ teaching: activity.teaching ?? null, records: evidence.records, runs: evidence.runs, suggestions: evidence.suggestions });
   const unhelpful = evidence.records.flatMap((record) => record.turns.filter((turn) => turn.rating === -1).map((turn) => ({ learner: record.user, turn })));
-  return { title: `What to look at · ${doc.course.title}`, css: `${GRID_CSS}\n${VIEW_CSS}\n${LOOK_CSS}`, body: lookView({ ...common, activity, parts: { ...parts, runs: evidence.runs.length, heard: parts.heardList.length }, moments: hardMoments.build({ records: evidence.records }).moments, unhelpful, accepted: evidence.accepted, people, sections }) };
+  return { title: `What to look at · ${doc.course.title}`, css: `${GRID_CSS}\n${VIEW_CSS}\n${LOOK_CSS}`, body: lookView({ ...common, activity, parts: { ...parts, runs: evidence.runs.length, waited: waitLine(evidence.runs, doc.agents?.find((agent) => agent.ref === activity.agent_ref)?.slug),  heard: parts.heardList.length }, moments: hardMoments.build({ records: evidence.records }).moments, unhelpful, accepted: evidence.accepted, people, sections }) };
 }
 
 export const progressPages = [

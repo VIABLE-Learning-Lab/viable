@@ -7,9 +7,10 @@ description: Check an AI reply with VETTING before a learner sees it, with the c
 
 VETTING (Li, Zhang & Botelho, 2026) has a second model review each reply with rules the reply model
 never sees, so a learner can't talk the reviewer out of them. It reads the reply and nothing the
-learner wrote: with an answer key, a reply that confirms an answer as the learner's own passes and
-one that supplies it fails, and it can't check they really said it. A reply is checked only when
-the review's outcome is `passed`.
+learner wrote. With an answer key, a reply that confirms an answer as the learner's own passes and
+one that supplies it fails. Code compares what the learner wrote with the key, and tells both models
+only whether they have it: then the reply says they are right, and may discuss the answer. A reply
+is checked only when the review's outcome is `passed`.
 
 ## When
 

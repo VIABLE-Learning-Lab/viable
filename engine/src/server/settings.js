@@ -95,7 +95,7 @@ export function featuresOf({ roles, reads }) {
     row('replies', 'reply', 'Replies', reply, where(reply) || 'Each agent’s own models, at the environment’s address.', 'No model writes replies yet.'),
     row('photos', 'reply', 'Photos from learners', read.images, 'The reply model reads images.', reply?.model ? 'Switch on “Reads images” for the reply model.' : 'Needs a reply model that reads images.'),
     row('pdfs', 'reply', 'PDFs from learners', read.files, 'The reply model reads PDFs.', reply?.model ? 'Switch on “Reads PDFs” for the reply model.' : 'Needs a reply model that reads PDFs.'),
-    row('review', 'reviewer', 'A second model checks replies', roles.reviewer?.model, `${where(roles.reviewer)} It applies where an agent has a check step.`, 'A check step uses the model it names, or the reply model.'),
+    row('review', 'reviewer', 'A second model checks replies', roles.reviewer?.model, `${where(roles.reviewer)} It applies where an agent has a check step, and a learner waits for each review, so a small, fast model here answers sooner.`, 'A check step uses the model it names, or the reply model.'),
     row('moment', 'picker', 'A model reads the moment', roles.picker, 'A small model picks what each moment needs. Rules take over if it fails.', 'Rules read the moment from what the learner wrote.'),
     row('voice', 'hearing', 'Voice in activities', roles.hearing, 'Learners can dictate and talk, where an activity or chat page allows it.', 'The microphone isn’t offered.'),
     row('read_aloud', 'speaking', 'Reading aloud', roles.speaking, 'A Speech step reads aloud, and a reply to a spoken message is read aloud.', 'Nothing is read aloud on a page.'),

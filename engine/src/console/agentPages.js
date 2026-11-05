@@ -114,6 +114,14 @@ ${choose('theme', 'Light or dark', look.theme, [{ value: 'auto', label: 'As the 
 </form>`;
 }
 
+// Care against waiting, which only whoever runs it can weigh. Every agent with a check can change it, wherever its steps came from.
+const TRIES = [
+  { value: 1, label: '1: the shortest wait. A reply that fails isn’t rewritten' },
+  { value: 2, label: '2' },
+  { value: 3, label: '3: the most care, and the longest wait' }
+];
+const triesField = (tries) => choose('tries', 'Tries for each reply', Math.min(tries, 3), TRIES, { hint: 'A learner waits while it tries, and a try is one reply and one review. A faster reviewer in Models makes each one shorter.' });
+
 function simpleForm(agent, entry, values, using) {
   const kbs = knowledgeIn(entry);
   const reply = using.roles.reply?.model;
@@ -127,7 +135,8 @@ ${text('instructions', 'Its instructions', values.instructions, { rows: 8, requi
 ${kbs.length ? `<small class="v-note">Searched with every message; it is told to answer from what it finds.</small><div class="tools">${kbs.map((kb) => toggle('knowledge', kb.name, values.knowledge.includes(kb.ref), { value: kb.ref })).join('')}</div>` : `<small class="v-note">None beside it yet. <a href="/console/knowledge?place=${esc(entry.id)}">Add a knowledge base</a>.</small>`}
 </fieldset>
 <fieldset class="one-of"><legend class="v-label">What else it does</legend><div class="tools">
-${toggle('check', 'Check each reply with a second model', values.check, { hint: `A reviewer checks each reply against the instructions. One that fails is rewritten, up to 3 tries, and if none passes the person is told so. Replies then arrive whole, not word by word. ${reviewer ? `${reviewer} reviews.` : 'No reviewer is set in Models yet, so the reply model reviews itself.'}` })}
+${toggle('check', 'Check each reply with a second model', values.check, { hint: `A reviewer checks each reply against the instructions. One that fails is rewritten, and if none passes the person is told so. Replies then arrive whole, not word by word. ${reviewer ? `${reviewer} reviews.` : 'No reviewer is set in Models yet, so the reply model reviews itself.'}` })}
+${triesField(values.tries)}
 ${toggle('web', 'Read web pages it is given', values.web, { hint: 'It reads one public https page at a time, given its exact address. It can’t search the web.' })}
 ${toggle('memory', 'Remember who it talks to', values.memory, { hint: 'It can keep lasting facts about each learner or visitor between conversations, on this server.' })}
 <small class="v-note">With either of the last two, the model chooses what to do, so one message can take several model calls.</small>
@@ -137,7 +146,7 @@ ${toggle('memory', 'Remember who it talks to', values.memory, { hint: 'It can ke
 </form>`;
 }
 
-function readOnlySteps(agent, using) {
+function readOnlySteps(agent, using, version) {
   const models = stepModels(applyModels(agent.graph, using.plan));
   const told = new Set();
   const rows = agent.graph.nodes.filter((node) => node.type !== 'note').map((node) => {
@@ -148,8 +157,14 @@ function readOnlySteps(agent, using) {
     told.add(node.type);
     return `<li><strong>${esc(manifest?.label || node.type)}</strong> <code>${esc(node.id)}</code>${own ? `<br><span class="v-note">${own}</span>` : ''}${summary ? `<br><small class="v-note">${esc(summary)}</small>` : ''}</li>`;
   }).join('');
+  const checks = agent.graph.nodes.filter((node) => node.type === 'vetting');
+  const tries = checks.length ? `<h3>Care or speed</h3><form class="stack" id="tries-form" data-api="PUT agents/${esc(agent.slug)}/tries" data-guard>
+<input type="hidden" name="version" value="${version}">
+${triesField(Number(checks[0].config?.max_attempts) || 3)}
+<div class="actions"><button class="v-btn is-primary" type="submit">Save</button></div>${say()}
+</form>` : '';
   return `<p class="notice">This agent’s steps were made elsewhere and run as they are. To change them, change it on the Developer Platform, then add it here again. Its look and its chat page can be changed here.</p>
-<ol class="steps">${rows}</ol>`;
+<ol class="steps">${rows}</ol>${tries}`;
 }
 
 async function agentBody({ library, settings, store }, match) {
@@ -170,7 +185,7 @@ ${noModelNotice(using, [agent])}
 ${version === 0 ? `<p class="notice">This agent comes from <code>${esc(entry.file)}</code>. The first change makes a copy on this server, at the same address, and the file is no longer read.</p>` : ''}
 <section class="block" aria-labelledby="does-title">
 <h2 id="does-title">What it does</h2>
-${values ? simpleForm(agent, entry, values, using) : readOnlySteps(agent, using)}
+${values ? simpleForm(agent, entry, values, using) : readOnlySteps(agent, using, version)}
 </section>
 <section class="block" aria-labelledby="test-title">
 <h2 id="test-title">Test it</h2>
@@ -220,6 +235,7 @@ const AGENT_CSS = `.steps{margin:14px 0 0;padding:0 0 0 22px}
 // A provider's own words, without a key if it says one back.
 const scrubbed = (message, using) => [...Object.values(using.roles), using.fallback].reduce((said, role) => (role?.apiKey ? said.replaceAll(role.apiKey, '[its key]') : said), String(message)).slice(0, 600);
 
+const LONG_CHECK_MS = 10000;
 const REVIEW_WORDS = { passed: 'passed', unverified: 'none passed', attention: 'needs attention' };
 
 function stepDone(step, using) {
@@ -231,7 +247,8 @@ function stepDone(step, using) {
     ...(step.nodeType === 'agent' && out.tool_calls?.length ? [`${plural(out.tool_calls.length, 'tool call')}: ${[...new Set(out.tool_calls.map((call) => call.tool || call.name))].join(', ')}`] : []),
     `${(step.durationMs / 1000).toFixed(1)} s`
   ];
-  return `<li><strong>${esc(stepManifest(step.nodeType)?.label || step.nodeType)}</strong> ${esc(facts.join(' · '))}${step.error ? `<br><span class="test-bad">${esc(scrubbed(step.error, using))}</span>` : ''}</li>`;
+  const long = step.nodeType === 'vetting' && step.durationMs >= LONG_CHECK_MS ? '<br><small class="v-note">A learner would wait this long, with nothing on the page. Fewer tries, or a faster reviewer in <a href="/console/models">Models</a>, makes it shorter.</small>' : '';
+  return `<li><strong>${esc(stepManifest(step.nodeType)?.label || step.nodeType)}</strong> ${esc(facts.join(' · '))}${step.error ? `<br><span class="test-bad">${esc(scrubbed(step.error, using))}</span>` : ''}${long}</li>`;
 }
 
 function testAnswer(result, using) {
@@ -286,6 +303,12 @@ async function createAgent({ library }, _match, body) {
   return { go: `/console/agents/${await addAgent(library, place, newAgent(body, entry?.doc))}` };
 }
 
+const triesOf = (body) => {
+  const tries = Number(body?.tries ?? 3);
+  if (!TRIES.some((item) => item.value === tries)) throw refused('Choose 1, 2 or 3 tries.');
+  return tries;
+};
+
 async function saveAgent({ library }, match, body) {
   await changeAgent(library, match[1], body?.version, (agent, doc) => {
     if (!formOf(agent.graph)) throw refused('This agent’s steps were made elsewhere. Change them on the Developer Platform, then add it here again.');
@@ -293,7 +316,7 @@ async function saveAgent({ library }, match, body) {
     if (agent.profile?.title === agent.name) agent.profile.title = fields.name;
     agent.name = fields.name;
     agent.description = clean(body.description, WHAT_FOR_CHARS) || null;
-    agent.graph = graphFrom({ ...fields, check: body.check === true, web: body.web === true, memory: body.memory === true });
+    agent.graph = graphFrom({ ...fields, check: body.check === true, tries: triesOf(body), web: body.web === true, memory: body.memory === true });
     if (!doc.course && doc.agents.length === 1) doc.title = fields.name;
   }, clean(body?.name, 80));
   return { said: 'Saved. Its next message uses it.' };
@@ -331,6 +354,12 @@ export const agentPages = [
           agent.profile = profileSettings({ ...agent.profile, title: body.title, tagline: body.tagline, greeting: body.greeting, starters: linesOf(body.starters), placeholder: body.placeholder, notice: body.notice ?? '', color: body.color, theme: body.theme }, agent.name);
         }, 'The look');
         return { said: 'Saved. It shows the next time a page is opened.' };
+      }],
+      ['PUT', /^agents\/([\w.-]+)\/tries$/, async ({ library }, match, body) => {
+        await changeAgent(library, match[1], body?.version, (agent) => {
+          for (const node of agent.graph.nodes) if (node.type === 'vetting') node.config = { ...node.config, max_attempts: triesOf(body) };
+        }, 'Tries for each reply');
+        return { said: 'Saved. Its next message uses it.' };
       }],
       ['POST', /^agents\/([\w.-]+)\/test$/, testAgent],
       ['GET', /^agents\/([\w.-]+)\/download$/, async ({ library }, match) => {

@@ -1,12 +1,12 @@
 // How the AI helps in an activity (product map, section 3): the teacher's goal, a standard from
 // Learning Commons or a durable skill (kept as it was when chosen), how far the AI may go, and what
-// the teacher wants to hear about, misconceptions to listen for (Eedi's, chosen by the teacher), and
-// for a section, its own help level and a note. Part of the activity's version. It reaches the agent
+// the teacher wants to hear about, misconceptions to listen for (Eedi's, chosen by the teacher), guidance
+// from others' research (a context component's items, chosen and kept), and for a section, its own help level and a note. Part of the activity's version. It reaches the agent
 // as an instruction with what the learner has open; steps and an activity without the AI are what
 // the server enforces. Not per learner: a note about a person would go to a model.
 import { MISCONCEPTIONS_SOURCE } from './misconceptionsSource.js';
 
-export const TEACHING_LIMITS = { tools_off: 12, tool: 64, goal: 1000, watch: 500, description: 1200, components: 40, prior: 12, attribution: 8, misconceptions: 8, sections: 60, note: 500 };
+export const TEACHING_LIMITS = { tools_off: 12, tool: 64, goal: 1000, watch: 500, description: 1200, components: 40, prior: 12, attribution: 8, misconceptions: 8, guidance: 20, guidanceText: 600, sections: 60, note: 500 };
 
 export const HELP_LEVELS = {
   ask_first: 'Before helping, ask what the learner thinks or has tried, and build on their answer. Don’t give the answer.',
@@ -83,6 +83,26 @@ function misconceptionsOf(value) {
   }).filter(Boolean);
 }
 
+// The moments a turn's brief reads (brief.js), which a piece of guidance can be for.
+const MOMENTS = ['attempt', 'asks_answer', 'stuck', 'repeated'];
+
+// Guidance chosen from others' research (a context component's items, guidanceFrom), each kept as it was then
+// with what it is for and where it came from, as a standard is, so a version says what the AI was given.
+function guidanceOf(value) {
+  const seen = new Set();
+  return list(value, TEACHING_LIMITS.guidance).map((item) => {
+    const said = text(item?.text, TEACHING_LIMITS.guidanceText);
+    if (!said || seen.has(said)) return null;
+    seen.add(said);
+    const when = list(item.when, MOMENTS.length).filter((moment) => MOMENTS.includes(moment));
+    const about = line(item.about, 200);
+    const component = line(item.component, 120);
+    const source = line(item.source, 160);
+    const attribution = text(item.attribution, 600);
+    return { text: said, ...(when.length ? { when } : {}), ...(about ? { about } : {}), ...(component ? { component } : {}), ...(source ? { source } : {}), ...(attribution ? { attribution } : {}) };
+  }).filter(Boolean);
+}
+
 // A section's own help level and note ({ [section_id]: { help, note } }), merged over the activity's
 // on a course run (teachingContext).
 function sectionsOf(value) {
@@ -107,12 +127,13 @@ export function teachingSettings(value) {
   const watch = text(value.watch_for, TEACHING_LIMITS.watch);
   const standard = standardOf(value.standard);
   const misconceptions = misconceptionsOf(value.misconceptions);
+  const guidance = guidanceOf(value.guidance);
   const sections = sectionsOf(value.sections);
   const toolsOff = [...new Set(list(value.tools_off, TEACHING_LIMITS.tools_off).map((name) => line(name, TEACHING_LIMITS.tool)).filter(Boolean))];
   const brief = typeof value.turn_brief === 'boolean' ? value.turn_brief : null;
-  if (!goal && !help && !watch && !standard && !misconceptions.length && !sections && !toolsOff.length) return null;
+  if (!goal && !help && !watch && !standard && !misconceptions.length && !guidance.length && !sections && !toolsOff.length) return null;
   // Only when set, so settings saved before them read (and version) the same.
-  return { goal: goal || null, help, watch_for: watch || null, standard, ...(brief === null ? {} : { turn_brief: brief }), ...(misconceptions.length ? { misconceptions } : {}), ...(sections ? { sections } : {}), ...(toolsOff.length ? { tools_off: toolsOff } : {}) };
+  return { goal: goal || null, help, watch_for: watch || null, standard, ...(brief === null ? {} : { turn_brief: brief }), ...(misconceptions.length ? { misconceptions } : {}), ...(guidance.length ? { guidance } : {}), ...(sections ? { sections } : {}), ...(toolsOff.length ? { tools_off: toolsOff } : {}) };
 }
 
 /**
@@ -127,7 +148,7 @@ export function teachingContext(teaching, section = null) {
   const { watch_for: _watch, sections, turn_brief: _brief, ...own } = saved;
   const theirs = section ? sections?.[section] : null;
   const settings = theirs ? { ...own, help: theirs.help || own.help, ...(theirs.note ? { note: theirs.note } : {}) } : own;
-  if (!settings.goal && !settings.help && !settings.standard && !settings.misconceptions && !settings.note && !settings.tools_off) return null;
+  if (!settings.goal && !settings.help && !settings.standard && !settings.misconceptions && !settings.guidance && !settings.note && !settings.tools_off) return null;
   const lines = ['How the teacher wants you to help in this activity:'];
   if (settings.goal) lines.push(`Goal: ${settings.goal}`);
   const standard = settings.standard;
@@ -142,6 +163,7 @@ export function teachingContext(teaching, section = null) {
     if (standard.prior.length) lines.push(`Standards before it, to go back to when the learner needs them:\n${standard.prior.map((item) => `- ${item.code ? `${item.code}: ` : ''}${item.description}`).join('\n')}`);
   }
   if (settings.misconceptions) lines.push(`Common misconceptions to listen for:\n${settings.misconceptions.map((item) => `- ${item.description}`).join('\n')}`);
+  if (settings.guidance) lines.push(`Guidance from research, to use where it fits:\n${settings.guidance.map((item) => `- ${item.text}${item.source ? ` (${item.source})` : ''}`).join('\n')}`);
   if (settings.help) lines.push(`How far to go: ${HELP_LEVELS[settings.help]}`);
   if (settings.note) lines.push(`The teacher’s extra note for this group: ${settings.note}`);
   if (settings.tools_off) lines.push(`Don’t use these here: ${settings.tools_off.join(', ')}.`);

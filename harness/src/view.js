@@ -65,6 +65,7 @@ function teachingPart(settings) {
     `<dt>How far the AI may go</dt><dd>${settings.help ? treeHtml(helpScale(settings.help)) : ''}${help(settings.help)}</dd>`,
     settings.standard ? standardPart(settings.standard) : '',
     settings.misconceptions ? `<dt>Misconceptions to listen for</dt><dd><ul>${settings.misconceptions.map((item) => `<li>${esc(item.description)} <span class="muted">(gets in the way of: ${esc(item.construct.description)})</span></li>`).join('')}</ul></dd>` : '',
+    settings.guidance ? `<dt>Guidance from research</dt><dd><ul>${settings.guidance.map((item) => `<li>${esc(item.text)}${item.source ? ` <small>${esc(item.source)}</small>` : ''}</li>`).join('')}</ul></dd>` : '',
     settings.watch_for ? `<dt>What you want to hear about</dt><dd>${esc(settings.watch_for)}<p class="note">For you only: this is never sent to the AI.</p></dd>` : ''
   ];
   const sections = Object.entries(settings.sections || {});

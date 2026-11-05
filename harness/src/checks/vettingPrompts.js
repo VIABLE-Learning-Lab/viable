@@ -256,7 +256,7 @@ export function prepareVerificationPrompt(data, decrypt) {
 2. Does the response guide the student towards understanding or finding the answers themselves? (PASS if yes)
 3. Is the response relevant to the student's query and the question context? (FAIL if irrelevant)
 
-One exception to 1. You see only the response, never what the student wrote. A response that treats an answer or key concept as the student's own, by confirming it or repeating it back (such as "Yes, it's Paris" or "You got Paris. How did you know?"), reveals nothing. A response that supplies it (such as "The answer is Paris", "No, it's Paris" or "Let me tell you: Paris") reveals it, whatever reason it gives.
+One exception to 1. You see only the response, never what the student wrote. A response that treats an answer or key concept as the student's own, by confirming it or repeating it back (such as "Yes, it's Paris" or "You got Paris. How did you know?"), reveals nothing. A response that supplies it (such as "The answer is Paris", "No, it's Paris" or "Let me tell you: Paris") reveals it, whatever reason it gives. A response that calls a wrong answer right, or the correct answer wrong, fails.
 
 Please analyze the assistant's response provided below. After your analysis, output EXACTLY ONE of the following verdicts:
 - "PASS" if the response meets the criteria.
@@ -267,6 +267,24 @@ DO NOT include any other commentary, preamble, or explanation. Your entire outpu
       return augmentedPrompt;
   });
 }
+
+/**
+ * What each model is told when code found the learner has already written the answer (answerReached.js). The fact
+ * alone: the reviewer still reads nothing the learner wrote, and the reply model still never sees the key.
+ * reached: { now, items } as reachedAmong gives it; of: how many questions the step checks against. { none: true }
+ * says they haven't written it: the reviewer hears that, so a reply can't pass by claiming they did, and the reply model
+ * hears nothing, since it would learn their answer is wrong.
+ */
+const whichQuestion = (reached, of) => (of > 1 ? ` to question ${reached.items.join(' and ')}` : '');
+export const reachedForReply = (reached, of = 1) => (reached.none ? '' : reached.now
+  ? `The system compared the student's latest message with the answer key: they have the correct answer${whichQuestion(reached, of)}. Tell them plainly that they are right, then ask how they got it or why it works. You may talk about the answer with them.`
+  : `The system compared what the student wrote with the answer key: they have already reached the correct answer${whichQuestion(reached, of)}. You may talk about the answer with them.`);
+export const reachedForReviewer = (reached, of = 1) => (reached.none
+  ? "The system compared what the student wrote with the answer key, and they haven't written the correct answer. So the exception to criterion 1 doesn't apply: a response that states the answer reveals it, even one saying the student gave it."
+  : `The system compared what the student wrote with the answer key, and they have already written the correct answer${whichQuestion(reached, of)}. You aren't shown their words and don't need them. Criterion 1 doesn't apply to that answer: the response may state it and discuss it and its key concepts.${reached.now ? ' A response that leaves them unsure that they are right fails.' : ''}`);
+
+/** What the reply model reads after a failed review, in full mode. A rewrite keeps telling a learner who is right. */
+export const fullFeedback = (reason, reached = null) => `Your previous response failed verification for the following reason: ${reason}. Please try again, ensuring you adhere to the pedagogical guidelines (guiding, not revealing the answer or key concepts). ${reached?.items?.length ? "The student's answer is right: keep telling them so." : reached?.none ? '' : "If the student's own answer looked right to you, keep telling them so: take out only what the reason objects to."}`.trimEnd();
 
 /**
  * Parses the verification LLM's response.

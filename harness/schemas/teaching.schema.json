@@ -97,6 +97,56 @@
         }
       }
     },
+    "guidance": {
+      "type": "array",
+      "maxItems": 20,
+      "description": "Guidance chosen from others' research (a context component's items), each kept as it was chosen with what it is for and where it came from. A turn's brief takes at most two that fit the moment.",
+      "items": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          },
+          "when": {
+            "type": "array",
+            "maxItems": 4,
+            "items": {
+              "enum": [
+                "attempt",
+                "asks_answer",
+                "stuck",
+                "repeated"
+              ]
+            },
+            "description": "The moments it is for. Left out, it comes when what was said shares words with it."
+          },
+          "about": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Words saying what it applies to, which what was said is compared with instead of its text."
+          },
+          "component": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "The component it came from, as id@version."
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "attribution": {
+            "type": "string",
+            "maxLength": 600
+          }
+        }
+      }
+    },
     "sections": {
       "type": [
         "object",

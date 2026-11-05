@@ -1,6 +1,66 @@
 # Components
 
-Another team's work, or VIABLE's own, joins the harness as a **component** in one of six **slots**.
+You have research: a framework, a list of misconceptions, a classifier, a way to rate replies. A component is how it reaches
+the AIs people are using, with your name on it, without each of them building it in.
+
+## What you have, and what you do
+
+| You have | Its slot | What you write | What happens then |
+| --- | --- | --- | --- |
+| Guidance, a framework, moves, a list of what goes wrong | `context` | One JSON file. No server, and no learner's data reaches you | Someone adds pieces to an activity, and each turn takes those that fit the moment, with your name beside them |
+| A method that writes or checks a reply | `step` | A manifest, and an address or an MCP tool that runs it | A builder puts it in a workflow as a Component step, on the Developer Platform or the Engine |
+| A way to rate replies | `judge` | The same | Agent tests rate replies with it, and say so in the result |
+| A method that reads what happened | `detector` or `measure` | The same | `detect` and `measure` return its marks and numbers, from code or `viable-harness measure --component`. They aren't on a teacher's Progress yet |
+| A dataset or a benchmark | None: an entry in the [catalog](catalog.md), and a connector | An entry | `viable-engine test --suite` runs it against an agent |
+
+## A context component in five minutes
+
+```sh
+viable-harness component new your-lab/your-framework
+```
+
+That makes a folder from [the template](../integrations/_template-context/). Write your guidance in its `manifest.json`, a
+sentence or two each, saying which moments each is for. Then see what it changes:
+
+```sh
+viable-harness component try your-framework/manifest.json --teaching activity.json --message "i got 2/5"
+```
+
+```text
+What a model is told for "i got 2/5" (the moment read: attempt)
+
+Without your-lab/your-framework:
+  ...what the teacher decided, and the teaching move...
+
+With it, this is added, 2 of its 4 items:
+  - Before correcting a wrong answer, ask the learner to say how they got it. (Your framework)
+  - With unlike denominators, ask what the two fractions need to have in common. (Your framework)
+```
+
+A teacher or a builder takes the pieces that fit one activity:
+
+```sh
+viable-harness component add your-framework/manifest.json --teaching activity.json --items 1,3
+```
+
+They go in that activity's settings as they are then, up to 20, with your citation. From there it works wherever those
+settings go, since they travel with the activity: `prepare`, the gateway, the Engine and the Developer Platform.
+[How the Harness works](how-it-works.md) says how a turn chooses.
+
+## What you get for it
+
+- **Teachers' AIs use your work** without anyone rewriting it, on any model.
+- **Your credit travels:** your citation goes with every copy, and a record says which pieces went into a reply.
+- **A way to show what it does:** compare replies with and without it in agent tests, and report that apart from what your
+  own studies showed.
+- **A page** with what it does, what it receives, its license, its evidence and how to cite it, once it is reviewed.
+- **Help with the first ones.** VIABLE writes the adapter for early partners, and you review it.
+
+Not built yet: choosing guidance on a screen (the Engine's console and the Developer Platform take it in the settings, by
+file or API), a detector's marks on Progress, a reviewed catalog of components, and telling authors how much theirs was used.
+
+## The six slots
+
 The slot says what the work does in the loop and how its value is checked; without one, a component
 is an entry in a list that nobody can judge.
 
@@ -38,7 +98,7 @@ validate manifest.json`).
 | `version` | the component's own version; agents pin it |
 | `slot` | one of the six above |
 | `label`, `summary` | what a teacher or builder reads in a list |
-| `runs` | `core` (JavaScript in this repository, with the export that runs it in `entry` and the step type, if any), `mcp` (the tool's name in `entry`, and in `server` the `command` and `args` that start the server) or `http` (the endpoint's URL in `entry`) |
+| `runs` | `core` (JavaScript in this repository, with the export that runs it in `entry` and the step type, if any), `mcp` (the tool's name in `entry`, and in `server` the `command` and `args` that start the server), `http` (the endpoint's URL in `entry`) or `data` (a context component's `items`, here in the manifest: nothing runs and nothing is sent) |
 | `receives` | the only learner data passed to it: `reply`, `learner_message`, `conversation`, `guideline`, `answer_key`, `reference`, `teaching_settings`, `learning_events`, `case` or `teacher_text`; never a learner's name, and no identifier beyond the pseudonymous id learning events carry |
 | `sends_to` | every host it contacts itself, besides the host's own model endpoint |
 | `uses_models` | whether it calls models: in the harness's process through the host's model service; out of process on its own, with that model's host in `sends_to` |
@@ -122,7 +182,7 @@ What it can't enforce:
 | judge | `runAgentTests(doc, cases, { judgeComponent: manifest })` | `case` (its name, rubric, must_not, context and pictures), `reply`, `conversation` (the case's messages) | `{ verdict: "pass" or "fail", reason }` |
 | detector | `detect(manifest, record)` | `learning_events`: the record's `events` and `turns` | `{ marks: [{ turn_index, label, evidence }] }`, `turn_index` being the turn's place in the record's `turns`, from 0 |
 | measure | `measure(manifest, record)` | `learning_events`, as above | `{ measures: [{ id, value }] }`, each value a number, text, true, false or null |
-| context | `lookup(manifest, query)` | `teacher_text` for a string, or the payload you pass | `{ items: [{ text, source, attribution }] }`; an item without its own attribution gets the component's (`attribution`, else `cite`) |
+| context | `lookup(manifest, query)`, then `guidanceFrom(manifest, { items, chosen })` for an activity's `teaching.guidance` | `teacher_text` for a string, or the payload you pass; nothing for `data` | `{ items: [{ text, when, about, source, attribution }] }`; an item without its own attribution gets the component's (`attribution`, else `cite`) |
 | step | a graph's Component step (below) | the fields its `inputs` map, each worked out from the run | `{ output, flags }`: `output` any JSON value, `flags` (optional) at most 20 `{ label, reason }` |
 
 `detect`, `measure` and `lookup` take `callComponent`'s options last. With a judge component, the

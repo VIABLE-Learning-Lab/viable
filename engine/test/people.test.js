@@ -483,6 +483,8 @@ test('what to look at: how replies went, hard moments, and a suggestion accepted
   }
   const look = await (await s.page(`/console/courses/${code}/progress/look`)).text();
   assert.match(look, /How replies went/);
+  assert.match(look, /Checking took about \d+ s a reply/, 'how long learners wait, with where to change it');
+  assert.match(look, /Allow fewer tries/);
   assert.match(look, /Hard moments/);
   assert.match(look, /Said a reply didn’t help/);
   assert.match(look, /the AI was asked to tell them their teacher can help/);

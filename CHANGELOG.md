@@ -20,10 +20,14 @@ Two parts, one repository.
   five tasks prepare other teaching work. The gateway and the Engine read the moment by default: `--whole-settings` on the gateway sends
   everything the teacher set, as before.
 - **Rules.** `tools_off` in How the AI helps says which tools are off, and they are removed, not only told.
-- **Confirming a learner's right answer no longer fails an answer-key review.** The rule read "Yes, 3 5/6" as giving the answer away. A
-  reply that treats the answer as the learner's own now passes, and one that supplies it still fails. The reviewer still reads only the
-  reply, so it can't check the learner really said it. A review's default limit is now 1,024 tokens in both modes, so a reasoning model
+- **A learner who is right is told so.** The rule read "Yes, 3 5/6" as giving the answer away, and a rewrite dropped it. A reply that treats
+  the answer as the learner's own now passes, one that supplies it still fails, and one that calls a wrong answer right fails. Code compares
+  what the learner wrote with the key (`answerReached`, or a question panel's own marking) and tells both models only whether they have it,
+  so the reply says they are right and may discuss the answer. Where code can check and they haven't written it, the reviewer hears that too, so a learner who only claims the answer doesn't get it confirmed; an answer in words code can't read counts as not written. The reviewer still reads nothing the learner wrote. A rewrite keeps the reaction. A review's default limit is now 1,024 tokens in both modes, so a reasoning model
   doesn't run out before it answers: an empty review counts as a failure.
+- **Others' research reaches a reply.** A `context` component can be one JSON file (`runs.kind: data`), with nothing to host. Its pieces go in an
+  activity's settings (`teaching.guidance`, `guidanceFrom`), and a turn's brief takes at most two that fit the moment, with their source.
+  `viable-harness component new`, `try` (what a model is told with and without it) and `add`. [docs/how-it-works.md](harness/docs/how-it-works.md) says how a turn chooses.
 - **`checkReply` no longer runs a graph.** The review is in `checks/vetting.js`, and the graph's VETTING step runs the same one.
 - **`viable-harness test --endpoint`** tests whatever is behind an OpenAI-compatible endpoint.
 - **A course's setting for who its learners are now applies on your own server.** A package with `identify: code` opens only for

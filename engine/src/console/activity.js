@@ -107,6 +107,13 @@ ${say()}
 </div>`;
 }
 
+// Guidance comes with a package or from viable-harness component add. Here it is shown, as it goes into what the AI reads.
+const guidanceBlock = (activity) => {
+  const chosen = activity.teaching?.guidance || [];
+  return chosen.length ? `<div class="part" id="guidance"><h3>Guidance from research <small>each turn takes at most two that fit the moment</small></h3>
+<ul class="picked">${chosen.map((item) => `<li><p>${esc(item.text)}${item.source ? `<small>${esc(item.source)}</small>` : ''}</p></li>`).join('')}</ul></div>` : '';
+};
+
 function misconceptionsBlock(activity, api, locked) {
   const chosen = activity.teaching?.misconceptions || [];
   return `<div class="part" id="misconceptions" data-say-box>
@@ -212,6 +219,7 @@ ${onForm(toggle('files_on', 'Attach PDFs', Boolean(reads.files) && activity.atta
 </div>
 ${standardBlock(activity, api, locked)}
 ${misconceptionsBlock(activity, api, locked)}
+${guidanceBlock(activity)}
 </section>
 <section class="block" aria-labelledby="open-title">
 <h2 id="open-title">When it is open</h2>

@@ -24,7 +24,22 @@ export function checkManifest(manifest, slot = null) {
   if (errors.length) throw refused(`The manifest doesn't fit schemas/component.schema.json:\n${errors.map((error) => `  ${error}`).join('\n')}`);
   if (slot && manifest.slot !== slot) throw refused(`${manifest.id} is a ${manifest.slot} component, not a ${slot}.`);
   if (manifest.runs.kind === 'core') throw refused(`${manifest.id} runs in the harness's own process: call ${manifest.runs.entry}.`);
+  if (manifest.runs.kind === 'data' && manifest.slot !== 'context') throw refused(`${manifest.id} holds data, which only a context component can: it has nothing to run as a ${manifest.slot}.`);
   return manifest;
+}
+
+/**
+ * A context component's items as an activity's guidance (teaching.guidance), each carrying where it came from.
+ * items: what lookup answered, or a data component's own. chosen: which of them, by number from 1; left out, all.
+ */
+export function guidanceFrom(manifest, { items = manifest.runs?.items ?? [], chosen = null } = {}) {
+  const numbers = chosen ?? items.map((_, index) => index + 1);
+  const unknown = numbers.filter((number) => !Number.isInteger(number) || number < 1 || number > items.length);
+  if (unknown.length) throw refused(`${manifest.id} has items 1 to ${items.length}, so there is no ${unknown.join(', ')}.`);
+  return numbers.map((number) => {
+    const { text: said, when, about, source, attribution } = items[number - 1];
+    return { text: said, ...(when ? { when } : {}), ...(about ? { about } : {}), component: `${manifest.id}@${manifest.version}`, source: source || manifest.label, attribution: attribution || manifest.attribution || manifest.cite };
+  });
 }
 
 /** Why an http manifest's entry can't be called (a sentence), or null: https unless on this machine, no credentials, a host in sends_to. */

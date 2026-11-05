@@ -47,6 +47,10 @@ What you change reaches learners on their next message. There is nothing to rest
 
 The console shows each one on or off, and why. Keys are encrypted where they are kept, and never come back to a browser.
 
+**Care or speed is yours to weigh.** A check holds a reply back until it passes, so a learner waits for each try: on our first run with a strict
+reviewer, 12 to 31 seconds a reply. An agent's page sets how many tries, Models sets how fast a reviewer, and Progress says how long learners
+have been waiting.
+
 ## A chat button on your website
 
 A library wants research help on its guides' pages, answering from its own guides, on its own server.

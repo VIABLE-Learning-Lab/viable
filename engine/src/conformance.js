@@ -17,14 +17,14 @@ const NO_USAGE = { prompt: 0, completion: 0, total: 0 };
 const failure = (error) => ({ error: true, message: String(error?.message || error) });
 
 // The instructions (system message) of each model call an agent of one step makes, with a scripted model.
-async function instructions(step, { teaching = null, section = null, replies = ['What have you tried so far?', 'PASS'] } = {}) {
+async function instructions(step, { teaching = null, section = null, message = null, replies = ['What have you tried so far?', 'PASS'] } = {}) {
   const sent = [];
   const callChatModel = async (_env, request) => {
     sent.push(request.messages.find((message) => message.role === 'system')?.content ?? '');
     return { content: replies[Math.min(sent.length, replies.length) - 1], usage: NO_USAGE, cost: 0 };
   };
   const graph = { entry: 'in', nodes: [{ id: 'in', type: 'input', next: 'step' }, { id: 'step', next: 'out', ...step }, { id: 'out', type: 'output', config: { text: 'done' } }] };
-  await runAgent(graph, { input: 'Can you help me with this?', teaching: teaching ?? false, section, services: { callChatModel } });
+  await runAgent(graph, { input: message ?? 'Can you help me with this?', teaching: teaching ?? false, section, services: { callChatModel } });
   return sent;
 }
 
@@ -55,8 +55,8 @@ const RUN = {
     return { text };
   },
   async vetting(input) {
-    if (typeof input.reviewer === 'string' || typeof input.reply === 'string') return HARNESS.vetting(input);
-    const [generation, verification] = await instructions({ type: 'vetting', config: { model: 'local', ...(input.config || {}) } }, { teaching: input.teaching ?? null });
+    if (typeof input.reviewer === 'string' || typeof input.reply === 'string' || input.answer !== undefined) return HARNESS.vetting(input);
+    const [generation, verification] = await instructions({ type: 'vetting', config: { model: 'local', ...(input.config || {}) } }, { teaching: input.teaching ?? null, message: input.message ?? null });
     return { text: input.prompt === 'verification' ? verification : generation };
   }
 };

@@ -80,6 +80,7 @@ function overMcp(manifest, payload, { signal, maxBytes, dir, env }) {
  * component_timeout. An MCP server starts in dir with only PATH and env from the environment.
  */
 export async function callComponent(manifest, payload, { timeoutMs, maxBytes, fetch = globalThis.fetch, checkEntry = null, dir = process.cwd(), env = {} } = {}) {
+  if (manifest?.runs?.kind === 'data') return { items: checkManifest(manifest, 'context').runs.items };
   const transport = (component, sent, call) => (component.runs.kind === 'http' ? overHttp(component, sent, { ...call, fetch, checkEntry }) : overMcp(component, sent, { ...call, dir, env }));
   return callOut(manifest, payload, transport, { timeoutMs, maxBytes });
 }
@@ -109,4 +110,8 @@ export const detect = async (manifest, record, options) => callComponent(checkMa
 /** A measure over one learner's record: { measures: [{ id, value }] }. */
 export const measure = async (manifest, record, options) => callComponent(checkManifest(manifest, 'measure'), learningEvents(record), options);
 /** A context component's items for a query (a teacher's words, or a payload): { items: [{ text, source, attribution }] }. */
-export const lookup = async (manifest, query, options) => callComponent(checkManifest(manifest, 'context'), typeof query === 'string' ? { teacher_text: query } : query, options);
+export const lookup = async (manifest, query, options) => {
+  checkManifest(manifest, 'context');
+  // A data component holds its items, so there is nothing to call and nothing is sent.
+  return manifest.runs.kind === 'data' ? { items: manifest.runs.items } : callComponent(manifest, typeof query === 'string' ? { teacher_text: query } : query, options);
+};

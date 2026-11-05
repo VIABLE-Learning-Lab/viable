@@ -4,6 +4,7 @@
  * teaching layer, VETTING, measures or xAPI profile runs the same cases and should get the same results.
  */
 import { existsSync, readFileSync } from 'node:fs';
+import { answerReached, reachedAmong } from './checks/answerReached.js';
 import { readReview, vettingPromptSet, withTeacher } from './checks/vetting.js';
 import { parseSafetyPrefix, parseSimpleVerificationResult, parseVerificationResult } from './checks/vettingPrompts.js';
 import { teacherNote, teachingContext } from './utils/teaching.js';
@@ -26,12 +27,12 @@ const replyInstructions = ({ teaching = null, section = null }) => {
   const taught = teachingContext(teaching, section);
   return ['You are a tutor.', ...(taught ? [teacherNote(taught.text)] : [])].join('\n\n');
 };
-const reviewInstructions = async (config, teaching) => {
+const reviewInstructions = async (config, teaching, message = null) => {
   const full = config.mode === 'full';
   const concepts = String(config.key_concepts ?? '').split(/[,\n;]+/).map((item) => item.trim()).filter(Boolean);
   const items = full && config.question && config.answer_key ? [{ question: { text: config.question }, answerKey: { correctAnswer: config.answer_key, ...(concepts.length ? { keyConcepts: concepts } : {}), ...(config.explanation ? { explanation: config.explanation } : {}) } }] : [];
   const taught = teachingContext(teaching);
-  return withTeacher(await vettingPromptSet({ full, chatPrompt: config.chat_prompt ?? null, verificationPrompt: config.verification_prompt ?? null, items, guideline: config.guideline ?? '', reference: config.reference ?? '', requireClosingQuestion: config.require_closing_question }), taught ? teacherNote(taught.text) : null);
+  return withTeacher(await vettingPromptSet({ full, reached: full && message ? reachedAmong(items, [message]) : null, chatPrompt: config.chat_prompt ?? null, verificationPrompt: config.verification_prompt ?? null, items, guideline: config.guideline ?? '', reference: config.reference ?? '', requireClosingQuestion: config.require_closing_question }), taught ? teacherNote(taught.text) : null);
 };
 
 // Each suite turns a case's input into the result its expectations are checked against.
@@ -44,7 +45,7 @@ export const RUN = {
   teaching(input) {
     return { text: replyInstructions(input) };
   },
-  async vetting({ reviewer, mode = 'simple', reply, prompt, config = {}, teaching = null }) {
+  async vetting({ reviewer, mode = 'simple', reply, prompt, config = {}, teaching = null, message = null, answer, question, said = [] }) {
     if (typeof reviewer === 'string') {
       const verdict = mode === 'full' ? parseVerificationResult(reviewer) : parseSimpleVerificationResult(reviewer);
       return { passed: verdict.passed, reason: verdict.passed ? null : verdict.reason };
@@ -53,7 +54,8 @@ export const RUN = {
       const safety = parseSafetyPrefix(reply);
       return { requires_attention: safety.requiresAttention, content: safety.content };
     }
-    const set = await reviewInstructions(config, teaching);
+    if (answer !== undefined) return answerReached({ answer, question, said });
+    const set = await reviewInstructions(config, teaching, message);
     return { text: prompt === 'verification' ? set.verify : set.chat };
   },
   measures(record) {

@@ -21,7 +21,7 @@ export default {
       by: brief.by,
       tries: brief.tries,
       flag: brief.flag,
-      chosen: { misconceptions: pick(brief.misconceptions), components: pick(brief.components), prior: pick(brief.prior) },
+      chosen: { misconceptions: pick(brief.misconceptions), components: pick(brief.components), prior: pick(brief.prior), guidance: brief.guidance.map(({ text, component, source }) => ({ text, ...(component ? { component } : {}), ...(source ? { source } : {}) })) },
       usage: brief.usage,
       ...(brief.picker_error ? { picker_error: brief.picker_error } : {})
     };

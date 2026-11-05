@@ -1,0 +1,32 @@
+{
+  "id": "example/feedback-moves",
+  "version": "0.1.0",
+  "slot": "context",
+  "label": "Feedback moves (template)",
+  "summary": "Short pieces of guidance on giving feedback, each for a moment in learning. A template: replace them with what your research says.",
+  "runs": {
+    "kind": "data",
+    "items": [
+      { "text": "Before correcting a wrong answer, ask the learner to say how they got it: the mistake is often in a step they can find themselves.", "when": ["attempt"] },
+      { "text": "When a learner asks for the answer, name what they have already done, then offer the smallest next step.", "when": ["asks_answer"] },
+      { "text": "When a learner has tried more than once, change the representation rather than repeating the hint: a picture, a number line or a simpler case.", "when": ["repeated"] },
+      { "text": "With unlike denominators, ask what the two fractions need to have in common before asking them to add.", "when": ["attempt", "stuck"], "about": "fractions denominators adding common" }
+    ]
+  },
+  "receives": [],
+  "sends_to": [],
+  "uses_models": false,
+  "license": { "data": "CC-BY-4.0" },
+  "authors": ["Your name"],
+  "cite": "Your name (year). Your paper. Your journal. https://doi.org/...",
+  "evidence": {
+    "original": "What your work showed, and for whom. The template's items show the shape, and are not findings.",
+    "integration": "What comparing replies with and without it showed, with the runs. None yet.",
+    "unknown": "What nobody has shown yet, such as whether it changes what learners learn."
+  },
+  "risk": "low",
+  "risk_notes": "Its text goes to a model as guidance. Nothing runs and nothing about a learner goes anywhere.",
+  "maintainer": { "name": "Your name" },
+  "harness": ">=0.3.0 <1.0.0",
+  "fixtures": "fixtures/"
+}

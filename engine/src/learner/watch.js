@@ -41,7 +41,7 @@ export function watchHooks(emit, base = {}) {
       base.onStep?.(step);
       if (step.nodeType === 'knowledge') say({ kind: 'passages', query: step.input?.query ?? null, items: (step.output?.results || []).map((item) => ({ index: item.index, title: item.title || null, text: clipped(plain(item.text), 260) })) });
     },
-    onBrief: (brief) => say({ kind: 'brief', moment: brief.moment, move: brief.move, by: brief.by, flag: brief.flag, misconceptions: brief.misconceptions.map((item) => item.description), components: brief.components.map((item) => item.description), prior: brief.prior.map((item) => item.description) }),
+    onBrief: (brief) => say({ kind: 'brief', moment: brief.moment, move: brief.move, by: brief.by, flag: brief.flag, misconceptions: brief.misconceptions.map((item) => item.description), components: brief.components.map((item) => item.description), guidance: (brief.guidance || []).map((item) => `${item.text}${item.source ? ` (${item.source})` : ''}`), prior: brief.prior.map((item) => item.description) }),
     onVettingDraft: (node, draft) => say({ kind: 'draft', attempt: draft.attempt, source: draft.source, reply: draft.reply }),
     onVettingRound: (node, round) => say({ kind: 'round', round: { attempt: round.attempt, source: round.source, verdict: round.verdict, reply: round.reply, feedback: round.feedback } })
   };
@@ -272,7 +272,7 @@ function watchPanel(config) {
   // What the model was given before it wrote anything: this moment, and only what it calls for.
   function onBrief(event) {
     const moments = { attempt: 'giving an answer or some working', asks_answer: 'asking for the answer', stuck: 'stuck, with nothing tried yet', repeated: 'still not there after trying more than once', other: 'saying something else' };
-    const parts = [...event.misconceptions, ...event.components, ...event.prior];
+    const parts = [...event.misconceptions, ...event.components, ...event.prior, ...(event.guidance || [])];
     turn.briefLine.hidden = false;
     // What the panel says of a misconception once this has said it.
     turn.heardLine.hidden = true;

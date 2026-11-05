@@ -505,7 +505,7 @@ export function workspaceRunContext(workspace, state, sets = new Map(), { versio
     const item = items[index];
     if (!item) return { context: base, view: null };
     // The key, for a step that checks replies against it (VETTING's answer_key): never in the view.
-    const key = { answer_key: keyText(item) };
+    const key = { answer_key: keyText(item), ...(state?.last_correct === true ? { answer_reached: true } : {}) };
     const given = responseText(item, state?.response);
     const tries = Number.isInteger(state?.tries) ? state.tries : 0;
     const opened = panel.hints ? Math.min(hintsOpened, item.hints?.length || 0) : 0;
@@ -541,7 +541,8 @@ export function openedNow(workspace, state, level) {
 }
 
 // The run's context from what the learner has open. A question also sets context.question and
-// context.answer_key, the fields a VETTING step's question and answer key read.
+// context.answer_key, the fields a VETTING step's question and answer key read, and context.answer_reached
+// once the page has marked the learner's answer right.
 // The view enters as the agent's profile says (open.place: before the message, with the instructions,
 // or only as variables) and reaches its reply steps or every model step (open.reaches).
 // An activity's teaching settings (how the AI helps, teaching.js), with or without a panel open:
@@ -552,13 +553,13 @@ export const workspaceContext = (workspace, state, sets, versions = {}, open = {
   const run = workspace ? workspaceRunContext(workspace, state, sets, versions) : null;
   const taught = teachingContext(teaching, section);
   if (!run && !taught) return null;
-  const { answer_key: key, question_text: question, ...view } = run?.context || {};
+  const { answer_key: key, answer_reached: reached, question_text: question, ...view } = run?.context || {};
   const place = open.place || 'message';
   const told = Boolean(run?.view) && place !== 'variables';
   const instructed = Boolean(taught) && place !== 'variables';
   return {
     workspace: { ...view, ...(taught ? { teaching: taught.context } : {}) },
-    ...(key ? { answer_key: key } : {}), ...(question ? { question } : {}),
+    ...(key ? { answer_key: key } : {}), ...(reached ? { answer_reached: true } : {}), ...(question ? { question } : {}),
     ...(told ? { workspace_view: run.view, workspace_place: place } : {}),
     ...(instructed ? { teaching_view: taught.text } : {}),
     ...(told || instructed ? { workspace_reach: open.reaches || 'reply' } : {})

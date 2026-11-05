@@ -414,7 +414,7 @@ export function gatewayHandler({ upstream, apiKey = null, token = null, teacherT
     });
     who.taught = Boolean(taught);
     who.moment = taught?.moment ?? null;
-    if (taught?.moment) turn.brief = { moment: taught.moment, by: taught.by, ...(taught.flag ? { flag: taught.flag } : {}), chosen: { misconceptions: taught.misconceptions.map((item) => item.id), components: taught.components.map((item) => item.id), prior: taught.prior.map((item) => item.id) } };
+    if (taught?.moment) turn.brief = { moment: taught.moment, by: taught.by, ...(taught.flag ? { flag: taught.flag } : {}), chosen: { misconceptions: taught.misconceptions.map((item) => item.id), components: taught.components.map((item) => item.id), prior: taught.prior.map((item) => item.id), guidance: taught.guidance.map((item) => item.component || item.source || item.text.slice(0, 80)) } };
     const toolsOff = teachingSettings(settings)?.tools_off ?? [];
     const structured = ['json_object', 'json_schema'].includes(body.response_format?.type);
     if (reviewerModel && !structured && Number(body.n ?? 1) > 1) throw failure(400, 'unsupported_n', 'With checks on, ask for one reply at a time (n = 1): each reply is held until it passes.');

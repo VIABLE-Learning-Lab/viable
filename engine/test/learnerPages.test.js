@@ -150,6 +150,11 @@ test('a real course’s answers and a teacher’s note aren’t in its pages', (
   assert.ok(!run.view.includes('the-secret-key'), 'what a reply step reads never holds the key');
   assert.ok(run.context.answer_key.includes('the-secret-key'), 'a review may check against it');
   const context = workspaceContext(keyed, { panel: 'q', item: 'q2' }, SET);
+  // Once the page has marked it right, a VETTING step can know, and it never enters what the AI is shown.
+  const marked = workspaceContext(keyed, { panel: 'q', item: 'q2', last_correct: true }, SET);
+  assert.equal(marked.answer_reached, true);
+  assert.equal(marked.workspace.answer_reached, undefined);
+  assert.equal(workspaceContext(keyed, { panel: 'q', item: 'q2', last_correct: false }, SET).answer_reached, undefined);
   assert.ok(!context.workspace_view.includes('the-secret-key') && !JSON.stringify(context.workspace).includes('the-secret-key'));
 });
 

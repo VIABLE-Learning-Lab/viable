@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import './no-network.js';
 import { MOVES, readMoment, turnBrief } from '../src/brief.js';
+import { teachingContext } from '../src/utils/teaching.js';
 import { runWithServices } from '../../engine/src/server/runtime.js';
 
 const U = (n) => `00000000-0000-4000-8000-00000000000${n}`;
@@ -101,4 +102,34 @@ test('a run gets the brief only when asked, and reply steps get its text', async
   assert.doesNotMatch(seen[1].messages[0].content, /Subtract mixed numbers/);
   const none = await runWithServices({ format: 'viable.agent', name: 'T', graph }, { input: 'hi', teaching: false, services: { callChatModel }, brief: true });
   assert.equal(none.brief, undefined, 'no settings, no brief');
+});
+
+test('guidance a person chose comes when it fits the moment, at most two, with its source, and is kept in the record', async () => {
+  const guidance = [
+    { text: 'Ask how they got it before correcting.', when: ['attempt'], source: 'A framework' },
+    { text: 'Offer the smallest next step.', when: ['asks_answer'], source: 'A framework' },
+    { text: 'Ask what fractions need in common before adding.', when: ['attempt', 'stuck'], about: 'fractions denominators', component: 'lab/moves@1.0.0' },
+    { text: 'Check the poem for its rhythm.', when: ['attempt'], about: 'poems rhythm' },
+    { text: 'Ask what fractions need before adding them together.' },
+    { text: 'A third for the same moment.', when: ['attempt'] }
+  ];
+  const teaching = { goal: 'Add fractions with unlike denominators.', help: 'hint', guidance };
+  const attempt = await turnBrief(teaching, { message: 'i got 2/5' });
+  assert.deepEqual(attempt.guidance.map((item) => item.text), ['Ask what fractions need in common before adding.', 'Ask how they got it before correcting.'], 'about-words first, then the author\'s order, two at most');
+  assert.match(attempt.text, /From research, where it fits:\n- Ask what fractions need in common before adding\.\n- Ask how they got it before correcting\. \(A framework\)/);
+  assert.ok(!attempt.text.includes('poem'), 'not about this');
+  const asks = await turnBrief(teaching, { message: 'just tell me the answer' });
+  assert.deepEqual(asks.guidance.map((item) => item.text), ['Offer the smallest next step.']);
+  // No moment named: it needs two words in common with what was said.
+  assert.deepEqual((await turnBrief(teaching, { message: 'hello' })).guidance, []);
+  assert.ok((await turnBrief(teaching, { message: 'what do fractions need before adding' })).guidance.some((item) => item.text === 'Ask what fractions need before adding them together.'));
+  // Nothing of a learner's enters it, and the whole settings list it for a host that doesn't read the moment.
+  assert.match(teachingContext(teaching).text, /Guidance from research, to use where it fits:/);
+});
+
+test('a small model chooses guidance too, and a number it makes up is dropped', async () => {
+  const call = async () => ({ content: JSON.stringify({ moment: 'stuck', misconceptions: [], components: [], prior: [], guidance: [2, 9] }), usage: {} });
+  const guidance = [{ text: 'One.' }, { text: 'Two.', when: ['stuck'] }];
+  const brief = await turnBrief({ goal: 'G', help: 'hint', guidance }, { message: 'je ne sais pas', picker: { call, model: 'small' } });
+  assert.deepEqual(brief.guidance.map((item) => item.text), ['Two.']);
 });

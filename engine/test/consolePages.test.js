@@ -77,11 +77,28 @@ const VALUES = [
 test('each graph the form makes reads back as the form’s values, and runs', () => {
   for (const values of VALUES) {
     const graph = graphFrom({ name: 'A desk', ...values });
-    assert.deepEqual(formOf(graph), values);
-    assert.deepEqual(formOf({ ...graph, nodes: graph.nodes.map(({ x: _x, y: _y, ...node }) => node) }), values, 'where the steps sit on a canvas doesn’t matter');
+    assert.deepEqual(formOf(graph), { tries: 3, ...values });
+    assert.deepEqual(formOf({ ...graph, nodes: graph.nodes.map(({ x: _x, y: _y, ...node }) => node) }), { tries: 3, ...values }, 'where the steps sit on a canvas doesn’t matter');
     validateGraph(linkKnowledgeRefs(graph, (ref) => `kb_${ref}`));
     assert.deepEqual(validateDocument({ format: 'viable.course-package', version: 1, knowledge_bases: [{ ref: 'guides', name: 'G' }, { ref: 'more', name: 'M' }], agents: [{ ref: 'desk', name: 'A desk', graph }] }, 'course-package').errors, []);
   }
+});
+
+test('how many tries a check takes is the form’s, and an agent from elsewhere can change it too', async () => {
+  const quick = graphFrom({ name: 'A', instructions: 'Help.', check: true, tries: 1 });
+  assert.equal(quick.nodes.find((node) => node.type === 'vetting').config.max_attempts, 1);
+  assert.equal(formOf(quick).tries, 1);
+  const s = await server();
+  const checked = { ...plainAgent(), graph: { entry: 'in', nodes: [{ id: 'in', type: 'input', next: 'one' }, { id: 'one', type: 'vetting', next: 'two', config: { model: 'm', guideline: 'Be kind.', max_attempts: 3 } }, { id: 'two', type: 'vetting', next: 'out', config: { model: 'm', guideline: 'Be brief.' } }, { id: 'out', type: 'output', config: { text: '{{two.content}}' } }] } };
+  await s.upload('courses/from-file', 'custom.viable.json', JSON.stringify({ format: 'viable.course-package', version: 1, title: 'From elsewhere', agents: [checked], knowledge_bases: [] }));
+  const page = await s.page('agents/custom');
+  assert.match(page, /Tries for each reply/);
+  assert.match(page, /the shortest wait/);
+  await s.ok('PUT', 'agents/custom/tries', { version: await version(s, 'agents/custom'), tries: 1 });
+  const doc = await s.ok('GET', 'agents/custom/download');
+  assert.deepEqual(doc.agents[0].graph.nodes.filter((node) => node.type === 'vetting').map((node) => node.config.max_attempts), [1, 1]);
+  const refused = await s.call('PUT', 'agents/custom/tries', { version: await version(s, 'agents/custom'), tries: 9 });
+  assert.equal(refused.status, 400);
 });
 
 test('a graph the form didn’t make is left alone, so a save can’t drop what someone set elsewhere', () => {
@@ -303,7 +320,7 @@ test('an agent made in the form: changed there, run as it is saved, and saved as
   const after = await s.page('agents/a-desk');
   assert.match(after, /The desk/);
   const { doc } = await (async () => { const library = await s.ok('GET', `agents/a-desk/download`); return { doc: library }; })();
-  assert.deepEqual(formOf(doc.agents[0].graph), { instructions: 'Help with sources.', knowledge: [ref], check: true, web: true, memory: true });
+  assert.deepEqual(formOf(doc.agents[0].graph), { instructions: 'Help with sources.', knowledge: [ref], check: true, tries: 3, web: true, memory: true });
   assert.equal(doc.agents[0].description, 'For the library.');
   // A stale form, and knowledge that isn't beside it, are refused.
   const stale = await s.call('PUT', 'agents/a-desk', { version: 1, name: 'x', instructions: 'y' });
@@ -657,4 +674,18 @@ test('where a knowledge base lives: in a course, beside an agent, or on its own;
   // A package that holds only knowledge isn't a course, and isn't served as one.
   await s.ok('POST', 'knowledge', { name: 'Alone too', place: 'own' });
   assert.equal(((await s.page('courses')).match(/class="course-card/g) || []).length, 1);
+});
+
+test('guidance in an activity shows in the console, and saving the page keeps it', async () => {
+  const s = await server();
+  const agent = plainAgent();
+  await s.upload('courses/from-file', 'with.viable.json', JSON.stringify({ format: 'viable.course-package', version: 1, title: 'With guidance', agents: [agent], knowledge_bases: [], course: { code: 'with-guidance', title: 'With guidance', activities: [{ key: 'practice', title: 'Practice', agent_ref: agent.ref, teaching: { goal: 'Add fractions.', guidance: [{ text: 'Ask how they got it.', when: ['attempt'], source: 'A framework' }] } }] } }));
+  const path = 'courses/with-guidance/activities/practice';
+  const page = await s.page(path);
+  assert.match(page, /Guidance from research/);
+  assert.match(page, /Ask how they got it\./);
+  await s.ok('PUT', path, { version: await version(s, path), title: 'Practice', kind: 'chat', agent_ref: agent.ref, release: 'open', done_when: 'auto', teaching: { goal: 'Add fractions well.', help: 'hint' } });
+  const { course } = await s.ok('GET', 'courses/with-guidance/download');
+  assert.equal(course.activities[0].teaching.goal, 'Add fractions well.');
+  assert.deepEqual(course.activities[0].teaching.guidance.map((item) => item.text), ['Ask how they got it.']);
 });

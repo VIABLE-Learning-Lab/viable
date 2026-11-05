@@ -5,6 +5,7 @@
  * by the reply model and reviewed again, up to that many times.
  */
 import { checkOutcome, checkPlan } from './checkPlan.js';
+import { learnerWords, reachedAmong } from './checks/answerReached.js';
 import { readReview, redraftTurns, replyText, reviewMessages, reviewRounds, vettingPromptSet, withTeacher } from './checks/vetting.js';
 import { openAICompatible } from './models.js';
 import { teacherNote, teachingContext } from './utils/teaching.js';
@@ -25,15 +26,18 @@ export async function checkReply({ teaching = null, section = null, baseUrl, api
   const call = services.callChatModel || openAICompatible({ baseUrl, apiKey, fetch });
   const concepts = context.key_concepts ? context.key_concepts.split(',').map((item) => item.trim()).filter(Boolean) : [];
   const taught = teachingContext(teaching, section);
+  const items = full ? [{ question: { text: context.question }, answerKey: { correctAnswer: context.answer_key, ...(concepts.length ? { keyConcepts: concepts } : {}), ...(context.explanation ? { explanation: context.explanation } : {}) } }] : [];
+  const turns = [...history.map((turn) => ({ role: turn.role, content: turn.content })), { role: 'user', content: String(input ?? '') }];
+  const reached = full ? reachedAmong(items, learnerWords(turns)) : null;
   const prompts = withTeacher(await vettingPromptSet({
     full,
     chatPrompt: cfg.chat_prompt ? context.instructions : null,
-    items: full ? [{ question: { text: context.question }, answerKey: { correctAnswer: context.answer_key, ...(concepts.length ? { keyConcepts: concepts } : {}), ...(context.explanation ? { explanation: context.explanation } : {}) } }] : [],
+    items,
+    reached,
     guideline: context.guideline,
     reference: context.reference,
     decrypt: services.decryptPrompt ?? null
   }), taught ? teacherNote(taught.text) : null);
-  const turns = [...history.map((turn) => ({ role: turn.role, content: turn.content })), { role: 'user', content: String(input ?? '') }];
   let usage = { prompt: 0, completion: 0, total: 0 };
   let modelCalls = 0;
   const ask = async (request) => {
@@ -56,7 +60,8 @@ export async function checkReply({ teaching = null, section = null, baseUrl, api
     steps: [{ nodeId: 'vetting', output: {
       content: rounds.response, passed: rounds.outcome === 'passed', requires_attention: rounds.requiresAttention, outcome: rounds.outcome, stop_reason: rounds.stopReason,
       attempts: reviewed.length, verification: reviewed.at(-1)?.verification ?? null, attempt_details: rounds.attempts,
-      revised: rounds.response !== context.reply.trim(), model: cfg.model, verification_model: cfg.verification_model
+      revised: rounds.response !== context.reply.trim(), model: cfg.model, verification_model: cfg.verification_model,
+      ...(reached?.items?.length ? { answer_reached: true } : {})
     } }],
     usage,
     modelCalls

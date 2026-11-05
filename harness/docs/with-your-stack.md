@@ -106,6 +106,9 @@ headers and a `viable` field. In a stream the field is on the chunk with the `fi
 | Your endpoint fails | Its own status and error, so your app's retry logic still works, or a 502 if it can't be reached. No fallback |
 | No `--reviewer-model` | Replies pass through, streams too, marked `not_checked` |
 
+A check is care against waiting, and that is yours to weigh. Your app waits for each round, and `X-Viable-Added-Ms` says how long the
+gateway added. For less: `--rewrites 0` or `1`, or a faster `--reviewer-model`. For more: the other way.
+
 ### Streaming
 
 With checks on, the reply is held until it passes, then sent as a normal stream, so a failed draft never

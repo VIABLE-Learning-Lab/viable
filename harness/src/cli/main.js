@@ -11,6 +11,7 @@ import { findMisconceptions } from '../utils/misconceptions.js';
 import { COMPONENTS, SLOTS } from '../components/index.js';
 import { CATALOG_KINDS, openForAnyUse, searchCatalog } from '../catalog.js';
 import { callComponent, measure as measureWith } from '../components/call.js';
+import { COMPONENT_USAGE, componentCommand } from './component.js';
 import { teacherView, viewInputs } from '../view.js';
 import { serveStdio } from '../mcp.js';
 import { SUITES, runConformance } from '../conformance.js';
@@ -42,6 +43,7 @@ ${MOMENT_USAGE}
                          [--slot ${SLOTS.join('|')}] [--open] [--connected] [--json]
 ${RESOURCES_USAGE}
   viable-harness component <manifest.json> --input payload.json [--json]
+${COMPONENT_USAGE}
   viable-harness view <record.json | run.json | package.json | folder...> [--teaching teaching.json] [--out report.html]
   viable-harness suggest <record.json | run.json | package.json | folder...> [--teaching teaching.json] [--json]
   viable-harness mcp
@@ -139,6 +141,7 @@ export async function harnessMain(argv, host = {}) {
   if (argv[0] === 'gateway') return gatewayCommand(argv.slice(1));
   if (argv[0] === 'resources') return resourcesCommand(argv.slice(1));
   if (argv[0] === 'prepare') return prepareCommand(argv.slice(1));
+  if (argv[0] === 'component' && ['new', 'try', 'add'].includes(argv[1])) return componentCommand(argv.slice(1));
   const { values, positionals } = parseArgs({
     args: argv,
     allowPositionals: true,

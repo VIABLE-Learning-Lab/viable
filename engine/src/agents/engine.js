@@ -21,6 +21,7 @@ import { parseBase64Asset } from '../utils/base64Asset.js';
 import { ExpressionError, evaluateCondition, evaluateExpression, expressionPaths, openContext, renderTemplate, renderValue, resolvePath } from './expression.js';
 import { sanitizeRequestPayloadForLogging } from '../utils/logRedaction.js';
 import { DEFAULT_VETTING_REVIEWER, GUARDRAIL_MODEL_CHECKS, parallelPaths, routerRoutes } from './graph.js';
+import { learnerWords, reachedAmong } from '../../../harness/src/checks/answerReached.js';
 import { readReview, redraftTurns, replyText, reviewMessages, reviewRounds, vettingPromptSet, withTeacher } from '../../../harness/src/checks/vetting.js';
 import { agentVettingControls, reasoningBudget, REVIEW_TOKENS, thinkingBudget, vettingModelOptions } from '../../../harness/src/utils/vettingControls.js';
 import { teacherNote } from '../../../harness/src/utils/teaching.js';
@@ -1198,6 +1199,11 @@ const HANDLERS = {
     const controls = agentVettingControls(cfg);
     const chatOptions = vettingModelOptions(controls.chatModel, { temperature: 0.7, ...reasoningBudget(ctx.models, cfg.model, 1024) });
     const verificationOptions = vettingModelOptions(controls.verificationModel, { temperature: 0.1, ...reasoningBudget(ctx.models, verifier, REVIEW_TOKENS) });
+    // Whether the learner has already written the answer, by code: both models get the fact, and no model reads their words for it.
+    // The learner's real turns, never cfg.input. A summary leads the first kept message and can hold what the assistant said.
+    const reached = full ? reachedAmong(vettingItems(cfg, ctx.scope()), learnerWords([...(cfg.includeHistory !== false ? ctx.messages.slice(ctx.historySummary ? 1 : 0) : []), { role: 'user', content: ctx.inputContent }]), {
+      checked: ctx.scope().context?.answer_reached === true && /\bcontext\.answer_key\b/.test(String(cfg.answer_key ?? ''))
+    }) : null;
     const prompts = (scope) => vettingPromptSet({
       full,
       chatPrompt: cfg.chat_prompt ? String(renderTemplate(cfg.chat_prompt, scope)) : null,
@@ -1206,7 +1212,8 @@ const HANDLERS = {
       guideline: full ? '' : String(renderTemplate(cfg.guideline ?? '', scope) ?? ''),
       reference: full ? '' : String(renderTemplate(cfg.reference ?? '', scope) ?? ''),
       requireClosingQuestion: full ? controls.requireClosingQuestion : cfg.require_closing_question,
-      decrypt: services.decryptPrompt
+      decrypt: services.decryptPrompt,
+      reached
     });
     if (full && !vettingItems(cfg, ctx.scope()).length) {
       throw new AgentRunError(`VETTING step "${node.id}" needs a question and answer key in full mode.`, { status: 422, code: 'vetting_answer_key_missing' });
@@ -1261,7 +1268,8 @@ const HANDLERS = {
         content: response, passed: outcome === 'passed', requires_attention: requiresAttention, outcome, stop_reason: stopReason,
         attempts: reviewed.length, verification: reviewed.at(-1)?.verification ?? null, attempt_details: attempts,
         ...(draft ? { revised: response !== draft } : {}),
-        model: cfg.model, verification_model: verifier, usage, cost
+        model: cfg.model, verification_model: verifier, usage, cost,
+        ...(reached?.items?.length ? { answer_reached: true } : {})
       },
       next: branches[outcome] ?? node.next ?? null
     };
