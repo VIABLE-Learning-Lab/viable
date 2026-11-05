@@ -439,10 +439,11 @@ function history(field, earlier, text, c, now) {
  * (data, not instructions). Only what the panel's context
  * allows; never answer keys. state: what the page sent with the message (the open panel, a draft's
  * text, an embed's last events); versions and planVersions: the draft's and the plan's earlier saved
- * versions, read by the server (recentVersions), never taken from the page; hintsOpened: how many
+ * versions, read by the server (recentVersions), never taken from the page; lastCorrect: whether their last answer to the
+ * open question was marked right, from the same kind of record; hintsOpened: how many
  * hints the server has given this learner on the question, the same.
  */
-export function workspaceRunContext(workspace, state, sets = new Map(), { versions = [], planVersions = [], hintsOpened = 0, now = Date.now() } = {}) {
+export function workspaceRunContext(workspace, state, sets = new Map(), { versions = [], planVersions = [], hintsOpened = 0, lastCorrect: marked = null, now = Date.now() } = {}) {
   const panel = workspace?.panels.find((item) => item.id === state?.panel) || null;
   if (!panel) return null;
   const c = panelContextOf(panel);
@@ -504,8 +505,11 @@ export function workspaceRunContext(workspace, state, sets = new Map(), { versio
     const index = items.findIndex((item) => item.id === state?.item);
     const item = items[index];
     if (!item) return { context: base, view: null };
+    // Whether their last answer was right comes from the host's own record of marking it, never from the page: said by the page, it would let a
+    // learner lift the check. Where the panel keeps that from them until the end, the AI doesn't have it either.
+    const lastCorrect = (panel.feedback ?? 'each') === 'each' && typeof marked === 'boolean' ? marked : null;
     // The key, for a step that checks replies against it (VETTING's answer_key): never in the view.
-    const key = { answer_key: keyText(item), ...(state?.last_correct === true ? { answer_reached: true } : {}) };
+    const key = { answer_key: keyText(item), ...(lastCorrect === true ? { answer_reached: true } : {}) };
     const given = responseText(item, state?.response);
     const tries = Number.isInteger(state?.tries) ? state.tries : 0;
     const opened = panel.hints ? Math.min(hintsOpened, item.hints?.length || 0) : 0;
@@ -515,7 +519,7 @@ export function workspaceRunContext(workspace, state, sets = new Map(), { versio
     if (c.answer) { question.learner_response = given || null; lines.push(given ? `Their answer so far: ${clip(given, 2000)}` : 'They haven’t answered yet.'); }
     if (c.attempts) {
       question.tries = tries;
-      question.last_correct = typeof state?.last_correct === 'boolean' ? state.last_correct : null;
+      question.last_correct = lastCorrect;
       if (tries) lines.push(`They have answered ${tries} time${tries === 1 ? '' : 's'}${question.last_correct === false ? '; the last answer was wrong' : question.last_correct ? '; the last answer was right' : ''}.`);
     }
     if (c.hints && opened) { question.hints_seen = item.hints.slice(0, opened); lines.push(`Hints they have opened:\n${question.hints_seen.map((hint, i) => `${i + 1}. ${hint}`).join('\n')}`); }

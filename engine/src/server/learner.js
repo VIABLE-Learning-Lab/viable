@@ -603,7 +603,9 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
       const hintsOpened = open?.type === 'questions' && open.hints && learner ? await hintsGiven(page, learner, open, state) : 0;
       const teaching = await teachingOf(page);
       const section = learner?.section ?? null;
-      const context_ = page.kind === 'activity' ? workspaceContext(page.workspace, state, page.sets, { ...versions, hintsOpened }, page.open, teaching, section) : null;
+      // Whether their last answer here was right, from the record of marking it: never what the page says.
+      const lastCorrect = open?.type === 'questions' && learner && state?.item != null ? answersSoFar((await store.get(keys.answers(page.code, learner.id, page.key, open.id)))?.rows || [])[state.item]?.correct ?? null : null;
+      const context_ = page.kind === 'activity' ? workspaceContext(page.workspace, state, page.sets, { ...versions, hintsOpened, lastCorrect }, page.open, teaching, section) : null;
       const signals = sanitizeSignals(page.level !== 'minimal' ? body?.signals : { source: body?.signals?.source });
       const previous = learner && page.level !== 'minimal' && body?.after && typeof body.after === 'object' ? noteAfter(page, owner, body.after) : null;
       const opened = openedNow(page.workspace, state, page.level);
