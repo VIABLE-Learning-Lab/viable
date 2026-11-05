@@ -1,5 +1,7 @@
 # With your stack
 
+> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+
 You already have an AI app or an agent, in any language or framework. You won't rewrite it. Two ways in:
 
 - **Change one URL.** The gateway stands in front of your model endpoint. Each call gets what its moment

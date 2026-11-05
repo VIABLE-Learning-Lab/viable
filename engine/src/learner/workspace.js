@@ -8,7 +8,7 @@
  *   - writing: a prompt, an optional plan area, a rubric, word limits; the draft follows the learner
  *     across devices, and how it was written is recorded as process measures;
  *   - embed: a page of the author's (a simulation, a game, a tool) in a sandboxed frame, which can
- *     report what happens in it through the page's bridge (window.postMessage; docs/learning-pages.md);
+ *     report what happens in it through the page's bridge (window.postMessage);
  *   - questions: a question set (questions.js), one question at a time, graded on the server with
  *     feedback as the panel says; each graded answer is also a learning attempt (mastery, pyBKT);
  *   - reading: a PDF from the project's knowledge bases, read page by page, with the learner's
@@ -43,7 +43,7 @@ const PANEL_ID = /^[a-z0-9][a-z0-9_-]{0,23}$/;
 function embedUrl(value) {
   try {
     const url = new URL(String(value || '').trim());
-    if (url.protocol !== 'https:' && url.hostname !== 'localhost') return null;
+    if (url.protocol !== 'https:' && !(url.protocol === 'http:' && url.hostname === 'localhost')) return null;
     return url.href.slice(0, WORKSPACE_LIMITS.url);
   } catch { return null; }
 }

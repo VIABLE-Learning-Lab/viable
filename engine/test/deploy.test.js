@@ -783,3 +783,13 @@ test('scaffolds keep the rules: no package files in what is served, no secrets i
   assert.match(readFileSync(resolve(dir, 'node', '.gitignore'), 'utf8'), /\.env/);
   assert.match(readFileSync(resolve(dir, 'cloudflare', '.gitignore'), 'utf8'), /\.dev\.vars/);
 });
+
+test('a scaffold\'s example settings name only variables the code reads, and its secrets stay out of git', async () => {
+  const { readFileSync, readdirSync, statSync } = await import('node:fs');
+  const root = new URL('../', import.meta.url).pathname;
+  const walk = (dir) => readdirSync(dir).flatMap((name) => { const path = `${dir}/${name}`; return statSync(path).isDirectory() ? walk(path) : [path]; });
+  const code = [...walk(`${root}src`), ...walk(`${root}deploy`).filter((path) => /\.(?:js|mjs|ts)$/.test(path))].map((path) => readFileSync(path, 'utf8')).join('\n');
+  for (const file of walk(`${root}deploy`).filter((path) => /\.(?:env|dev\.vars)\.example$|\.example$/.test(path))) {
+    for (const [, name] of readFileSync(file, 'utf8').matchAll(/^(VIABLE_[A-Z_]+)=/gm)) assert.ok(code.includes(name), `${file} names ${name}, which nothing reads`);
+  }
+});

@@ -22,9 +22,9 @@ Learning Commons Knowledge Graph
 
 Carnegie Skills Progressions (durable skills)
   Collaboration, communication and critical thinking, with their subskills, indicators and four
-  levels, from a Learning Commons Knowledge Graph release: VIABLE's copy, src/utils/skillsData.js,
+  levels, from a Learning Commons Knowledge Graph release: VIABLE's copy, harness/src/utils/skillsData.js,
   exported as SKILLS, and the skill kept in
-  examples/library-research-help.json and schemas/examples/teaching.example.json.
+  examples/library-research-help.json and harness/schemas/examples/teaching.example.json.
   Author: Carnegie Foundation for the Advancement of Teaching.
   Attribution:
     Knowledge Graph is provided by Learning Commons under the CC BY-4.0 license, available at

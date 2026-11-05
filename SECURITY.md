@@ -3,8 +3,7 @@
 This runs with learners, many of them minors, so a security report comes first.
 
 - **Report privately**, never in a public issue: through GitHub's private vulnerability reporting
-  ([Security, then Report a vulnerability](https://github.com/VIABLE-Learning-Lab/viable/security/advisories/new)),
-  or to a maintainer in MAINTAINERS.md.
+  ([Security, then Report a vulnerability](https://github.com/VIABLE-Learning-Lab/viable/security/advisories/new)).
 - **We answer within 7 days**, agree on a fix, release it, update VIABLE's hosted platform, and only
   then disclose, crediting you unless you'd rather not be named.
 - **In scope**: a learner's data reaching a model, a host or a log it shouldn't; a way around

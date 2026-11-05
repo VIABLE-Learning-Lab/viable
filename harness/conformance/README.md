@@ -9,8 +9,8 @@ implementations disagree. Every fixture is synthetic: no real learner's data.
 
 ```sh
 npm test                                         # test/conformance.test.js runs every case
-node bin/viable-harness.mjs conformance          # pass or FAIL per case; exit code 1 on a failure
-node bin/viable-harness.mjs conformance vetting  # one suite
+node harness/bin/viable-harness.mjs conformance          # pass or FAIL per case; exit code 1 on a failure
+node harness/bin/viable-harness.mjs conformance vetting  # one suite
 ```
 
 A case with `"only": "engine"` needs the graph checks, so `viable-engine conformance` runs it and `viable-harness conformance` leaves it out.

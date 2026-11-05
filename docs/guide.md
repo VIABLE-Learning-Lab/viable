@@ -49,8 +49,8 @@ viable-harness conformance [suite]
 viable-harness mcp
 ```
 
-(`node bin/viable-harness.mjs` until the package is published; `npm link` puts `viable-harness` on
-your path.)
+(Until the packages are on npm, use `npx github:VIABLE-Learning-Lab/viable` in place of `viable-harness`: it takes every command.
+From a clone, `node engine/bin/viable-engine.mjs`.)
 
 - **run**: a `.viable.zip` (a course downloaded with its files) runs as it is: its files are read from
   the archive, which is never unpacked. `--knowledge <id>=<folder>` searches a folder's text files as
@@ -119,7 +119,7 @@ and `suggest` what the server kept, and `viable-engine forget <code>` removes on
 ## From code
 
 ```js
-import { runAgent, validateDocument, measureLearner, teachingContext, SKILLS } from '@viable-lab/harness';
+import { runAgent, validateDocument, measureLearner, teachingContext, SKILLS } from '@viable-lab/engine'; // npm i github:VIABLE-Learning-Lab/viable
 
 const result = await runAgent(agentFile, { input: 'Help me start', teaching, model: 'llama3.1', baseUrl: 'http://localhost:11434/v1' });
 result.output.text;   // the reply
@@ -150,7 +150,7 @@ For a host that keeps its own harness, assistant or agent SDK:
   `teaching_instructions`, `find_misconceptions`, `compute_measures`, `validate_document`,
   `run_agent`, `run_agent_tests`, `draft_tests`, `calibrate_judge`, `suggest_changes`,
   `list_components` and `find_public_goods`. A client starts it as
-  `node /path/to/viable-harness/bin/viable-harness.mjs mcp`, with `OPENAI_BASE_URL` and
+  `node /path/to/viable/harness/bin/viable-harness.mjs mcp`, with `OPENAI_BASE_URL` and
   `OPENAI_API_KEY` for the tools that call models. The host decides whether a reply is checked and
   what is kept; only an agent the harness runs is guaranteed its VETTING steps
   ([mcp.md](../harness/docs/mcp.md)). In an assistant that renders MCP Apps, `check_reply`, `run_agent_tests` and
@@ -212,7 +212,7 @@ from the internet), escapes everything learners and models wrote, works in dark 
 every section open.
 
 ```sh
-node bin/viable-harness.mjs view learner-*.json run-*.json examples/fractions-practice.json --out class.html
+node engine/bin/viable-engine.mjs view learner-*.json run-*.json examples/fractions-practice.json --out class.html
 ```
 
 What the page shares with the MCP views is written once in `src/ui/`. `theme.js` holds the tokens, under the names

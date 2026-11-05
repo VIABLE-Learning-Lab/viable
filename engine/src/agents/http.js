@@ -1,4 +1,5 @@
 import { decodeHTML, decodeHTMLAttribute, escapeUTF8 } from 'entities';
+import { elementsIn, replaceElements, withoutComments } from '../../../harness/src/markdown.js';
 import { publicUrl } from '../../../harness/src/net/publicUrl.js';
 
 // Fetch only through Workers' public internet transport. Keep
@@ -222,11 +223,12 @@ async function patternSource(html, sourceUrl, toMarkdown) {
       return value && ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : null;
     } catch { return null; }
   };
-  const page = String(html).replace(/<!--[\s\S]*?-->|<(script|style|template)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '');
-  const base = absolute(attribute(/<base\b[^>]*>/i.exec(page)?.[0] || '', 'href'), sourceUrl) || sourceUrl;
-  const text = (value) => decodeHTML(value.replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
-  const links = [...page.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi)].map(([, attrs, inner]) => ({ url: absolute(attribute(attrs, 'href'), base), text: text(inner) })).filter((link) => link.url);
-  const images = [...page.matchAll(/<img\b[^>]*>/gi)].map(([tag]) => ({ url: absolute(attribute(tag, 'data-src') || attribute(tag, 'src'), base), alt: attribute(tag, 'alt') })).filter((image) => image.url);
+  // A page can be anything, and a pattern with [^>]* or [\s\S]*? would look to its end again from every "<".
+  const page = replaceElements(withoutComments(String(html)), ['script', 'style', 'template']);
+  const base = absolute(attribute(/<base\b[^<>]*>/i.exec(page)?.[0] || '', 'href'), sourceUrl) || sourceUrl;
+  const text = (value) => decodeHTML(value.replace(/<[^<>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
+  const links = [...elementsIn(page, ['a'])].map(({ attrs, inner }) => ({ url: absolute(attribute(attrs, 'href'), base), text: text(inner) })).filter((link) => link.url);
+  const images = [...page.matchAll(/<img\b[^<>]*>/gi)].map(([tag]) => ({ url: absolute(attribute(tag, 'data-src') || attribute(tag, 'src'), base), alt: attribute(tag, 'alt') })).filter((image) => image.url);
   const selector = /<main[\s>]/i.test(page) ? 'main' : /\srole\s*=\s*["']?main\b/i.test(page) ? '[role="main"]' : null;
   const result = await toMarkdown({ name: 'source.html', blob: new Blob([page], { type: 'text/html' }) }, { conversionOptions: { html: { hostname: base, ...(selector ? { cssSelector: selector } : {}) } } });
   if (result?.format !== 'markdown' || typeof result.data !== 'string') {
@@ -236,7 +238,7 @@ async function patternSource(html, sourceUrl, toMarkdown) {
     markdown: result.data,
     links: [...new Map(links.map((link) => [link.url, link])).values()],
     images: [...new Map(images.map((image) => [JSON.stringify(image), image])).values()],
-    title: text(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i.exec(page)?.[1] || '')
+    title: text(elementsIn(page, ['title']).next().value?.inner || '')
   };
 }
 

@@ -185,7 +185,7 @@ export const meaningFrom = (settings, fetch, store) => async () => {
   return meaning ? { model: meaning.model, embed: openAIEmbeddings({ ...onRole(meaning, fetch), model: meaning.model }), store } : null;
 };
 
-// What an endpoint's safety system says when it refuses a picture (as VIABLE reads it: src/services/imageGeneration.js).
+// What an endpoint's safety system says when it refuses a picture.
 const SAFETY_CODES = new Set(['content_policy_violation', 'moderation_blocked', 'safety_violation']);
 
 /**

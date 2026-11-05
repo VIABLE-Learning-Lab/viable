@@ -1,5 +1,5 @@
 /**
- * One learner shell (docs/product-map.md, section 4): what every page a learner or visitor opens
+ * One learner shell: what every page a learner or visitor opens
  * shares, the course home (home.js), a course activity and an agent's chat page
  * (chatPage.js): colors and type, buttons and cards, the security headers, and the page shown
  * when something isn't available. A page's accent is its course's or agent's

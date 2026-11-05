@@ -1,5 +1,7 @@
 # Agent tests
 
+> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+
 An agent test is a case written from what a teacher or builder wants: the learner's message (or a
 short conversation), what a good reply does, and what it must not do. Each case runs through the agent, and a judge
 model rates the reply pass or fail with a reason. Your agent is whatever you have: `viable-harness test cases.json

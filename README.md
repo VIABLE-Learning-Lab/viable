@@ -84,7 +84,7 @@ versioning ([CHANGELOG](CHANGELOG.md)).
 
 Issues, discussions and pull requests are welcome, from a typo to a new component or catalog entry.
 [CONTRIBUTING.md](CONTRIBUTING.md) covers setting up, testing and how a pull request lands. Look for
-[good first issues](../../labels/good%20first%20issue), ask in [Discussions](../../discussions), and follow the
+[good first issues](https://github.com/VIABLE-Learning-Lab/viable/labels/good%20first%20issue), ask in [Discussions](https://github.com/VIABLE-Learning-Lab/viable/discussions), and follow the
 [code of conduct](CODE_OF_CONDUCT.md).
 
 ## Citing and license

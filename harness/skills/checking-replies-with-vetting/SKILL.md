@@ -5,6 +5,8 @@ description: Check an AI reply with VETTING before a learner sees it, with the c
 
 # Checking replies with VETTING
 
+> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+
 VETTING (Li, Zhang & Botelho, 2026) has a second model review each reply with rules the reply model
 never sees, so a learner can't talk the reviewer out of them. It reads the reply and nothing the
 learner wrote. With an answer key, a reply that confirms an answer as the learner's own passes and
@@ -48,7 +50,7 @@ viable-harness check --reply "What do the two denominators need to be before you
   --rewrite 1 --model gpt-4.1-mini --reviewer gpt-4.1 --json
 ```
 
-(From a clone, `node bin/viable-harness.mjs check ...`.) From code, `checkReply` takes the same
+(From a clone, `node harness/bin/viable-harness.mjs check ...`.) From code, `checkReply` takes the same
 options in camelCase. Model calls go to `OPENAI_BASE_URL` with `OPENAI_API_KEY`; name the models.
 
 - `reviewer` reviews; without it, `model` does. `model` also writes rewrites.

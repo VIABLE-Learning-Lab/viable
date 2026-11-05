@@ -1,5 +1,7 @@
 # The MCP server
 
+> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+
 The Harness's parts are [MCP](https://modelcontextprotocol.io) tools, so an assistant, a harness of your own or an
 app on another agent SDK can prepare what a moment of teaching needs, check replies with VETTING, find
 misconceptions, compute the measures and test agents without adopting anything else. A tool is advice an assistant may
@@ -116,7 +118,7 @@ listed its eleven tools and four Skills.
 ## Configuring a client for the local server
 
 Every client needs the same three things: the command `node`, the arguments
-`["/path/to/viable-harness/bin/viable-harness.mjs", "mcp"]` (or the command `viable-harness` and
+`["/path/to/viable/harness/bin/viable-harness.mjs", "mcp"]` (or the command `viable-harness` and
 `["mcp"]` after `npm link`), and the environment for model calls.
 
 Claude Desktop (`claude_desktop_config.json`) and Cursor (`.cursor/mcp.json`):
@@ -126,7 +128,7 @@ Claude Desktop (`claude_desktop_config.json`) and Cursor (`.cursor/mcp.json`):
   "mcpServers": {
     "viable-harness": {
       "command": "node",
-      "args": ["/path/to/viable-harness/bin/viable-harness.mjs", "mcp"],
+      "args": ["/path/to/viable/harness/bin/viable-harness.mjs", "mcp"],
       "env": { "OPENAI_API_KEY": "sk-...", "OPENAI_BASE_URL": "https://api.openai.com/v1" }
     }
   }
@@ -141,7 +143,7 @@ VS Code (`.vscode/mcp.json`):
     "viable-harness": {
       "type": "stdio",
       "command": "node",
-      "args": ["/path/to/viable-harness/bin/viable-harness.mjs", "mcp"],
+      "args": ["/path/to/viable/harness/bin/viable-harness.mjs", "mcp"],
       "env": { "OPENAI_API_KEY": "${input:openai-key}" }
     }
   },

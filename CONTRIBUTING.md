@@ -88,7 +88,7 @@ checklist and how to add one; we write the adapter with its authors where we can
 
 The public goods catalog ([docs/catalog.md](harness/docs/catalog.md)) lists open datasets, benchmarks,
 knowledge graphs, standards, evaluators, models, tools, open content and learning data repositories
-for K-12 AI, one file each in `catalog/`, checked against `schemas/catalog-entry.schema.json`. An
+for K-12 AI, one file each in `harness/catalog/`, checked against `harness/schemas/catalog-entry.schema.json`. An
 entry describes the work; it doesn't endorse it, and listing it doesn't bring it into the harness
 (a connector or a component does).
 
@@ -100,7 +100,7 @@ entry describes the work; it doesn't endorse it, and listing it doesn't bring it
   for gated, non-commercial, mixed or conflicting terms (and `unclear` where the sources disagree,
   rather than a guess), how to get it, and whether it is released.
 - **How**: open an [issue](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=catalog.yml),
-  or a pull request with `catalog/<id>.json` and what `npm run catalog:build` writes from it
+  or a pull request with `harness/catalog/<id>.json` and what `npm run catalog:build` writes from it
   (`npm test` checks both).
 - **`connect`**: how far it is connected (0 listed, 1 fetchable, 2 one command from an effect, 3 built
   in), as what, the exact command, and a note: what results can show and what they can't, or why it goes

@@ -17,7 +17,7 @@ From the harness's folder:
 
 ```sh
 node integrations/_template/server.mjs     # http://127.0.0.1:8787/detect
-node bin/viable-harness.mjs component integrations/_template/manifest.json \
+node harness/bin/viable-harness.mjs component harness/integrations/_template/manifest.json \
   --input integrations/_template/fixtures/input.json
 ```
 
@@ -30,7 +30,7 @@ node bin/viable-harness.mjs component integrations/_template/manifest.json \
 3. Write the manifest: `receives` only what the method needs; `runs.entry` where it runs (an https
    address) and its host in `sends_to`; the license of its code and data; how to cite it; the
    three parts of its evidence kept apart; its risk from the review checklist; its maintainer.
-   Check it with `node bin/viable-harness.mjs validate manifest.json`.
+   Check it with `node harness/bin/viable-harness.mjs validate manifest.json`.
 4. Replace `detect` with your method, or point `runs.entry` at where it already runs. An MCP server
    instead: `"runs": { "kind": "mcp", "entry": "<tool name>", "server": { "command": "...", "args": [...] } }`,
    started in the manifest's folder.

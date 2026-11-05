@@ -1,5 +1,5 @@
 /**
- * A course's look (docs/product-map.md, Course → Settings → Appearance): what every page of the course
+ * A course's look (Course → Settings → Appearance): what every page of the course
  * shares, the course home (home.js) and its activities (chatPage.js). Each look has
  * its own type, colors, light and dark, a default color the course's own replaces, and the few rules
  * that give the home and the activities their shape. Fonts are the device's own: learner pages load

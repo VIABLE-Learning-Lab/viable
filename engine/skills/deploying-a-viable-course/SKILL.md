@@ -21,7 +21,7 @@ git clone https://github.com/VIABLE-Learning-Lab/viable.git
 cd viable && npm install
 ```
 
-Run the commands below from that folder as `node bin/viable-harness.mjs` (`npm link` puts `viable-harness`
+Run the commands below from that folder as `node engine/bin/viable-engine.mjs` (`npm link` puts `viable-engine`
 on your path, if you may write there). If `npm install` can't write its cache, give it `--cache <a folder you
 can write>` rather than changing permissions.
 

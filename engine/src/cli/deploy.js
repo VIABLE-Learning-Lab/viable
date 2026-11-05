@@ -124,7 +124,7 @@ ${models}` : '## Models\n\nSet at \`/console\`.'}
 
 ${report.warnings.length ? `## Read these first\n\n${report.warnings.map((line) => `- ${line}`).join('\n')}\n\n` : ''}## What it keeps
 
-${withStore ? `Conversations, runs, what learners wrote on pages and Memory steps' facts, in ${place.store.says}. Check who can read this store, and how long you may keep it ([deploying.md](https://github.com/VIABLE-Learning-Lab/viable/blob/main/docs/deploying.md)). \`VIABLE_ENGINE_KEEP_DAYS\` deletes, that many days after each last changed, conversations, runs, turns and their traces, and a learner's drafts, answers, highlights and events. A learner's code and how far they got stay until \`viable-engine forget\`, and a Memory step's facts until you delete \`memory/<learner>\`.` : 'Nothing between requests: no conversations, and Memory steps are skipped. Apps send the earlier messages themselves, with `history_mode: "client"`.'}
+${withStore ? `Conversations, runs, what learners wrote on pages and Memory steps' facts, in ${place.store.says}. Check who can read this store, and how long you may keep it ([deploying.md](https://github.com/VIABLE-Learning-Lab/viable/blob/main/engine/docs/deploying.md)). \`VIABLE_ENGINE_KEEP_DAYS\` deletes, that many days after each last changed, conversations, runs, turns and their traces, and a learner's drafts, answers, highlights and events. A learner's code and how far they got stay until \`viable-engine forget\`, and a Memory step's facts until you delete \`memory/<learner>\`.` : 'Nothing between requests: no conversations, and Memory steps are skipped. Apps send the earlier messages themselves, with `history_mode: "client"`.'}
 
 Each run logs one JSON line: its timing and outcome, never what a learner wrote.
 
@@ -203,6 +203,8 @@ export async function scaffold(target, file, { out, name = null, store = null, e
     mkdirSync(dirname(target2), { recursive: true });
     writeFileSync(target2, template(readFileSync(path, 'utf8'), values, withStore));
   }
+  // npm leaves a .gitignore out of a package, and this folder will hold secrets and learners' work.
+  if (!existsSync(join(folder, '.gitignore'))) writeFileSync(join(folder, '.gitignore'), 'node_modules/\n.env\n.dev.vars\ndata/\n.wrangler/\n');
   const root = join(folder, place.root);
   mkdirSync(join(root, 'package'), { recursive: true });
   if (read) writeFileSync(join(root, 'package', packed.name), packed.bytes);

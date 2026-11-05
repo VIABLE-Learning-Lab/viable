@@ -60,7 +60,7 @@ with `searchCatalog(query, { kind, slot, open, connected })` from the package, o
 `find_public_goods` tool ([mcp.md](mcp.md)). `--open` keeps what anyone can download without asking
 and use, commercially too, under every license listed; an entry’s note can still leave parts out.
 `--connected` keeps what has an effect on an agent. To add an entry or correct one, see
-[CONTRIBUTING.md](../CONTRIBUTING.md#catalog-entries).
+[CONTRIBUTING.md](../../CONTRIBUTING.md#catalog-entries).
 
 41 entries: 4 built into the harness, 6 not yet released.
 

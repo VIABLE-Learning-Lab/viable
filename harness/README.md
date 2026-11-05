@@ -42,7 +42,7 @@ claude mcp add --transport http viable https://api.viablelab.org/mcp
 app sees it, and a record feeds the teacher's page. Nothing else changes:
 
 ```sh
-npx @viable-lab/harness gateway --upstream https://api.openai.com/v1 --teaching fractions.json --reviewer-model your-reviewer
+npx github:VIABLE-Learning-Lab/viable gateway --upstream https://api.openai.com/v1 --teaching fractions.json --reviewer-model your-reviewer
 export OPENAI_BASE_URL=http://127.0.0.1:8090/v1
 ```
 
@@ -52,7 +52,8 @@ AI SDK, each one run as written.
 **Your own code, with three calls** around whatever writes the reply:
 
 ```js
-import { prepare, check, record } from '@viable-lab/harness';
+// npm i github:VIABLE-Learning-Lab/viable. On npm it will be @viable-lab/harness; for now it comes with the Engine:
+import { prepare, check, record } from '@viable-lab/engine/harness';
 
 const turn = await prepare({ teaching, message, history });             // before: context and rules
 const reply = await yourAgent(`${yourPrompt}\n\n${turn.instructions}`); // anything: a model, a framework, your own loop
@@ -114,5 +115,5 @@ take from them, credits them, and measures whether it helped. It carries their o
 [Conformance](conformance/README.md)
 
 ```sh
-npx @viable-lab/harness --help
+npx github:VIABLE-Learning-Lab/viable --help
 ```

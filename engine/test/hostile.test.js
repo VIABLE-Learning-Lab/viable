@@ -720,3 +720,63 @@ test('keepDays takes all a learner wrote, on every host’s schedule, and what s
   await scaffold('aws-lambda', input, { out: join(dir, 'lambda-none'), name: 'sweep-test', store: 'none' });
   assert.ok(!/index\.sweep/.test(readFileSync(join(dir, 'lambda-none', 'template.yaml'), 'utf8')), 'with no store there is nothing to sweep');
 });
+
+test('an address with localhost in it is still only https, or http on this machine', async () => {
+  const { workspaceSettings } = await import('../src/learner/workspace.js');
+  const { chatPageSettings } = await import('../src/learner/settings.js');
+  const { embedSite } = await import('../src/learner/logic.js');
+  for (const value of ['javascript://localhost/%0aalert(1)', 'data://localhost/x', 'file://localhost/etc/passwd']) {
+    assert.equal(embedSite(value), null, value);
+    assert.throws(() => chatPageSettings({ allowed_sites: [value] }), /not a website address/, value);
+    assert.throws(() => workspaceSettings({ ai: 'right', panels: [{ id: 'p', type: 'embed', title: 'P', url: value }] }), /https address/, value);
+  }
+  assert.equal(embedSite('http://localhost:3000/x'), 'http://localhost:3000');
+  assert.equal(embedSite('https://school.example/x'), 'https://school.example');
+});
+
+test('a sitemap of 5 MiB takes moments, whatever it repeats, and an ordinary one reads as it did', async () => {
+  const { sitemapEntries } = await import('../src/server/siteRefresh.js');
+  for (const piece of ['<url>', '<url ', '</url>', '<x:url>', '<', '<loc>', '<url><loc>', '<url><loc>   ']) {
+    const started = Date.now();
+    sitemapEntries(piece.repeat(Math.ceil(5 * 1024 * 1024 / piece.length)));
+    assert.ok(Date.now() - started < 5000, `${piece} took ${Date.now() - started} ms`);
+  }
+  const { index, entries } = sitemapEntries(`<?xml version="1.0"?><urlset xmlns="x"><url><loc> https://a.example/1?x=1&amp;y=2 </loc><lastmod>2026-01-02</lastmod></url><URL><LOC><![CDATA[https://a.example/2]]></LOC><lastmod>nonsense</lastmod></URL><image:url><image:loc>https://a.example/3</image:loc></image:url><url></url></urlset>`);
+  assert.equal(index, false);
+  assert.deepEqual(entries, [{ url: 'https://a.example/1?x=1&y=2', lastmod: '2026-01-02' }, { url: 'https://a.example/2', lastmod: null }, { url: 'https://a.example/3', lastmod: null }]);
+  assert.equal(sitemapEntries('<sitemapindex><sitemap><loc>https://a.example/s.xml</loc></sitemap></sitemapindex>').index, true);
+});
+
+test('what a link can fill is bounded: events past a day\'s room aren\'t kept, and learners who never came back make room', async () => {
+  const { createHandler } = await import('../src/server/handler.js');
+  const { learnerRoutes } = await import('../src/server/learner.js');
+  const { agentsToServe, createRuntime } = await import('../src/server/runtime.js');
+  const { memoryStore } = await import('../../harness/src/store/store.js');
+  const doc = courseDoc();
+  doc.course.identify = 'browser';
+  doc.course.data_level = 'detailed';
+  const store = memoryStore();
+  const clock = Date.parse('2026-11-05T12:00:00Z');
+  const handle = createHandler({ agents: agentsToServe([{ doc, file: 'c.json', name: 'c.json' }]), runtime: createRuntime({ baseUrl: 'https://m.invalid/v1', apiKey: 'k', fetch: async () => { throw new Error('no model'); } }), store, routes: [learnerRoutes({ now: () => clock })], options: { log: () => {}, token: 'test-token' } });
+  const post = (path, body) => handle(new Request(`https://school.example${path}`, { method: 'POST', headers: JSON_TYPE, body: JSON.stringify(body) }), { address: '10.1.1.1' });
+  const code = 'equivalent-fractions';
+  const home = await (await post(`/course/${code}/home`, { visitor: VISITOR_ID })).json();
+  const key = home.units.flatMap((unit) => unit.activities).find((item) => item.state === 'open').key;
+  const panel = doc.course.activities.find((activity) => activity.key === key || activity.workspace)?.workspace?.panels?.[0]?.id;
+  const send = () => post(`/course/${code}/${key}/events`, { visitor: VISITOR_ID, session: 'session-1234', events: [{ panel, type: 'view', at: new Date(clock).toISOString(), seq: 1, data: { visible_ms: 100, active_ms: 100 } }] }).then((answer) => answer.json());
+  assert.equal((await send()).recorded, 1);
+  const learners = await store.list(`courses/${code}/learners/`);
+  const learner = await store.get(learners[0]);
+  await store.put(`limits/2026-11-05/events-${code}/${learner.id}`, { count: 40 * 1024 * 1024 });
+  const room = createHandler({ agents: agentsToServe([{ doc, file: 'c.json', name: 'c.json' }]), runtime: createRuntime({ baseUrl: 'https://m.invalid/v1', apiKey: 'k', fetch: async () => { throw new Error('no model'); } }), store, routes: [learnerRoutes({ now: () => clock })], options: { log: () => {}, token: 'test-token' } });
+  const fresh = (path, body) => room(new Request(`https://school.example${path}`, { method: 'POST', headers: JSON_TYPE, body: JSON.stringify(body) }), { address: '10.1.1.2' });
+  assert.equal((await (await fresh(`/course/${code}/${key}/events`, { visitor: VISITOR_ID, session: 'session-1234', events: [{ panel, type: 'view', at: new Date(clock).toISOString(), seq: 2, data: { visible_ms: 100, active_ms: 100 } }] })).json()).recorded, 0);
+
+  // A course full of learners a script made a day ago: the class still gets in, and someone on the list stays.
+  const old = '2026-11-03T12:00:00.000Z';
+  for (let n = 0; n < 5000; n += 1) await store.put(`courses/${code}/learners/lrn_made${n}`, { id: `lrn_made${n}`, code: `CODE${n}`, created_at: old, last_seen_at: old, ...(n === 7 ? { listed: true, name: 'On the list' } : {}) });
+  const joined = await fresh(`/course/${code}/home`, { visitor: 'visitor_bbbbbbbbbbbbbbbb' });
+  assert.equal(joined.status, 200);
+  assert.ok(await store.get(`courses/${code}/learners/lrn_made7`));
+  assert.equal(await store.get(`courses/${code}/learners/lrn_made8`), null);
+});

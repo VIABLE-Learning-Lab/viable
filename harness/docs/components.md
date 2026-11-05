@@ -1,5 +1,7 @@
 # Components
 
+> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+
 You have research: a framework, a list of misconceptions, a classifier, a way to rate replies. A component is how it reaches
 the AIs people are using, with your name on it, without each of them building it in.
 

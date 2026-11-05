@@ -1,4 +1,9 @@
 node_modules/
+.env
+.env.*
+!.env.example
+.dev.vars
+/data/
 dist/
 .DS_Store
 # Copied in when the Harness is packed.

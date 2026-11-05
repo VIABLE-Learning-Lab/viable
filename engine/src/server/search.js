@@ -2,8 +2,7 @@
  * Knowledge search over a course package's own files, wherever it runs: the files its knowledge bases
  * name (found in its .viable.zip, or by readPath in its folder, or downloaded from their url, and
  * checked against bytes and sha256), split into passages under their headings and ranked by keywords
- * (BM25), as VIABLE searches a keyword-only knowledge base (documentText.js chunkText, searchTerms and
- * rankByKeywords, copied here). Text without spaces (Chinese, Japanese) is matched by character
+ * (BM25), as VIABLE's hosted platform searches a keyword-only knowledge base. Text without spaces (Chinese, Japanese) is matched by character
  * pairs. Websites aren't crawled, and only text formats are read: a PDF or Office file through the text
  * copy VIABLE packages with it (text_path), from the passages it made of the file. With a model for it,
  * passages are also found by meaning, and the two lists are combined. No Node built-ins: knowledge.js

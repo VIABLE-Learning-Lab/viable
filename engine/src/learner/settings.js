@@ -133,7 +133,7 @@ export function chatPageSettings(input = {}, agentName = 'Assistant', { avatar =
     let origin = null;
     try {
       const url = new URL(String(raw).trim().includes('://') ? String(raw).trim() : `https://${String(raw).trim()}`);
-      if (url.protocol === 'https:' || url.hostname === 'localhost') origin = url.origin;
+      if (url.protocol === 'https:' || (url.protocol === 'http:' && url.hostname === 'localhost')) origin = url.origin;
     } catch { /* reported below */ }
     if (!origin) throw agentError(`"${raw}" is not a website address. Use addresses like https://guides.example.edu.`, 400, 'invalid_chat_page');
     if (!sites.includes(origin)) sites.push(origin);

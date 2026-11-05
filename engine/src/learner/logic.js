@@ -82,7 +82,7 @@ export const CONVERSATION_ID = /^agtc_[A-Za-z0-9-]{8,80}$/;
 
 /** The website an embed says it runs on (an origin, or nothing). */
 export function embedSite(value) {
-  try { const url = new URL(String(value || '')); return url.protocol === 'https:' || url.hostname === 'localhost' ? url.origin : null; } catch { return null; }
+  try { const url = new URL(String(value || '')); return url.protocol === 'https:' || (url.protocol === 'http:' && url.hostname === 'localhost') ? url.origin : null; } catch { return null; }
 }
 
 // --- What a page is told -------------------------------------------------------------------------

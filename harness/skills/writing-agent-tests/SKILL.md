@@ -5,6 +5,8 @@ description: Write agent test cases for a VIABLE agent from what an activity int
 
 # Writing agent tests
 
+> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+
 An agent test is a case written from what the teacher or builder wants: the learner's message (or a
 short conversation), what a good reply does, and what it must not do. The harness runs each case
 through the agent and a judge model rates the reply pass or fail with a reason.
@@ -69,7 +71,7 @@ Check the agent first (`viable-harness validate agent.json` or the `validate_doc
 viable-engine test agent.json cases.json --judge-model gpt-4.1 [--model <id>] [--agent <ref>] [--json]
 ```
 
-(From a clone, `node bin/viable-harness.mjs test ...`; exit code 1 when a case fails or errors.) Or
+(From a clone, `node engine/bin/viable-engine.mjs test ...`; exit code 1 when a case fails or errors.) Or
 the `run_agent_tests` tool with `{"document": <agent or package>, "cases": <the file or a list>,
 "judge_model": "gpt-4.1"}`, plus `model`, `agent`, `teaching` or `section` as needed. Model calls go
 to `OPENAI_BASE_URL` with `OPENAI_API_KEY`; the judge always runs at temperature 0.

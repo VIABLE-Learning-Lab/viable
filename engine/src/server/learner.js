@@ -61,6 +61,8 @@ const VISITOR_KEY = /^[A-Za-z0-9_-]{1,128}$/;
 const NEW_PER_ADDRESS = 300;
 const MOST_LEARNERS = 5000;
 const EVENT_BODY_BYTES = 128 * 1024;
+// What events can fill in a day: far beyond a busy learner, and a course's teacher reads all of it.
+const EVENT_BYTES_A_DAY = { learner: 32 * 1024 * 1024, course: 2 * 1024 * 1024 * 1024 };
 const TRY_VISITOR = 'viable-chat:visitor:trying';
 const MEDIA_IN_MEMORY = 200;
 // The sign-out form posts here, and a form's post from a page with no referrer says its origin is null.
@@ -375,8 +377,8 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
     };
     // Per day, in the store, one at a time here. shortcut: two instances can undercount a little; a store with atomic counters if a server runs many.
     const dayCounts = new Map();
-    const addToDay = async (key) => {
-      const next = (dayCounts.get(key) || store.get(key).then((value) => value?.count || 0)).then((count) => count + 1);
+    const addToDay = async (key, by = 1) => {
+      const next = (dayCounts.get(key) || store.get(key).then((value) => value?.count || 0)).then((count) => count + by);
       dayCounts.set(key, next);
       const count = await next;
       await store.put(key, { count });
@@ -437,9 +439,25 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
     };
     // Counted now and then, so a course's list isn't read for each newcomer.
     const heads = new Map();
+    // Anyone with the link can make learners, so a course filled by a script would shut out its class: those not on the list, with nothing done, who haven't been back in a day make room.
+    const makeRoom = async (code) => {
+      let freed = 0;
+      for (const key of await store.list(`courses/${code}/learners/`)) {
+        const learner = await store.get(key);
+        if (!learner || learner.listed || now() - Date.parse(learner.last_seen_at || learner.created_at) < 86400000) continue;
+        if ((await store.list(`courses/${code}/progress/${learner.id}/`)).length) continue;
+        await forgetLearner(store, learner.id);
+        freed += 1;
+      }
+      return freed;
+    };
     const roomForLearner = async (code) => {
       let held = heads.get(code);
       if (!held || now() - held.at > 600000) heads.set(code, held = { at: now(), count: (await store.list(`courses/${code}/learners/`)).length });
+      if (held.count >= MOST_LEARNERS && now() - (held.swept || 0) > 600000) {
+        held.swept = now();
+        held.count -= await makeRoom(code);
+      }
       if (held.count >= MOST_LEARNERS) throw pageError('This course is full. Tell whoever runs it.', 409, 'course_full');
       held.count += 1;
     };
@@ -813,6 +831,12 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
         const learner = await known(activity, visitor);
         await gate(activity, learner);
         const list = keptEvents(activity.workspace, body.events, { level: activity.level });
+        await sweepDays();
+        const bytes = JSON.stringify(list).length;
+        const scope = `events-${activity.code}`;
+        const date = today(now());
+        // Past a day's room they aren't kept. Nothing a learner is doing stops for it.
+        if (await addToDay(keys.day(scope, date, learner.id), bytes) > EVENT_BYTES_A_DAY.learner || await addToDay(keys.day(scope, date), bytes) > EVENT_BYTES_A_DAY.course) return { object: 'workspace.events', recorded: 0 };
         const recorded = await record(activity, learner, list, body.session);
         const completed = Object.fromEntries(list.filter((event) => event.type === 'embed.event' && (event.data.verb === 'completed' || event.data.completion === true)).map((event) => [event.panel, true]));
         const row = await progressOf(activity, learner);

@@ -1,5 +1,7 @@
 # Resources: from a public good to your agent
 
+> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+
 A list of datasets is what the K-12 AI Infrastructure Program's own platform already is. The reason to
 come here is the next step: a benchmark or a set of rated essays runs against your agent or your judge,
 and changes what you see in a test report.

@@ -52,9 +52,20 @@ export function sitemapEntries(xml) {
   const index = /<(?:\w+:)?sitemapindex[\s>]/i.test(xml);
   const decode = (value) => value.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
   const entries = [];
-  for (const match of String(xml).matchAll(/<(?:\w+:)?(url|sitemap)\b[^>]*>([\s\S]*?)<\/(?:\w+:)?\1>/gi)) {
-    const loc = /<(?:\w+:)?loc>\s*(?:<!\[CDATA\[)?\s*([^<\]]+?)\s*(?:\]\]>)?\s*<\/(?:\w+:)?loc>/i.exec(match[2])?.[1];
-    const lastmod = /<(?:\w+:)?lastmod>\s*([^<]+?)\s*<\/(?:\w+:)?lastmod>/i.exec(match[2])?.[1];
+  // In one pass, as a sitemap comes from anywhere: a pattern with [^>]* or [\s\S]*? would look to its end again from every "<".
+  const text = String(xml);
+  const between = (inner, name) => {
+    const found = new RegExp(`<(?:\\w+:)?${name}>([^<]*(?:<!\\[CDATA\\[[^\\]]*\\]\\]>)?[^<]*)<\\/(?:\\w+:)?${name}>`, 'i').exec(inner)?.[1];
+    return found?.replace(/^\s*<!\[CDATA\[|\]\]>\s*$/g, '').trim() || null;
+  };
+  let open = null;
+  for (const tag of text.matchAll(/<(\/?)(?:\w+:)?(url|sitemap)\b[^<>]*>/gi)) {
+    if (!tag[1]) { open = { name: tag[2].toLowerCase(), from: tag.index + tag[0].length }; continue; }
+    if (open?.name !== tag[2].toLowerCase()) continue;
+    const inner = text.slice(open.from, tag.index);
+    open = null;
+    const loc = between(inner, 'loc');
+    const lastmod = between(inner, 'lastmod');
     if (loc) entries.push({ url: decode(loc), lastmod: lastmod && !Number.isNaN(Date.parse(lastmod)) ? lastmod : null });
   }
   return { index, entries };

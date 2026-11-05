@@ -81,7 +81,7 @@ export function catalogPage(entries) {
     '`find_public_goods` tool ([mcp.md](mcp.md)). `--open` keeps what anyone can download without asking',
     'and use, commercially too, under every license listed; an entry’s note can still leave parts out.',
     '`--connected` keeps what has an effect on an agent. To add an entry or correct one, see',
-    '[CONTRIBUTING.md](../CONTRIBUTING.md#catalog-entries).',
+    '[CONTRIBUTING.md](../../CONTRIBUTING.md#catalog-entries).',
     '',
     `${entries.length} entries: ${count((entry) => entry.in_harness)} built into the harness, ${count((entry) => entry.status === 'expected')} not yet released.`,
     '',
