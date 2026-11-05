@@ -8,7 +8,7 @@ import { publicUrl } from '../agents/http.js';
 import { showCode } from '../server/classList.js';
 import { learnerRecords } from '../server/learner.js';
 import { courseAt } from './course.js';
-import { esc, plural, say, when } from './forms.js';
+import { dropZone, esc, plural, say, when } from './forms.js';
 
 const refused = (message, status = 400, code = 'invalid_detector') => Object.assign(new Error(message), { status, code });
 const MOST = { detectors: 8, records: 300, atOnce: 4, manifestBytes: 64 * 1024 };
@@ -42,7 +42,7 @@ ${say()}
 <h2 id="detectors-title">From detectors</h2>
 <p class="v-note">A detector is someone else’s method that reads what learners did and marks moments for you. Nothing runs until you ask.</p>
 ${rows.length ? `<ul class="detectors">${rows.join('')}</ul>` : ''}
-${rows.length < MOST.detectors ? `<div class="v-form"><label class="v-label" for="detector-file">Add one, from its manifest</label><input class="v-input" id="detector-file" type="file" accept=".json" data-upload="POST courses/${esc(code)}/detectors"></div>` : ''}
+${rows.length < MOST.detectors ? dropZone({ id: 'detector-file', label: 'Drop its manifest here', accept: '.json', upload: `POST courses/${code}/detectors` }) : ''}
 ${say()}
 </section>`;
 }

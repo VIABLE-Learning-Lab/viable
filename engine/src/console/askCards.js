@@ -84,8 +84,8 @@ async function openCard(here, spec, { thread, id, state }) {
   const sectionName = spec.section ? (await here.classes.sections(spec.course)).find((item) => item.id === spec.section)?.name : null;
   const who = sectionName || 'everyone in the course';
   const title = activity?.title || 'This activity';
-  if (state === 'done') return card(`“${title}” is ${spec.open ? `open for ${who}` : 'hidden'}`, `<p class="v-mark pass">You pressed ${spec.open ? 'Open' : 'Hide'}.</p>`, { className: 'is-settled' });
-  if (state === 'declined') return card(`“${title}” wasn’t changed`, '<p class="v-note">You said not yet. It stays as it was.</p>', { className: 'is-settled' });
+  if (state === 'done') return card(`“${title}” is ${spec.open ? `open for ${who}` : 'hidden'}`, `<p class="v-mark pass">You pressed ${spec.open ? 'Open' : 'Hide'}.</p>${say()}`, { id: `pending-${id}`, className: 'is-settled' });
+  if (state === 'declined') return card(`“${title}” wasn’t changed`, `<p class="v-note">You said not yet. It stays as it was.</p>${say()}`, { id: `pending-${id}`, className: 'is-settled' });
   const api = `ask/${esc(thread)}/pending/${esc(id)}`;
   const [own, sections] = spec.open ? [{}, []] : await Promise.all([here.classes.releases(spec.course), here.classes.sections(spec.course)]);
   const stays = Object.entries(own[spec.activity] || {}).filter(([, item]) => item?.release !== 'hidden').map(([section]) => sections.find((item) => item.id === section)?.name).filter(Boolean);
@@ -94,9 +94,28 @@ async function openCard(here, spec, { thread, id, state }) {
 <div class="actions"><button class="v-btn is-small is-primary" type="button" data-api="POST ${api}" data-body='{"yes":true}'>${spec.open ? 'Open it' : 'Hide it'}</button><button class="v-btn is-small" type="button" data-api="POST ${api}" data-body='{"yes":false}'>Not yet</button></div>${say()}`, { id: `pending-${id}`, className: 'is-waiting' });
 }
 
+// A change learners would meet, as a person's click: what it would be, in words.
+async function changeCard(here, spec, { thread, id, state }) {
+  const { doc } = await courseAt(here.library, spec.course);
+  const activity = spec.activity ? activitiesOf(doc).find((item) => item.key === spec.activity) : null;
+  const title = activity?.title || doc.course.title;
+  if (state === 'done') return card(`“${title}” is changed`, `<p class="v-mark pass">You pressed Change it.</p>${say()}`, { id: `pending-${id}`, className: 'is-settled' });
+  if (state === 'declined') return card(`“${title}” wasn’t changed`, `<p class="v-note">You said not yet. It stays as it was.</p>${say()}`, { id: `pending-${id}`, className: 'is-settled' });
+  const api = `ask/${esc(thread)}/pending/${esc(id)}`;
+  return card(`Change “${title}”?`, `<p class="v-note">Learners can reach this now, so they’d meet the change on their next visit.</p>
+<ul class="ask-facts">${(spec.words || []).map((line) => `<li>${esc(line)}</li>`).join('')}</ul>
+<div class="actions"><button class="v-btn is-small is-primary" type="button" data-api="POST ${api}" data-body='{"yes":true}'>Change it</button><button class="v-btn is-small" type="button" data-api="POST ${api}" data-body='{"yes":false}'>Not yet</button></div>${say()}`, { id: `pending-${id}`, className: 'is-waiting' });
+}
+
+// A file that read as a list of names: it stays off the model until a person says it isn't one.
+const notAListCard = (_here, spec, { thread, id }) => (spec.allowed
+  ? card(`“${spec.name}” isn’t a list`, `<p class="v-note">You said so, so the AI can read it. Say what to do with it.</p>${say()}`, { id: `list-${id}`, className: 'is-settled' })
+  : card(`“${spec.name}” looks like a list of names`, `<p class="v-note">So the AI didn’t read it: names never reach a model. A class list goes on a course’s People page.</p>
+<div class="actions"><button class="v-btn is-small" type="button" data-api="POST ask/${esc(thread)}/read-anyway/${esc(spec.material)}">It isn’t a list: let the AI read it</button></div>${say()}`, { id: `list-${id}` }));
+
 const toolsCard = (here) => card('Other tools for your teaching', `<ul class="ask-rows">${(here.otherTools || []).map((tool) => `<li><div><a href="${esc(tool.url)}" target="_blank" rel="noopener"><strong>${esc(tool.name)}</strong></a><small>${esc(tool.summary)}</small></div></li>`).join('')}</ul>`);
 
-const DRAW = { course: courseCard, try: tryCard, share: shareCard, 'class-list': classListCard, progress: progressCard, open: openCard, tools: toolsCard };
+const DRAW = { course: courseCard, try: tryCard, share: shareCard, 'class-list': classListCard, progress: progressCard, open: openCard, change: changeCard, 'not-a-list': notAListCard, tools: toolsCard };
 
 /** A card as HTML, from what is true now. One whose course has gone says so. */
 export async function drawCard(here, spec, context = {}) {
@@ -106,9 +125,10 @@ export async function drawCard(here, spec, context = {}) {
   }
 }
 
-export const ASK_CARD_CSS = `.ask-card{display:grid;gap:12px;max-width:640px}
-.ask-card h3{font-size:1.0625rem;font-weight:600;letter-spacing:0;color:var(--public-ink);overflow-wrap:anywhere}
-.ask-card.is-waiting{outline:2px solid var(--ink-blue);outline-offset:-2px}
+export const ASK_CARD_CSS = `.ask-card.v-card{display:grid;gap:12px;padding:16px 18px;border:1px solid var(--public-rule);box-shadow:none}
+.ask-card h3{font-size:1rem;font-weight:600;letter-spacing:0;color:var(--public-ink);overflow-wrap:anywhere}
+.ask-card.is-waiting.v-card{border-color:var(--ink-blue)}
+.ask-card.is-settled.v-card{background:transparent}
 .ask-rows{display:grid;gap:0;margin:0;padding:0;list-style:none;border-top:1px solid var(--public-rule)}
 .ask-rows li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--public-rule)}
 .ask-rows li>div{display:grid;gap:2px;min-width:0}

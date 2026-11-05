@@ -10,7 +10,7 @@ the AIs people are using, with your name on it, without each of them building it
 | You have | Its slot | What you write | What happens then |
 | --- | --- | --- | --- |
 | Guidance, a framework, moves, a list of what goes wrong | `context` | One JSON file. No server, and no learner's data reaches you | Someone adds pieces to an activity, on a screen or from a file, and each turn takes those that fit the moment, with your name beside them |
-| A method that writes or checks a reply | `step` | A manifest, and an address or an MCP tool that runs it | A builder puts it in a workflow as a Component step, on the Developer Platform or the Engine |
+| A method that writes or checks a reply | `step` | A manifest, and an address or an MCP tool that runs it | A builder puts it in a workflow as a Component step, on the VIABLE Developer Platform or the Engine |
 | A way to rate replies | `judge` | The same | Agent tests rate replies with it, and say so in the result |
 | A method that reads what happened | `detector` or `measure` | The same | `detect` and `measure` return its marks and numbers, from code or `viable-harness measure --component`. On the Engine, a teacher adds a detector on What to look at and runs it there, and its marks show beside the class |
 | A dataset or a benchmark | None: an entry in the [catalog](catalog.md), and a connector | An entry | `viable-engine test --suite` runs it against an agent |
@@ -46,7 +46,7 @@ viable-harness component add your-framework/manifest.json --teaching activity.js
 ```
 
 They go in that activity's settings as they are then, up to 20, with your citation. From there it works wherever those
-settings go, since they travel with the activity: `prepare`, the gateway, the Engine and the Developer Platform.
+settings go, since they travel with the activity: `prepare`, the gateway, the Engine and the VIABLE Developer Platform.
 [How the Harness works](how-it-works.md) says how a turn chooses.
 
 ## What you get for it
@@ -56,10 +56,10 @@ settings go, since they travel with the activity: `prepare`, the gateway, the En
 - **A way to show what it does:** compare replies with and without it in agent tests, and report that apart from what your
   own studies showed.
 - **A page** with what it does, what it receives, its license, its evidence and how to cite it, once it is reviewed, and how many
-  replies on the Developer Platform it went into in the last 30 days. Servers of one's own report nothing.
+  replies on the VIABLE Developer Platform it went into in the last 30 days. Servers of one's own report nothing.
 - **Help with the first ones.** VIABLE writes the adapter for early partners, and you review it.
 
-Not built yet: a reviewed catalog of outside components, and a detector's marks on the Developer Platform, where they would send
+Not built yet: a reviewed catalog of outside components, and a detector's marks on the VIABLE Developer Platform, where they would send
 minors' data to someone else (the Engine's Progress shows them).
 
 ## The six slots

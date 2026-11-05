@@ -19,7 +19,7 @@ Three things follow from that:
 
 - **Your citation travels with your words.** Anyone who reads what the AI was given sees it.
 - **Your work gets a page** in the [library](catalog.md), with what you showed, what comparing replies showed, and what nobody has shown yet.
-- **You can see that it's used.** The Developer Platform counts replies that drew on a component, per day. Nothing about a class or a learner comes with the count.
+- **You can see that it's used.** The VIABLE Developer Platform counts replies that drew on a component, per day. Nothing about a class or a learner comes with the count.
 
 ## What you write
 
@@ -99,6 +99,6 @@ No model is called and nothing is sent anywhere. [Components](components.md) has
 
 1. It comes as a pull request, from you or from us, with you as its maintainer.
 2. We check [seven things](components.md): among them that the source says what the piece says, and that the license lets it travel.
-3. It appears in the library. Teachers can then choose it on the Developer Platform and on any Engine.
+3. It appears in the library. Teachers can then choose it on the VIABLE Developer Platform and on any Engine.
 
 The license stays yours to choose, as long as it lets the words be used: CC BY 4.0 is the usual one. You can correct or withdraw it at any time. A new version goes out with the next release.

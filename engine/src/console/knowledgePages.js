@@ -12,8 +12,7 @@ import { meaningFrom } from '../server/runtime.js';
 import { readsLocally, searchPackage } from '../server/search.js';
 import { REFRESH_LIMITS, refreshSite, siteReader } from '../server/siteRefresh.js';
 import { extensionOf, readsAsText } from '../utils/textFormats.js';
-import { CONSOLE_SCRIPT } from './client.js';
-import { choose, esc, FORMS_CSS, say, text } from './forms.js';
+import { choose, dropZone, esc, FORMS_CSS, say, text } from './forms.js';
 import { agentsIn, clean, freeRef, knowledgeIn, NO_STORE, OWN, placeLabel, plural, refused, ROWS_CSS, utc } from './places.js';
 
 const NAME_CHARS = 120;
@@ -125,7 +124,7 @@ ${entry.meta.version === 0 ? `<p class="notice">This comes from <code>${esc(entr
 <section class="block" aria-labelledby="files-title">
 <h2 id="files-title">Files</h2>
 ${files.length ? `<ul class="rows">${files.map((file) => fileRow(entry, kb, file)).join('')}</ul>` : '<p class="v-empty">No files yet.</p>'}
-${locked ? '' : `<div class="add-file" data-say-box><div class="v-form"><label class="v-label" for="base-file">Add files</label><input class="v-input" id="base-file" type="file" multiple accept="${ACCEPT}" data-upload="POST ${api}/files"><small class="v-note">Text, Markdown, CSV, JSON and HTML, up to ${Math.round(LIBRARY_LIMITS.file / 1048576)} MB each. A PDF or Word file isn’t read here: save it as text or Markdown first. A file with a name already here replaces it.</small></div>${say()}</div>`}
+${locked ? '' : `<div class="add-file" data-say-box>${dropZone({ id: 'base-file', label: 'Drop files here', accept: ACCEPT, upload: `POST ${api}/files`, multiple: true, hint: `Text, Markdown, CSV, JSON and HTML, up to ${Math.round(LIBRARY_LIMITS.file / 1048576)} MB each. A PDF or Word file isn’t read here: save it as text or Markdown first. A file with a name already here replaces it.` })}${say()}</div>`}
 </section>
 <section class="block" aria-labelledby="sites-title">
 <h2 id="sites-title">Websites</h2>
@@ -371,7 +370,7 @@ async function removeBase({ library }, match) {
 export const knowledgePages = [
   {
     id: 'knowledge', title: 'Knowledge',
-    render: async (tools) => ({ body: await listBody(tools), css: `${FORMS_CSS}\n${ROWS_CSS}`, script: CONSOLE_SCRIPT }),
+    render: async (tools) => ({ body: await listBody(tools), css: `${FORMS_CSS}\n${ROWS_CSS}` }),
     api: [
       ['POST', /^knowledge$/, addBase],
       ['PUT', /^knowledge\/([\w-]+)\/([\w.-]+)$/, async ({ library }, match, body) => {
@@ -392,7 +391,7 @@ export const knowledgePages = [
   {
     id: 'knowledge-base', title: 'Knowledge base', section: 'knowledge', nav: false,
     match: /^knowledge\/([\w-]+)\/([\w.-]+)$/,
-    render: async (tools, match) => { const made = await baseBody(tools, match); return { ...made, css: `${FORMS_CSS}\n${ROWS_CSS}\n${made.css}`, script: CONSOLE_SCRIPT }; },
+    render: async (tools, match) => { const made = await baseBody(tools, match); return { ...made, css: `${FORMS_CSS}\n${ROWS_CSS}\n${made.css}` }; },
     api: []
   }
 ];

@@ -74,6 +74,7 @@ export function storeThreads(store) {
   return {
     get: (id) => store.get(key(id)),
     put: (thread) => store.put(key(thread.id), thread),
+    remove: (id) => store.delete(key(id)),
     /** The latest first: { id, title, updated_at }. */
     async list() {
       const held = await Promise.all((await store.list('ask/threads/')).slice(-40).map((name) => store.get(name)));

@@ -5,8 +5,8 @@
  */
 import { activityKeys } from '../server/library.js';
 import { readPackage } from '../server/runtime.js';
-import { choose, courseHead, esc, FORMS_CSS, oneOf, plural, say, text, toggle, withForms } from './forms.js';
-import { CONSOLE_SCRIPT } from './client.js';
+import { icon } from './icons.js';
+import { courseHead, dropZone, esc, FORMS_CSS, oneOf, plural, say, text, toggle, withForms } from './forms.js';
 
 const refused = (message, status = 400, code = 'invalid_course') => Object.assign(new Error(message), { status, code });
 const ARCHIVE_BYTES = 50 * 1024 * 1024;
@@ -45,52 +45,95 @@ const SAVING = '<p class="notice">This server has no store, so courses can’t b
 
 // --- The list -----------------------------------------------------------------------------------------
 
-async function listBody({ library, classes, examples, settings, simple }) {
+async function listBody(tools) {
+  const { library, classes, settings, simple } = tools;
   const courses = await library.courses();
   const cards = await Promise.all(courses.map(async (entry) => {
     const { code } = entry;
-    const facts = [plural((entry.doc.course.activities || []).length, 'activity', 'activities'), plural((await classes.people(code)).length, 'learner'), ...(entry.meta.status === 'closed' ? ['Closed'] : []), ...(entry.meta.version === 0 ? [`From ${entry.file}`] : [])];
-    return `<li><a class="course-card v-card" href="/console/courses/${esc(code)}"><strong>${esc(entry.doc.course.title)}</strong><span class="v-note">${esc(facts.join(' · '))}</span></a></li>`;
+    const facts = [plural((entry.doc.course.activities || []).length, 'activity', 'activities'), plural((await classes.people(code)).length, 'learner'), ...(entry.meta.version === 0 ? [`From ${entry.file}`] : [])];
+    return `<li><a class="course-card" href="/console/courses/${esc(code)}"><span><strong>${esc(entry.doc.course.title)}</strong><small>${esc(facts.join(' · '))}</small></span>${entry.meta.status === 'closed' ? '<span class="v-pill">Closed</span>' : ''}</a></li>`;
   }));
   const { saving } = classes;
   const using = settings ? await settings.resolve() : null;
-  return `<h1>Courses</h1>
-<p class="v-lead">A course is one link for your learners: its activities, who is in it, and how far the AI may go in each.</p>
+  return `<div class="page-head"><div><h1>Courses</h1>
+<p class="v-lead">A course is one link for your learners: its activities, who is in it, and how far the AI may go in each.</p></div>
+${saving && cards.length ? '<a class="v-btn is-primary" href="/console/new-course">New course</a>' : ''}</div>
 ${saving ? '' : SAVING}
 ${saving && using && !using.roles.reply ? '<p class="notice">No model writes replies yet. <a href="/console/models">Set one up</a> and the AI in your activities starts working. You can build a course first.</p>' : ''}
 ${cards.length || simple ? '' : '<p class="v-note first-door">Only want a chat button for a website? <a href="/console/chat-pages">Start with a chat page</a>.</p>'}
 ${cards.length ? `<ul class="course-list">${cards.join('')}</ul>` : ''}
-${saving ? `<section class="block" aria-labelledby="start-title">
-<h2 id="start-title">Start a course</h2>
-<div class="starts">
-<form class="v-card start" id="new-blank" data-api="POST courses">
-<h3>From nothing</h3>
-<p class="v-note">A title, then add activities. It comes with a tutor, which you can change.</p>
-${text('title', 'Its title', '', { required: true, maxlength: 160, placeholder: 'e.g. Fractions, period 2', autocomplete: 'off' })}
-<div class="actions"><button class="v-btn is-primary" type="submit">Create</button></div>${say()}
-</form>
-${examples.length ? `<form class="v-card start" id="new-example" data-api="POST courses/from-example">
-<h3>From an example</h3>
-<p class="v-note">A whole working course to read, try and change.</p>
-${choose('id', 'Which', examples[0].id, examples.map((example) => ({ value: example.id, label: example.title })))}
-<div class="actions"><button class="v-btn" type="submit">Add it</button></div>${say()}
-</form>` : ''}
-<div class="v-card start" id="new-file" data-say-box>
-<h3>From a file</h3>
-<p class="v-note">A package (<code>.viable.zip</code> or <code>.viable.json</code>) from the VIABLE Developer Platform or another Engine. Learners, class lists and study data don’t travel in one.${simple ? '' : ' A chat page in it starts paused.'}</p>
-<div class="v-form"><label class="v-label" for="package-file">Choose the file</label><input class="v-input" id="package-file" type="file" accept=".zip,.json" data-upload="POST courses/from-file"></div>${say()}
-</div>
-</div>
-</section>` : ''}`;
+${saving && !cards.length ? await startParts(tools) : ''}`;
 }
 
-const LIST_CSS = `.course-list{display:grid;gap:12px;margin:24px 0 0;padding:0;list-style:none}
-.course-card{display:grid;gap:4px;color:var(--public-ink);text-decoration:none;transition:box-shadow .16s ease}
-.course-card strong{font-size:1.0625rem;font-weight:600}
-.starts{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;align-items:start}
-.start{display:grid;gap:12px}
-.start h3{font-size:1rem;font-weight:600;letter-spacing:0}
-.first-door{margin-top:14px}`;
+const AUDIENCE_WORDS = { children: 'For children', teens: 'For teens', adults: 'For adults' };
+
+// What an example holds, so a person can choose one without opening each.
+async function exampleRow(example) {
+  const { doc } = await example.read();
+  const list = doc.course?.activities || [];
+  const minutes = list.reduce((sum, activity) => sum + (activity.minutes || 0), 0);
+  const facts = [AUDIENCE_WORDS[doc.course?.audience], plural(list.length, 'activity', 'activities'), ...(minutes ? [`about ${minutes} minutes`] : [])].filter(Boolean);
+  return `<li class="example" id="example-${esc(example.id)}" data-say-box>
+<div class="example-head"><div><h3>${esc(example.title)}</h3>${example.summary ? `<p>${esc(example.summary)}</p>` : ''}<small>${esc(facts.join(' · '))}</small></div>
+<button class="v-btn is-small" type="button" data-api="POST courses/from-example" data-body='${esc(JSON.stringify({ id: example.id }))}' data-busy="Copying it…">Use this</button></div>
+${list.length ? `<details id="inside-${esc(example.id)}"><summary>What’s in it</summary><ul>${list.map((activity) => `<li><strong>${esc(activity.title)}</strong><small>${esc(kindWords(activity))}</small></li>`).join('')}</ul></details>` : ''}
+${say()}
+</li>`;
+}
+
+// The ways to start a course. A title is the shortest, so it comes first; an example shows what it holds before it is copied.
+async function startParts({ examples = [], simple }) {
+  return `<section class="block start-part" aria-labelledby="blank-title" data-say-box>
+<h2 id="blank-title">Start with a title</h2>
+<form id="new-blank" class="new-blank" data-api="POST courses" data-busy="Making it…">
+<label class="sr" for="new-title">Course title</label>
+<input class="v-input" id="new-title" name="title" required maxlength="160" autocomplete="off" placeholder="e.g. Fractions, period 2">
+<button class="v-btn is-primary" type="submit">Create course</button>
+</form>
+<p class="v-note">It starts empty, with a tutor you can change. Learners see nothing until you open an activity.</p>
+${say()}
+</section>
+${examples.length ? `<section class="block start-part" aria-labelledby="examples-title">
+<h2 id="examples-title">Or start from an example</h2>
+<p class="v-note">A whole working course. You get your own copy, to read, try and change.</p>
+<ul class="examples">${(await Promise.all(examples.map(exampleRow))).join('')}</ul>
+</section>` : ''}
+<section class="block start-part" id="new-file" aria-labelledby="file-title" data-say-box>
+<h2 id="file-title">Or bring a course file</h2>
+<p class="v-note">A package from the VIABLE Developer Platform or another VIABLE Engine. Learners, class lists and study data don’t travel in one.${simple ? '' : ' A chat page in it starts paused.'}</p>
+${dropZone({ id: 'package-file', accept: '.zip,.json', upload: 'POST courses/from-file', hint: '.viable.zip or .viable.json' })}
+${say()}
+</section>
+<p class="v-note start-ask">Rather say it in your own words? <a href="/console/ask">Tell Ask what you’re teaching</a>, and it sets up the course.</p>`;
+}
+
+const LIST_CSS = `.page-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px 32px}
+.page-head>div{flex:1 1 320px;min-width:0}
+.course-list{display:grid;gap:10px;margin:28px 0 0;padding:0;list-style:none}
+.course-card{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;border:1px solid var(--public-rule);border-radius:var(--radius);background:var(--surface);color:var(--public-ink);text-decoration:none;transition:border-color .16s ease}
+.course-card:hover{border-color:var(--public-rule-strong)}
+.course-card>span:first-child{display:grid;gap:2px;min-width:0}
+.course-card strong{font-size:1.0625rem;font-weight:600;overflow-wrap:anywhere}
+.course-card small{color:var(--muted);font-size:.875rem}
+.first-door{margin-top:14px}
+.start-part{display:grid;gap:12px;max-width:720px}
+.start-part>h2+*{margin-top:0}
+.new-blank{display:flex;flex-wrap:wrap;gap:10px}
+.new-blank .v-input{flex:1 1 280px;min-width:0}
+.new-blank .v-btn{flex:none}
+.examples{display:grid;gap:0;margin:0;padding:0;list-style:none;border-top:1px solid var(--public-rule)}
+.example{display:grid;gap:8px;padding:16px 0;border-bottom:1px solid var(--public-rule)}
+.example-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.example h3{font-size:1rem;font-weight:600;letter-spacing:0;line-height:1.35}
+.example p{margin:4px 0 0;color:var(--public-text);font-size:.9375rem;line-height:1.5}
+.example small{display:block;margin-top:4px;color:var(--muted);font-size:.8125rem}
+.example .v-btn{flex:none}
+.example summary{width:fit-content;color:var(--ink-blue);font-size:.875rem;cursor:pointer}
+.example details ul{display:grid;gap:8px;margin:8px 0 2px;padding:0;list-style:none}
+.example details strong{display:block;color:var(--public-ink);font-size:.9375rem;font-weight:500}
+.example details li small{margin-top:0}
+.start-ask{margin-top:28px;max-width:720px}
+@media (max-width:520px){.example-head{flex-direction:column;gap:10px}}`;
 
 // --- A course's activities ----------------------------------------------------------------------------
 
@@ -133,7 +176,7 @@ function activityRow(activity, code, version, index, count, locked, sections, ow
 <div class="actions row-do">
 ${locked ? '' : `<button class="v-btn is-small" type="button" data-api="POST ${api}/release" data-body='${esc(JSON.stringify({ version, release: open ? 'hidden' : 'open' }))}' data-said="${open ? 'Hidden from learners.' : 'Open to learners.'}">${open ? 'Hide' : 'Open'}</button>`}
 <a class="v-btn is-small" href="/console/api/courses/${esc(code)}/try/${key}" target="_blank" rel="noopener">Try it</a>
-${locked ? '' : `<button class="v-btn is-small icon" type="button" aria-label="Move ${esc(activity.title)} up" data-api="POST ${api}/move" data-body='${esc(JSON.stringify({ version, by: -1 }))}'${index === 0 ? ' disabled' : ''}>↑</button><button class="v-btn is-small icon" type="button" aria-label="Move ${esc(activity.title)} down" data-api="POST ${api}/move" data-body='${esc(JSON.stringify({ version, by: 1 }))}'${index === count - 1 ? ' disabled' : ''}>↓</button>`}
+${locked ? '' : `<button class="v-btn is-small icon" type="button" aria-label="Move ${esc(activity.title)} up" data-api="POST ${api}/move" data-body='${esc(JSON.stringify({ version, by: -1 }))}'${index === 0 ? ' disabled' : ''}><span class="turned">${icon('chevron', 15)}</span></button><button class="v-btn is-small icon" type="button" aria-label="Move ${esc(activity.title)} down" data-api="POST ${api}/move" data-body='${esc(JSON.stringify({ version, by: 1 }))}'${index === count - 1 ? ' disabled' : ''}>${icon('chevron', 15)}</button>`}
 </div>
 ${locked ? '' : forSections(activity, code, sections, own, open)}
 ${say()}
@@ -156,7 +199,7 @@ async function activitiesBody({ library, classes, origin, addresses, signIn, tab
   const rows = (list) => list.map((activity) => activityRow(activity, code, meta.version, activities.indexOf(activity), activities.length, locked, sections, releases[activity.key] || {})).join('');
   const groups = [...units.map((unit) => ({ title: unit.title, list: inUnit(unit.ref) })), { title: units.length ? 'Not in a unit' : null, list: activities.filter((activity) => !units.some((unit) => unit.ref === activity.unit_ref)) }].filter((group) => group.title && units.length ? group.list.length || group.title !== 'Not in a unit' : group.list.length);
   return {
-    title: `Activities · ${course.title}`,
+    title: course.title,
     body: `${courseHead({ title: course.title, code, origin, addresses, tabs, current: 'Activities', closed: meta.status === 'closed' })}
 ${locked ? SAVING : ''}
 ${shut ? `<p class="notice">Only personal codes on the class list open this course, and nobody is on it yet. <a href="/console/courses/${esc(code)}/people">Add your class</a>.</p>` : ''}
@@ -282,7 +325,7 @@ export const changeCourse = async (library, code, version, work, note) => {
 export const coursePages = [
   {
     id: 'courses', title: 'Courses',
-    render: async (tools) => ({ body: await listBody(tools), css: `${FORMS_CSS}\n${LIST_CSS}`, script: CONSOLE_SCRIPT }),
+    render: async (tools) => ({ body: await listBody(tools), css: `${FORMS_CSS}\n${LIST_CSS}` }),
     api: [
       ['POST', /^courses$/, async ({ library }, _match, body) => {
         const title = clean(body?.title, 160);
@@ -358,6 +401,11 @@ export const coursePages = [
         return { said: 'Saved.' };
       }]
     ]
+  },
+  {
+    id: 'new-course', title: 'New course', section: 'courses', nav: false,
+    render: async (tools) => ({ body: `<nav class="crumbs" aria-label="Where you are"><a href="/console/courses">Courses</a></nav><h1>New course</h1>${tools.classes.saving ? await startParts(tools) : SAVING}`, css: `${FORMS_CSS}\n${LIST_CSS}` }),
+    api: []
   },
   {
     id: 'course-activities', title: 'Activities', section: 'courses', nav: false, courseTab: 'Activities', tabPath: '',

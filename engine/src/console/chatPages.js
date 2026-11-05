@@ -6,7 +6,6 @@
  */
 import { CHAT_PAGE_LIMITS, LOOK, chatPageSettings, profileLook } from '../learner/settings.js';
 import { messagesToday } from '../server/learner.js';
-import { CONSOLE_SCRIPT } from './client.js';
 import { lookForm, newAgent, noModelNotice } from './agentPages.js';
 import { choose, esc, FORMS_CSS, hereOnly, qrSvg, reachOf, say, text } from './forms.js';
 import { addAgent, agentAt, agentsIn, changeAgent, clean, knowledgeIn, linesOf, NO_STORE, OWN, plural, refused, ROWS_CSS } from './places.js';
@@ -207,7 +206,7 @@ async function setStatus({ library }, match, body) {
 export const chatPages = [
   {
     id: 'chat-pages', title: 'Chat pages',
-    render: async (tools) => ({ body: await listBody(tools), css: `${FORMS_CSS}\n${ROWS_CSS}`, script: CONSOLE_SCRIPT }),
+    render: async (tools) => ({ body: await listBody(tools), css: `${FORMS_CSS}\n${ROWS_CSS}` }),
     api: [
       ['POST', /^chat-pages$/, createPage],
       ['PUT', /^chat-pages\/([\w.-]+)$/, savePage],
@@ -217,7 +216,7 @@ export const chatPages = [
   {
     id: 'chat-page', title: 'Chat page', section: 'chat-pages', nav: false,
     match: /^chat-pages\/([\w.-]+)$/,
-    render: async (tools, match) => { const made = await pageBody(tools, match); return { ...made, css: `${FORMS_CSS}\n${ROWS_CSS}\n${PAGE_CSS}`, script: CONSOLE_SCRIPT }; },
+    render: async (tools, match) => { const made = await pageBody(tools, match); return { ...made, css: `${FORMS_CSS}\n${ROWS_CSS}\n${PAGE_CSS}` }; },
     api: []
   }
 ];

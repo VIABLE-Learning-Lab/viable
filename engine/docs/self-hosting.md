@@ -441,7 +441,7 @@ searches only the knowledge bases beside it. A new agent can be made beside a kn
 something, and a VETTING step with those instructions as its guideline when a second model checks it. Its steps name the model
 `default`, which the roles on Models replace, so a role with no model means it can't answer. Reading web pages and remembering
 use an Agent step, so a message can take several model calls. An agent with any other graph runs as it is: its page lists its
-steps with the model each uses now, and they change on the Developer Platform. Its look and its chat page can change here.
+steps with the model each uses now, and they change on the VIABLE Developer Platform. Its look and its chat page can change here.
 **Test it** runs an agent on the real path, as a real call on your key, and keeps nothing but what the agent remembers, under
 a test visitor. An agent can be downloaded alone, with the agents it calls and the knowledge they search. On the Developer
 Platform, models it doesn't have become its default, and the import says so. It can't be removed while

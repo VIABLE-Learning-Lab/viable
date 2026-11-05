@@ -2,7 +2,7 @@
 
 Each step type an agent graph can use has one manifest in `src/agents/steps/<type>.js`. It is
 plain data (a default export with no functions), so it serializes to JSON unchanged. One manifest
-drives the step settings panel and canvas card in the Developer Portal, the step library, the AI
+drives the step settings panel and canvas card on the VIABLE Developer Platform, the step library, the AI
 builder's notes, `GET /v1/developer/agents/graph-schema` (and so `viable developer agents schema`),
 this harness's `schemas/steps.json` and the step docs. Runtime validation stays in
 `src/agents/graph.js`; `test/stepManifests.test.js` keeps the two in agreement.

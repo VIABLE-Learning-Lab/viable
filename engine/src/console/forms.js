@@ -4,12 +4,12 @@
  */
 import { encode } from 'uqr';
 import { escapeHtml as esc } from '../learner/shell.js';
-import { CONSOLE_SCRIPT } from './client.js';
+import { icon } from './icons.js';
 
 export { esc };
 export const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 /** A page's render, with the look and the script these forms need. */
-export const withForms = (body) => async (tools, match) => { const made = await body(tools, match); return { ...made, css: `${FORMS_CSS}\n${made.css}`, script: CONSOLE_SCRIPT }; };
+export const withForms = (body) => async (tools, match) => { const made = await body(tools, match); return { ...made, css: `${FORMS_CSS}\n${made.css}` }; };
 export const attrs = (more = {}) => Object.entries(more).filter(([, value]) => value != null && value !== false).map(([name, value]) => (value === true ? ` ${name}` : ` ${name}="${esc(value)}"`)).join('');
 
 let counter = 0;
@@ -25,10 +25,10 @@ export function text(name, label, value, { hint = '', rows = 0, type = 'text', i
   return `<div class="v-form"><label class="v-label" for="${at}">${esc(label)}</label>${control}${hintOf(hint)}</div>`;
 }
 
-/** A labelled select. options: [{ value, label }]. */
+/** A labelled choice of one: a real select, which the page's script dresses as the console's own menu. options: [{ value, label, hint }]. */
 export function choose(name, label, value, options, { hint = '', id = null, ...more } = {}) {
   const at = id || fresh(name);
-  const rows = options.map((option) => `<option value="${esc(option.value ?? '')}"${String(option.value ?? '') === String(value ?? '') ? ' selected' : ''}>${esc(option.label)}</option>`).join('');
+  const rows = options.map((option) => `<option value="${esc(option.value ?? '')}"${String(option.value ?? '') === String(value ?? '') ? ' selected' : ''}${option.hint ? ` data-hint="${esc(option.hint)}"` : ''}>${esc(option.label)}</option>`).join('');
   return `<div class="v-form"><label class="v-label" for="${at}">${esc(label)}</label><select class="v-input" id="${at}" name="${esc(name)}"${attrs(more)}>${rows}</select>${hintOf(hint)}</div>`;
 }
 
@@ -43,6 +43,11 @@ export function toggle(name, label, on, { hint = '', value = null, disabled = fa
 }
 
 export const say = () => '<p class="say" data-say role="status"></p>';
+
+/** Where a file goes: dropped on it, or chosen with a click or the keyboard, and sent at once (data-upload). The first it holds is what it's for. */
+export function dropZone({ id, label = 'Drop a file here', accept, upload, multiple = false, hint = '', disabled = false }) {
+  return `<label class="v-drop" data-drop for="${esc(id)}"><input class="sr" id="${esc(id)}" type="file"${accept ? ` accept="${esc(accept)}"` : ''} data-upload="${esc(upload)}"${multiple ? ' multiple' : ''}${disabled ? ' disabled' : ''}>${icon('upload', 22)}<span data-drop-words><strong>${esc(label)}</strong> or <u>choose ${multiple ? 'files' : 'one'}</u></span>${hint ? `<small>${esc(hint)}</small>` : ''}</label>`;
+}
 
 const round = (n) => Math.round(n * 1000) / 1000;
 
@@ -88,7 +93,7 @@ export function courseHead({ title, code, origin, addresses = [], tabs, current,
   const link = `${base}/course/${code}`;
   return `<nav class="crumbs" aria-label="Where you are"><a href="/console/courses">Courses</a></nav>
 <h1>${esc(title)}</h1>
-${closed ? '<p class="notice">This course is closed: learners can’t open it. Open it again in Settings.</p>' : `<div class="share-line"><code>${esc(link)}</code><button class="v-btn is-small" type="button" data-copy="${esc(link)}">Copy link</button><a class="v-btn is-small" href="/console/courses/${esc(code)}/share">Share</a><a class="v-btn is-small" href="/console/api/courses/${esc(code)}/try" target="_blank" rel="noopener">Try it</a></div>
+${closed ? '<p class="notice">This course is closed: learners can’t open it. Open it again in Settings.</p>' : `<div class="share-line"><code>${esc(link)}</code><button class="v-btn is-small" type="button" data-copy="${esc(link)}">Copy link</button><a class="v-btn is-small" href="/console/courses/${esc(code)}/share">Share</a><a class="v-btn is-small" href="/console/api/courses/${esc(code)}/try" target="_blank" rel="noopener">Try it</a><a class="v-btn is-small" href="/console/ask?course=${esc(code)}">Ask about it</a></div>
 ${local && !addresses.length ? '<p class="v-note here-only">This address only opens on this computer. <a href="/console/courses/' + esc(code) + '/share">To reach it from elsewhere</a></p>' : ''}`}
 <nav class="tabs" aria-label="This course"><ul>${tabs.map((tab) => `<li><a href="/console/courses/${esc(code)}${tab.tabPath}"${tab.courseTab === current ? ' aria-current="page"' : ''}>${esc(tab.courseTab)}</a></li>`).join('')}</ul></nav>`;
 }
@@ -132,10 +137,5 @@ fieldset.one-of>legend{padding:0;margin-bottom:6px}
 .one strong,.toggle strong{font-weight:600;color:var(--public-ink);font-size:.9375rem}
 .one small,.toggle small{color:var(--muted);font-size:.875rem;line-height:1.45}
 .toggle{display:grid;grid-template-columns:18px minmax(0,1fr);gap:10px;cursor:pointer}
-dialog.ask{max-width:min(460px,calc(100vw - 32px));padding:22px;border:0;border-radius:var(--radius);background:var(--surface);color:var(--public-ink);box-shadow:var(--public-shadow)}
-dialog.ask::backdrop{background:rgb(0 0 0/.35)}
-dialog.ask p{margin:0 0 14px;line-height:1.5}
-dialog.ask label{display:grid;gap:6px;margin-bottom:14px}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @media (max-width:640px){.fields.two{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:420px){.tabs a{padding:9px 10px}}`;

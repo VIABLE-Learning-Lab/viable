@@ -33,7 +33,7 @@ button.
 
 What you change reaches learners on their next message. There is nothing to restart and nothing to publish.
 
-**Or just say it.** With a model set, the console opens on **Ask**: say what you're teaching, and it makes the course, the activities and the questions, showing each step and what it did, and hands back cards to use, such as the link, its QR code and the class list. It can't open anything to learners or delete anything: that waits for your click, enforced on the server. A class list goes in its own box, and names never reach the model.
+**Or just say it.** With a model set, the console opens on **Ask**: say what you're teaching, and it makes the course, the activities and the questions, showing each step as it works, and hands back cards to use, such as the link, its QR code and the class list. To change what's there, bring a course or an activity into the conversation, from its page or from the + in the box. With a model that hears, you can say it instead of typing. It can't change what learners can already reach, open anything to them or delete anything: that waits for your click, enforced on the server. A class list goes in its own box, and names never reach the model.
 
 ## What each model turns on
 
@@ -68,9 +68,9 @@ A library wants research help on its guides' pages, answering from its own guide
 
 Anyone who can open it can use it on your model keys, up to the limits you set.
 
-## From the Developer Platform
+## From the VIABLE Developer Platform
 
-On the Developer Platform, download the course or agent as a package with its files (Courses → ⋯ → Export). In the console:
+On the VIABLE Developer Platform, download the course or agent as a package with its files (Courses → ⋯ → Export). In the console:
 **Courses → From a file**. Or start with it:
 
 ```sh
@@ -82,7 +82,7 @@ npx github:VIABLE-Learning-Lab/viable start course.viable.zip
 | Activities, question sets, How the AI helps, agents and their look, chat page settings, knowledge files, website snapshots | Learners and their work, class lists, keys, study data |
 
 A workflow built on the visual editor runs here as it is: you can't redraw it in the console, and you can change its look and page.
-The other way works too: **Settings → Download**, then import it on the Developer Platform, where models it doesn't have become
+The other way works too: **Settings → Download**, then import it on the VIABLE Developer Platform, where models it doesn't have become
 its default, and it says so.
 
 ## Where it runs
@@ -121,5 +121,5 @@ Apps call the same API as the hosted platform (`POST /v1/agents/<slug>/runs`), s
 [learner-pages.md](docs/learner-pages.md), [deploying.md](docs/deploying.md), [try.md](docs/try.md).
 
 **Not here:** the visual workflow editor, studies with consent and the research export stay on the
-[Developer Platform](https://developers.viablelab.org). LTI isn't built. The Engine is built on the
+[VIABLE Developer Platform](https://developers.viablelab.org). LTI isn't built. The Engine is built on the
 [VIABLE Harness](../harness/README.md), which you can use without any of this.

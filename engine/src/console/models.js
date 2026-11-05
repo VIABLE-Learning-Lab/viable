@@ -227,6 +227,7 @@ const MODELS_SCRIPT = String.raw`(() => {
     if (!next) { location.reload(); return; }
     const focused = document.activeElement && document.activeElement.id;
     const scrolled = [...document.querySelectorAll('.models')].map((list) => [list.closest('[data-id]').dataset.id, list.scrollTop]);
+    window.viableConsole?.dress(next);
     document.querySelector('main').replaceWith(next);
     for (const [id, top] of scrolled) { const list = next.querySelector('[data-id="' + id + '"] .models'); if (list) list.scrollTop = top; }
     const again = focused && document.getElementById(focused);

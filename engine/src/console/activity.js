@@ -9,7 +9,7 @@ import { TEACHING_LIMITS, teachingContext, teachingSettings } from '../../../har
 import { ITEM_TYPES, normalizeItems } from '../learner/questions.js';
 import { activityKeys } from '../server/library.js';
 import { changeCourse, courseAt, kindOfActivity } from './course.js';
-import { choose, esc, oneOf, say, text, toggle, withForms } from './forms.js';
+import { choose, dropZone, esc, oneOf, say, text, toggle, withForms } from './forms.js';
 
 // Large data, loaded when a page asks for it, so a server that never opens these starts small.
 const misconceptions = () => import('../../../harness/src/utils/misconceptions.js');
@@ -86,7 +86,7 @@ ${toggle('panel.lock_on_submit', 'Handed in once: they can’t change it afterwa
 </div>
 <div class="kind-fields" data-show-when="kind=reading" data-form="${FORM}" data-say-box>
 ${panel.file_ref ? `<p class="v-note">The reading: ${esc((doc.files || []).find((file) => file.ref === panel.file_ref)?.name || panel.file_ref)}</p>` : '<p class="v-note">No PDF yet.</p>'}
-${locked ? '' : `<div class="v-form"><label class="v-label" for="reading-file">${panel.file_ref ? 'Replace it with a PDF' : 'Choose a PDF'}</label><input class="v-input" id="reading-file" type="file" accept=".pdf,application/pdf" data-upload="POST courses/${esc(code)}/activities/${esc(activity.key)}/reading"></div>`}${say()}
+${locked ? '' : dropZone({ id: 'reading-file', label: panel.file_ref ? 'Drop another PDF to replace it' : 'Drop a PDF here', accept: '.pdf,application/pdf', upload: `POST courses/${code}/activities/${activity.key}/reading` })}${say()}
 </div>
 <div class="kind-fields" data-show-when="kind=embed" data-form="${FORM}">
 ${text('panel.url', 'Its address', panel.url, { type: 'url', form: FORM, placeholder: 'https://', hint: 'It has to allow being shown inside another page.' })}
@@ -198,10 +198,10 @@ async function activityBody({ library, classes, settings, origin, simple, url },
   const onForm = (markup) => markup.replaceAll('type="radio"', `type="radio" form="${FORM}"`).replaceAll('type="checkbox"', `type="checkbox" form="${FORM}"`);
   const sections = await classes.sections(code);
   return {
-    title: `${activity.title} · ${doc.course.title}`,
+    title: activity.title,
     body: `<nav class="crumbs" aria-label="Where you are"><a href="/console/courses">Courses</a> / <a href="/console/courses/${esc(code)}">${esc(doc.course.title)}</a></nav>
 <h1>${esc(activity.title)}</h1>
-<div class="share-line"><span class="v-pill">${esc({ open: 'Open', hidden: 'Hidden', scheduled: 'Scheduled' }[release])}</span><a class="v-btn is-small" href="/console/api/courses/${esc(code)}/try/${esc(activity.key)}" target="_blank" rel="noopener">Try it</a></div>
+<div class="share-line"><span class="v-pill">${esc({ open: 'Open', hidden: 'Hidden', scheduled: 'Scheduled' }[release])}</span><a class="v-btn is-small" href="/console/api/courses/${esc(code)}/try/${esc(activity.key)}" target="_blank" rel="noopener">Try it</a><a class="v-btn is-small" href="/console/ask?course=${esc(code)}&amp;activity=${esc(activity.key)}">Ask about it</a></div>
 <form id="${FORM}" data-api="PUT ${api}" data-guard data-say-in="save-bar"><input type="hidden" name="version" value="${meta.version}"></form>
 <div class="two-sides">
 <div class="edit">
@@ -280,7 +280,7 @@ const ACTIVITY_CSS = `.two-sides{display:grid;grid-template-columns:minmax(0,1fr
 .part h3 small{color:var(--muted);font-weight:400}
 .find{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .find input{flex:1 1 240px;min-height:38px;padding:6px 12px}
-.find select{flex:0 0 auto;width:auto;min-height:38px;padding:6px 12px}
+.find .v-menu-button{flex:0 0 auto;width:auto;min-height:38px;padding:6px 12px}
 .found ul{display:grid;gap:6px;margin:0;padding:0;list-style:none}
 .found li>button,.found .pick{display:grid;gap:2px;width:100%;padding:10px 12px;border:1px solid var(--public-rule);border-radius:var(--radius-sm);background:var(--surface);color:var(--public-text);font:inherit;text-align:left;cursor:pointer}
 .found li>button:hover,.found .pick:hover{border-color:var(--ink-blue)}
@@ -520,6 +520,14 @@ export const activityPages = [
         const { doc } = await changeCourse(library, match[1], null, (draft) => {
           const { activity, index, list } = activityIn(draft, match[2]);
           const { key: _key, id: _id, ...rest } = structuredClone(activity);
+          // Its own questions: a copy made to change into something else mustn't change the original.
+          for (const panel of rest.workspace?.panels || []) {
+            const set = panel.type === 'questions' && draft.question_sets?.find((item) => item.ref === panel.set_ref);
+            if (!set) continue;
+            const ref = newRef(`${set.title} copy`, new Set(draft.question_sets.map((item) => item.ref)));
+            draft.question_sets.push({ ...structuredClone(set), ref, title: `${set.title} (copy)`.slice(0, 160) });
+            panel.set_ref = ref;
+          }
           list.splice(index + 1, 0, { ...rest, title: `${activity.title} (copy)`.slice(0, 160), release: 'hidden', opens_at: null, closes_at: null });
         }, 'Copied an activity');
         const at = doc.course.activities.findIndex((item) => item.key === match[2]);

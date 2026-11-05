@@ -188,7 +188,7 @@ viable-engine deploy cloudflare my-course.json --out site</pre>
 </div>
 </div>
 </section>
-<footer class="foot wrap"><p>The harness is open source under the MIT license.</p><p><a href="${REPOSITORY}">The repository</a></p></footer>
+<footer class="foot wrap"><p>The VIABLE Harness is part of the VIABLE Open Kit, under the MIT license.</p><p><a href="${REPOSITORY}">The repository</a></p></footer>
 <script nonce="${nonce}">${LAUNCHER_SCRIPT(tour ? featured?.href ?? null : null)}</script>
 </body>
 </html>`;

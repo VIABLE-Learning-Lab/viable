@@ -38,7 +38,7 @@ record can say exactly what the AI was given.
 
 | What | How much | Where it lives | Who narrows it | What reaches the model |
 | --- | --- | --- | --- | --- |
-| What the teacher decided | One activity's settings | Your file, or the activity on the Engine or the Developer Platform | The teacher | The goal and the limit, every turn |
+| What the teacher decided | One activity's settings | Your file, or the activity on the Engine or the VIABLE Developer Platform | The teacher | The goal and the limit, every turn |
 | Teaching moves | 4, with their sources | In the code, [`src/brief.js`](../src/brief.js) | The moment | One |
 | Misconceptions ([Eedi](https://www.eedi.com)) | 8,117, under 2,258 skills, 1.2 MB | In the package | The teacher ticks up to 8, or words search the skills | At most 2 |
 | Durable skills (Carnegie) | 60 KB | In the package | The teacher picks one | Its level |
@@ -68,7 +68,7 @@ Retrieval is for your own documents, such as a library's guides, and belongs to 
 | Where | Keywords | By meaning | Reranked | Where the vectors are |
 | --- | --- | --- | --- | --- |
 | The Engine's knowledge | BM25 | Once a model for it is set in the console | No | In its own store, made the first time a file is searched, and kept |
-| The Developer Platform's knowledge | BM25 | Yes | Yes | In a vector index on the platform |
+| The VIABLE Developer Platform's knowledge | BM25 | Yes | Yes | In a vector index on the platform |
 | The Harness | No | No | No | None |
 
 Using both generally finds more than keywords alone: meaning catches a paraphrase, and keywords catch an exact name or a
@@ -91,11 +91,11 @@ All of them reach the same code. What differs is what runs where, and whether it
 | [The gateway](with-your-stack.md) | One URL in front of your model | This code, on your server | In the package, and the settings you give it | Yes |
 | [The Engine](../../engine/README.md) | The whole thing on your server | This code, inside it | In the package, and its own store | Yes |
 
-## Where the Engine and the Developer Platform use it
+## Where the Engine and the VIABLE Developer Platform use it
 
 Neither has a copy: they import these same files, so a change here reaches all three.
 
-| Part of the Harness | The Engine | The Developer Platform |
+| Part of the Harness | The Engine | The VIABLE Developer Platform |
 | --- | --- | --- |
 | Teaching settings, in `How the AI helps` | Yes | Yes |
 | The turn's brief | On by default | A choice in How the AI helps, off by default, read by rules |

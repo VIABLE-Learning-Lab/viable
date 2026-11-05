@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { memoryStore } from '../../harness/src/store/store.js';
 import { looksLikeClassList, settled } from '../src/console/ask.js';
+import { holdsClassList } from '../src/console/askTools.js';
 import { createApp } from '../src/server/app.js';
 
 const TOKEN = 'a-token-of-some-length';
@@ -20,7 +21,7 @@ function scripted(script) {
     if (String(url).endsWith('/models')) return new Response(JSON.stringify({ data: [{ id: 'reply-model' }] }), { headers: { 'content-type': 'application/json' } });
     const body = JSON.parse(init.body);
     sent.push(body);
-    const next = typeof script === 'function' ? script(body, at) : script[at];
+    const next = await (typeof script === 'function' ? script(body, at) : script[at]);
     at += 1;
     if (next === undefined) return new Response(JSON.stringify({ choices: [{ message: { role: 'assistant', content: 'That’s all.' }, finish_reason: 'stop' }] }), { headers: { 'content-type': 'application/json' } });
     if (next instanceof Response) return next;
@@ -127,7 +128,8 @@ test('what reaches learners waits for a person: the model can only propose it, a
   assert.equal(course.activities[0].release, 'hidden', 'proposing changes nothing, whatever the model then says');
   assert.equal(s.sent.length, 3, 'a proposal ends the turn, so the model can’t go on to say it happened');
   assert.doesNotMatch(allText(events), /It’s open now|made\.up/);
-  assert.ok(events.some((event) => event.name === 'said' && /Nothing changes for learners until you do/.test(event.data.html)));
+  assert.ok(events.some((event) => event.name === 'card' && /Open it/.test(event.data.html)), 'the button is on its card');
+  assert.ok(!events.some((event) => event.name === 'said' && /is open/.test(event.data.html)));
 
   const thread = threadOf(events);
   const api = /data-api="POST (ask\/thr_[a-f0-9]+\/pending\/pnd_[a-f0-9]+)"/.exec(card)[1];
@@ -340,4 +342,160 @@ test('one round of a model’s steps has a limit, and the ones past it are told 
 test('reading as a class list: lists are, sentences aren’t', () => {
   for (const list of ['Ada Lovelace\nGrace Hopper\nAlan Turing', 'Lovelace, Ada\nHopper, Grace\nTuring, Alan', 'Ada Lovelace\tPeriod 1\nGrace Hopper\tPeriod 2\nAlan Turing\tPeriod 1', '王小明\n李华\n张伟']) assert.ok(looksLikeClassList(list), list);
   for (const words of ['Fractions for grade 5', 'A course on fractions.\nThey keep adding denominators.\nMake it short.', 'Week 1\nWeek 2', 'Make three activities:\n- Practice\n- Check\n- Reflect']) assert.ok(!looksLikeClassList(words), words);
+});
+
+test('a course or activity brought into a conversation is what it works on, and what learners can reach waits for a click', async () => {
+  const courseName = 'Fractions';
+  let code;
+  let key;
+  const s = await server(following([
+    (course) => [call('read_activity', { course: code, activity: key })],
+    (course) => [call('change_activity', { course: code, activity: key, goal: 'Say why two fractions are equal.', minutes: 15 })],
+    'Done.',
+    (course) => [call('change_activity', { course: code, activity: key, title: 'Practice, renamed' })],
+    'Waiting.'
+  ]));
+  ({ go: code } = await s.ok('POST', 'courses', { title: courseName }));
+  code = code.split('/').at(-1);
+  const { go } = await s.ok('POST', `courses/${code}/activities`, { title: 'Practice', kind: 'writing' });
+  key = go.split('/').at(-1);
+  const page = await s.page(`courses/${code}/activities/${key}`);
+  assert.match(page, new RegExp(`/console/ask\\?course=${code}&amp;activity=${key}`), 'its page leads to Ask, bringing it along');
+  assert.match(await s.page(`ask?course=${code}&activity=${key}`), /What should change in “Practice”\?/);
+
+  const response = await s.api('POST', 'ask', { message: 'Make it shorter.', about: { course: code, activity: key } });
+  const events = (await response.text()).split('\n\n').filter(Boolean).map((frame) => ({ name: /^event: (.+)$/m.exec(frame)?.[1], data: JSON.parse(/^data: (.+)$/m.exec(frame)?.[1] || 'null') }));
+  assert.match(s.sent[0].messages[0].content, new RegExp(`the activity “Practice” \\(activity: ${key}\\)`), 'the model is told what they mean');
+  const thread = threadOf(events);
+  let { course } = await s.ok('GET', `courses/${code}/download`);
+  assert.equal(course.activities[0].minutes, 15, 'hidden, so it changes now');
+  assert.equal(course.activities[0].teaching.goal, 'Say why two fractions are equal.');
+  assert.ok(events.some((event) => event.name === 'done' && event.data.words), 'it says how long it worked');
+
+  await s.ok('POST', `courses/${code}/activities/${key}/release`, { release: 'open' });
+  const again = await s.ask('Rename it.', thread);
+  ({ course } = await s.ok('GET', `courses/${code}/download`));
+  assert.equal(course.activities[0].title, 'Practice', 'learners can reach it, so nothing changed yet');
+  const card = again.find((event) => event.name === 'card' && /Change it/.test(event.data.html)).data.html;
+  const api = /data-api="POST (ask\/thr_[a-f0-9]+\/pending\/pnd_[a-f0-9]+)"/.exec(card)[1];
+  await s.ok('POST', api, { yes: true });
+  ({ course } = await s.ok('GET', `courses/${code}/download`));
+  assert.equal(course.activities[0].title, 'Practice, renamed', 'a person’s click does it');
+  assert.match((await s.ok('POST', api, { yes: true })).said, /already settled/);
+});
+
+test('a conversation can be deleted, one or all, and what it set up stays', async () => {
+  const s = await server(['Hello.', 'Hello again.']);
+  const first = threadOf(await s.ask('One.'));
+  const second = threadOf(await s.ask('Two.'));
+  const home = await s.page('ask');
+  assert.match(home, new RegExp(`data-forget="${first}"`));
+  assert.match(home, /data-forget-all/);
+  assert.deepEqual(await s.ok('DELETE', `ask/${first}`, {}), { removed: 1 });
+  assert.doesNotMatch(await s.page('ask'), new RegExp(first));
+  assert.equal((await s.api('POST', 'ask', { message: 'Three.', thread: first })).status, 404);
+  assert.deepEqual(await s.ok('DELETE', 'ask', {}), { removed: 1 });
+  assert.doesNotMatch(await s.page('ask'), new RegExp(second));
+});
+
+test('a reply’s list stays a list when a line leads into it, and work folds into a line', async () => {
+  const s = await server(following([
+    () => [call('list_courses', {})],
+    'I assumed:\n- Grade 5\n- About 20 minutes\n\nTell me when to open it.'
+  ]));
+  const events = await s.ask('Fractions.');
+  const html = events.find((event) => event.name === 'said').data.html;
+  assert.match(html, /<p>I assumed:<\/p><ul><li>Grade 5<\/li><li>About 20 minutes<\/li><\/ul><p>Tell me when to open it\.<\/p>/);
+  const page = await s.page(`ask/${threadOf(events)}`);
+  assert.match(page, /class="ask-run"/);
+  assert.match(page, /Worked for /);
+  assert.match(page, /1 step/);
+});
+
+test('a list of names reads as one however a spreadsheet wrote it', () => {
+  for (const list of [
+    '| Name | Score |\n| --- | --- |\n| Ada Lovelace | 92 |\n| Grace Hopper | 88 |\n| Katherine Johnson | 95 |',
+    'Ada,92\nGrace,88\nKatherine,95',
+    'Ada Lovelace 92 A\nGrace Hopper 88 B+\nKatherine Johnson 95 A',
+    '1. Lovelace, Ada\t92\n2. Hopper, Grace\t88\n3. Johnson, Katherine\t95'
+  ]) assert.ok(looksLikeClassList(list), list);
+  for (const note of ['Fractions for grade 5, please.\nThey keep adding the denominators.', 'Make it a practice set with 5 questions.', '| Topic | Week |\n| --- | --- |\n| Add the fractions in this unit | 2 |']) assert.ok(!looksLikeClassList(note), note);
+  const padding = Array.from({ length: 40 }, (_, at) => `This is a sentence about fractions number ${at}, and it goes on a little.`).join('\n');
+  assert.ok(holdsClassList(`${padding}\nAda Lovelace, 92\nGrace Hopper, 88\nKatherine Johnson, 95\nMary Jackson, 91\nDorothy Vaughan, 90\nChristine Darden, 89\n${padding}`), 'a list inside a long file');
+  assert.ok(!holdsClassList(padding), 'prose isn’t');
+});
+
+test('Stop stops, whatever the run saves meanwhile, and a card waits until the run is over', async () => {
+  let code;
+  let key;
+  let thread;
+  let s;
+  s = await server(following([
+    'Hello.',
+    async () => { await s.ok('POST', `ask/${thread}/stop`, {}); return [call('list_courses', {}), call('list_courses', {})]; },
+    'This should never be reached.',
+    'Back again.'
+  ]));
+  ({ go: code } = await s.ok('POST', 'courses', { title: 'Fractions' }));
+  code = code.split('/').at(-1);
+  ({ go: key } = await s.ok('POST', `courses/${code}/activities`, { title: 'Practice', kind: 'writing' }));
+  key = key.split('/').at(-1);
+  // A thread to stop: the first message ends at once, then the second is stopped in its first call.
+  thread = threadOf(await s.ask('Hello.'));
+  const stoppedFrom = s.sent.length;
+  const events = await s.ask('Do a lot.', thread);
+  assert.ok(events.some((event) => event.name === 'said' && /Stopped/.test(event.data.html)), JSON.stringify(events.map((event) => event.name)));
+  assert.ok(s.sent.length - stoppedFrom <= 1, 'one call was under way, and no more are paid for');
+  assert.ok(events.filter((event) => event.name === 'step' && event.data.state === 'done').length === 0, 'nor does it go on with the rest of what it was doing');
+  assert.equal((await s.ask('Again.', thread)).some((event) => event.name === 'said' && /Stopped/.test(event.data.html)), false, 'the next message starts clean');
+});
+
+test('a scheduled activity is one learners will meet, and a copy has questions of its own', async () => {
+  let code;
+  let key;
+  const s = await server(following([
+    () => [call('change_activity', { course: code, activity: key, title: 'Renamed' })],
+    'Asked.'
+  ]));
+  ({ go: code } = await s.ok('POST', 'courses', { title: 'Fractions' }));
+  code = code.split('/').at(-1);
+  const page = await s.page(`courses/${code}`);
+  const version = /name="version" value="([^"]+)"/.exec(page)?.[1];
+  ({ go: key } = await s.ok('POST', `courses/${code}/activities`, { title: 'Practice', kind: 'questions', version }));
+  key = key.split('/').at(-1);
+  const { doc } = { doc: await s.ok('GET', `courses/${code}/download`) };
+  const held = doc.course.activities.find((item) => item.title === 'Practice');
+  assert.ok(held.workspace.panels[0].set_ref);
+  // Copied, it holds a set of its own.
+  const copied = await s.ok('POST', `courses/${code}/activities/${key}/copy`, {});
+  const after = await s.ok('GET', `courses/${code}/download`);
+  const [one, two] = after.course.activities;
+  assert.notEqual(one.workspace.panels[0].set_ref, two.workspace.panels[0].set_ref, 'its own questions');
+  assert.ok(copied.go);
+  // It opens later: asked, not done.
+  const body = await s.page(`courses/${code}/activities/${key}`);
+  const formVersion = /name="version" value="([^"]+)"/.exec(body)[1];
+  await s.ok('PUT', `courses/${code}/activities/${key}`, { version: formVersion, title: 'Practice', kind: 'questions', panel: { set_ref: one.workspace.panels[0].set_ref }, release: 'scheduled', opens_at: new Date(Date.now() + 86400000).toISOString(), teaching: {} });
+  const events = await s.ask('Rename it.');
+  assert.ok(events.some((event) => event.name === 'card' && /Change it/.test(event.data.html)), 'a button, since learners will meet it when it opens');
+  const now = await s.ok('GET', `courses/${code}/download`);
+  assert.equal(now.course.activities[0].title, 'Practice');
+});
+
+test('on a button that changes what learners meet, each question shows with its answer; a reading won’t replace questions', async () => {
+  let code;
+  let key;
+  const s = await server(following([
+    () => [call('change_questions', { course: code, activity: key, add: [{ type: 'fill', prompt: 'What is 1/2 + 1/2?', accept: ['1'] }] })],
+    'Asked.'
+  ]));
+  ({ go: code } = await s.ok('POST', 'courses', { title: 'Fractions' }));
+  code = code.split('/').at(-1);
+  ({ go: key } = await s.ok('POST', `courses/${code}/activities`, { title: 'Practice', kind: 'questions' }));
+  key = key.split('/').at(-1);
+  await s.ok('POST', `courses/${code}/activities/${key}/release`, { release: 'open' });
+  const events = await s.ask('Add one.');
+  const card = events.find((event) => event.name === 'card' && /Change it/.test(event.data.html)).data.html;
+  assert.match(card, /What is 1\/2 \+ 1\/2\?/);
+  assert.match(card, /answer: 1/);
 });

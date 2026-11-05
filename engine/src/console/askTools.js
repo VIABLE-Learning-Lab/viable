@@ -14,6 +14,52 @@ import { activitiesOf } from './askCards.js';
 
 const refused = (message) => Object.assign(new Error(message), { status: 400, code: 'invalid_request' });
 const clean = (value, limit) => String(value ?? '').trim().slice(0, limit);
+
+// A pasted class list shouldn't reach a model: lines that read as names, in any script or case, with or without numbering, an ID or an email.
+// Reading a note as a list costs one click to send it anyway; the other mistake sends a learner's name to a model, so this leans that way.
+const EMAIL = /[\w.+-]+@[\w-]+\.[\w.-]+/;
+const WIDE = /^[\p{Script=Han}\p{Script=Hangul}\p{Script=Katakana}\p{Script=Hiragana}]+$/u;
+// Written small, these are English; An, To and In are also people's names, so a capital lets them through.
+const SMALL_WORDS = /(?<!\p{L})(?:an|the|and|or|for|with|to|of|in|on|at|by|from|my|our|their|they|this|that|is|are|be|it|we|you)(?!\p{L})/u;
+const TEACHERS_WORDS = /(?<!\p{L})(?:the|this|they|that|please|grades?|class(?:es)?|courses?|units?|weeks?|days?|lessons?|activit(?:y|ies)|practice|quiz(?:zes)?|questions?|hints?|students?|learners?)(?!\p{L})/iu;
+// What a score or a grade leaves at the end of a row: 92, 8.5, 90%, A-.
+const MARKS_AFTER = /(?:[\s,;|\t]+(?:\d[\d.,%/-]*|[A-F][+-]?))+\s*$/;
+function readsAsName(line) {
+  // A row of a table, as a spreadsheet becomes when it is read.
+  const row = line.replace(/^\|\s*/, '').replace(/\s*\|\s*$/, '');
+  const bare = row.replace(/^(?:[-*•]|\(?\d{1,3}[.):]?)\s+/, '').replace(EMAIL, '').replace(MARKS_AFTER, '').replace(/[\s,;|-]*\d[\d-]{2,}\s*$/, '').replace(/[\s,;|<>()-]+$/, '').trim();
+  const [name, rest = ''] = bare.split(/\t|\s*\|\s*|,(?=\s)|,(?=\d)/);
+  if (rest.length > 40 || SMALL_WORDS.test(name) || TEACHERS_WORDS.test(name)) return null;
+  if (WIDE.test(name)) return name.length <= 5 ? name : null;
+  return /^\p{L}[\p{L}\p{M}'’.-]*(?: \p{L}[\p{L}\p{M}'’.-]*){0,3}$/u.test(name) ? name : null;
+}
+export function looksLikeClassList(message) {
+  const lines = String(message).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.filter((line) => EMAIL.test(line)).length >= 2) return true;
+  const names = lines.map(readsAsName).filter(Boolean);
+  if (lines.length === 2) return names.length === 2 && names.every((name) => name.includes(' ') || WIDE.test(name));
+  return names.length >= 2 && names.length / lines.length >= 0.6;
+}
+// A file can be long and hold a list in one part of it, and a passage found in it can be that part.
+export function holdsClassList(text) {
+  const lines = String(text).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length <= 30) return looksLikeClassList(lines.join('\n'));
+  if (lines.filter((line) => EMAIL.test(line)).length >= 3) return true;
+  // Five in a row is a list. A deck of short titles can read as one too, which costs a click to say it isn't.
+  let inARow = 0;
+  for (const line of lines) {
+    inARow = readsAsName(line) ? inARow + 1 : 0;
+    if (inARow >= 5) return true;
+  }
+  return false;
+}
+// What the teacher said isn't a list goes through; anything else that reads as one stays off a model.
+async function notAList(here, id) {
+  if (here.thread?.read_anyway?.includes(id)) return null;
+  const words = await here.materials.words(id);
+  return holdsClassList(words) ? await here.materials.get(id) : null;
+}
+const LIST_WORDS = 'This looks like a list of learners’ names, so it wasn’t read. Tell the teacher so: a class list goes on a course’s People page, and if it isn’t one they can say so on the card.';
 const HELP = ['ask_first', 'hint', 'explain', 'check_only'];
 const KINDS = ['chat', 'questions', 'writing', 'reading', 'embed'];
 const string = (description) => ({ type: 'string', description });
@@ -43,7 +89,7 @@ const TEACHING = {
 };
 
 // Whether learners can reach an activity now: for everyone, or for a section of its own.
-const reaches = (activity, own) => activity.release !== 'hidden' || Object.values(own || {}).some((item) => item?.release !== 'hidden');
+const reaches = (activity, own) => activity.release !== 'hidden' || Boolean(activity.opens_at) || Object.values(own || {}).some((item) => item?.release !== 'hidden');
 
 function questionItem(question, id) {
   const type = question?.type;
@@ -95,6 +141,93 @@ function addQuestions(doc, activity, questions) {
 const teachingFrom = (args) => Object.fromEntries(['goal', 'help', 'watch_for'].filter((name) => args[name] !== undefined).map((name) => [name, name === 'help' ? (HELP.includes(args.help) ? args.help : null) : clean(args[name], 1000) || null]));
 const brief = (doc) => activitiesOf(doc).map((activity) => ({ activity: activity.key, title: activity.title, kind: kindOfActivity(activity), open: activity.release !== 'hidden', goal: activity.teaching?.goal ?? null, help: activity.teaching?.help ?? null, ai: Boolean(activity.agent_ref) }));
 const pageOf = (code, key) => `/console/courses/${code}${key ? `/activities/${key}` : ''}`;
+const READING_LAYOUT = { ai_width: 36, resizable: true, collapsible: true };
+// The reading in an activity, from a PDF the teacher brought.
+function withReading(activity, document) {
+  const other = activity.workspace?.panels?.find((panel) => panel.type !== 'reading');
+  // A reading takes the whole activity, so it would take what learners do there with it.
+  if (other) throw refused(`“${activity.title}” already has ${other.type === 'questions' ? 'questions' : other.type === 'writing' ? 'a writing task' : 'a web page'}. Make the reading an activity of its own.`);
+  const held = activity.workspace?.panels?.find((panel) => panel.type === 'reading');
+  const reading = { highlights: true, notes: true, start_page: 1, ai_sees: 'page', id: 'reading', type: 'reading', title: 'The reading', ...held, document, file_ref: document.document_id };
+  activity.workspace = { ai: activity.workspace?.ai || 'right', title: activity.workspace?.title ?? null, layout: activity.workspace?.layout || READING_LAYOUT, panels: [reading] };
+}
+const CHANGE_FIELDS = {
+  title: string('Its title.'), summary: string('A line about it, on the course’s home.'), minutes: { type: 'integer', description: 'About how long it takes.' }, unit: string('Which unit it belongs to, by its title. Empty for none.'),
+  ...TEACHING,
+  prompt: string('For writing: what to write.'), rubric: { type: 'array', items: { type: 'string' }, description: 'For writing: what makes it good, one point each, as “name: what it means”.' }, min_words: { type: 'integer' }, max_words: { type: 'integer' }, lock_on_submit: { type: 'boolean', description: 'For writing: handed in once, with no changes afterwards.' },
+  feedback: { enum: ['each', 'end', 'none'], description: 'For questions: when they find out: after each answer, once all are answered, or never (a test).' }, tries: { type: 'integer', description: 'For questions: tries per question. 0 for as many as they like.' }, hints: { type: 'boolean', description: 'For questions: whether they can see the hints.' },
+  url: string('For a web page: its https address.'), ai: string('Which AI is beside them, by its name from read_activity, or none for no AI.'), done_when: { enum: ['auto', 'self', 'opened'], description: 'When it counts as done: when its work is finished, when they say so, or when they open it.' },
+  material: string('A PDF the teacher added, by its id, to be the reading in this activity.')
+};
+const CHANGE_WORDS = { title: 'Title', summary: 'The line about it', minutes: 'Minutes', unit: 'Unit', goal: 'Goal', help: 'How far the AI may go', watch_for: 'What you want to hear about', prompt: 'What to write', rubric: 'What makes it good', min_words: 'At least (words)', max_words: 'At most (words)', lock_on_submit: 'Handed in once', feedback: 'When they find out', tries: 'Tries per question', hints: 'They can see the hints', url: 'Its address', ai: 'Which AI', done_when: 'When it counts as done', material: 'The reading' };
+const wordsOf = (args, held = {}) => Object.keys(CHANGE_WORDS).filter((name) => args[name] !== undefined).map((name) => { const value = name === 'material' ? (held.material || args[name]) : Array.isArray(args[name]) ? args[name].join('; ') : args[name]; return `${CHANGE_WORDS[name]}: ${clip(String(value), 160)}`; });
+const clip = (text, limit) => (text.length > limit ? `${text.slice(0, limit)}…` : text);
+
+// The change itself, on a copy of the course, under the checks a page's form has. Only what is passed changes.
+function changeActivity(doc, activity, args, reading = null) {
+  if (args.title !== undefined) { const title = clean(args.title, 160); if (!title) throw refused('It needs a title.'); activity.title = title; }
+  if (args.summary !== undefined) activity.summary = clean(args.summary, 600) || null;
+  if (args.minutes !== undefined) activity.minutes = Number.isInteger(args.minutes) && args.minutes > 0 ? Math.min(args.minutes, 600) : null;
+  if (args.unit !== undefined) {
+    const wanted = clean(args.unit, 160).toLowerCase();
+    const unit = (doc.course.units || []).find((item) => item.title.toLowerCase() === wanted);
+    if (wanted && !unit) throw refused(`This course has no unit called “${clean(args.unit, 80)}”.`);
+    activity.unit_ref = unit?.ref ?? null;
+  }
+  const panel = (type) => activity.workspace?.panels?.find((item) => item.type === type);
+  const needs = (type, words) => { const found = panel(type); if (!found) throw refused(`“${activity.title}” has no ${words}.`); return found; };
+  if (args.prompt !== undefined) needs('writing', 'writing task').prompt = clean(args.prompt, 8000);
+  if (args.rubric !== undefined) needs('writing', 'writing task').rubric = args.rubric.slice(0, 12).map((point) => { const line = clean(point, 400); const at = line.indexOf(':'); return at > 0 ? { criterion: line.slice(0, at).trim(), description: line.slice(at + 1).trim() } : { criterion: line }; });
+  if (args.min_words !== undefined) needs('writing', 'writing task').min_words = Number.isInteger(args.min_words) && args.min_words > 0 ? args.min_words : null;
+  if (args.max_words !== undefined) needs('writing', 'writing task').max_words = Number.isInteger(args.max_words) && args.max_words > 0 ? args.max_words : null;
+  if (args.lock_on_submit !== undefined) needs('writing', 'writing task').lock_on_submit = args.lock_on_submit === true;
+  if (args.feedback !== undefined) { if (!['each', 'end', 'none'].includes(args.feedback)) throw refused('That isn’t a time they can find out.'); needs('questions', 'questions').feedback = args.feedback; }
+  if (args.tries !== undefined) needs('questions', 'questions').tries = Number.isInteger(args.tries) ? Math.min(10, Math.max(0, args.tries)) : 3;
+  if (args.hints !== undefined) needs('questions', 'questions').hints = args.hints === true;
+  if (args.url !== undefined) { if (!/^https:\/\//i.test(String(args.url))) throw refused('A web page needs its whole https address.'); needs('embed', 'web page').url = clean(args.url, 2000); }
+  if (args.ai !== undefined) {
+    const wanted = clean(args.ai, 120).toLowerCase();
+    const agent = (doc.agents || []).find((item) => item.name.toLowerCase() === wanted);
+    if (wanted && wanted !== 'none' && !agent) throw refused(`This course has no AI called “${clean(args.ai, 80)}”.`);
+    if (!agent && !activity.workspace?.panels?.length) throw refused('A conversation needs an AI. Choose one, or make it something else for learners to do.');
+    activity.agent_ref = agent?.ref ?? null;
+    if (activity.workspace) activity.workspace.ai = agent ? (activity.workspace.ai === 'off' ? 'right' : activity.workspace.ai) : 'off';
+  }
+  if (args.done_when !== undefined && ['auto', 'self', 'opened'].includes(args.done_when)) activity.done_when = args.done_when;
+  if (reading) withReading(activity, reading);
+  const teaching = teachingFrom(args);
+  if (Object.keys(teaching).length) withTeaching(activity, teaching);
+}
+
+// The questions an activity holds, and anything else using them that learners can reach.
+function questionsOf(doc, key, releases) {
+  const { activity, list } = activityIn(doc, key);
+  const panel = activity.workspace?.panels?.find((item) => item.type === 'questions');
+  const set = panel && doc.question_sets?.find((item) => item.ref === panel.set_ref);
+  if (!set) throw refused(`“${activity.title}” has no questions. Make an activity whose kind is questions.`);
+  const keys = activityKeys(list);
+  const uses = (item) => (item.workspace?.panels || []).some((other) => other.type === 'questions' && other.set_ref === set.ref);
+  const reached = list.find((item, index) => uses(item) && reaches(item, releases[keys[index]]));
+  return { activity, set, reached };
+}
+function changeQuestions(doc, set, activity, args) {
+  const items = set.items ||= [];
+  const removed = new Set((args.remove || []).map(String));
+  set.items = items.filter((item) => !removed.has(String(item.id)));
+  for (const question of args.replace || []) {
+    const at = set.items.findIndex((item) => String(item.id) === String(question.id));
+    if (at < 0) throw refused(`There is no question ${clean(question.id, 40)} here. Read the activity again.`);
+    set.items[at] = questionItem(question, set.items[at].id);
+  }
+  if (args.add?.length) addQuestions(doc, activity, args.add);
+}
+const questionWords = (args) => [...((args.add || []).length ? [`Add ${args.add.length} question${args.add.length === 1 ? '' : 's'}`] : []), ...((args.replace || []).length ? [`Change ${args.replace.length} question${args.replace.length === 1 ? '' : 's'}`] : []), ...((args.remove || []).length ? [`Remove ${args.remove.length} question${args.remove.length === 1 ? '' : 's'}`] : [])];
+// On a button that changes what learners meet, a person sees what they are agreeing to: each question with its answer.
+function questionLines(args, items = []) {
+  const said = (question) => `${clip(clean(question.prompt, 200), 160)}${question.right?.length || question.accept?.length ? ` (answer: ${clip([...(question.right || []), ...(question.accept || [])].map((item) => clean(item, 80)).join(', '), 80)})` : ''}`;
+  const lines = [...(args.add || []).map((question) => `Add: ${said(question)}`), ...(args.replace || []).map((question) => `Change to: ${said(question)}`), ...(args.remove || []).map((id) => `Remove: ${clip(clean(items.find((item) => String(item.id) === String(id))?.prompt ?? id, 200), 160)}`)];
+  return lines.length > 12 ? [...lines.slice(0, 12), `And ${lines.length - 12} more`] : lines;
+}
 
 export const ASK_TOOLS = [
   {
@@ -207,24 +340,28 @@ export const ASK_TOOLS = [
   },
   {
     name: 'add_activity', tier: 'draft', says: (args) => `Adding “${clean(args.title, 80)}”`,
-    description: 'An activity in a course, hidden from learners until the teacher opens it. kind: chat is a conversation; questions is questions to answer with the AI beside them; writing is a piece of writing with the AI beside it; reading is a PDF the teacher must add on its page; embed is a web page at an https address.',
+    description: 'An activity in a course, hidden from learners until the teacher opens it. kind: chat is a conversation; questions is questions to answer with the AI beside them; writing is a piece of writing with the AI beside it; reading is a PDF the teacher added here, or gives on its page; embed is a web page at an https address.',
     parameters: {
       type: 'object', required: ['course', 'title', 'kind'],
       properties: {
-        course: COURSE, title: string('Its title.'), kind: { enum: KINDS }, summary: string('A line about it, on the course’s home.'), minutes: { type: 'integer', description: 'About how long it takes.' }, unit: string('Which unit it belongs to, by its title.'),
+        course: COURSE, title: string('Its title.'), kind: { enum: KINDS }, material: string('For reading: a PDF the teacher added, by its id.'), summary: string('A line about it, on the course’s home.'), minutes: { type: 'integer', description: 'About how long it takes.' }, unit: string('Which unit it belongs to, by its title.'),
         ...TEACHING, prompt: string('For writing: what to write.'), rubric: { type: 'array', items: { type: 'string' }, description: 'For writing: what makes it good, one point each.' }, url: string('For embed: its https address.'), questions: QUESTIONS
       }
     },
     async run(here, args, call) {
-      if (here.simple && args.kind === 'reading') throw refused('A reading needs its PDF, which only the teacher can give, on the course’s page: Add an activity, then Reading. Tell them so, and make anything else they asked for.');
+      if (here.simple && args.kind === 'reading' && !(args.material && here.materials)) throw refused('A reading needs its PDF. Ask the teacher to add it here with the + button, then use its id as material. Make anything else they asked for.');
+      if (args.kind === 'reading' && args.material && here.materials && await notAList(here, String(args.material))) throw refused(LIST_WORDS);
+      const reading = args.kind === 'reading' && args.material && here.materials ? await here.materials.forReading(String(args.material)) : null;
       const { code } = await courseAt(here.library, args.course);
       const title = clean(args.title, 160);
       // Before anything is made, so a bad question leaves no empty activity behind.
       (args.questions || []).forEach((question, index) => questionItem(question, `q${index + 1}`));
       const { go } = await call('POST', `courses/${code}/activities`, { title, kind: KINDS.includes(args.kind) ? args.kind : 'chat', url: args.url });
-      const key = go.split('/').at(-1);
+      // A reading with no PDF yet goes to its page asking for one: the key is before that.
+      const key = go.split('/').at(-1).split('?')[0];
       await changeCourse(here.library, code, null, (doc) => {
         const { activity } = activityIn(doc, key);
+        if (reading) withReading(activity, reading);
         if (args.summary) activity.summary = clean(args.summary, 600);
         if (Number.isInteger(args.minutes) && args.minutes > 0) activity.minutes = Math.min(args.minutes, 600);
         if (args.unit) activity.unit_ref = (doc.course.units || []).find((unit) => unit.title.toLowerCase() === clean(args.unit, 160).toLowerCase())?.ref ?? null;
@@ -308,6 +445,158 @@ export const ASK_TOOLS = [
     }
   },
 
+  {
+    name: 'read_activity', tier: 'look', says: () => 'Reading the activity',
+    description: 'One activity in full: what learners do, its questions with their answers, how the AI helps, and the AIs it can use. Read it before you change it. Names and work are never in it.',
+    parameters: { type: 'object', required: ['course', 'activity'], properties: { course: COURSE, activity: ACTIVITY } },
+    async run(here, args) {
+      const { code, doc } = await courseAt(here.library, args.course);
+      const { activity } = activityIn(doc, args.activity);
+      const panels = (activity.workspace?.panels || []).map((panel) => {
+        if (panel.type === 'questions') { const set = doc.question_sets?.find((item) => item.ref === panel.set_ref); return { type: 'questions', feedback: panel.feedback ?? 'each', tries: panel.tries ?? 3, hints: panel.hints !== false, questions: (set?.items || []).map(({ id, type, prompt, choices, answer, hints, explanation }) => ({ id, type, prompt, ...(choices ? { choices: choices.map((choice) => choice.text), right: (answer?.choice ? [answer.choice] : answer?.choices || []).map((right) => choices.find((choice) => choice.id === right)?.text) } : {}), ...(answer?.accept ? { accept: answer.accept } : {}), hints, explanation })) }; }
+        if (panel.type === 'writing') return { type: 'writing', prompt: panel.prompt, rubric: panel.rubric, min_words: panel.min_words ?? null, max_words: panel.max_words ?? null, lock_on_submit: panel.lock_on_submit === true };
+        if (panel.type === 'embed') return { type: 'embed', url: panel.url };
+        return { type: panel.type, file: panel.document?.title ?? null };
+      });
+      const teaching = activity.teaching ? teachingSettings(activity.teaching) : null;
+      return { done: `Read “${activity.title}”`, link: { href: pageOf(code, args.activity), label: 'Its page' }, course: code, forModel: { activity: args.activity, title: activity.title, summary: activity.summary ?? null, kind: kindOfActivity(activity), open: activity.release !== 'hidden', opens_at: activity.opens_at ?? null, closes_at: activity.closes_at ?? null, minutes: activity.minutes ?? null, unit: (doc.course.units || []).find((unit) => unit.ref === activity.unit_ref)?.title ?? null, done_when: activity.done_when ?? 'auto', ai: (doc.agents || []).find((agent) => agent.ref === activity.agent_ref)?.name ?? null, ais: (doc.agents || []).map((agent) => ({ name: agent.name, about: agent.description ?? null })), goal: teaching?.goal ?? null, help: teaching?.help ?? null, watch_for: teaching?.watch_for ?? null, panels } };
+    }
+  },
+  {
+    name: 'change_activity', tier: 'draft', says: () => 'Changing the activity',
+    description: 'Changes an activity: only what you pass. If learners can reach it, this shows the teacher a button instead, and nothing changes until they press it. For questions, use change_questions.',
+    parameters: { type: 'object', required: ['course', 'activity'], properties: { course: COURSE, activity: ACTIVITY, ...CHANGE_FIELDS } },
+    async run(here, args) {
+      const { code, doc } = await courseAt(here.library, args.course);
+      const { activity } = activityIn(doc, args.activity);
+      if (args.material && here.materials && await notAList(here, String(args.material))) throw refused(LIST_WORDS);
+      const reading = args.material && here.materials ? await here.materials.forReading(String(args.material)) : null;
+      const words = wordsOf(args, { material: reading?.title });
+      if (!words.length) throw refused('Say what to change.');
+      // Tried on a copy first, so a bad change is said now and never reaches a button.
+      changeActivity(structuredClone(doc), activityIn(structuredClone(doc), args.activity).activity, args, reading);
+      if (reaches(activity, (await here.classes.releases(code))[args.activity])) return { course: code, propose: { card: { kind: 'change', course: code, activity: args.activity, change: { ...args, ...(reading ? { reading } : {}) }, words, what: `change the activity ${args.activity}` }, title: activity.title, course: code, says: 'Asking you to change it' } };
+      await changeCourse(here.library, code, null, (draft) => changeActivity(draft, activityIn(draft, args.activity).activity, args, reading), `Changed ${clean(activity.title, 80)} by Ask`);
+      return { done: `Changed “${clean(args.title || activity.title, 80)}”`, link: { href: pageOf(code, args.activity), label: 'Its page' }, course: code, forModel: { changed: true, open: false }, detail: words.join('\n') };
+    },
+    async apply(here, card) {
+      await changeCourse(here.library, card.course, null, (draft) => changeActivity(draft, activityIn(draft, card.activity).activity, card.change, card.change.reading), 'Changed by Ask, with the teacher’s click');
+    }
+  },
+  {
+    name: 'change_questions', tier: 'draft', says: () => 'Changing the questions',
+    description: 'Adds, rewrites or removes questions in an activity. Read the activity first for their ids. If learners can reach them, this shows the teacher a button instead.',
+    parameters: { type: 'object', required: ['course', 'activity'], properties: { course: COURSE, activity: ACTIVITY, add: QUESTIONS, replace: { type: 'array', description: 'Questions to rewrite: each whole, with its id.', items: { ...QUESTIONS.items, required: ['id', 'type', 'prompt'], properties: { id: string('Its id, from read_activity.'), ...QUESTIONS.items.properties } } }, remove: { type: 'array', items: { type: 'string' }, description: 'The ids of questions to take out.' } } },
+    async run(here, args) {
+      const { code, doc } = await courseAt(here.library, args.course);
+      const words = questionWords(args);
+      if (!words.length) throw refused('Say which questions to change.');
+      const releases = await here.classes.releases(code);
+      const { activity, reached, set } = questionsOf(doc, args.activity, releases);
+      // Before anything is made, so a bad question is said now.
+      for (const question of [...(args.add || []), ...(args.replace || [])]) questionItem(question, question.id || 'q');
+      if (reached) return { course: code, propose: { card: { kind: 'change', course: code, activity: args.activity, questions: args, words: questionLines(args, set.items), what: `change the questions of the activity ${args.activity}` }, title: reached.title, course: code, says: 'Asking you to change them' } };
+      await changeCourse(here.library, code, null, (draft) => { const found = questionsOf(draft, args.activity, releases); changeQuestions(draft, found.set, found.activity, args); }, 'Changed questions by Ask');
+      return { done: `${words.join(', ')} in “${clean(activity.title, 80)}”`, link: { href: pageOf(code, args.activity), label: 'Its page' }, course: code, forModel: { changed: true } };
+    },
+    async apply(here, card) {
+      await changeCourse(here.library, card.course, null, (draft) => { const found = questionsOf(draft, card.activity, {}); changeQuestions(draft, found.set, found.activity, card.questions); }, 'Changed questions by Ask, with the teacher’s click');
+    }
+  },
+  {
+    name: 'change_course', tier: 'draft', says: () => 'Changing the course',
+    description: 'A course’s title, the line on its home, who it is for, or its units. Only what you pass changes. If learners can reach it, this shows the teacher a button instead. Sign-in and sharing stay on the course’s pages.',
+    parameters: { type: 'object', required: ['course'], properties: { course: COURSE, title: string('Its title.'), description: string('A line learners see on its home.'), audience: { enum: ['adults', 'teens', 'children'], description: 'children is under 13, teens 13 to 17.' }, units: { type: 'array', items: { type: 'string' }, description: 'Every unit, in order. One left out is removed, and its activities are in none.' } } },
+    async run(here, args, call) {
+      const { code, doc } = await courseAt(here.library, args.course);
+      const words = [...(args.title !== undefined ? [`Title: ${clean(args.title, 120)}`] : []), ...(args.description !== undefined ? [`The line on its home: ${clean(args.description, 160)}`] : []), ...(args.audience !== undefined ? [`For: ${args.audience}`] : []), ...(args.units !== undefined ? [`Units: ${args.units.join(', ')}`] : [])];
+      if (!words.length) throw refused('Say what to change.');
+      const releases = await here.classes.releases(code);
+      const keys = activityKeys(doc.course.activities || []);
+      const reachable = (doc.course.activities || []).some((activity, index) => reaches(activity, releases[keys[index]]));
+      if (reachable) return { course: code, propose: { card: { kind: 'change', course: code, activity: null, course_change: args, words, what: `change the course ${code}` }, title: doc.course.title, course: code, says: 'Asking you to change it' } };
+      await ASK_TOOLS.find((tool) => tool.name === 'change_course').apply(here, { course: code, course_change: args }, call);
+      return { done: `Changed “${clean(args.title || doc.course.title, 80)}”`, link: { href: pageOf(code), label: 'The course' }, course: code, forModel: { changed: true }, detail: words.join('\n') };
+    },
+    async apply(here, card, call) {
+      const args = card.course_change;
+      await changeCourse(here.library, card.course, null, (draft) => {
+        if (args.title !== undefined) { const title = clean(args.title, 160); if (!title) throw refused('It needs a title.'); draft.title = title; draft.course.title = title; }
+        if (args.description !== undefined) draft.course.description = clean(args.description, 4000) || null;
+        if (['adults', 'teens', 'children'].includes(args.audience)) draft.course.audience = args.audience;
+      }, 'Changed by Ask');
+      if (args.units !== undefined) await call('PUT', `courses/${card.course}/units`, { titles: args.units.map((title) => clean(title, 160)).join('\n') });
+    }
+  },
+  {
+    name: 'copy_activity', tier: 'draft', says: () => 'Copying the activity',
+    description: 'A hidden copy of an activity, right after it in the course, to change into a new one.',
+    parameters: { type: 'object', required: ['course', 'activity'], properties: { course: COURSE, activity: ACTIVITY } },
+    async run(here, args, call) {
+      const { code } = await courseAt(here.library, args.course);
+      const { go } = await call('POST', `courses/${code}/activities/${args.activity}/copy`, {});
+      const key = go.split('/').at(-1);
+      return { done: 'Made a copy, hidden for now', link: { href: pageOf(code, key), label: 'Its page' }, course: code, forModel: { activity: key, open: false } };
+    }
+  },
+  {
+    name: 'read_material', tier: 'look', says: () => 'Reading what you added', available: (here) => Boolean(here.materials),
+    description: 'What a material the teacher added says, a piece at a time. If it comes with next_from, pass that as from to go on. Read only what you need.',
+    parameters: { type: 'object', required: ['material'], properties: { material: string('Its id, from what the teacher added.'), from: { type: 'integer', description: 'Where to go on reading, from next_from.' } } },
+    async run(here, args) {
+      const id = String(args.material);
+      // A list of names reads as a list here too, and goes to no model unless the teacher says it isn't one.
+      const listed = await notAList(here, id);
+      if (listed) return { done: `Didn’t read “${clip(listed.name, 60)}”: it looks like a list of names`, cards: [{ kind: 'not-a-list', material: id, name: listed.name }], forModel: { error: LIST_WORDS } };
+      const read = await here.materials.read(id, { from: Number.isInteger(args.from) ? args.from : 0 });
+      return { done: `Read “${clip(read.name, 60)}”`, forModel: read };
+    }
+  },
+  {
+    name: 'search_materials', tier: 'look', says: (args) => `Looking for “${clean(args.words, 60)}” in what you added`, available: (here) => Boolean(here.materials),
+    description: 'Finds the passages about something in the materials the teacher added, for a long one you don’t need to read whole.',
+    parameters: { type: 'object', required: ['words'], properties: { words: string('A few words.') } },
+    async run(here, args) {
+      const found = (await here.materials.search(clean(args.words, 200), here.thread?.files || null)).filter((item) => here.thread?.read_anyway?.includes(item.material) || !holdsClassList(item.says));
+      return { done: found.length ? `Found ${found.length} passage${found.length === 1 ? '' : 's'}` : 'Found nothing on that', forModel: found };
+    }
+  },
+
+  {
+    name: 'tutor_uses_materials', tier: 'draft', says: () => 'Giving the tutor your materials', available: (here) => Boolean(here.materials?.tutorFor),
+    description: 'Makes the AI beside learners in an activity search these materials with every message, and draw on them. Use it when the teacher wants the tutor to know what they added. Only that course’s tutor can find them, and it can tell learners what it finds: never give it an answer key, a test or anything else they shouldn’t see, and say so. If learners can reach anything using that tutor, this shows the teacher a button instead.',
+    parameters: { type: 'object', required: ['course', 'activity', 'materials'], properties: { course: COURSE, activity: ACTIVITY, materials: { type: 'array', items: { type: 'string' }, description: 'The ids of what the teacher added.' }, quick: { type: 'boolean', description: 'The tutor whose replies aren’t checked, if the activity uses that one.' } } },
+    async run(here, args) {
+      const { code, doc } = await courseAt(here.library, args.course);
+      const { activity } = activityIn(doc, args.activity);
+      const ids = (args.materials || []).map(String).slice(0, 12);
+      if (!ids.length) throw refused('Say which materials.');
+      const files = await Promise.all(ids.map((id) => here.materials.get(id)));
+      if (files.some((file) => file.status !== 'ready')) throw refused('One of them isn’t ready to read yet.');
+      for (const id of ids) if (await notAList(here, id)) throw refused(LIST_WORDS);
+      const quick = args.quick === true || /^quick/i.test((doc.agents || []).find((agent) => agent.ref === activity.agent_ref)?.name || '');
+      const words = [`The AI searches: ${files.map((file) => file.name).join(', ')}`, 'It can tell learners what it finds, so leave out answer keys and tests'];
+      // The course's tutor is one agent: another activity using it would find these too.
+      const releases = await here.classes.releases(code);
+      const tutorName = here.materials.tutorName(doc.course.title, code, quick);
+      const held = (doc.agents || []).find((agent) => agent.name === tutorName);
+      const list = doc.course.activities || [];
+      const keys = activityKeys(list);
+      const reached = reaches(activity, releases[args.activity]) || (held && list.some((item, index) => item.agent_ref === held.ref && reaches(item, releases[keys[index]])));
+      const reads = { ids, quick, title: doc.course.title };
+      if (reached) return { course: code, propose: { card: { kind: 'change', course: code, activity: args.activity, reads, words, what: `give the AI in the activity ${args.activity} these materials` }, title: activity.title, course: code, says: 'Asking you to give it your materials' } };
+      await ASK_TOOLS.find((tool) => tool.name === 'tutor_uses_materials').apply(here, { course: code, activity: args.activity, reads });
+      return { done: `The AI in “${clip(activity.title, 60)}” now searches ${files.length === 1 ? `“${clip(files[0].name, 60)}”` : `${files.length} materials`}`, link: { href: pageOf(code, args.activity), label: 'Its page' }, course: code, forModel: { changed: true, note: 'It takes a moment before they can be found, and it can tell learners what it finds. Say both.' } };
+    },
+    async apply(here, card) {
+      const tutor = await here.materials.tutorFor(card.reads.title, card.course, card.reads.ids, { quick: card.reads.quick });
+      await changeCourse(here.library, card.course, null, (draft) => {
+        const { activity } = activityIn(draft, card.activity);
+        activity.agent_ref = tutor.ref;
+        if (activity.workspace?.ai === 'off') activity.workspace.ai = 'right';
+      }, 'The tutor reads the materials, by Ask');
+    }
+  },
   {
     name: 'open_activity', tier: 'reach', says: () => 'Asking you to open it',
     description: 'Asks the teacher to open an activity, for everyone or for one section. It shows them a button: it isn’t open until they press it, so never say it is.',

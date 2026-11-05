@@ -9,7 +9,7 @@
   <img alt="Node 22 or later" src="https://img.shields.io/badge/node-22%2B-2e6f4c">
 </p>
 
-**Open tools for AI that teaches the way a teacher wants.** Left alone, a model replies generally: it gives the
+**The VIABLE Open Kit: tools for AI that teaches the way a teacher wants.** Left alone, a model replies generally: it gives the
 answer, explains too much, and answers everyone alike. What it lacks isn't intelligence. It doesn't know the goal, how much
 help is right today, or what this learner's mistake suggests.
 

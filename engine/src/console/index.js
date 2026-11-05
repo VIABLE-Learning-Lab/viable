@@ -4,11 +4,10 @@
  * page says its title, how it renders and the JSON routes it answers under /console/api/, and the
  * navigation shows what is listed there. A routes module for the handler; no Node built-ins.
  */
-import { unavailablePage, UNAVAILABLE_HEADERS } from '../learner/shell.js';
 import { signInHeaders, signInPage, teacherSession, withCookies } from '../server/session.js';
-import { onRole } from '../server/runtime.js';
+import { hearRecording, onRole } from '../server/runtime.js';
 import { storeClasses, storeRecords, storeThreads } from '../server/teacherData.js';
-import { consoleHeaders, consolePage } from './layout.js';
+import { consoleHeaders, consolePage, missingBody, standalonePage } from './layout.js';
 import { activityPages } from './activity.js';
 import { askPages } from './ask.js';
 import { agentPages } from './agentPages.js';
@@ -21,8 +20,8 @@ import { progressPages } from './progress.js';
 import { sharePages } from './share.js';
 
 // A course's tabs come in this order.
-const [courseList, activitiesTab, settingsTab] = coursePages;
-const PAGES = [...askPages(() => PAGES), courseList, activitiesTab, ...peoplePages, ...progressPages, settingsTab, ...sharePages, ...activityPages, ...chatPages, ...agentPages, ...knowledgePages, modelsPage];
+const [courseList, newCourse, activitiesTab, settingsTab] = coursePages;
+const PAGES = [...askPages(() => PAGES), courseList, newCourse, activitiesTab, ...peoplePages, ...progressPages, settingsTab, ...sharePages, ...activityPages, ...chatPages, ...agentPages, ...knowledgePages, modelsPage];
 const TABS = PAGES.filter((page) => page.courseTab);
 
 const answer = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
@@ -34,6 +33,11 @@ const serverAskModel = (settings, fetch, store) => ({
   missing: store ? 'Ask needs a model.' : 'Ask needs somewhere to keep a conversation: start this server with a data folder.',
   setUp: store ? '/console/models' : null,
   async ready() { const { roles } = await settings.resolve(); return Boolean(store && (roles.assistant ?? roles.reply)?.model); },
+  async hears() { return Boolean((await settings.resolve()).roles.hearing); },
+  async hear({ bytes, type }) {
+    const data = btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(''));
+    return hearRecording(await settings.resolve(), { type, filename: `recording.${type.split('/')[1] || 'webm'}`, data: `data:${type};base64,${data}` }, { fetch });
+  },
   async chat({ messages, tools }) {
     const { roles } = await settings.resolve();
     const role = roles.assistant ?? roles.reply;
@@ -56,14 +60,14 @@ function fromHere(request, url) {
 }
 
 // The pages a teacher needs, for a host that decides models, agents and knowledge for them.
-export const TEACHING_PAGES = [...askPages(() => PAGES), courseList, activitiesTab, ...peoplePages, ...progressPages, settingsTab, ...sharePages, ...activityPages];
+export const TEACHING_PAGES = [...askPages(() => PAGES), courseList, newCourse, activitiesTab, ...peoplePages, ...progressPages, settingsTab, ...sharePages, ...activityPages];
 export const TEACHING_TABS = TEACHING_PAGES.filter((page) => page.courseTab);
 
 /**
  * The console's pages and routes, for whichever host has signed someone in. tools: what they reach a course through (library,
- * classes, records, threads, askModel, tryLink...). pages: which it shows. notice: HTML above every page, the host's to say. origin, if given: where learners reach pages, when that isn't here.
+ * classes, records, threads, askModel, tryLink...). pages: which it shows. notice: HTML above every page, the host's to say. origin, if given: where learners reach pages, when that isn't here. home: where its name leads. who: who is signed in.
  */
-export function consoleApp({ tools, pages = PAGES, readBody, readJson, brand, signOut, links, notice, origin = null }) {
+export function consoleApp({ tools, pages = PAGES, readBody, readJson, brand, signOut, links, notice, origin = null, home = null, who = null }) {
   const place = (url) => origin || url.origin;
   async function api(path, request, url) {
     if (!['GET', 'HEAD'].includes(request.method) && !fromHere(request, url)) return refusal(403, 'origin_not_allowed', 'Open the console to change this.');
@@ -85,14 +89,15 @@ export function consoleApp({ tools, pages = PAGES, readBody, readJson, brand, si
   }
   async function renderPage(rest, request, url) {
     const page = pages.find((item) => (item.match ? item.match.test(rest) : rest === item.id));
-    if (!page) return new Response(unavailablePage({ title: 'Not here', message: 'There’s no such page.', back: { href: '/console', label: 'Go back' } }), { status: 404, headers: { 'content-type': 'text/html; charset=utf-8', ...UNAVAILABLE_HEADERS } });
     const nonce = nonceOf();
+    const missing = (message) => new Response(consolePage({ title: 'Page not found', pages, current: null, brand, signOut, links, home, who, body: missingBody(message) }, nonce), { status: 404, headers: consoleHeaders(nonce) });
+    if (!page) return missing();
     let made;
     try { made = await page.render({ ...tools, url, origin: place(url), request }, page.match?.exec(rest)); } catch (error) {
       if (error?.status !== 404) throw error;
-      return new Response(unavailablePage({ title: 'Not here', message: error.message, back: { href: '/console', label: 'Go back' } }), { status: 404, headers: { 'content-type': 'text/html; charset=utf-8', ...UNAVAILABLE_HEADERS } });
+      return missing(error.message);
     }
-    return new Response(consolePage({ title: made.title || page.title, pages, current: page.section || page.id, brand, signOut, links, notice, ...made }, nonce), { status: 200, headers: consoleHeaders(nonce) });
+    return new Response(consolePage({ title: made.title || page.title, pages, current: page.section || page.id, brand, signOut, links, notice, home, who, ...made }, nonce), { status: 200, headers: consoleHeaders(nonce) });
   }
   return { api, renderPage };
 }
@@ -128,7 +133,7 @@ export function consoleRoutes({ settings = null, library = null, teacherToken = 
       let wanted = null;
       if (path.startsWith('/console/api/')) { try { wanted = decodeURI(path.slice('/console/api/'.length)); } catch { return refusal(400, 'bad_address', 'That address isn’t right.'); } }
       if (url.searchParams.has('token')) return refusal(400, 'token_in_url', 'A token doesn’t go in an address, where it would be logged and kept in a browser’s history.');
-      if (!secret()) return new Response(unavailablePage({ title: 'This server isn’t set up yet', message: ctx.options.requireToken ? 'It needs its token before anyone can use it. Set one, and open this again.' : 'Give this server a token to open its console.' }), { status: ctx.options.requireToken ? 503 : 403, headers: { 'content-type': 'text/html; charset=utf-8', ...UNAVAILABLE_HEADERS } });
+      if (!secret()) { const nonce = nonceOf(); return new Response(standalonePage({ title: 'This server isn’t set up yet', message: ctx.options.requireToken ? 'It needs its token before anyone can use it. Set one, and open this again.' : 'Give this server a token to open its console.', brand: 'VIABLE Engine' }, nonce), { status: ctx.options.requireToken ? 503 : 403, headers: consoleHeaders(nonce) }); }
       if (!await session.holdsToken(request)) {
         if (wanted !== null) return refusal(401, 'sign_in_required', 'Sign in to the console.');
         const nonce = nonceOf();

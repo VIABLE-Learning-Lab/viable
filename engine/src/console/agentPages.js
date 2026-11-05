@@ -11,9 +11,8 @@ import { activityKeys, courseCodes } from '../server/library.js';
 import { forgetChat } from '../server/learner.js';
 import { applyModels, stepModels } from '../server/models.js';
 import { graphOf } from '../server/runtime.js';
-import { CONSOLE_SCRIPT } from './client.js';
 import { formOf, graphFrom } from './agentShape.js';
-import { choose, esc, FORMS_CSS, say, text, toggle } from './forms.js';
+import { choose, dropZone, esc, FORMS_CSS, say, text, toggle } from './forms.js';
 import { activitiesUsing, addAgent, agentAt, agentsIn, changeAgent, clean, group, knowledgeIn, linesOf, NO_STORE, OWN, placeLabel, plural, refused, ROWS_CSS } from './places.js';
 
 const NAME_CHARS = 80;
@@ -70,7 +69,7 @@ ${places.map(knowledgeFor).join('')}
 <div class="v-card stack from-file" id="agent-file" data-say-box>
 <h3>From a file</h3>
 <p class="v-note">An agent or a package (<code>.agent.json</code>, <code>.viable.json</code> or <code>.viable.zip</code>) from the VIABLE Developer Platform or another Engine. A chat page in it starts paused.</p>
-<div class="v-form"><label class="v-label" for="agent-upload">Choose the file</label><input class="v-input" id="agent-upload" type="file" accept=".zip,.json" data-upload="POST courses/from-file"></div>${say()}
+${dropZone({ id: 'agent-upload', accept: '.zip,.json', upload: 'POST courses/from-file', hint: '.agent.json, .viable.json or .viable.zip' })}${say()}
 </div>
 </section>`;
 }
@@ -344,7 +343,7 @@ async function removeAgent({ library, store }, match) {
 export const agentPages = [
   {
     id: 'agents', title: 'Agents',
-    render: async (tools) => ({ body: await listBody(tools), css: `${FORMS_CSS}\n${ROWS_CSS}\n.from-file{margin-top:14px}.from-file h3{font-size:1rem;font-weight:600;letter-spacing:0}`, script: CONSOLE_SCRIPT }),
+    render: async (tools) => ({ body: await listBody(tools), css: `${FORMS_CSS}\n${ROWS_CSS}\n.from-file{margin-top:14px}.from-file h3{font-size:1rem;font-weight:600;letter-spacing:0}` }),
     api: [
       ['POST', /^agents$/, createAgent],
       ['PUT', /^agents\/([\w.-]+)$/, saveAgent],
@@ -372,7 +371,7 @@ export const agentPages = [
   {
     id: 'agent', title: 'Agent', section: 'agents', nav: false,
     match: /^agents\/([\w.-]+)$/,
-    render: async (tools, match) => { const made = await agentBody(tools, match); return { ...made, css: `${FORMS_CSS}\n${ROWS_CSS}\n${made.css}`, script: CONSOLE_SCRIPT }; },
+    render: async (tools, match) => { const made = await agentBody(tools, match); return { ...made, css: `${FORMS_CSS}\n${ROWS_CSS}\n${made.css}` }; },
     api: []
   }
 ];
