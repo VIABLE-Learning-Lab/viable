@@ -1,15 +1,22 @@
 version: 2
 updates:
+  # Monthly and together: each one goes through the same review, and the hosted platform takes the same versions.
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     commit-message:
       prefix: chore
       include: scope
+    groups:
+      browser-libraries:
+        patterns: ['*']
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     commit-message:
       prefix: ci
+    groups:
+      actions:
+        patterns: ['*']

@@ -4,7 +4,7 @@ Changes that matter to people who build on this. Versions follow semantic versio
 to a format or to what a step's setting means is at least a minor version and says how to move
 existing files.
 
-## Unreleased (0.3.0)
+## 0.3.0 (2026-11-05)
 
 Two parts, one repository.
 
