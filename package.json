@@ -60,7 +60,7 @@
     "marked": "18.0.14",
     "mermaid": "12.3.0",
     "pdfjs-dist": "6.4.299",
-    "temml": "0.13.5"
+    "temml": "0.14.0"
   },
   "scripts": {
     "test": "node --import ./harness/test/no-network.js --test harness/test/*.test.js engine/test/*.test.js",
