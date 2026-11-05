@@ -10,3 +10,12 @@ import tutoringTalk from './guidance/tutoring-talk.json' with { type: 'json' };
 import workedExamples from './guidance/worked-examples.json' with { type: 'json' };
 
 export const GUIDANCE = [scaffolding, feedback, tutoringTalk, selfExplanation, workedExamples, productiveStruggle, retrieval, metacognition];
+
+/** What research says to do at a moment in tutoring, each piece naming its studies. By a few words, a moment, or both. */
+export function findGuidance({ topic = '', moment = null } = {}) {
+  const words = String(topic).toLowerCase().split(/\W+/).filter(Boolean);
+  return GUIDANCE.filter((framework) => !words.length || words.some((word) => `${framework.id} ${framework.label} ${framework.summary}`.toLowerCase().includes(word))).map((framework) => ({
+    component: framework.id, label: framework.label, shown: framework.evidence.original, unknown: framework.evidence.unknown,
+    pieces: framework.runs.items.map((item, index) => ({ item: index + 1, text: item.text, when: item.when ?? null, about: item.about ?? null, source: item.source })).filter((item) => !moment || !item.when || item.when.includes(moment))
+  }));
+}

@@ -1,6 +1,7 @@
 # VIABLE Harness
 
-**Give any AI agent what a good teacher has in mind, before it replies.**
+**Give any AI agent what a good teacher has in mind, before it replies.** Building a tool for learners with a coding agent instead?
+[That's the other side of the Harness](docs/for-builders.md): what the AI that builds needs to know about a classroom.
 
 In the field's terms, a harness is everything around a model that decides what it knows, what it may do, when it stops and
 whether the result is any good. General harnesses are tuned for writing code. This one is tuned for teaching, and it goes

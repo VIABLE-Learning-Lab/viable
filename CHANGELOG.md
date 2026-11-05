@@ -6,6 +6,7 @@ existing files.
 
 ## Unreleased
 
+- **For the AI that builds.** A Skill, `building-for-learners`, for coding agents making something learners will use: what to ask first, the least to build, what a class does to a tool (one address, a budget per class, shared computers), learners' data, and when to stop and say so. `viable-harness review` reads a project for what classrooms trip on, with no model and nothing leaving the computer. `tutor-tests.json` is a ready set of tests for a tutor it builds. [docs/for-builders.md](harness/docs/for-builders.md).
 - **Ask.** With a model set, the console opens on a conversation: say what you're teaching, and it makes the course, activities and questions through the console's own routes, showing each step, and hands back cards for the link, QR code, class list and progress. What reaches learners waits for a person's click, enforced on the server, and names never reach its model. The role `assistant` is optional.
 - **What reaches learners stays a person's.** Ask won't change teaching or questions on what's open, for everyone or for a section, or add a first section to a course in use. It says why, and where the teacher can do it.
 - **Class lists.** Pasted lists read as lists in any script or case, numbered, with IDs or emails, with a button to send a note that only looks like one. Two columns of first and last names are refused rather than read as sections.

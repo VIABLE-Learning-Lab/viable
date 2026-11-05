@@ -22,10 +22,14 @@ import { showTestRun, testRunPage } from './testPage.js';
 import { CONNECTOR_OPTIONS, RESOURCES_USAGE, connectorChoices, creditLines, resourceOptions, resourcesCommand } from './resources.js';
 import { resourceJudge, useResource } from '../resources/index.js';
 import { MOMENT_USAGE, prepareCommand } from './prepare.js';
+import { printReview, reviewProject } from '../builders/review.js';
+import { findGuidance } from '../components/guidance.js';
 
-export const HARNESS_COMMANDS = ['prepare', 'check', 'test', 'draft-tests', 'tests-from-records', 'calibrate', 'misconceptions', 'components', 'catalog', 'resources', 'component', 'view', 'suggest', 'mcp', 'gateway', 'measure', 'xapi', 'validate', 'conformance'];
+export const HARNESS_COMMANDS = ['review', 'guidance', 'prepare', 'check', 'test', 'draft-tests', 'tests-from-records', 'calibrate', 'misconceptions', 'components', 'catalog', 'resources', 'component', 'view', 'suggest', 'mcp', 'gateway', 'measure', 'xapi', 'validate', 'conformance'];
 
 const USAGE = `Usage:
+  viable-harness review [<folder>] [--json]
+  viable-harness guidance ["<a few words>"] [--json]
 ${MOMENT_USAGE}
   viable-harness check --reply "..." [--message "..."] (--guideline "..." | --question "..." --answer-key "...")
                        [--key-concepts "a, b"] [--teaching teaching.json] [--section <id>] [--rewrite <n>]
@@ -55,6 +59,8 @@ ${GATEWAY_USAGE}
 
 Model calls go to an OpenAI-compatible endpoint: OPENAI_BASE_URL (default https://api.openai.com/v1) and OPENAI_API_KEY.
 
+review reads a project someone is building for learners, and says what a classroom would trip on; it calls no model, and exits 1
+when something should be fixed before learners use it (docs/for-builders.md).
 prepare prints what a model should be given before it replies at this moment, chosen from the teaching settings; with
 --picker-model a small model reads the moment instead of rules.
 check reviews one reply with VETTING (the reviewer is --reviewer, else --model); with --rewrite, a failed reply is
@@ -150,6 +156,12 @@ export async function harnessMain(argv, host = {}) {
   const [command, file] = positionals;
   if (values.help || !command) return console.log(usage);
   if (command === 'mcp') return (host.serveStdio ?? serveStdio)();
+  if (command === 'review') {
+    const reviewed = reviewProject(file ?? '.');
+    if (values.json) console.log(JSON.stringify(reviewed, null, 2)); else printReview(reviewed);
+    if (reviewed.must) process.exitCode = 1;
+    return;
+  }
   if (command === 'check') {
     const checked = await checkReply({
       reply: values.reply, message: values.message ?? '', guideline: values.guideline ?? '', question: values.question ?? '', answerKey: values['answer-key'] ?? '',
@@ -184,6 +196,16 @@ export async function harnessMain(argv, host = {}) {
       console.log(`  ${entry.url}  (checked ${entry.verified_at})`);
     }
     return console.log(`\n${plural(found.entries.length, 'public good')}${found.match === 'most_words' ? ' sharing the most words (none had them all)' : ''}. Entries describe, not endorse: check each license before you use it.`);
+  }
+  if (command === 'guidance') {
+    const topics = findGuidance({ topic: positionals.slice(1).join(' ') });
+    if (values.json) return console.log(JSON.stringify(topics, null, 2));
+    if (!topics.length) return console.log('No topic matched. Try scaffolding, feedback, worked examples or retrieval, or leave the words out for every topic.');
+    for (const topic of topics) {
+      console.log(`${topic.label}\n  What it rests on: ${topic.shown}`);
+      for (const piece of topic.pieces) console.log(`  - ${piece.text} (${piece.source})`);
+    }
+    return;
   }
   if (command === 'misconceptions') {
     const found = findMisconceptions(positionals.slice(1).join(' '));

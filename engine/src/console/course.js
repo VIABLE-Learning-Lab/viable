@@ -77,7 +77,7 @@ ${choose('id', 'Which', examples[0].id, examples.map((example) => ({ value: exam
 </form>` : ''}
 <div class="v-card start" id="new-file" data-say-box>
 <h3>From a file</h3>
-<p class="v-note">A package (<code>.viable.zip</code> or <code>.viable.json</code>) from the Developer Platform or another Engine. Learners, class lists and study data don’t travel in one.${simple ? '' : ' A chat page in it starts paused.'}</p>
+<p class="v-note">A package (<code>.viable.zip</code> or <code>.viable.json</code>) from the VIABLE Developer Platform or another Engine. Learners, class lists and study data don’t travel in one.${simple ? '' : ' A chat page in it starts paused.'}</p>
 <div class="v-form"><label class="v-label" for="package-file">Choose the file</label><input class="v-input" id="package-file" type="file" accept=".zip,.json" data-upload="POST courses/from-file"></div>${say()}
 </div>
 </div>
@@ -240,7 +240,7 @@ ${text('learner_daily_messages', 'Messages to the AI per learner, per day', cour
 </form>
 <section class="block" aria-labelledby="file-title" data-say-box>
 <h2 id="file-title">The course as a file</h2>
-<p class="v-note">Download it to keep it, or to open it somewhere else: the Developer Platform (Courses → Import), or a server of your own with the Engine. It holds the activities, the agents and their files. Learners, class lists and their work stay here.</p>
+<p class="v-note">Download it to keep it, or to open it somewhere else: the VIABLE Developer Platform (Courses → Import), or a server of your own with the Engine. It holds the activities, the agents and their files. Learners, class lists and their work stay here.</p>
 <div class="actions file-actions"><a class="v-btn" href="/console/api/courses/${esc(code)}/download">Download</a></div>
 </section>
 ${versions ? `<section class="block" aria-labelledby="versions-title" data-say-box>
@@ -252,7 +252,7 @@ ${locked || given ? '' : `<section class="block" aria-labelledby="end-title" dat
 <h2 id="end-title">Close or ${library.archives ? 'archive' : 'delete'}</h2>
 <div class="end">
 <div><p class="v-note">Closed, learners can’t open it. Their work stays, and you can open it again.</p><button class="v-btn" type="button" data-api="POST courses/${esc(code)}/status" data-body='${esc(JSON.stringify({ status: meta.status === 'closed' ? 'open' : 'closed' }))}' data-said="${meta.status === 'closed' ? 'Open again.' : 'Closed.'}">${meta.status === 'closed' ? 'Open it again' : 'Close this course'}</button></div>
-${library.archives ? `<div><p class="v-note">Archived, learners can’t open it and it leaves your list. What they did stays, on the Developer Platform under Learners.</p><button class="v-btn danger" type="button" data-api="DELETE courses/${esc(code)}" data-confirm="This archives “${esc(course.title)}”: learners can’t open it any more." data-yes="Archive">Archive this course</button></div>` : `<div><p class="v-note">Deleted, the course and its versions are gone from this server, with every learner’s work in it. This can’t be undone. Download it first if you may want it.</p><button class="v-btn danger" type="button" data-api="DELETE courses/${esc(code)}" data-confirm="This deletes “${esc(course.title)}”, its versions and everything its learners did. It can’t be undone." data-type="DELETE" data-yes="Delete">Delete this course</button></div>`}
+${library.archives ? `<div><p class="v-note">Archived, learners can’t open it and it leaves your list. What they did stays, on the VIABLE Developer Platform under Learners.</p><button class="v-btn danger" type="button" data-api="DELETE courses/${esc(code)}" data-confirm="This archives “${esc(course.title)}”: learners can’t open it any more." data-yes="Archive">Archive this course</button></div>` : `<div><p class="v-note">Deleted, the course and its versions are gone from this server, with every learner’s work in it. This can’t be undone. Download it first if you may want it.</p><button class="v-btn danger" type="button" data-api="DELETE courses/${esc(code)}" data-confirm="This deletes “${esc(course.title)}”, its versions and everything its learners did. It can’t be undone." data-type="DELETE" data-yes="Delete">Delete this course</button></div>`}
 </div>${say()}
 </section>`}`,
     css: `.settings{display:grid;gap:18px;max-width:640px}.versions{margin:12px 0 0;padding:0;list-style:none;border-top:1px solid var(--public-rule)}.versions li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;padding:10px 0;border-bottom:1px solid var(--public-rule)}.file-actions{margin-top:12px}.end{display:grid;gap:18px;margin-top:12px}.end>div{display:grid;gap:10px;justify-items:start}.danger{border-color:var(--pencil-red);color:var(--pencil-red)}.danger:hover{border-color:var(--pencil-red);background:color-mix(in srgb,var(--pencil-red) 8%,transparent)}`

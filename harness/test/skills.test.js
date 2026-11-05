@@ -9,7 +9,7 @@ import { TARGET_NAMES } from '../../engine/src/server/targets.js';
 
 const HARNESS = new URL('../skills/', import.meta.url);
 const ENGINE = new URL('../../engine/skills/', import.meta.url);
-const HARNESS_SKILLS = ['checking-replies-with-vetting', 'reading-learning-evidence', 'teaching-with-viable', 'writing-agent-tests', 'writing-how-the-ai-helps'];
+const HARNESS_SKILLS = ['building-for-learners', 'checking-replies-with-vetting', 'reading-learning-evidence', 'teaching-with-viable', 'writing-agent-tests', 'writing-how-the-ai-helps'];
 const ENGINE_SKILLS = ['deploying-a-viable-course'];
 const SKILLS = [...HARNESS_SKILLS, ...ENGINE_SKILLS];
 // A Skill about deploying drives the command line, and names no MCP tool.

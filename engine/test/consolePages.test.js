@@ -445,7 +445,7 @@ test('removing an agent is refused while an activity or another agent uses it, a
   const kept = await s.page('agents/tutor');
   assert.match(kept, /“Practice” uses this agent, so it can’t be removed/, 'said before anyone asks');
   assert.doesNotMatch(kept, /id="remove-agent"/);
-  assert.match(kept, /On the Developer Platform, models it doesn’t have become its default/, 'its file names this server’s model');
+  assert.match(kept, /On the VIABLE Developer Platform, models it doesn’t have become its default/, 'its file names this server’s model');
   assert.match(await s.page('courses/fractions/activities/practice'), /href="\/console\/agents\/tutor"/, 'the activity links to it');
   assert.match(await s.page('agents'), /Used in .*Practice/);
   // One called by another.

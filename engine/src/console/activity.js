@@ -66,7 +66,7 @@ function kindFields(activity, doc, code, locked, simple, asked) {
   // A host that keeps no reading without its PDF is asked for one when the activity opens.
   const kind = asked === 'reading' && !activity.workspace ? 'reading' : kindOfActivity(activity);
   if (kind === 'several') {
-    return `<p class="notice">This activity has ${activity.workspace.panels.length} panels${activity.workspace.steps?.length ? ` in ${activity.workspace.steps.length} steps` : ''} from its package. They stay as they are here. To change them, ${simple ? 'open this course on the Developer Platform' : 'change the package on the Developer Platform and add it again'}.</p>`;
+    return `<p class="notice">This activity has ${activity.workspace.panels.length} panels${activity.workspace.steps?.length ? ` in ${activity.workspace.steps.length} steps` : ''} from its package. They stay as they are here. To change them, ${simple ? 'open this course on the VIABLE Developer Platform' : 'change the package on the VIABLE Developer Platform and add it again'}.</p>`;
   }
   const panel = activity.workspace?.panels?.[0] || {};
   const sets = doc.question_sets || [];

@@ -69,7 +69,7 @@ ${places.map(knowledgeFor).join('')}
 </form>
 <div class="v-card stack from-file" id="agent-file" data-say-box>
 <h3>From a file</h3>
-<p class="v-note">An agent or a package (<code>.agent.json</code>, <code>.viable.json</code> or <code>.viable.zip</code>) from the Developer Platform or another Engine. A chat page in it starts paused.</p>
+<p class="v-note">An agent or a package (<code>.agent.json</code>, <code>.viable.json</code> or <code>.viable.zip</code>) from the VIABLE Developer Platform or another Engine. A chat page in it starts paused.</p>
 <div class="v-form"><label class="v-label" for="agent-upload">Choose the file</label><input class="v-input" id="agent-upload" type="file" accept=".zip,.json" data-upload="POST courses/from-file"></div>${say()}
 </div>
 </section>`;
@@ -163,7 +163,7 @@ function readOnlySteps(agent, using, version) {
 ${triesField(Number(checks[0].config?.max_attempts) || 3)}
 <div class="actions"><button class="v-btn is-primary" type="submit">Save</button></div>${say()}
 </form>` : '';
-  return `<p class="notice">This agent’s steps were made elsewhere and run as they are. To change them, change it on the Developer Platform, then add it here again. Its look and its chat page can be changed here.</p>
+  return `<p class="notice">This agent’s steps were made elsewhere and run as they are. To change them, change it on the VIABLE Developer Platform, then add it here again. Its look and its chat page can be changed here.</p>
 <ol class="steps">${rows}</ol>${tries}`;
 }
 
@@ -207,7 +207,7 @@ ${agent.chat_page ? `<p class="v-note">${agent.chat_page.status === 'paused' ? '
 </section>
 <section class="block" aria-labelledby="file-title" data-say-box>
 <h2 id="file-title">The agent as a file</h2>
-<p class="v-note">Download it to keep it, or to open it on the Developer Platform or another Engine. On the Developer Platform, models it doesn’t have become its default, and the import says so.</p>
+<p class="v-note">Download it to keep it, or to open it on the VIABLE Developer Platform or another Engine. On the VIABLE Developer Platform, models it doesn’t have become its default, and the import says so.</p>
 <div class="actions file-actions"><a class="v-btn is-small" href="/console/api/agents/${slug}/download">Download</a>
 ${inUse ? '' : `<button class="v-btn is-small danger" type="button" id="remove-agent" data-api="DELETE agents/${slug}" data-confirm="Remove “${esc(agent.name)}” from this server? ${agent.chat_page ? 'Its chat page goes with it, and what visitors said there. ' : ''}This can’t be undone. Download it first if you may want it." data-yes="Remove">Remove it</button>`}</div>${inUse ? `<p class="v-note part-note">${esc(inUse)}</p>` : ''}${say()}
 </section>`,
@@ -311,7 +311,7 @@ const triesOf = (body) => {
 
 async function saveAgent({ library }, match, body) {
   await changeAgent(library, match[1], body?.version, (agent, doc) => {
-    if (!formOf(agent.graph)) throw refused('This agent’s steps were made elsewhere. Change them on the Developer Platform, then add it here again.');
+    if (!formOf(agent.graph)) throw refused('This agent’s steps were made elsewhere. Change them on the VIABLE Developer Platform, then add it here again.');
     const fields = formFields(body, doc);
     if (agent.profile?.title === agent.name) agent.profile.title = fields.name;
     agent.name = fields.name;
