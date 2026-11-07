@@ -626,7 +626,7 @@ export const ASK_TOOLS = [
       const from = Number.isInteger(args.from) && args.from > 0 ? Math.min(args.from, page.text.length) : 0;
       const next = from + READ_CHARS;
       remember(here.thread, [url, page.url]);
-      return { done: `Read “${clean(page.title || hostOf(page.url), 60)}”`, link: { href: page.url, label: 'Open the page' }, forModel: { title: page.title, url: page.url, text: page.text.slice(from, next), total_chars: page.text.length, ...(next < page.text.length ? { next_from: next } : {}) } };
+      return { done: `Read “${clip(page.title || hostOf(page.url), 60)}”`, link: { href: page.url, label: 'Open the page' }, forModel: { title: page.title, url: page.url, text: page.text.slice(from, next), total_chars: page.text.length, ...(next < page.text.length ? { next_from: next } : {}) } };
     }
   },
   {

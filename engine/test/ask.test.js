@@ -282,6 +282,20 @@ test('an activity’s web page takes an address the teacher gave, not one a page
   assert.ok(given.activity);
 });
 
+test('a model’s own citation marks don’t reach the page, the thread or its next call', async () => {
+  const s = await server(['It says so. citeturn1 Then this\ue200cite\ue202turn0search1\ue202turn0news2\ue201 and citeturn0search1turn0news2. A poet can recite turns in a poem.', 'Yes.']);
+  const events = await s.ask('What does it say?');
+  const html = events.find((event) => event.name === 'said').data.html;
+  assert.match(html, /It says so\. Then this and\. A poet can recite turns in a poem\./);
+  assert.doesNotMatch(html, /citeturn|[\ue200-\ue2ff]/u);
+  await s.ask('And?', threadOf(events));
+  assert.doesNotMatch(JSON.stringify(s.sent.at(-1).messages.filter((message) => message.role === 'assistant')), /citeturn/);
+  const [, marks] = (await s.page('ask')).match(/live\.words\.replace\(\/(.+)\/g, ''\)/);
+  let words = '';
+  const shown = ['So cite', 'turn0search1turn0', 'news2. Then\ue200cite', '\ue202turn0', '\ue201 more.'].map((piece) => (words += piece).replace(new RegExp(marks, 'g'), ''));
+  assert.deepEqual(shown, ['So cite', 'So', 'So. Then', 'So. Then', 'So. Then more.'], 'words as they arrive lose them too, however they’re cut');
+});
+
 test('a link’s words: a bracket stays in an address, and a full stop after one isn’t part of it', async () => {
   const s = await server(['See [Mercury](https://en.example.org/wiki/Mercury_(planet)) and https://en.example.org/x. Also https://made.up/y.']);
   const events = await s.ask('Use https://en.example.org/wiki/Mercury_(planet) and https://en.example.org/x');
