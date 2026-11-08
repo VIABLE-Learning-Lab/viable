@@ -75,17 +75,38 @@ export function embedLine(src, title, label) {
   return `<p>${escapeUTF8(`${label}: ${name ? `${name} — ` : ''}${link}`)}</p>`;
 }
 
+// A site behind Cloudflare's email protection serves "[email protected]" in place of each address and keeps the
+// address, XOR-ed with its first byte, in data-cfemail or after /cdn-cgi/l/email-protection#; a visitor's
+// browser writes it back with a script. Write it back here too, so the page reads as its visitors see it.
+export function revealHiddenEmails(html) {
+  if (!html.includes('data-cfemail') && !html.includes('/cdn-cgi/l/email-protection#')) return html;
+  const address = (hex) => {
+    const bytes = (hex.match(/../g) || []).map((pair) => parseInt(pair, 16));
+    const key = bytes.shift();
+    return escapeUTF8(new TextDecoder().decode(new Uint8Array(bytes.map((byte) => byte ^ key))));
+  };
+  // Neither pattern reads past the second "<" from where it starts, so a page that repeats one still reads in a pass.
+  return html
+    .replace(/<(a|span)(\s[^<>]*)>[^<]*<\/\1>/gi, (element, name, attributes) => {
+      const hex = /\sdata-cfemail\s*=\s*["']?([0-9a-f]+)/i.exec(attributes)?.[1];
+      return hex ? address(hex) : element;
+    })
+    .replace(/(\bhref\s*=\s*["']?)(?:https?:\/\/[^/"'\s<>]+)?\/cdn-cgi\/l\/email-protection#([0-9a-f]+)/gi, (_, start, hex) => `${start}mailto:${address(hex)}`);
+}
+
 /**
  * Readable Markdown for agents and knowledge bases: the page's main region when it
  * has one (else the converter's default, which drops header and footer), without
  * navigation or forms; email and phone link targets are written into the text so
- * "Email me" keeps its address. Links and images are inventoried from the whole page;
+ * "Email me" keeps its address, and addresses a site hid from scripts are written back
+ * (revealHiddenEmails). Links and images are inventoried from the whole page;
  * `knowledge` adds a LibGuides page's own navigation as guide_pages and, for a page with more
  * links than the inventory holds, keeps the first ones instead of failing (knowledge bases only
  * use them to find more pages).
  */
 export async function htmlToSource(html, sourceUrl, toMarkdown, signal, { knowledge = false } = {}) {
   if (!toMarkdown) throw failure('HTML conversion requires the Workers AI binding.', 'http_markdown_unavailable');
+  html = revealHiddenEmails(html);
   if (typeof HTMLRewriter === 'undefined') return patternSource(html, sourceUrl, toMarkdown);
   let base = sourceUrl;
   let foundBase = false;
