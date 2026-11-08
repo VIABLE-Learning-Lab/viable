@@ -38,6 +38,9 @@ export function skillAtLevel(code, wanted) {
     level: { number: level, name: SKILLS.levels[level - 1] },
     learning_components: indicator.items.map((item) => ({ id: item.levels[level - 1][0], description: item.levels[level - 1][1] })),
     prior: level > 1 ? indicator.items.map((item) => ({ uuid: item.levels[level - 2][0], code: `${item.code}.${level - 1}`, description: item.levels[level - 2][1] })) : [],
-    source: { name: SKILLS.framework.name, license: SKILLS.framework.license, attribution: [SKILLS.framework.attribution], modified: SKILLS.framework.modified, retrieved_at: null }
+    source: skillsSource()
   };
 }
+
+/** Where the skills come from, as a chosen skill keeps it. */
+export const skillsSource = () => ({ name: SKILLS.framework.name, license: SKILLS.framework.license, attribution: [SKILLS.framework.attribution], modified: SKILLS.framework.modified, retrieved_at: null });

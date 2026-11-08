@@ -439,6 +439,37 @@ test('what would reach learners at once is refused: sections on a course in use,
   assert.match(await say(call('add_sections', { course: code, names: ['Period 2'] })), /first section would stop each of them/);
 });
 
+test('what Ask looks up and sets says whose work it is, in the page’s words', async () => {
+  const { findMisconceptions } = await import('../../harness/src/utils/misconceptions.js');
+  const { findSkills } = await import('../../harness/src/utils/skills.js');
+  const id = findMisconceptions('adding fractions').data[0].misconceptions[0].id;
+  const skill = findSkills('evidence').data[0].code;
+  const steps = [
+    SETUP[0],
+    (told) => SETUP[1](told.map((answer) => answer.course).filter(Boolean).at(-1)),
+    [call('find_misconceptions', { words: 'adding fractions' }), call('find_skills', { words: 'evidence' })],
+    (told) => { const made = told.find((answer) => answer.activity); return [call('set_how_ai_helps', { course: made.course, activity: made.activity, help: 'hint', misconceptions: [id], skill: { code: skill, level: 3 } })]; },
+    'Done.'
+  ];
+  const s = await server((body, at) => (typeof steps[at] === 'function' ? steps[at](body.messages.filter((message) => message.role === 'tool').map((message) => JSON.parse(message.content))) : steps[at]));
+  const events = await s.ask('Fractions for my grade 5 class. Listen for adding the denominators, and aim at using evidence.');
+  const done = events.filter((event) => event.name === 'step' && event.data.state === 'done').map((event) => event.data.html).join('\n');
+  assert.match(done, /<p class="ask-detail">From Eedi Misconceptions Graph v1\.0, CC BY 4\.0\.<\/p>/);
+  assert.match(done, /<p class="ask-detail">From Carnegie Skills Progressions, CC BY 4\.0\.<\/p>/);
+  assert.match(done, /How much the AI does: Gives hints/);
+  assert.match(done, new RegExp(`Skill: ${skill} at Integrating, from Carnegie Skills Progressions, CC BY 4\\.0`));
+  assert.match(done, /Listening for 1 misconception, from Eedi Misconceptions Graph v1\.0, CC BY 4\.0/);
+});
+
+test('a host’s standards search names its source when the host gives one', async () => {
+  const { ASK_TOOLS } = await import('../src/console/askTools.js');
+  const tool = ASK_TOOLS.find((item) => item.name === 'find_standards');
+  const search = async () => [{ uuid: 'u', code: '5.NF.A.1', says: 'Add fractions with unlike denominators.' }];
+  const named = await tool.run({ standards: { search, source: { name: 'Learning Commons Knowledge Graph', license: 'https://creativecommons.org/licenses/by/4.0/' } } }, { words: 'fractions' });
+  assert.equal(named.detail, 'From Learning Commons Knowledge Graph, CC BY 4.0.');
+  assert.equal((await tool.run({ standards: { search } }, { words: 'fractions' })).detail, null);
+});
+
 test('one round of a model’s steps has a limit, and the ones past it are told to wait', async () => {
   const many = Array.from({ length: 12 }, (_, index) => call('list_courses', {}, `call_${index}`));
   const { ask, sent } = await server([many, 'Done.']);

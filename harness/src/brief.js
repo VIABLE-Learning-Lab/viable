@@ -7,6 +7,7 @@
  */
 import { readJsonAnswer } from './agentTests.js';
 import { findMisconceptions } from './utils/misconceptions.js';
+import { MISCONCEPTIONS_SOURCE } from './utils/misconceptionsSource.js';
 import { teachingContext } from './utils/teaching.js';
 import { searchTerms } from './utils/terms.js';
 import { SPEAK_UP, speakUpMove, speaksUpOf } from './speakUp.js';
@@ -54,18 +55,19 @@ export function readMoment(message, history = []) {
 const unique = (items) => [...new Map(items.map((item) => [item.id, item])).values()];
 
 // What could be chosen: the teacher's choices first, then what Eedi's graph holds for the goal and
-// standard, then for the learner's own words (searched here, sent nowhere).
+// standard, then for the learner's own words (searched here, sent nowhere). Each keeps where it came from,
+// so whoever reads the turn sees whose work went in.
 function candidatesOf(settings, message, extra = []) {
   const standard = settings.standard;
-  const chosen = (settings.misconceptions || []).map((item) => ({ id: item.id, description: item.description, from: 'teacher' }));
+  const chosen = (settings.misconceptions || []).map((item) => ({ id: item.id, description: item.description, from: 'teacher', source: item.source || MISCONCEPTIONS_SOURCE }));
   // Eedi's graph is mathematics only, so a standard in another subject doesn't search it.
   const words = standard && !/math/i.test(standard.subject || '') ? '' : [settings.goal, standard?.description, ...(standard?.learning_components || []).map((item) => item.description)].filter(Boolean).join(' ').slice(0, 4000);
   const search = (text) => (searchTerms(text).length ? findMisconceptions(text).data.flatMap((construct) => construct.misconceptions) : []);
   const found = [...search(words), ...(standard && !/math/i.test(standard.subject || '') ? [] : search(message.slice(0, BRIEF_LIMITS.messageChars)))];
   return {
-    misconceptions: unique([...chosen, ...extra.map((item) => ({ id: item.id, description: item.description, from: item.from ?? 'host' })), ...found.map((item) => ({ id: item.id, description: item.description, from: 'graph' }))]).slice(0, BRIEF_LIMITS.candidates),
-    components: (standard?.learning_components || []).map((item) => ({ id: item.id, description: item.description })),
-    prior: (standard?.prior || []).map((item) => ({ id: item.uuid, description: item.description })),
+    misconceptions: unique([...chosen, ...extra.map((item) => ({ id: item.id, description: item.description, from: item.from ?? 'host', ...(item.source ? { source: item.source } : {}) })), ...found.map((item) => ({ id: item.id, description: item.description, from: 'graph', source: MISCONCEPTIONS_SOURCE }))]).slice(0, BRIEF_LIMITS.candidates),
+    components: (standard?.learning_components || []).map((item) => ({ id: item.id, description: item.description, ...(standard.source ? { source: standard.source } : {}) })),
+    prior: (standard?.prior || []).map((item) => ({ id: item.uuid, description: item.description, ...(standard.source ? { source: standard.source } : {}) })),
     guidance: settings.guidance || []
   };
 }

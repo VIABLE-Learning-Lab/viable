@@ -18,6 +18,12 @@ import { SPEAK_UP } from '../../../harness/src/speakUp.js';
 const plain = (text) => String(text ?? '').replace(/^#+\s.*$|^\*[^*\n]+\*$/gm, '').replace(/[*_`]/g, '').replace(/\s+/g, ' ').trim();
 const clipped = (value, limit) => (typeof value === 'string' && value.length > limit ? `${value.slice(0, limit).replace(/\s+\S*$/, '')}…` : value);
 
+// Where something came from, as a reader sees it: its name and license, a Creative Commons address as its short name.
+export const sourceName = (source) => {
+  const cc = /creativecommons\.org\/licenses\/([a-z-]+)\/([\d.]+)/i.exec(String(source?.license || ''));
+  return [source?.name, cc ? `CC ${cc[1].toUpperCase()} ${cc[2]}` : source?.license].filter(Boolean).join(', ') || null;
+};
+
 /** What the panel says of an activity's settings, with a section's own help level over them. What the teacher wants to hear about is for the teacher, and isn't given to the AI. */
 export function settingsShown(teaching, section = null) {
   const saved = teachingSettings(teaching);
@@ -25,8 +31,9 @@ export function settingsShown(teaching, section = null) {
   const help = (section && saved.sections?.[section]?.help) || saved.help;
   return {
     goal: saved.goal, help, told: help ? HELP_LEVELS[help] : null, role: saved.role || null,
-    standard: saved.standard ? { code: saved.standard.code || null, description: saved.standard.description } : null,
-    listens_for: (saved.misconceptions || []).map((item) => item.description)
+    standard: saved.standard ? { kind: saved.standard.kind, code: saved.standard.code || null, level: saved.standard.level?.name || null, description: saved.standard.description, from: sourceName(saved.standard.source) } : null,
+    listens_for: (saved.misconceptions || []).map((item) => item.description),
+    listens_from: [...new Set((saved.misconceptions || []).map((item) => sourceName(item.source)).filter(Boolean))]
   };
 }
 
@@ -35,13 +42,12 @@ export function settingsShown(teaching, section = null) {
  * learner was on, and what the Harness read of the moment, with where each thing came from. Never the learner's words.
  */
 export function turnRecord(brief, step = null) {
-  const named = (source) => [source?.name, source?.license].filter(Boolean).join(', ') || null;
   return {
     ...(step ? { step: { title: step.title, brief: step.brief || null } } : {}),
     ...(brief ? { brief: { moment: brief.moment, move: brief.move || null, move_source: brief.move_source || null, by: brief.by || 'rules', flag: brief.flag || null, went_in: [
-      ...(brief.misconceptions || []).map((item) => ({ what: 'A misconception that may be behind it', text: item.description, source: named(item.source) })),
-      ...(brief.components || []).map((item) => ({ what: 'The part of the skill in play', text: item.description, source: named(item.source) })),
-      ...(brief.prior || []).map((item) => ({ what: 'What to go back to', text: item.description, source: named(item.source) })),
+      ...(brief.misconceptions || []).map((item) => ({ what: 'A misconception that may be behind it', text: item.description, source: sourceName(item.source) })),
+      ...(brief.components || []).map((item) => ({ what: 'The part of the skill in play', text: item.description, source: sourceName(item.source) })),
+      ...(brief.prior || []).map((item) => ({ what: 'What to go back to', text: item.description, source: sourceName(item.source) })),
       ...(brief.guidance || []).map((item) => ({ what: 'From research', text: item.text, source: item.source || null }))
     ] } } : {})
   };
@@ -138,11 +144,10 @@ export function watchHooks(emit, base = {}) {
     },
     // Each thing that went in, with where it came from, so whoever reads this can see what the Harness added and whose work it is.
     onBrief: (brief) => {
-      const named = (source) => [source?.name, source?.license].filter(Boolean).join(', ') || null;
       say({ kind: 'brief', moment: brief.moment, move: brief.move, move_source: brief.move_source || null, by: brief.by, flag: brief.flag, went_in: [
-        ...brief.misconceptions.map((item) => ({ what: 'A misconception that may be behind it', text: item.description, source: named(item.source) })),
-        ...brief.components.map((item) => ({ what: 'The part of the skill in play', text: item.description, source: named(item.source) })),
-        ...brief.prior.map((item) => ({ what: 'What to go back to', text: item.description, source: named(item.source) })),
+        ...brief.misconceptions.map((item) => ({ what: 'A misconception that may be behind it', text: item.description, source: sourceName(item.source) })),
+        ...brief.components.map((item) => ({ what: 'The part of the skill in play', text: item.description, source: sourceName(item.source) })),
+        ...brief.prior.map((item) => ({ what: 'What to go back to', text: item.description, source: sourceName(item.source) })),
         ...(brief.guidance || []).map((item) => ({ what: 'From research', text: item.text, source: item.source || null }))
       ] });
     },
@@ -229,7 +234,7 @@ function watchPanel(config) {
           const pick = el('button', null, name);
           pick.type = 'button';
           pick.setAttribute('aria-pressed', String(level === set.help));
-          pick.addEventListener('click', () => change({ help: level }));
+          pick.addEventListener('click', () => (config.control.url ? change({ help: level }) : tryLevel(level)));
           item.append(pick);
         } else item.append(name);
         scale.append(item);
@@ -238,12 +243,17 @@ function watchPanel(config) {
     }
     kids.push(goalPart(part, set));
     if (set.role) kids.push(el('div', 'goal-row', el('p', 'row-label', 'Who the AI is here'), el('p', 'goal', set.role)));
+    if (set.standard) {
+      const which = [set.standard.code, set.standard.level ? `at ${set.standard.level}` : ''].filter(Boolean).join(' ');
+      kids.push(el('div', 'goal-row', el('p', 'row-label', `${set.standard.kind === 'skill' ? 'The skill' : 'The standard'}${which ? `, ${which}` : ''}`), el('p', 'goal', set.standard.description), set.standard.from ? el('cite', 'source', `From ${set.standard.from}`) : null));
+    }
     if (set.listens_for?.length) {
       const list = el('ul', null, ...set.listens_for.map((text) => el('li', turn?.heard?.has(text) ? 'heard' : null, text)));
-      const more = el('details', 'listening', el('summary', null, `Listening for ${set.listens_for.length} misconception${set.listens_for.length === 1 ? '' : 's'}`), list);
+      const from = set.listens_from?.length ? el('cite', 'source', `Chosen for this activity from ${set.listens_from.join('; ')}`) : null;
+      const more = el('details', 'listening', el('summary', null, `Listening for ${set.listens_for.length} misconception${set.listens_for.length === 1 ? '' : 's'}`), list, from);
       kids.push(more);
     }
-    const said = el('p', 'said-back', note);
+    const said = el('p', 'said-back', note || (config.control?.tried && !config.control.url ? `For this try only${config.control.own ? `; the activity is set to ${HELP_NAMES[config.control.own]}` : ''}. Ask again to see the difference.` : ''));
     said.setAttribute('role', 'status');
     kids.push(said);
     part.replaceChildren(...kids);
@@ -251,7 +261,7 @@ function watchPanel(config) {
   function goalPart(part, set) {
     const line = el('p', 'goal', set.goal || 'None set.');
     const row = el('div', 'goal-row', el('p', 'row-label', 'The goal'), line);
-    if (!config.control) return row;
+    if (!config.control?.url) return row;
     const edit = el('button', 'link', 'Change the goal');
     edit.type = 'button';
     edit.addEventListener('click', () => {
@@ -271,6 +281,13 @@ function watchPanel(config) {
     });
     row.append(edit);
     return row;
+  }
+  // A host with no place to keep a try's settings (control.param): the page opens again with the level in its address, for its own turns only.
+  function tryLevel(level) {
+    const next = new URL(location.href);
+    if (level === config.control.own) next.searchParams.delete(config.control.param);
+    else next.searchParams.set(config.control.param, level);
+    location.assign(next.href);
   }
   async function change(what) {
     try {
@@ -393,7 +410,7 @@ function watchPanel(config) {
     if (!event.items?.length) return;
     for (const text of event.items) turn.heard.add(text);
     turn.heardLine.hidden = false;
-    turn.heardLine.replaceChildren(el('p', 'label', 'Heard in this message'), ...event.items.map((text) => el('p', 'heard-text', text)), el('p', 'note', 'A misconception the teacher chose to listen for. The Harness asked a model about this message separately.'));
+    turn.heardLine.replaceChildren(el('p', 'label', 'Heard in this message'), ...event.items.map((text) => el('p', 'heard-text', text)), el('p', 'note', `A misconception chosen for this activity${teaching?.listens_from?.length ? `, from ${teaching.listens_from.join('; ')}` : ''}. The Harness asked a model about this message separately.`));
     drawSettings();
     toEnd();
   }
@@ -601,7 +618,8 @@ html{padding-top:40px}
  * The panel as a page's slots.beside. Give it only to a request the host has granted it. teaching: the
  * settings as settingsShown says them; note: a few words saying what is answering; warning: what's wrong
  * with this page, if anything; hint: what the empty panel suggests; control: { url, page }, where the settings can be changed for a
- * try-out (POST { page, help?, goal? } answers { teaching }); extra: more of the host's own script;
+ * try-out (POST { page, help?, goal? } answers { teaching }), or { param, own, tried } for a host that keeps no try's settings: the
+ * page opens again with the help level in its address (?param=level), own being the activity's and tried the one in use; extra: more of the host's own script;
  * fontBase: where this host serves the type (fontRoutes), or null to carry it in the page.
  */
 export function watchSlot({ teaching = null, note = null, warning = null, hint = null, control = null, signOut = null, record = false, extra = '', fontBase, docs = 'https://github.com/VIABLE-Learning-Lab/viable/blob/main/harness/docs/how-it-works.md' } = {}, nonce) {

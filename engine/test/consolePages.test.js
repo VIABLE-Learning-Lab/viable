@@ -731,6 +731,36 @@ test('guidance from research: browsed by topic with what isn\'t known, chosen on
   assert.ok(!(await page(`courses/${code}/activities/${key}`)).includes(`DELETE ${api}/guidance/19`));
 });
 
+test('whose work each chosen thing is: a skill, misconceptions and guidance name their source, and open to its attribution', async () => {
+  const { GUIDANCE } = await import('../../harness/src/components/guidance.js');
+  const { SKILLS } = await import('../../harness/src/utils/skillsData.js');
+  const { findSkills } = await import('../../harness/src/utils/skills.js');
+  const { findMisconceptions } = await import('../../harness/src/utils/misconceptions.js');
+  const { escapeHtml } = await import('../src/learner/shell.js');
+  const { ok, page } = await server();
+  const { go } = await ok('POST', 'courses', { title: 'Fractions' });
+  const code = go.split('/').at(-1);
+  const key = (await ok('POST', `courses/${code}/activities`, { title: 'Practice', kind: 'chat' })).go.split('/').at(-1);
+  const api = `courses/${code}/activities/${key}`;
+  const before = await page(api);
+  // The levels to choose are the source's own, the ones a chosen skill keeps; where misconceptions are searched is named before a search.
+  for (const name of SKILLS.levels) assert.ok(before.includes(`>${name}</option>`), name);
+  assert.match(before, /from the Carnegie Skills Progressions/);
+  assert.match(before, /<details class="source-note"><summary>From Eedi Misconceptions Graph v1\.0, CC&nbsp;BY&nbsp;4\.0<\/summary><p>[^<]*Eedi Ltd\./);
+  const found = (await ok('GET', `${api}/find-skill?q=evidence&level=3`)).html;
+  assert.match(found, /<summary>From Carnegie Skills Progressions, CC&nbsp;BY&nbsp;4\.0<\/summary><p>[^<]*Carnegie Foundation/);
+
+  await ok('POST', `${api}/standard`, { skill: findSkills('evidence').data[0].code, level: '3' });
+  await ok('POST', `${api}/misconceptions`, { id: findMisconceptions('adding fractions').data[0].misconceptions[0].id });
+  const piece = GUIDANCE[0].runs.items[0];
+  await ok('POST', `${api}/guidance`, { component: GUIDANCE[0].id, item: 1 });
+  const after = await page(api);
+  assert.match(after, new RegExp(`· ${SKILLS.levels[2]}</strong>`));
+  assert.match(after, /<div class="chosen"><div>[\s\S]*?<summary>From Carnegie Skills Progressions, CC&nbsp;BY&nbsp;4\.0<\/summary>/);
+  assert.equal(after.match(/From Eedi Misconceptions Graph v1\.0, CC&nbsp;BY&nbsp;4\.0/g).length, 1, 'each source once');
+  assert.ok(after.includes(`<summary>${escapeHtml(piece.source)}</summary><p>${escapeHtml(piece.attribution)}</p>`), 'a piece opens to the studies it names');
+});
+
 test('a detector: nothing is sent until someone asks, no names go, its marks come back joined to the class, and only https is taken', async () => {
   const asked = [];
   const answers = { marks: [{ turn_index: 0, label: 'Gaming the hints', evidence: 'Asked for the next hint at once, three times.' }] };

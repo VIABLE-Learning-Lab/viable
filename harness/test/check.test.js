@@ -70,6 +70,20 @@ test('the reviewer reads the reply and its rules, never what the learner wrote',
   }
 });
 
+test('a question panel’s explanation is how the answer is reached, a hint is not giving it away, and no key concept is made up', async () => {
+  const { fetch, calls } = scripted('PASS');
+  await checkReply({ reply: 'The top number changes in the same way. Which numerator fits?', question: 'Which fraction equals 2/3? A) 3/4 B) 2/6 C) 4/6', answerKey: 'Correct answer: 4/6\nExplanation: Multiply the top and bottom by 2.', reviewer: 'judge', ...endpoint(fetch) });
+  const rule = calls[0].messages[0].content;
+  assert.match(rule, /give away any of the correct answers \('Correct answer: 4\/6'\)\?/, 'the answer alone is what must not be given');
+  assert.match(rule, /Explanation 1 \(how the answer is reached\): Multiply the top and bottom by 2\./);
+  assert.match(rule, /A hint doesn't give it away: naming the idea, rule or method/);
+  assert.doesNotMatch(rule, /any of the key concepts|Reveals the key concept/, 'none listed, none to fail');
+  const listed = scripted('PASS');
+  await checkReply({ reply: 'What could the denominators become?', question: 'What is 1/2 + 1/3?', answerKey: '5/6', keyConcepts: ['common denominator'], reviewer: 'judge', ...endpoint(listed.fetch) });
+  assert.match(listed.calls[0].messages[0].content, /or explicitly state any of the key concepts \('common denominator'\)/);
+  assert.match(listed.calls[0].messages[0].content, /unless it states a listed key concept/);
+});
+
 test('an answer-key review tells confirming an answer from supplying it, with room to answer', async () => {
   const { fetch, calls } = scripted('PASS');
   await checkReply({ reply: 'Yes, it’s 5/6. How did you get there?', question: 'What is 1/2 + 1/3?', answerKey: '5/6', reviewer: 'judge', ...endpoint(fetch) });

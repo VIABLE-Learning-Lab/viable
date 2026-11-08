@@ -7,6 +7,10 @@
 import { activityKeys } from '../server/library.js';
 import { guidanceFrom } from '../../../harness/src/components/contract.js';
 import { teachingSettings } from '../../../harness/src/utils/teaching.js';
+import { MISCONCEPTIONS_SOURCE } from '../../../harness/src/utils/misconceptionsSource.js';
+import { HELP_NAMES } from '../../../harness/src/ui/parts.js';
+import { sourceName } from '../learner/watch.js';
+import { plural } from './forms.js';
 import { normalizeItems } from '../learner/questions.js';
 import { activityIn, withTeaching } from './activity.js';
 import { changeCourse, courseAt, kindOfActivity } from './course.js';
@@ -383,6 +387,19 @@ function questionLines(args, items = []) {
   return lines.length > 12 ? [...lines.slice(0, 12), `And ${lines.length - 12} more`] : lines;
 }
 
+// What Ask set, in the page's words, with whose work each chosen thing is.
+function setLines(after) {
+  const from = (names) => { const unique = [...new Set(names.filter(Boolean))]; return unique.length ? `, from ${unique.join('; ')}` : ''; };
+  const standard = after?.standard;
+  return [
+    after?.goal ? `Goal: ${after.goal}` : '',
+    after?.help ? `How much the AI does: ${HELP_NAMES[after.help] || after.help}` : '',
+    standard ? `${standard.kind === 'skill' ? 'Skill' : 'Standard'}: ${[standard.code, standard.level?.name ? `at ${standard.level.name}` : ''].filter(Boolean).join(' ')}${from([sourceName(standard.source)])}` : '',
+    after?.misconceptions?.length ? `Listening for ${plural(after.misconceptions.length, 'misconception')}${from(after.misconceptions.map((item) => sourceName(item.source)))}` : '',
+    after?.guidance?.length ? `${plural(after.guidance.length, 'piece')} of guidance${from(after.guidance.map((item) => item.source))}` : ''
+  ].filter(Boolean).join('\n');
+}
+
 export const ASK_TOOLS = [
   {
     name: 'list_courses', tier: 'look', says: () => 'Looking at your courses',
@@ -419,7 +436,7 @@ export const ASK_TOOLS = [
       const { findMisconceptions } = await import('../../../harness/src/utils/misconceptions.js');
       const found = findMisconceptions(clean(args.words, 200));
       const list = found.data.flatMap((construct) => construct.misconceptions.slice(0, 5).map((item) => ({ id: item.id, says: item.description, skill: construct.description })));
-      return { done: list.length ? `Found ${list.length} common misconceptions` : 'Found no misconceptions for those words', forModel: list.slice(0, 16) };
+      return { done: list.length ? `Found ${list.length} common misconceptions` : 'Found no misconceptions for those words', forModel: list.slice(0, 16), detail: list.length ? `From ${sourceName(MISCONCEPTIONS_SOURCE)}.` : null };
     }
   },
   {
@@ -427,9 +444,9 @@ export const ASK_TOOLS = [
     description: 'Durable skills (collaboration, communication, critical thinking) from the Carnegie progressions, for a goal that no standard fits.',
     parameters: { type: 'object', required: ['words'], properties: { words: string('A few words, such as evidence or feedback.') } },
     async run(_here, args) {
-      const { findSkills } = await import('../../../harness/src/utils/skills.js');
+      const { findSkills, skillsSource } = await import('../../../harness/src/utils/skills.js');
       const found = findSkills(clean(args.words, 200));
-      return { done: `Found ${found.data.length} skills`, forModel: found.data.slice(0, 8).map((item) => ({ code: item.code, skill: item.skill, says: item.description })) };
+      return { done: `Found ${found.data.length} skills`, forModel: found.data.slice(0, 8).map((item) => ({ code: item.code, skill: item.skill, says: item.description })), detail: found.data.length ? `From ${sourceName(skillsSource())}.` : null };
     }
   },
   {
@@ -438,7 +455,7 @@ export const ASK_TOOLS = [
     parameters: { type: 'object', required: ['words'], properties: { words: string('A few words or a code, such as 5.NF.A.1.'), jurisdiction: string('A state, or Multi-State for Common Core. Leave it out if unsure.'), grade: string('A grade, such as 5 or K.') } },
     async run(here, args) {
       const found = await here.standards.search({ words: clean(args.words, 200), jurisdiction: args.jurisdiction ? clean(args.jurisdiction, 60) : null, grade: args.grade ? clean(args.grade, 8) : null });
-      return { done: `Found ${found.length} standards`, forModel: found.slice(0, 8) };
+      return { done: `Found ${found.length} standards`, forModel: found.slice(0, 8), detail: found.length && here.standards.source ? `From ${sourceName(here.standards.source)}.` : null };
     }
   },
   {
@@ -581,7 +598,7 @@ export const ASK_TOOLS = [
       properties: {
         course: COURSE, activity: ACTIVITY, ...TEACHING,
         misconceptions: { type: 'array', items: { type: 'string' }, description: 'Up to 8 ids from find_misconceptions that this class is likely to hold.' },
-        skill: { type: 'object', properties: { code: string('Its code from find_skills.'), level: { type: 'integer', description: '1 to 4: emerging to advanced.' } } },
+        skill: { type: 'object', properties: { code: string('Its code from find_skills.'), level: { type: 'integer', description: '1 to 4: Exploring, Analyzing, Integrating, Extending.' } } },
         guidance: { type: 'array', items: { type: 'object', properties: { component: string('From find_guidance.'), item: { type: 'integer' } } }, description: 'Pieces from find_guidance that fit this activity. A few well-chosen ones, not all.' }
       }
     },
@@ -604,7 +621,7 @@ export const ASK_TOOLS = [
       for (const id of (args.misconceptions || []).slice(0, 8)) await call('POST', `courses/${code}/activities/${args.activity}/misconceptions`, { id: String(id) });
       if (args.skill?.code) await call('POST', `courses/${code}/activities/${args.activity}/standard`, { skill: String(args.skill.code), level: String(args.skill.level ?? 2) });
       const after = teachingSettings(activityIn((await courseAt(here.library, code)).doc, args.activity).activity.teaching);
-      return { done: `Set how the AI helps in “${activity.title}”`, link: { href: pageOf(code, args.activity), label: 'Its page' }, course: code, forModel: { goal: after?.goal ?? null, help: after?.help ?? null, misconceptions: after?.misconceptions?.length ?? 0, guidance: after?.guidance?.length ?? 0, open: activity.release !== 'hidden' }, detail: [after?.goal ? `Goal: ${after.goal}` : '', after?.help ? `How far: ${after.help}` : '', after?.misconceptions?.length ? `Listening for ${after.misconceptions.length} misconceptions` : '', after?.guidance?.length ? `${after.guidance.length} pieces of guidance` : ''].filter(Boolean).join('\n') };
+      return { done: `Set how the AI helps in “${activity.title}”`, link: { href: pageOf(code, args.activity), label: 'Its page' }, course: code, forModel: { goal: after?.goal ?? null, help: after?.help ?? null, misconceptions: after?.misconceptions?.length ?? 0, guidance: after?.guidance?.length ?? 0, open: activity.release !== 'hidden' }, detail: setLines(after) };
     }
   },
   {

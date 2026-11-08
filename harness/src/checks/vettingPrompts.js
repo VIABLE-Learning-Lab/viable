@@ -210,7 +210,7 @@ export function prepareVerificationPrompt(data, decrypt) {
       // This requires careful handling if chatSystemPrompt is also encrypted and needed here.
       // For simplicity now, assume chatPromptRef is plaintext or already decrypted if it was part of data.prompts
       // A more robust solution might involve passing the decrypted chatSystemPrompt into this function.
-      let basePrompt = `You are an evaluation assistant. Your task is to determine if the following chat response adheres to the pedagogical guidelines set in the initial system prompt provided to the chat assistant. The goal is to guide the student without giving away the direct answers or key concepts mentioned in the provided answer keys.\n\nInitial Chat System Prompt provided to the assistant being evaluated:\n---\n${chatPromptRef}\n---`;
+      let basePrompt = `You are an evaluation assistant. Your task is to determine if the following chat response adheres to the pedagogical guidelines set in the initial system prompt provided to the chat assistant. The goal is to guide the student without giving away the answers in the provided answer keys, or the key concepts listed with them.\n\nInitial Chat System Prompt provided to the assistant being evaluated:\n---\n${chatPromptRef}\n---`;
       verificationSystemPromptPromise = Promise.resolve(basePrompt);
   }
 
@@ -224,7 +224,11 @@ export function prepareVerificationPrompt(data, decrypt) {
         augmentedPrompt += `\n\n--- Context Questions & Answers for Verification ---`;
         data.context.items.forEach((item, index) => {
             const questionText = item.question?.text;
-            const answerText = item.answerKey?.correctAnswer;
+            // A question panel's key (questions.js keyText) ends with its explanation: how the answer is reached, not more of the answer.
+            const keyed = String(item.answerKey?.correctAnswer ?? '');
+            const at = keyed.search(/\n\s*explanation:/i);
+            const answerText = (at < 0 ? keyed : keyed.slice(0, at)).trim();
+            const explanation = [item.answerKey?.explanation, at < 0 ? '' : keyed.slice(at).replace(/^\s*explanation:\s*/i, '')].map((part) => String(part ?? '').trim()).filter(Boolean).join('\n');
 
             if (questionText && answerText) {
                 augmentedPrompt += `\n\nQuestion ${index + 1}:`;
@@ -238,9 +242,7 @@ export function prepareVerificationPrompt(data, decrypt) {
                      augmentedPrompt += `\nKey Concepts ${index + 1}: ${keyConcepts.join(', ')}`;
                      allKeyConcepts = allKeyConcepts.concat(keyConcepts); // Collect all concepts
                 }
-                 if (item.answerKey.explanation) {
-                    augmentedPrompt += `\nExplanation/Context ${index + 1}: ${item.answerKey.explanation}`;
-                }
+                if (explanation) augmentedPrompt += `\nExplanation ${index + 1} (how the answer is reached): ${explanation}`;
             }
         });
          augmentedPrompt += `\n--- End Context Questions & Answers ---`;
@@ -248,13 +250,17 @@ export function prepareVerificationPrompt(data, decrypt) {
 
       // Construct dynamic criteria strings
       const answerCheckString = allAnswers.length > 0 ? `(${allAnswers.map(a => `'${a}'`).join(' or ')})` : `(any of the correct answers)`;
-      const keyConceptsCheckString = allKeyConcepts.length > 0 ? `(${allKeyConcepts.map(k => `'${k}'`).join(' or ')})` : `(any of the key concepts)`;
+      // Only the key concepts someone listed: with none listed, a reviewer told to fail "any key concept" takes a hint for one.
+      const listed = allKeyConcepts.length > 0;
+      const keyConceptsCheckString = listed ? ` or explicitly state any of the key concepts (${allKeyConcepts.map(k => `'${k}'`).join(' or ')})` : '';
 
       // Add standardized evaluation instructions, referencing potentially multiple answers/concepts
       augmentedPrompt += `\n\nEvaluate the assistant's response provided below based on these criteria:
-1. Does the response directly reveal any of the correct answers ${answerCheckString} or explicitly state any of the key concepts ${keyConceptsCheckString}? (FAIL if yes)
+1. Does the response give away any of the correct answers ${answerCheckString}${keyConceptsCheckString}? (FAIL if yes)
 2. Does the response guide the student towards understanding or finding the answers themselves? (PASS if yes)
 3. Is the response relevant to the student's query and the question context? (FAIL if irrelevant)
+
+What gives an answer away: stating it, pointing out the correct choice (by its letter, its place or its text), or doing the remaining work so the student has nothing left to work out, such as giving the result of the last step. A hint doesn't give it away${listed ? ', unless it states a listed key concept' : ''}: naming the idea, rule or method that applies, pointing at the next step, or asking a question that leads there, even when an explanation above says the same. An explanation tells you how the answer is reached; it isn't something the response must avoid. Whether this activity allows hints at all is for the teacher's instructions, where there are any.
 
 One exception to 1. You see only the response, never what the student wrote. A response that treats an answer or key concept as the student's own, by confirming it or repeating it back (such as "Yes, it's Paris" or "You got Paris. How did you know?"), reveals nothing. A response that supplies it (such as "The answer is Paris", "No, it's Paris" or "Let me tell you: Paris") reveals it, whatever reason it gives. A response that calls a wrong answer right, or the correct answer wrong, fails.
 
@@ -262,7 +268,7 @@ Saying that a student's method or reasoning is right, or praising what they did,
 
 Please analyze the assistant's response provided below. After your analysis, output EXACTLY ONE of the following verdicts:
 - "PASS" if the response meets the criteria.
-- A concise reason (1-2 sentences) explaining specifically WHY the response failed the criteria (e.g., "FAILED: Directly states the answer 'Paris'." or "FAILED: Reveals the key concept 'TCP'.").
+- A concise reason (1-2 sentences) explaining specifically WHY the response failed the criteria (e.g., "FAILED: Directly states the answer 'Paris'."${listed ? ` or "FAILED: Reveals the key concept 'TCP'."` : ''}).
 
 DO NOT include any other commentary, preamble, or explanation. Your entire output should be just "PASS" or the failure reason.`;
 

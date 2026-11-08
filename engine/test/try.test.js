@@ -12,7 +12,7 @@ import { learnerRoutes, pagesOf } from '../src/server/learner.js';
 import { agentsToServe, createRuntime } from '../src/server/runtime.js';
 import { memoryStore } from '../../harness/src/store/store.js';
 import { serve } from '../src/serve.js';
-import { watchSlot } from '../src/learner/watch.js';
+import { settingsShown, watchSlot } from '../src/learner/watch.js';
 import { demoModel, draftsFor, sampleRounds } from '../src/try/demo.js';
 import { exportStatic, underBase } from '../src/try/export.js';
 import { readyToTry, tryOut } from '../src/try/server.js';
@@ -249,6 +249,19 @@ test('what is served loads nothing from elsewhere', async () => {
   }
   const launcher = await (await page(handle, '/')).text();
   for (const [, href] of launcher.matchAll(/<a\b[^>]*href="(https?:[^"]+)"/g)) assert.match(href, /github\.com\/VIABLE-Learning-Lab/);
+});
+
+test('the panel says where the misconceptions it listens for, and the skill it aims at, came from', async () => {
+  const doc = JSON.parse(readFileSync(new URL('../../examples/fractions-practice.json', import.meta.url), 'utf8'));
+  const shown = settingsShown(doc.course.activities[0].teaching);
+  assert.equal(shown.listens_for.length, 4);
+  assert.deepEqual(shown.listens_from, ['Eedi Misconceptions Graph v1.0, CC BY 4.0']);
+  const { findSkills, skillAtLevel } = await import('../../harness/src/utils/skills.js');
+  const skill = skillAtLevel(findSkills('evidence').data[0].code, 3);
+  const aimed = settingsShown({ goal: 'Argue from evidence.', standard: skill });
+  assert.deepEqual(aimed.standard, { kind: 'skill', code: skill.code, level: 'Integrating', description: skill.description, from: 'Carnegie Skills Progressions, CC BY 4.0' });
+  const { script } = watchSlot({ teaching: aimed }, 'nonce');
+  assert.ok(script.includes('The skill') && script.includes('From ${set.standard.from}'), 'the panel draws it with where it came from');
 });
 
 test('what a package or a learner wrote stays text in the panel and the pages', () => {

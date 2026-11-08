@@ -6,9 +6,10 @@
  */
 import { guidanceFrom } from '../../../harness/src/components/contract.js';
 import { HELP_LADDER, treeHtml } from '../../../harness/src/ui/parts.js';
-import { TRACE_CSS, turnTree } from '../learner/watch.js';
+import { sourceName, TRACE_CSS, turnTree } from '../learner/watch.js';
 import { SPEAK_UP } from '../../../harness/src/speakUp.js';
 import { TEACHING_LIMITS, teachingContext, teachingSettings } from '../../../harness/src/utils/teaching.js';
+import { MISCONCEPTIONS_SOURCE } from '../../../harness/src/utils/misconceptionsSource.js';
 import { ITEM_TYPES, normalizeItems } from '../learner/questions.js';
 import { activityKeys } from '../server/library.js';
 import { changeCourse, courseAt, kindOfActivity } from './course.js';
@@ -21,6 +22,17 @@ const skills = () => import('../../../harness/src/utils/skills.js');
 const research = () => import('../../../harness/src/components/guidance.js');
 const refused = (message, status = 400, code = 'invalid_activity') => Object.assign(new Error(message), { status, code });
 const clean = (value, limit) => String(value ?? '').trim().slice(0, limit);
+// Whose work something is, in a line that opens to the attribution it asks for.
+const credit = (name, attribution) => {
+  const lines = [attribution].flat().filter(Boolean);
+  if (!name) return '';
+  // A license's short name (CC BY 4.0) stays on one line.
+  const said = esc(name).replace(/\bCC [A-Z-]+ [\d.]+/g, (license) => license.replaceAll(' ', '&nbsp;'));
+  return lines.length ? `<details class="source-note"><summary>${said}</summary>${lines.map((line) => `<p>${esc(line)}</p>`).join('')}</details>` : `<p class="source-note">${said}</p>`;
+};
+const credits = (sources) => [...new Map(sources.filter(Boolean).map((source) => [sourceName(source), source])).entries()].map(([name, source]) => (name ? credit(`From ${name}`, source.attribution) : '')).join('');
+// The Carnegie Skills Progressions' own names for its levels (skillsData.js).
+const SKILL_LEVELS = ['Exploring', 'Analyzing', 'Integrating', 'Extending'];
 const FORM = 'activity';
 // How much the AI does, as one scale from the least to the most (HELP_LADDER): each level does what the one before does, and one thing more,
 // named for that thing, with when to use it and what it sounds like. Not set is offered only where it is the choice now.
@@ -256,13 +268,13 @@ ${note ? '<p class="v-note">Off unless you choose: help that comes unasked can a
 
 function standardBlock(activity, api, locked) {
   const chosen = activity.teaching?.standard;
-  const shown = chosen ? `<div class="chosen"><div><strong>${esc(chosen.code || (chosen.kind === 'skill' ? 'Skill' : 'Standard'))}${chosen.level?.name ? ` · ${esc(chosen.level.name)}` : ''}</strong><p>${esc(chosen.description)}</p></div>${locked ? '' : `<button class="v-btn is-small" type="button" data-api="DELETE ${api}/standard" aria-label="Remove the standard or skill">Remove</button>`}</div>` : '';
+  const shown = chosen ? `<div class="chosen"><div><strong>${esc(chosen.code || (chosen.kind === 'skill' ? 'Skill' : 'Standard'))}${chosen.level?.name ? ` · ${esc(chosen.level.name)}` : ''}</strong><p>${esc(chosen.description)}</p>${credits([chosen.source])}</div>${locked ? '' : `<button class="v-btn is-small" type="button" data-api="DELETE ${api}/standard" aria-label="Remove the standard or skill">Remove</button>`}</div>` : '';
   return `<div class="part" id="standard" data-say-box>
 <h3>Standard or skill <small>optional</small></h3>
-${shown || `<p class="v-note">If you choose one, the AI gets its words, and what a learner at that level does, with each message.</p>
+${shown || `<p class="v-note">Collaboration, communication or critical thinking, from the Carnegie Skills Progressions. If you choose one, the AI gets its words, and what a learner at that level does, with each message.</p>
 <form class="find" id="find-skill" data-search="${api}/find-skill" data-into="skills-found">
 <label class="sr" for="skill-q">Search durable skills</label><input class="v-input" id="skill-q" name="q" type="search" placeholder="A durable skill, such as evidence or feedback" autocomplete="off">
-<label class="sr" for="skill-level">Level learners work toward</label><select class="v-input" id="skill-level" name="level"><option value="1">Emerging</option><option value="2" selected>Developing</option><option value="3">Proficient</option><option value="4">Advanced</option></select>
+<label class="sr" for="skill-level">Level learners work toward</label><select class="v-input" id="skill-level" name="level">${SKILL_LEVELS.map((name, index) => `<option value="${index + 1}"${index === 1 ? ' selected' : ''}>${name}</option>`).join('')}</select>
 <button class="v-btn is-small" type="submit">Find</button>
 </form>
 <div id="skills-found" class="found"></div>`}
@@ -288,7 +300,7 @@ function guidanceBlock(activity, api, locked) {
   const chosen = activity.teaching?.guidance || [];
   return `<div class="part" id="guidance" data-say-box>
 <h3>Guidance from research <small>optional · with each message it gets at most two pieces that fit the moment</small></h3>
-${chosen.length ? `<ul class="picked">${chosen.map((item, index) => `<li><p>${esc(item.text)}${item.source ? `<small>${esc(item.source)}</small>` : ''}</p>${locked ? '' : `<button class="v-btn is-small" type="button" data-api="DELETE ${api}/guidance/${index}" data-said="Removed.">Remove</button>`}</li>`).join('')}</ul>` : ''}
+${chosen.length ? `<ul class="picked">${chosen.map((item, index) => `<li><div><p>${esc(item.text)}</p>${credit(item.source, item.attribution)}</div>${locked ? '' : `<button class="v-btn is-small" type="button" data-api="DELETE ${api}/guidance/${index}" data-said="Removed.">Remove</button>`}</li>`).join('')}</ul>` : ''}
 ${locked ? '' : `<details class="library" id="guidance-library" data-load="${api}/guidance-library"><summary>${chosen.length ? 'Choose more' : 'Choose from what research says'}</summary><div data-loaded></div></details>`}
 ${say()}
 </div>`;
@@ -297,13 +309,14 @@ ${say()}
 function misconceptionsBlock(activity, api, locked) {
   const chosen = activity.teaching?.misconceptions || [];
   return `<div class="part" id="misconceptions" data-say-box>
-<h3>Misconceptions to listen for <small>optional · for math · from Eedi’s graph</small></h3>
+<h3>Misconceptions to listen for <small>optional · for math</small></h3>
 ${chosen.length ? `<ul class="picked">${chosen.map((item) => `<li><p>${esc(item.description)}<small>${esc(item.construct?.description)}</small></p>${locked ? '' : `<button class="v-btn is-small" type="button" data-api="DELETE ${api}/misconceptions/${esc(item.id)}" aria-label="Remove “${esc(item.description)}”">Remove</button>`}</li>`).join('')}</ul>` : '<p class="v-note">The AI gets the one that fits what a learner just did, on the turn it fits.</p>'}
 ${locked || chosen.length >= 8 ? '' : `<form class="find" id="find-misconception" data-search="${api}/find-misconception" data-into="misconceptions-found">
 <label class="sr" for="misconception-q">Search misconceptions by words</label><input class="v-input" id="misconception-q" name="q" type="search" placeholder="Words, such as adding fractions" autocomplete="off">
 <button class="v-btn is-small" type="submit">Find</button>
 </form>
 <div id="misconceptions-found" class="found"></div>`}
+${credits([...chosen.map((item) => item.source), ...(locked || chosen.length >= 8 ? [] : [MISCONCEPTIONS_SOURCE])])}
 ${say()}
 </div>`;
 }
@@ -663,6 +676,11 @@ const ACTIVITY_CSS = `.act-tabs{display:flex;gap:4px;margin:18px 0 6px;border-bo
 .picked li{display:flex;gap:12px;justify-content:space-between;align-items:start;padding:10px 12px;border-radius:var(--radius-sm);background:var(--field-mist)}
 .picked p{margin:0;font-size:.9375rem;line-height:1.45}
 .picked small{display:block;color:var(--muted);font-size:.8125rem}
+.source-note{min-width:0;margin:6px 0 0;color:var(--muted);font-size:.8125rem;line-height:1.45;overflow-wrap:anywhere}
+.chosen>div,.picked li>div{min-width:0}
+.source-note summary{width:fit-content;cursor:pointer}
+.source-note summary:hover{color:var(--public-ink)}
+.source-note p,.chosen .source-note p,.picked .source-note p{margin:6px 0 0;color:var(--muted);font-size:.8125rem;line-height:1.5}
 .library{display:grid;gap:10px}
 .library summary,.framework summary,.shows summary{color:var(--ink-blue);font-size:.9375rem;cursor:pointer}
 .framework{margin-top:10px}
@@ -1026,10 +1044,11 @@ export const activityPages = [
         return { said: 'Removed.' };
       }],
       ['GET', /^courses\/([\w-]+)\/activities\/([\w-]+)\/find-skill$/, async ({ url }, match) => {
-        const found = (await skills()).findSkills(url.searchParams.get('q') || '');
+        const { findSkills, skillsSource } = await skills();
+        const found = findSkills(url.searchParams.get('q') || '');
         const level = url.searchParams.get('level') || '2';
         const api = `courses/${esc(match[1])}/activities/${esc(match[2])}/standard`;
-        return { html: found.data.length ? `<ul>${found.data.slice(0, 12).map((item) => `<li><button type="button" data-api="POST ${api}" data-body='${esc(JSON.stringify({ skill: item.code, level }))}'><strong>${esc(item.skill)} · ${esc(item.code)}</strong><span>${esc(item.description)}</span></button></li>`).join('')}</ul>` : '<p class="v-note">No skill matches. Try other words.</p>' };
+        return { html: found.data.length ? `<ul>${found.data.slice(0, 12).map((item) => `<li><button type="button" data-api="POST ${api}" data-body='${esc(JSON.stringify({ skill: item.code, level }))}'><strong>${esc(item.skill)} · ${esc(item.code)}</strong><span>${esc(item.description)}</span></button></li>`).join('')}</ul>${credits([skillsSource()])}` : '<p class="v-note">No skill matches. Try other words.</p>' };
       }],
       ['GET', /^courses\/([\w-]+)\/activities\/([\w-]+)\/find-misconception$/, async ({ url }, match) => {
         const found = (await misconceptions()).findMisconceptions(url.searchParams.get('q') || '');

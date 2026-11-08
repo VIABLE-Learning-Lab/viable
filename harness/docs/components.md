@@ -55,8 +55,9 @@ settings go, since they travel with the activity: `prepare`, the gateway, the En
 - **Your credit travels:** your citation goes with every copy, and a record says which pieces went into a reply.
 - **A way to show what it does:** compare replies with and without it in agent tests, and report that apart from what your
   own studies showed.
-- **A page** with what it does, what it receives, its license, its evidence and how to cite it, once it is reviewed, and how many
-  replies on the VIABLE Developer Platform it went into in the last 30 days. Servers of one's own report nothing.
+- **A page** with what it does, what it receives, its license, its evidence and how to cite it, once it is reviewed. Guidance
+  is also in the library with how many replies on the VIABLE Developer Platform drew on it in the last 30 days; other kinds
+  of component are counted there too but not shown yet. Servers of one's own report nothing.
 - **Help with the first ones.** VIABLE writes the adapter for early partners, and you review it.
 
 Not built yet: a reviewed catalog of outside components, and a detector's marks on the VIABLE Developer Platform, where they would send

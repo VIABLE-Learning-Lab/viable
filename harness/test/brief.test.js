@@ -56,6 +56,13 @@ test('words the learner shares with a resource choose it, and the learner’s ow
   assert.doesNotMatch(brief.text, /PWNED|ignore your rules/);
 });
 
+test('what a brief chooses keeps where it came from', async () => {
+  const brief = await turnBrief(teaching, { message: 'i was summing numerators and denominators to add fractions with different denominators' });
+  assert.ok(brief.misconceptions.length && brief.misconceptions.every((item) => item.source?.name), 'the teacher’s choices and the graph’s');
+  assert.ok(brief.components.length && brief.components.every((item) => item.source?.name === 'Learning Commons'));
+  assert.doesNotMatch(brief.text, /CC BY|Learning Commons/, 'credit is for whoever reads the turn, not more words for the model');
+});
+
 test('a picker chooses only from what it was offered, and a failed one falls back to rules', async () => {
   const asked = [];
   const call = async (_env, request) => { asked.push(request); return { content: '```json\n{"moment":"repeated","misconceptions":[1,1,999,"2",-1],"components":[2],"prior":[1]}\n```', usage: { total: 9 } }; };
