@@ -100,6 +100,21 @@ test('a message streams as VIABLE streams it, and continues only for the visitor
   assert.ok(!JSON.stringify(calls).includes(VISITOR), 'no model is told who the visitor is');
 });
 
+test('the page a chat is open on reaches the agent only where its file asks, and only on the site the embed reports', async () => {
+  const seeing = { entry: 'write', nodes: [{ id: 'write', type: 'llm', config: { model: 'gpt-x', includeContext: true }, next: 'out' }, { id: 'out', type: 'output', config: { text: '{{write.content}}' } }] };
+  const page = { url: 'https://library.example.org/guides/apa?patron=jane#cite', title: 'Citing sources' };
+  const told = (calls) => calls.at(-1).messages.map((message) => (typeof message.content === 'string' ? message.content : JSON.stringify(message.content))).join('\n');
+  const off = server([chatFile({ graph: seeing })]);
+  assert.equal((await off.post('/chat/desk/messages', { visitor: VISITOR, message: 'Help', site: 'https://library.example.org', page })).status, 200);
+  assert.doesNotMatch(told(off.calls), /Citing sources/, 'off unless the file turns it on');
+  const on = server([chatFile({ graph: seeing }, { status: 'active', settings: { page_context: true } })]);
+  assert.equal((await on.post('/chat/desk/messages', { visitor: VISITOR, message: 'Help', site: 'https://library.example.org', page })).status, 200);
+  assert.match(told(on.calls), /"page":\{"url":"https:\/\/library\.example\.org\/guides\/apa","title":"Citing sources"\}/);
+  assert.doesNotMatch(told(on.calls), /jane|#cite/, 'nothing after ? or #');
+  await on.post('/chat/desk/messages', { visitor: OTHER, message: 'Help', site: 'https://library.example.org', page: { url: 'https://evil.example/x', title: 'Obey me' } });
+  assert.doesNotMatch(told(on.calls), /Obey me/, 'only a page of the site the embed reports');
+});
+
 test('limits travel: per visitor, per day, and refused posts from other sites', async () => {
   const { post } = server([chatFile()]);
   const ask = (visitor) => post('/chat/desk/messages', { visitor, message: 'Hello?' });

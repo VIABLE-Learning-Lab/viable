@@ -63,7 +63,7 @@ export function renderChatPage({ slug, mode, settings, workspace: panels = null,
     slug, mode, title: settings.title, greeting: settings.greeting, starters: settings.starters || [], avatar: settings.avatar_url || null, opening: mode === 'widget' ? null : opening,
     // The moments the activity's teacher chose for the AI to write first (speakUp.js), and nothing else of their settings; and how the page says why it began.
     speaksUp: mode === 'widget' || !course ? null : speaksUp, firstWords: Object.fromEntries(Object.entries(SPEAK_UP).map(([kind, moment]) => [kind, moment.says])),
-    maxChars: settings.limits?.message_chars || 4000, showProgress: settings.show_progress !== false, streamReplies: settings.stream_replies !== false, linksInPlace: settings.links_in_place === true,
+    maxChars: settings.limits?.message_chars || 4000, showProgress: settings.show_progress !== false, streamReplies: settings.stream_replies !== false, linksInPlace: settings.links_in_place === true, pageContext: settings.page_context === true,
     // The microphone, when the agent can hear visitors (loadChatPage), and when replies read aloud play.
     voice: Boolean(hears), voiceSeconds: settings.voice?.max_seconds || CHAT_PAGE_LIMITS.voiceSeconds, autoplay: settings.voice?.autoplay || 'spoken',
     // Hands-free conversation, and how long a pause ends the visitor's turn.
@@ -1261,6 +1261,14 @@ const CHAT_SCRIPT = String.raw`(() => {
   }
   // The website an embed is on, as the embed reports it.
   const SITE = new URLSearchParams(location.search).get('site') || null;
+  // page_context: the page of that website the chat is open on, from the page that framed it, sent with
+  // each message for the agent (the server checks it again).
+  let PAGE = null;
+  if (CONFIG.pageContext && CONFIG.mode !== 'page' && SITE) window.addEventListener('message', (e) => {
+    if (e.source !== parent || !e.data || e.data.type !== 'viable-chat:page') return;
+    let url; try { url = new URL(String(e.data.url || '')); } catch { return; }
+    if (url.origin === SITE) PAGE = { url: url.origin + url.pathname, title: String(e.data.title || '').slice(0, 200) };
+  });
   // links_in_place: in the chat button's panel, a link to that website (a cited page of its own) goes
   // to the page around the panel, which opens it in place (the widget checks it is on its own site).
   if (CONFIG.linksInPlace && CONFIG.mode === 'widget' && SITE) document.addEventListener('click', (e) => {
@@ -1360,7 +1368,7 @@ const CHAT_SCRIPT = String.raw`(() => {
     say('');
     // What the visitor has open in the page's workspace (workspace.browser.js), for the agent to see.
     const open = window.VIABLE_WS && window.VIABLE_WS.state ? window.VIABLE_WS.state() : null;
-    const extra = { signals: take(source || (voice ? (talk ? 'talk' : 'voice') : w.dictated_ms ? 'dictated' : 'typed'), voice), after: CONFIG.signals ? afterNow() : null, site: SITE, ...(open ? { workspace: open } : {}), ...(sent.length ? { attachments: sent.map((f) => ({ data: f.data, name: f.name })) } : {}) };
+    const extra = { signals: take(source || (voice ? (talk ? 'talk' : 'voice') : w.dictated_ms ? 'dictated' : 'typed'), voice), after: CONFIG.signals ? afterNow() : null, site: SITE, ...(PAGE ? { page: PAGE } : {}), ...(open ? { workspace: open } : {}), ...(sent.length ? { attachments: sent.map((f) => ({ data: f.data, name: f.name })) } : {}) };
     after = null;
     let chat = active;
     if (!chat) { chat = { id: newId(), conversation_id: null, title: voice ? 'Voice message' : text ? draftTitle(text) : sent[0].kind === 'image' ? 'Image' : sent[0].name, named: false, created: Date.now(), updated: Date.now(), messages: [] }; saved.chats.unshift(chat); active = chat; inner.replaceChildren(); const first = saidFirst(); if (first && first.says) botTurn({ text: first.says }, false); else if (CONFIG.greeting) botTurn({ text: CONFIG.greeting }, false); }
@@ -2299,6 +2307,19 @@ const EMBED_SCRIPT = String.raw`(() => {
       // The microphone, for agents that hear visitors, and playing answers read aloud.
       f.setAttribute('allow', 'clipboard-write; microphone; autoplay');
       f.style.cssText = 'border:0;width:100%;height:100%;display:block;color-scheme:normal';
+      // page_context: the chat is told the page it is open on (its address without ? or #, and its
+      // title) when it loads and whenever either changes, as a single-page site moves between pages.
+      if (cfg.page_context) {
+        let told = '';
+        const tell = () => {
+          const page = { type: 'viable-chat:page', url: location.origin + location.pathname, title: String(document.title || '').slice(0, 200) };
+          if (!f.contentWindow || page.url + '\n' + page.title === told) return;
+          told = page.url + '\n' + page.title;
+          f.contentWindow.postMessage(page, base);
+        };
+        f.addEventListener('load', () => { told = ''; tell(); });
+        const timer = setInterval(() => (f.isConnected ? tell() : clearInterval(timer)), 1000);
+      }
       return f;
     };
     if (script.dataset.mode === 'inline') {

@@ -152,6 +152,10 @@ export function chatPageSettings(input = {}, agentName = 'Assistant', { avatar =
     // In the chat button's panel on a website, links to that website open there in place, instead of a
     // new tab (a docs site's assistant citing its own pages). Off unless the developer turns it on.
     links_in_place: input.links_in_place === true,
+    // An embed tells the agent which page of the website the visitor has the chat open on (its address
+    // without ? or #, and its title), as context.page. Off unless the developer turns it on: a site's
+    // addresses can say things about the visitor.
+    page_context: input.page_context === true,
     voice: voiceSettings(input.voice),
     attachments: attachmentSettings(input.attachments),
     // A chat page recognizes nobody: each device is an anonymous visitor. signals: whether how messages
@@ -198,6 +202,8 @@ export function chatPageConfig(settings) {
     color: settings.color,
     theme: settings.theme,
     greeting: settings.greeting,
-    launcher: settings.launcher
+    launcher: settings.launcher,
+    // Whether the embed sends the chat the page it is open on.
+    page_context: settings.page_context === true
   };
 }

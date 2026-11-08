@@ -734,6 +734,19 @@ test('an address with localhost in it is still only https, or http on this machi
   assert.equal(embedSite('https://school.example/x'), 'https://school.example');
 });
 
+test('the page an embed reports is an address on its own site, without what follows ? or #, and a short title', async () => {
+  const { embedPage } = await import('../src/learner/logic.js');
+  const site = 'https://school.example';
+  assert.deepEqual(embedPage({ url: 'https://user:pass@school.example/guides/steps?student=jane&token=x#top', title: '  Steps \n · Guides ' }, site), { url: 'https://school.example/guides/steps', title: 'Steps · Guides' });
+  assert.deepEqual(embedPage({ url: 'https://school.example/' }, site), { url: 'https://school.example/' }, 'no title, none sent on');
+  assert.equal(embedPage({ url: 'https://school.example/a', title: 'x'.repeat(500) }, site).title.length, 200);
+  assert.ok(embedPage({ url: `https://school.example/${'a'.repeat(900)}` }, site).url.length <= 500);
+  // Another site's page, a page with no site, and anything that isn't a page come to nothing.
+  for (const [value, from] of [[{ url: 'https://evil.example/x' }, site], [{ url: 'javascript:alert(1)' }, site], [{ url: 'https://school.example/x' }, null], ['https://school.example/x', site], [null, site], [{ url: 'not a url' }, site]]) {
+    assert.equal(embedPage(value, from), null, JSON.stringify(value));
+  }
+});
+
 test('a sitemap of 5 MiB takes moments, whatever it repeats, and an ordinary one reads as it did', async () => {
   const { sitemapEntries } = await import('../src/server/siteRefresh.js');
   for (const piece of ['<url>', '<url ', '</url>', '<x:url>', '<', '<loc>', '<url><loc>', '<url><loc>   ']) {

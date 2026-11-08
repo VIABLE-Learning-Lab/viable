@@ -85,6 +85,19 @@ export function embedSite(value) {
   try { const url = new URL(String(value || '')); return url.protocol === 'https:' || (url.protocol === 'http:' && url.hostname === 'localhost') ? url.origin : null; } catch { return null; }
 }
 
+/**
+ * The page of that website the chat is open on, as the embed reports it (page_context): its address
+ * on that site with nothing after ? or #, and its title. Data for the agent, never instructions.
+ */
+export function embedPage(value, site) {
+  if (!site || !value || typeof value !== 'object') return null;
+  let url;
+  try { url = new URL(String(value.url || '')); } catch { return null; }
+  if (url.origin !== site) return null;
+  const title = String(value.title ?? '').replace(/\s+/g, ' ').trim().slice(0, 200);
+  return { url: `${url.origin}${url.pathname}`.slice(0, 500), ...(title ? { title } : {}) };
+}
+
 // --- What a page is told -------------------------------------------------------------------------
 
 /**

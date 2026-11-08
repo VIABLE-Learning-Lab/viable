@@ -1326,6 +1326,7 @@ const HANDLERS = {
     let trimmed = false;
     let cleared = 0;
     let reminded = false;
+    let lastChance = false;
     let toldToAnswer = false;
     let answerStreamed = false;
     // Past 80% of what the model's window leaves for the request, earlier tool results are cleared
@@ -1336,7 +1337,7 @@ const HANDLERS = {
       // call for a later step (a check), instead of the whole run failing.
       const runEnding = budgets.maxModelCalls - ctx.modelCalls <= 2 || ctx.runStartedAt + budgets.timeoutMs - Date.now() < Math.min(15000, budgets.timeoutMs / 4)
         || (budgets.maxRunTokens && tokensUsed(ctx.usage) >= budgets.maxRunTokens * 0.8);
-      const finalTurn = used >= maxTools || turn >= maxTools || (turn > 0 && runEnding);
+      const finalTurn = lastChance || used >= maxTools || turn >= maxTools || (turn > 0 && runEnding);
       if (finalTurn && !toldToAnswer) toldToAnswer = true, transcript.push({ role: 'user', content: native ? 'Tool budget exhausted. Answer now with what you have, as plain text.' : 'Tool budget exhausted. Respond now with {"final": "..."} using what you have.' });
       if (transcript.length > 4 && build(ctx.scope(), ctx.messages, ctx.inputContent).reduce((sum, message) => sum + messageTokens(message), 0) > toolRoom) cleared += clearOldToolResults(transcript);
       // The answer streams as it is written: from {"final": "…"}, or a native model's last turn (an
@@ -1367,6 +1368,14 @@ const HANDLERS = {
       }
       if (!requested.length) {
         const fallback = answer ?? longestText(json.__text !== undefined ? json.__text : json);
+        // Still nothing after the reminder while tools were on offer (gpt-oss can mean to search and send
+        // no call): one last turn without them, to answer with what it has, before the step fails.
+        if (!String(fallback || '').trim() && !finalTurn) {
+          lastChance = true;
+          toldToAnswer = true;
+          transcript.push({ role: 'user', content: native ? 'Answer now with what you have, as plain text.' : 'Respond now with {"final": "<your complete answer>"} using what you have.' });
+          continue;
+        }
         if (!String(fallback || '').trim()) throw new AgentRunError(`Agent step "${node.id}" got no answer from ${cfg.model}. Try again, or choose another model for this step.`, { status: 502, code: 'agent_empty_answer' });
         const content = normalizeCitationMarks(fallback);
         const evidence = citedContext(content, ctx.sources);

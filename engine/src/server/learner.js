@@ -20,7 +20,7 @@ import { renderHome } from '../learner/home.js';
 import { CHAT_PAGE_LIMITS, attachable, chatPageConfig, chatPageSettings, chatPageVoice, lookOf, mediaReaders, profileSettings } from '../learner/settings.js';
 import { draftTexts, embedOrigins, keptEvents, openedNow, panelOpenAt, publicWorkspace, versionsFrom, workspaceContext, workspaceSettings } from '../learner/workspace.js';
 import { gradeResponse, normalizeItems } from '../learner/questions.js';
-import { CONVERSATION_ID, RUN_ID, SSE_HEADERS, annotationTarget, answersSoFar, chatReply, doneButton, doneHow, embedSite, homeUnits, kindOf, learnerInfo, messageAttachments, noteOf, progressHooks, questionReplies, readMessage, readVisitor, releaseState, runEvents, sseStream, stepAllows, stepMove, stepReply, voiceRecording } from '../learner/logic.js';
+import { CONVERSATION_ID, RUN_ID, SSE_HEADERS, annotationTarget, answersSoFar, chatReply, doneButton, doneHow, embedPage, embedSite, homeUnits, kindOf, learnerInfo, messageAttachments, noteOf, progressHooks, questionReplies, readMessage, readVisitor, releaseState, runEvents, sseStream, stepAllows, stepMove, stepReply, voiceRecording } from '../learner/logic.js';
 import { sanitizeAfter, sanitizeSignals } from '../../../harness/src/utils/researchMetrics.js';
 import { teachingForSection, teachingSettings } from '../../../harness/src/utils/teaching.js';
 import { suggestChanges } from '../../../harness/src/suggest.js';
@@ -646,6 +646,8 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
       const previous = learner && page.level !== 'minimal' && body?.after && typeof body.after === 'object' ? noteAfter(page, owner, body.after) : null;
       const opened = openedNow(page.workspace, state, page.level);
       const site = embedSite(body?.site);
+      // The page of the website the chat is open on, where the chat page's developer turned it on.
+      const where = page.kind !== 'activity' && settings.page_context === true ? embedPage(body?.page, site) : null;
       const runId = `agtr_${crypto.randomUUID().replaceAll('-', '')}`;
       const begun = now();
       const graph = graphOf(page.agent);
@@ -674,7 +676,7 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
           }
           const content = attached.length || (spoken && stepHears) ? [...(said ? [{ type: 'text', text: said }] : []), ...attached, ...(spoken && stepHears ? [{ type: 'file', file: { filename: spoken.filename, mime_type: spoken.type, file_data: spoken.data } }] : [])] : undefined;
           const note = attached.length ? `[Attached: ${attached.map((part) => part.file?.filename || 'a picture').join(', ')}]` : null;
-          ({ result, conversationId } = await ctx.runInConversation(page.agent, { text: said, content, note, stopWhenSilent: Boolean(spoken), save, briefing: page.kind === 'activity' ? teaching : null, event: first, section, history: [], context: context_, teaching: page.kind === 'activity' ? false : teaching || false, silent: !can.speech, user, mode: 'server', conversationId: earlier?.id ?? null }, trace ? watchHooks(trace, hooks) : hooks, store));
+          ({ result, conversationId } = await ctx.runInConversation(page.agent, { text: said, content, note, stopWhenSilent: Boolean(spoken), save, briefing: page.kind === 'activity' ? teaching : null, event: first, section, history: [], context: where ? { ...context_, page: where } : context_, teaching: page.kind === 'activity' ? false : teaching || false, silent: !can.speech, user, mode: 'server', conversationId: earlier?.id ?? null }, trace ? watchHooks(trace, hooks) : hooks, store));
         } catch (error) {
           ctx.log({ at: new Date().toISOString(), request_id: context.requestId, page: page.slug, run_id: null, code: error?.code || 'agent_run_failed', duration_ms: now() - begun });
           trace?.({ kind: 'failed', message: String(error?.message || error) });

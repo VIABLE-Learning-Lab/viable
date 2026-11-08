@@ -362,7 +362,7 @@
         },
         "settings": {
           "type": "object",
-          "description": "launcher, allowed_sites, daily_limit, limits (visitor_per_minute, visitor_per_day, message_chars, daily_cost), show_progress, stream_replies, links_in_place, voice, attachments, learners. Unknown fields are dropped, and each is bounded when it is read."
+          "description": "launcher, allowed_sites, daily_limit, limits (visitor_per_minute, visitor_per_day, message_chars, daily_cost), show_progress, stream_replies, links_in_place, page_context, voice, attachments, learners. Unknown fields are dropped, and each is bounded when it is read."
         }
       }
     }
