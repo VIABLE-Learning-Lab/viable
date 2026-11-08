@@ -8,7 +8,7 @@ everything on every turn: a person narrows things down first, and each turn only
 
 A learner writes *"i got 2/5"*.
 
-1. **What the teacher decided is already a short list:** a goal, how far the AI may go, perhaps a standard, a few
+1. **What the teacher decided is already a short list:** a goal, how much the AI does, perhaps a standard, a few
    misconceptions and some guidance from research.
 2. **The moment is read:** giving an answer, asking for the answer, stuck, or trying again.
 3. **The list is cut down to this moment:** one teaching move, and at most two of each other kind.

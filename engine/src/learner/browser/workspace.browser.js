@@ -12,6 +12,7 @@ import { writing } from './workspace/writing.js';
 import { questions } from './workspace/questions.js';
 import { embed } from './workspace/embed.js';
 import { reading } from './workspace/reading.js';
+import { page } from './workspace/page.js';
 import { loadStep, stepBar } from './workspace/steps.js';
 
 const panels = CONFIG.panels || [];
@@ -26,22 +27,46 @@ function applyVariant(variant) {
 }
 if (document.getElementById('ws') && panels.length) {
   let shell = null;
-  const make = (shown = panels.filter((panel) => !panel.locked)) => {
-    shell = createShell({ panels: shown, factories: { writing, questions, embed, reading } });
-    shell.open(shown[0]);
+  // What the AI says first at the step they have reached.
+  let reached = null;
+  // The step they are on, when there are steps: whether the AI is part of it.
+  let onStep = null;
+  const make = (shown = panels.filter((panel) => !panel.locked), first = shown[0]) => {
+    shell = createShell({ panels: shown, factories: { writing, questions, embed, reading, page } });
+    shell.open(first);
   };
   // With steps, the panels wait for the learner's step (once they are let in).
   const stepped = async () => {
     try {
       const { data, shown } = await loadStep(panels);
-      make(shown);
-      document.querySelector('#ws .ws-bar')?.after(stepBar(data));
+      const step = data.steps[data.index];
+      onStep = step;
+      reached = step.says ? { says: step.says, since: data.started_at ? Date.parse(data.started_at) : 0, starters: [] } : { says: null };
+      // Earlier steps stay as tabs where they can go back; what opens is this step's.
+      make(shown, shown.find((panel) => step.panels.includes(panel.id)) || shown[0]);
+      const bar = stepBar(data);
+      document.querySelector('#ws .ws-bar')?.after(bar);
+      // A long page ends where they will be when they finish it, so the way on is there too.
+      const onward = bar.querySelector('.ws-steps-go');
+      const sheet = onward && !document.querySelector('.ws-steps-next[hidden]') ? document.querySelector('#ws .ws-page.sheet:not([hidden])') : null;
+      if (sheet) {
+        const end = document.createElement('div');
+        end.className = 'ws-sheet-end';
+        const go = onward.cloneNode(true);
+        go.addEventListener('click', () => { onward.click(); bar.scrollIntoView({ block: 'nearest' }); });
+        end.append(go);
+        sheet.append(end);
+      }
+      window.VIABLE_CHAT?.redraw?.();
     } catch (error) { make(); }
     shell.start();
   };
   window.VIABLE_WS = {
     state: () => (shell ? shell.state() : null),
     intro: () => (shell ? shell.intro() : null),
+    opening: () => reached,
+    aiHere: () => CONFIG.ai !== 'off' && !(onStep && onStep.ai === 'off'),
+    nudge: () => { if (shell && shell.nudge) shell.nudge(); },
     reply: (text) => { if (text) { replies.push(String(text)); if (replies.length > 20) replies.shift(); } }
   };
   // Where the page varies by learner, the panels are drawn once the host has said how.

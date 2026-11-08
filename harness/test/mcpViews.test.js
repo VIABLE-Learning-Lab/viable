@@ -81,10 +81,10 @@ test('suggest_changes’ view: each suggestion with why, its evidence and what i
   const run = (verdict, feedback) => ({ steps: [{ nodeType: 'vetting', output: { outcome: 'passed', attempt_details: [{ attempt: 1, verdict, feedback }] } }] });
   const args = { teaching: { goal: 'Add fractions.', help: 'explain' }, runs: [run('fail', 'FAILED: States the answer.'), run('fail', 'FAILED: Gives it away.'), run('pass'), run('pass'), run('pass')] };
   const shown = text(resultView(suggestionsView, await call('suggest_changes', args), args));
-  assert.match(shown, /^Suggested changes1 change to decide onRules over the runs and records given, with no model\..+The teacher decides\.Lower how far the AI helps, from “explain” to “hint”\./);
-  assert.match(shown, /Evidence2 of 5 \(40%\) replies VETTING reviewed failed their first review for giving too much away\.Run 1, the reviewer: “FAILED: States the answer\.”.+If you agree, set how far the AI may go to Hint\.Only checkAsk firstHintExplainA suggestion only: the teacher decides\.To accept it, ask the assistant to accept answers_given_away\.$/);
+  assert.match(shown, /^Suggested changes1 change to decide onRules over the runs and records given, with no model\..+The teacher decides\.Lower how far the AI helps, from “explain” to “step up”\./);
+  assert.match(shown, /Evidence2 of 5 \(40%\) replies VETTING reviewed failed their first review for giving too much away\.Run 1, the reviewer: “FAILED: States the answer\.”.+If you agree, how much the AI does becomes Shows an example\.Only checksAsks questionsGives hintsShows an exampleExplainsA suggestion only: the teacher decides\.To accept it, ask the assistant to accept answers_given_away\.$/);
   const accepted = text(resultView(suggestionsView, await call('suggest_changes', { ...args, accept: 'answers_given_away' }), args));
-  assert.match(accepted, /The settings with the change accepted.+"help": "hint"/s);
+  assert.match(accepted, /The settings with the change accepted.+"help": "step_up"/s);
   assert.match(text(suggestionsView({ suggestions: [] })), /No suggested changes/);
 });
 

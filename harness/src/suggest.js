@@ -10,7 +10,7 @@ import { HELP_LEVELS, TEACHING_LIMITS, teachingSettings } from './utils/teaching
 import { misconceptionById } from './utils/misconceptions.js';
 
 // Help levels from the least help to the most.
-export const HELP_ORDER = ['check_only', 'ask_first', 'hint', 'explain'];
+export const HELP_ORDER = ['check_only', 'ask_first', 'hint', 'step_up', 'explain'];
 // First values, to revisit with teachers: below these counts a share says too little to act on.
 export const SUGGESTION_THRESHOLDS = { runs: 5, give_away: 0.3, unverified: 0.2, learners: 3, stuck: 0.4 };
 // A reviewer's reason that says the draft gave the answer or the work away.

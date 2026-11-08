@@ -162,7 +162,7 @@ export function stepReply(workspace, sets, now) {
   const shown = publicWorkspace(workspace, sets, { through: now.index });
   return {
     object: 'workspace.step', index: now.index, started_at: now.at,
-    steps: steps.map(({ id, title, panels, ai, chat, move = null, minutes = 0, back = false }) => ({ id, title, panels, ai, chat, move, minutes, back })),
+    steps: steps.map(({ id, title, panels, ai, chat, says = null, move = null, minutes = 0, back = false }) => ({ id, title, panels, ai, chat, says, move, minutes, back })),
     next: next ? { move: next.move, minutes: next.minutes, opens_at: next.minutes && now.at ? new Date(Date.parse(now.at) + next.minutes * 60000).toISOString() : null } : null,
     panels: shown.panels.filter((panel) => !panel.locked && panelOpenAt(steps, now.index, panel.id))
   };

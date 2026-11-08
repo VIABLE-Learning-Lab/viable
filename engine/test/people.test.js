@@ -443,7 +443,7 @@ test('progress: a grid with a section filter, one learner’s work behind the to
   assert.match(all, /<span class="sr">Practice: Done<\/span>/);
   assert.match(all, /<span class="sr">Practice: Not started<\/span>/);
   assert.ok(!all.includes(hostile) && all.includes('&lt;script&gt;'));
-  assert.equal([...all.matchAll(/<script/g)].length, 1, 'only the page’s own');
+  assert.equal([...all.matchAll(/<script(?![^>]* nonce="[a-f0-9]+")/g)].length, 0, 'only the page’s own');
   assert.match(all, /never by name/);
   const [two] = (await s.store.get(`courses/${code}/sections`)).list;
   const one = await (await s.page(`/console/courses/${code}/progress?section=${two.id}`)).text();
@@ -496,7 +496,7 @@ test('what to look at: how replies went, hard moments, and a suggestion accepted
   const before = await version(s, code);
   await s.ok('POST', `courses/${code}/activities/practice/suggestions/accept`, { id: 'answers_given_away', version: before });
   const file = JSON.parse(await (await s.api('GET', `courses/${code}/download`)).response.text());
-  assert.equal(file.course.activities[0].teaching.help, 'hint', 'a change like any other, through the course’s versions');
+  assert.equal(file.course.activities[0].teaching.help, 'step_up', 'a change like any other, through the course’s versions');
   assert.equal(await version(s, code), before + 1);
   const after = await (await s.page(`/console/courses/${code}/progress/look`)).text();
   assert.match(after, /Accepted/);

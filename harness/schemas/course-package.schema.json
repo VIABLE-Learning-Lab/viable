@@ -677,6 +677,29 @@
           ],
           "format": "date-time",
           "description": "When it closes, on a server of your own."
+        },
+        "opening": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "What the AI says first in an activity without steps, and what it offers to ask.",
+          "properties": {
+            "says": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 800
+            },
+            "starters": {
+              "type": "array",
+              "maxItems": 4,
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },
@@ -707,7 +730,7 @@
         },
         "panels": {
           "type": "array",
-          "maxItems": 6,
+          "maxItems": 8,
           "items": {
             "type": "object",
             "required": [
@@ -724,7 +747,8 @@
                   "writing",
                   "embed",
                   "questions",
-                  "reading"
+                  "reading",
+                  "page"
                 ]
               },
               "title": {
@@ -739,6 +763,14 @@
               },
               "file_ref": {
                 "$ref": "#/$defs/ref"
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 12000,
+                "description": "A page panel's words, in Markdown."
               }
             },
             "if": {
@@ -757,7 +789,7 @@
         },
         "steps": {
           "type": "array",
-          "maxItems": 4,
+          "maxItems": 6,
           "items": {
             "type": "object"
           }

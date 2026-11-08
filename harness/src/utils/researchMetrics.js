@@ -62,9 +62,12 @@ const MAX_COUNT = 100000;
 
 /** What the chat page records about how a message was written (signals_json). */
 export const SIGNALS = [
-  { id: 'source', type: 'text', label: 'How it was sent', values: ['typed', 'voice', 'dictated', 'talk', 'starter', 'retry'],
-    definition: 'typed: written in the message box; voice: a recorded voice message; dictated: spoken, turned into text in the message box, and sent as text after the learner checked it (their changes count as typing); talk: a turn in a hands-free conversation; starter: a tap on one of the page’s suggested questions; retry: “Try again” after a failed answer.',
+  { id: 'source', type: 'text', label: 'How it was sent', values: ['typed', 'voice', 'dictated', 'talk', 'starter', 'retry', 'ai_first'],
+    definition: 'typed: written in the message box; voice: a recorded voice message; dictated: spoken, turned into text in the message box, and sent as text after the learner checked it (their changes count as typing); talk: a turn in a hands-free conversation; starter: a tap on one of the page’s suggested questions; retry: “Try again” after a failed answer; ai_first: no message from the learner, the AI wrote first at a moment the activity’s teacher chose (moment says which).',
     why: 'Taps on suggested questions and pasted text change what intent measures mean, so studies record how each message arrived.', cite: ['oreopoulos2026', 'bastani2025'] },
+  { id: 'moment', type: 'text', label: 'Why the AI wrote first', values: ['quiet', 'wrong', 'handed_in'],
+    definition: 'Only when source is ai_first. quiet: nothing written, answered or asked on the step for the minutes the teacher chose, with the page open; wrong: a checked answer to a question was wrong, at least as many times as the teacher chose; handed_in: the learner handed in a piece of writing.',
+    why: 'Learners often don’t ask for help when they need it, and help that comes unasked can also interrupt; a study of either needs to know which turns the AI began.', cite: ['aleven2003'] },
   { id: 'think_ms', type: 'ms', label: 'Think time',
     definition: 'From the moment the previous answer finished appearing (or the page was ready, for a first message) to the learner’s first keystroke or the start of a recording.',
     why: 'Response time is a long-standing proxy for engagement, hesitation and uncertainty in tutoring systems.', cite: ['beck2005'],
@@ -101,14 +104,14 @@ export const AFTER = [
   { id: 'links_opened', type: 'count', label: 'Links opened', definition: 'Times the learner opened one of the answer’s sources or a link in it.' }
 ];
 
-const SOURCES = new Set(SIGNALS[0].values);
+
 const clean = (specs, raw) => {
   if (!raw || typeof raw !== 'object') return null;
   const out = {};
   for (const spec of specs) {
     const value = raw[spec.id];
     if (value == null) continue;
-    if (spec.type === 'text') { if (SOURCES.has(value)) out[spec.id] = value; continue; }
+    if (spec.type === 'text') { if (spec.values.includes(value)) out[spec.id] = value; continue; }
     if (spec.type === 'bool') { if (typeof value === 'boolean') out[spec.id] = value; continue; }
     const number = Math.round(Number(value));
     if (Number.isFinite(number) && number >= 0) out[spec.id] = Math.min(number, spec.type === 'ms' ? MAX_MS : MAX_COUNT);

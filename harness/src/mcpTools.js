@@ -12,6 +12,7 @@ import { CITATIONS, MASTERY_STREAK, METRICS, SESSION_GAP_MINUTES, WHEEL_SPIN_ATT
 import { findMisconceptions } from './utils/misconceptions.js';
 import { COMPONENTS, GUIDANCE, SLOTS } from './components/index.js';
 import { findGuidance } from './components/guidance.js';
+import { DESIGN_RULES, findDesigns } from './designs.js';
 import { CATALOG_KINDS, searchCatalog } from './catalog.js';
 import { SUGGESTION_THRESHOLDS, applySuggestion, suggestChanges } from './suggest.js';
 import { prepare } from './harness.js';
@@ -28,7 +29,7 @@ export const HISTORY = {
   description: 'The conversation before the learner\'s message, oldest first.',
   items: { type: 'object', required: ['role', 'content'], additionalProperties: false, properties: { role: { enum: ['user', 'assistant'] }, content: text(20000) } }
 };
-const TEACHING = { type: 'object', description: 'An activity\'s teaching settings (How the AI helps, schemas/teaching.schema.json): goal, help (ask_first, hint, explain or check_only), watch_for, standard, misconceptions and sections.' };
+const TEACHING = { type: 'object', description: 'An activity\'s teaching settings (How the AI helps, schemas/teaching.schema.json): goal, help (step_up, ask_first, hint, explain or check_only), watch_for, standard, misconceptions and sections.' };
 const SECTION = { type: 'string', pattern: '^sec_[A-Za-z0-9_-]{1,64}$', description: 'The learner\'s section ID: that section\'s own help level and note apply, and no other section\'s.' };
 const DOCUMENT = { type: 'object', description: 'An agent file (format viable.agent) or a course package (format viable.course-package), as JSON.' };
 const AGENT = text(120, 'From a course package: the ref of the agent to run (default: the first).');
@@ -140,6 +141,15 @@ export function mcpTools({ checkReply, runAgent, draftCases, runAgentTests, endp
       async run(a) {
         const found = findGuidance({ topic: a.topic ?? '', moment: a.moment ?? null });
         return { summary: `${found.reduce((total, topic) => total + topic.pieces.length, 0)} pieces from ${found.length} topics. Keep each one's source with it.`, data: { topics: found } };
+      }
+    },
+    {
+      name: 'find_designs',
+      description: 'Ways to arrange a whole learning activity, from research, by what is being taught: what learners do step by step, what an AI does and holds back in each step, what the studies showed and what isn\'t known (the harness\'s own copy: no network, no model). Use it before writing an activity, so a conversation has a reason to happen.',
+      inputSchema: object({ words: text(300, 'What is being taught, in a few words, such as evaluating AI claims or adding fractions. Leave it out for every design.') }),
+      async run(a) {
+        const designs = findDesigns({ words: a.words ?? '', limit: a.words ? 3 : 20 });
+        return { summary: `${designs.length} design${designs.length === 1 ? '' : 's'}. Follow the rules for any of them, and keep each one's sources with it.`, data: { rules: DESIGN_RULES, designs } };
       }
     },
     {

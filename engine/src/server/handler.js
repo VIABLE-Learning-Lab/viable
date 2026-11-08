@@ -17,7 +17,7 @@ const VERSION = PACKAGE.version;
 
 // What VIABLE composes from a course activity (what the learner has open, the teacher's instructions)
 // never comes from a caller's context.
-const SERVER_CONTEXT = ['teaching_view', 'workspace_view', 'workspace_place', 'workspace_reach'];
+const SERVER_CONTEXT = ['teaching_view', 'step_view', 'workspace_view', 'workspace_place', 'workspace_reach'];
 // Without a store, runs are kept in memory, the newest 500, until the process stops.
 const KEPT_RUNS = 500;
 const KEEP_ALIVE_MS = 15000;

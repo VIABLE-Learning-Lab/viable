@@ -5,6 +5,7 @@
  * their endpoints is the host's (server/learner.js here).
  */
 import { BASE_CSS, escapeHtml, palette, scriptJson } from './shell.js';
+import { SPEAK_UP } from '../../../harness/src/speakUp.js';
 import { CHAT_PAGE_LIMITS } from './settings.js';
 import { themeOf } from './themes.js';
 import { publicWorkspace } from './workspace.js';
@@ -49,7 +50,7 @@ const VOICE_PAUSE_MS = { short: 800, normal: 1300, long: 2000 };
  * next to the whole page, and hears run.trace events as viable:trace. Nothing here names a feature the
  * core doesn't ship.
  */
-export function renderChatPage({ slug, mode, settings, workspace: panels = null, course = null, how = null, sets = new Map(), host = {} }, nonce) {
+export function renderChatPage({ slug, mode, settings, workspace: panels = null, opening = null, course = null, how = null, sets = new Map(), speaksUp = null, host = {} }, nonce) {
   const { voice: hears = false, speech: speaks = false, attachments: attaches = null, assets = {}, codes = {}, links = {}, slots = {} } = host;
   const before = slots.beforeConversation || {};
   const sheet = slots.sheet || {};
@@ -59,7 +60,9 @@ export function renderChatPage({ slug, mode, settings, workspace: panels = null,
   const workspace = mode !== 'widget' ? publicWorkspace(panels, sets, { waiting: Boolean(course?.waiting) }) : null;
   const reading = (workspace?.panels || []).some((panel) => panel.type === 'reading');
   const config = {
-    slug, mode, title: settings.title, greeting: settings.greeting, starters: settings.starters || [], avatar: settings.avatar_url || null,
+    slug, mode, title: settings.title, greeting: settings.greeting, starters: settings.starters || [], avatar: settings.avatar_url || null, opening: mode === 'widget' ? null : opening,
+    // The moments the activity's teacher chose for the AI to write first (speakUp.js), and nothing else of their settings; and how the page says why it began.
+    speaksUp: mode === 'widget' || !course ? null : speaksUp, firstWords: Object.fromEntries(Object.entries(SPEAK_UP).map(([kind, moment]) => [kind, moment.says])),
     maxChars: settings.limits?.message_chars || 4000, showProgress: settings.show_progress !== false, streamReplies: settings.stream_replies !== false, linksInPlace: settings.links_in_place === true,
     // The microphone, when the agent can hear visitors (loadChatPage), and when replies read aloud play.
     voice: Boolean(hears), voiceSeconds: settings.voice?.max_seconds || CHAT_PAGE_LIMITS.voiceSeconds, autoplay: settings.voice?.autoplay || 'spoken',
@@ -400,7 +403,7 @@ ${workspace ? '<div class="ws-shell">\n<section id="ws" class="ws" aria-label="A
   </form>
   </div>
 </div>
-${workspace ? `</div>\n<button id="ws-ai" class="ws-ai" type="button" aria-expanded="false" hidden>${ICON.chats}<span>Ask ${escapeHtml(settings.title)}</span></button>\n<script type="application/json" id="ws-config">${scriptJson({ ...workspace, workspace_title: workspace.title, title: settings.title, course, ...(reading ? { pdf: { worker: `${ASSET_PATH}${assets.pdfWorker}`, data: `${ASSET_PATH}${assets.pdfData}` } } : {}) })}</script>` : ''}
+${workspace ? `</div>\n<button id="ws-ai" class="ws-ai" type="button" aria-expanded="false" hidden>${ICON.chats}<span>Ask ${escapeHtml(settings.title)}</span></button>\n<script type="application/json" id="ws-config">${scriptJson({ ...workspace, workspace_title: workspace.title, title: settings.title, course, speaks_up: Boolean(course && speaksUp), ...(reading ? { pdf: { worker: `${ASSET_PATH}${assets.pdfWorker}`, data: `${ASSET_PATH}${assets.pdfData}` } } : {}) })}</script>` : ''}
 <template id="avatar">${avatarHtml(settings, 'sm')}</template>
 <template id="hero-avatar">${avatarHtml(settings, 'xl')}</template>
 ${assets.render ? `<script src="${ASSET_PATH}${assets.render}" nonce="${nonce}" data-code="${ASSET_PATH}${assets.code}" data-math="${ASSET_PATH}${assets.math}" data-diagram="${ASSET_PATH}${assets.diagram}"></script>` : ''}
@@ -473,6 +476,9 @@ body.ai-left.ai-collapsed .ws-rail{border-left:0;border-right:1px solid var(--li
 .ws-rail-label{writing-mode:vertical-rl;transform:rotate(180deg);font-size:.82rem;font-weight:620;letter-spacing:.01em}
 .ws-ai{position:fixed;right:18px;bottom:18px;z-index:21;display:inline-flex;align-items:center;gap:9px;padding:7px 16px 7px 7px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);font:inherit;font-weight:620;box-shadow:0 12px 32px -12px rgba(15,23,42,.35);cursor:pointer;transition:transform .15s,box-shadow .15s}
 .ws-ai:hover{transform:translateY(-1px);box-shadow:0 16px 40px -14px rgba(15,23,42,.45)}
+/* A message the AI wrote first while it was out of sight: a dot on the way to it. */
+.ai-new .ws-ai,.ai-new .ws-rail{position:relative}
+.ai-new .ws-ai::after,.ai-new .ws-rail::after{content:"";position:absolute;top:2px;right:2px;width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--panel)}
 body.ai-corner .app{position:fixed;right:18px;bottom:80px;z-index:20;width:min(420px,calc(100vw - 36px));height:min(680px,calc(100vh - 104px));border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:0 30px 70px -28px rgba(15,23,42,.55)}
 body.ai-corner:not(.ai-open) .app{display:none}
 body.corner-left.ai-corner .app,body.corner-left .ws-ai{right:auto;left:18px}
@@ -518,6 +524,14 @@ body.gated .app{display:flex!important;position:static!important;width:auto!impo
 .ws-body{flex:1;min-height:0;overflow:auto;position:relative;overscroll-behavior:contain}
 .ws-page{max-width:820px;margin:0 auto;padding:34px 36px 0;display:grid;gap:18px;align-content:start;animation:rise .3s cubic-bezier(.2,.8,.2,1)}
 .ws-page.writing.has-plan{max-width:1200px}
+.ws-page.sheet{max-width:720px;padding-bottom:40px}
+.ws-sheet{font-size:1.0625rem;line-height:1.65;color:var(--ink)}
+.ws-sheet h1,.ws-sheet h2,.ws-sheet h3{margin:1.2em 0 .4em;color:var(--ink);line-height:1.25}
+.ws-sheet>:first-child{margin-top:0}
+.ws-sheet blockquote{margin:1em 0;padding:.7em 1em;border-left:3px solid var(--accent-line);background:var(--accent-soft);border-radius:0 var(--r-sm,10px) var(--r-sm,10px) 0}
+.starters.said-first{margin:2px 0 8px}
+.first-why{margin:0 0 3px;color:var(--muted);font-size:.8125rem;font-weight:600;letter-spacing:.01em}
+.ws-sheet-end{display:flex;justify-content:flex-end;padding-top:6px}
 .ws-ph{display:grid;gap:6px}
 .ws-eyebrow{margin:0;color:var(--accent-text);font-size:.84rem;font-weight:650}
 .ws-h{margin:0;font:var(--head-weight) 1.6rem/1.2 var(--font-head);letter-spacing:var(--head-track)}
@@ -758,7 +772,8 @@ const CHAT_SCRIPT = String.raw`(() => {
   // platform, or the visitor's own name for it) and its messages. A new chat stays a draft until its
   // first message, so opening one costs nothing and nothing is lost. The single conversation kept
   // before chats existed becomes the first chat.
-  const KEY = 'viable-chat:' + CONFIG.slug;
+  // A preview's chats are its own (its own visitor), so a new preview link starts with none.
+  const KEY = (CONFIG.visitorKey ? CONFIG.visitorKey + ':' : 'viable-chat:') + CONFIG.slug;
   const MAX_CHATS = 30, MAX_MESSAGES = 40;
   const draftTitle = (text) => {
     const line = String(text || '').replace(/[#*_\x60>\[\]]/g, '').replace(/\s+/g, ' ').trim();
@@ -919,6 +934,8 @@ const CHAT_SCRIPT = String.raw`(() => {
   function botTurn(m, withActions, live) {
     const el = document.createElement('div'); el.className = 'turn bot';
     const body = document.createElement('div'); body.className = 'body';
+    // A message the AI wrote without being asked says so, and why.
+    if (m.first && FIRST_WORDS[m.first]) { const why = document.createElement('p'); why.className = 'first-why'; why.textContent = FIRST_WORDS[m.first]; body.appendChild(why); }
     const images = m.images || [];
     const ctx = { origin: location.origin, images, used: new Set() };
     const md = document.createElement('div'); md.className = 'md'; md.appendChild(renderText(m.text, { ...ctx, cites: m.citations || [] }));
@@ -979,9 +996,25 @@ const CHAT_SCRIPT = String.raw`(() => {
     el.append(avatar(), body); inner.appendChild(el);
     return el;
   }
+  // What the AI says first in this step or this activity: its first message, so a learner never meets an empty box. since: when the step began, so it comes after what was said before it.
+  const FIRST_WORDS = CONFIG.firstWords || {};
+  const saidFirst = () => (window.VIABLE_WS && window.VIABLE_WS.opening && window.VIABLE_WS.opening()) || CONFIG.opening;
   function hero() {
     // Beside a workspace, the empty chat is about the open panel (workspace.browser.js intro()).
     const intro = window.VIABLE_WS && window.VIABLE_WS.intro ? window.VIABLE_WS.intro() : null;
+    const first = saidFirst();
+    if (first && first.says) {
+      botTurn({ text: first.says }, false);
+      const offered = first.starters && first.starters.length ? first.starters : intro && intro.starters ? intro.starters.slice(0, 3) : CONFIG.starters;
+      if (offered.length) {
+        const row = document.createElement('div'); row.className = 'starters said-first';
+        for (const s of offered) {
+          const b = document.createElement('button'); b.type = 'button'; b.innerHTML = '<span>' + esc(s) + '</span>' + ARROW; b.onclick = () => ask(s, null, 'starter'); row.appendChild(b);
+        }
+        inner.appendChild(row);
+      }
+      return;
+    }
     const el = document.createElement('section'); el.className = intro ? 'hero docked' : 'hero'; el.id = 'hero';
     el.appendChild($(intro ? 'avatar' : 'hero-avatar').content.firstElementChild.cloneNode(true));
     const h = document.createElement('h2'); h.textContent = intro ? intro.title : CONFIG.title; el.appendChild(h);
@@ -1005,8 +1038,15 @@ const CHAT_SCRIPT = String.raw`(() => {
     const messages = active ? active.messages : [];
     if (!messages.length) hero();
     else {
-      if (CONFIG.greeting) botTurn({ text: CONFIG.greeting }, false);
-      for (const m of messages) m.role === 'user' ? userTurn(m) : botTurn(m, true);
+      const first = saidFirst();
+      if (!(first && first.says) && CONFIG.greeting) botTurn({ text: CONFIG.greeting }, false);
+      let said = !(first && first.says);
+      const opener = () => { said = true; botTurn({ text: first.says }, false); };
+      for (const m of messages) {
+        if (!said && (m.at || 0) >= (first.since || 0)) opener();
+        m.role === 'user' ? userTurn(m) : botTurn(m, true);
+      }
+      if (!said) opener();
     }
     if (pending && pending.chat === active) inner.appendChild(pending.wait);
     // The page closed before the last reply arrived: offer to ask again.
@@ -1314,14 +1354,17 @@ const CHAT_SCRIPT = String.raw`(() => {
     text = String(text || '').trim();
     const sent = attached || files;
     if ((!text && !voice && !sent.length) || pending || recording || dictating) return;
+    // A message of theirs goes first: the AI's own, on its way, is left.
+    if (firstTurn) { firstTurn.controller.abort(); firstTurn = null; }
+    askedAt = Date.now();
     say('');
     // What the visitor has open in the page's workspace (workspace.browser.js), for the agent to see.
     const open = window.VIABLE_WS && window.VIABLE_WS.state ? window.VIABLE_WS.state() : null;
     const extra = { signals: take(source || (voice ? (talk ? 'talk' : 'voice') : w.dictated_ms ? 'dictated' : 'typed'), voice), after: CONFIG.signals ? afterNow() : null, site: SITE, ...(open ? { workspace: open } : {}), ...(sent.length ? { attachments: sent.map((f) => ({ data: f.data, name: f.name })) } : {}) };
     after = null;
     let chat = active;
-    if (!chat) { chat = { id: newId(), conversation_id: null, title: voice ? 'Voice message' : text ? draftTitle(text) : sent[0].kind === 'image' ? 'Image' : sent[0].name, named: false, created: Date.now(), updated: Date.now(), messages: [] }; saved.chats.unshift(chat); active = chat; inner.replaceChildren(); if (CONFIG.greeting) botTurn({ text: CONFIG.greeting }, false); }
-    const mine = { role: 'user', text: voice ? '' : text, ...(voice ? { voice: { seconds: voice.seconds } } : {}), ...(sent.length ? { files: sent.map((f) => ({ kind: f.kind, name: f.name, thumb: f.thumb || null })) } : {}) };
+    if (!chat) { chat = { id: newId(), conversation_id: null, title: voice ? 'Voice message' : text ? draftTitle(text) : sent[0].kind === 'image' ? 'Image' : sent[0].name, named: false, created: Date.now(), updated: Date.now(), messages: [] }; saved.chats.unshift(chat); active = chat; inner.replaceChildren(); const first = saidFirst(); if (first && first.says) botTurn({ text: first.says }, false); else if (CONFIG.greeting) botTurn({ text: CONFIG.greeting }, false); }
+    const mine = { role: 'user', at: Date.now(), text: voice ? '' : text, ...(voice ? { voice: { seconds: voice.seconds } } : {}), ...(sent.length ? { files: sent.map((f) => ({ kind: f.kind, name: f.name, thumb: f.thumb || null })) } : {}) };
     chat.messages.push(mine); chat.updated = Date.now(); save();
     const bubble = userTurn(mine);
     if (!attached && files.length) { files = []; paintFiles(); }
@@ -1382,7 +1425,7 @@ const CHAT_SCRIPT = String.raw`(() => {
       clearInterval(tick); cancelAnimationFrame(drawing);
       readyAt = Date.now();
       if (voice && !mine.voice.heard) heard(bubble, mine);
-      chat.messages.push(reply); chat.updated = Date.now();
+      reply.at = Date.now(); chat.messages.push(reply); chat.updated = Date.now();
       pending = null; save();
       let el = null;
       if (chat === active && wait.isConnected) { el = botTurn(reply, true, true); wait.replaceWith(el); scrollDown(); }
@@ -2055,15 +2098,90 @@ const CHAT_SCRIPT = String.raw`(() => {
     const back = document.createElement('a'); back.href = CONFIG.course.url; back.textContent = 'Back to ' + CONFIG.course.title;
     card.append(h, p, back); box.append(card); document.body.append(box); back.focus();
   }
+  // The AI writes first at the moments the activity's teacher chose (CONFIG.speaksUp): quiet on a step, working a while without
+  // writing to it, an answer checked wrong or right, a pause in writing after enough new words, writing handed in. The page asks
+  // only when a moment comes, never on a clock of its own, and the server decides, holding to how often and how far apart. Never
+  // while they are writing to it, talking or waiting for a reply; a message of theirs goes first; once the server says no here, the
+  // page stops asking until the step changes.
+  let firstTurn = null, firstOff = false, stirredAt = Date.now(), quietArmed = true, askedAt = 0, aloneSince = Date.now(), lastFirstAt = 0, rights = 0;
+  const wrongSpoken = new Set(), lookedAt = new Map();
+  async function speakFirst(kind, about) {
+    const set = CONFIG.speaksUp;
+    if (firstOff || !set || !set[kind] || pending || firstTurn || recording || dictating || talk || input.value.trim()) return;
+    if (window.VIABLE_WS && window.VIABLE_WS.aiHere && !window.VIABLE_WS.aiHere()) return;
+    // Not on top of their own conversation, nor of the AI's last note.
+    if (Date.now() - askedAt < 60000 || (lastFirstAt && Date.now() - lastFirstAt < (set.gap || 3) * 60000)) return;
+    if (kind === 'wrong') {
+      const item = String((about && about.item) || '');
+      if (((about && about.tries) || 0) < set.wrong.after || wrongSpoken.has(item)) return;
+      wrongSpoken.add(item);
+    }
+    if (kind === 'right') { rights += 1; if (rights % (set.right.every || 1)) return; }
+    if (kind === 'writing') {
+      const panel = String((about && about.panel) || '');
+      const from = lookedAt.has(panel) ? lookedAt.get(panel) : ((about && about.start) || 0);
+      if (!lookedAt.has(panel)) lookedAt.set(panel, from);
+      if (((about && about.words) || 0) - from < set.writing.words) return;
+    }
+    const open = window.VIABLE_WS && window.VIABLE_WS.state ? window.VIABLE_WS.state() : null;
+    let chat = active;
+    const controller = new AbortController();
+    firstTurn = { controller };
+    try {
+      if (!chat) chat = { id: newId(), conversation_id: null, title: FIRST_WORDS[kind] || 'From the AI', named: false, created: Date.now(), updated: Date.now(), messages: [] };
+      const data = await post(chat, '', null, controller.signal, () => {}, () => {}, () => {}, () => {}, { event: { kind: kind }, ...(open ? { workspace: open } : {}) });
+      if (controller.signal.aborted || !data || !data.reply || !String(data.reply.text || '').trim()) return;
+      lastFirstAt = Date.now();
+      if (kind === 'writing') lookedAt.set(String(about.panel || ''), (about && about.words) || 0);
+      if (!saved.chats.includes(chat)) { saved.chats.unshift(chat); if (!active) active = chat; }
+      chat.conversation_id = data.conversation_id || chat.conversation_id;
+      chat.messages.push({ role: 'bot', first: kind, text: data.reply.text, citations: data.reply.citations || [], images: data.reply.images || [], audio: data.reply.audio || [], run_id: data.run_id || null, at: Date.now() });
+      chat.updated = Date.now(); save();
+      if (chat === active) render(); else renderChats();
+      if (window.VIABLE_WS && window.VIABLE_WS.reply) window.VIABLE_WS.reply(data.reply.text || '');
+      if (window.VIABLE_WS && window.VIABLE_WS.nudge) window.VIABLE_WS.nudge();
+    } catch (error) {
+      // Not here, or not again in this step: the page stops asking until the step changes. Too soon only waits.
+      if (error && (error.code === 'speaks_first_off' || error.code === 'speaks_first_limit')) firstOff = true;
+      if (error && error.code === 'speaks_first_soon') lastFirstAt = Date.now();
+    } finally { if (firstTurn && firstTurn.controller === controller) firstTurn = null; }
+  }
+  let watching = false;
+  function watchTime() {
+    if (watching || !CONFIG.speaksUp || !(CONFIG.speaksUp.quiet || CONFIG.speaksUp.alone)) return;
+    watching = true;
+    // Quiet: nothing typed, clicked or scrolled on the page while it is in view; once the AI has checked in, it waits for them to do
+    // something first. Alone: busy on the page, without writing to the AI, for the minutes the teacher chose.
+    const stirred = () => { stirredAt = Date.now(); quietArmed = true; };
+    ['keydown', 'pointerdown', 'scroll', 'input'].forEach((type) => document.addEventListener(type, stirred, { capture: true, passive: true }));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) stirredAt = Date.now(); });
+    setInterval(() => {
+      const set = CONFIG.speaksUp;
+      if (document.hidden || !set) return;
+      if (set.quiet && quietArmed && Date.now() - stirredAt >= set.quiet.minutes * 60000) { quietArmed = false; speakFirst('quiet'); return; }
+      if (set.alone && Date.now() - stirredAt < 60000 && Date.now() - Math.max(askedAt, aloneSince) >= set.alone.minutes * 60000) { aloneSince = Date.now(); speakFirst('alone'); }
+    }, 15000);
+  }
+  watchTime();
+  // A learner's section, or their condition in a study, may have moments of its own: the server says which, once it knows them.
+  function speaksAs(set) { CONFIG.speaksUp = set || null; firstOff = false; watchTime(); }
   // An embedded activity (through the workspace) may put a question in the box for the visitor to send;
   // signing out from the workspace's bar stops talking first.
   window.VIABLE_CHAT = {
+    // A moment the workspace saw (a wrong answer checked, writing handed in), for the AI to write first if the teacher chose it.
+    speakFirst(kind, about) { speakFirst(kind, about); },
+    // Who this browser is to the page, for the panel beside a preview to ask for its record.
+    visitor() { return visitor; },
+    // Whether the AI may write first here, for what the page tells the learner.
+    writesFirst() { return Boolean(CONFIG.speaksUp); },
     prefill(text) { input.value = String(text || '').slice(0, CONFIG.maxChars); grow(); updateSend(); input.focus(); },
     // The workspace's open panel changed: an empty chat shows what the AI can help with there.
     refresh() { if (!active || !active.messages.length) render(); },
     hush() { hush(); },
     // A step that starts the chat afresh: chats begun before it (ms) are no longer shown here.
-    since(ms) { since = Number(ms) || 0; if (active && (active.created || active.updated) < since) { active = null; save(); } render(); }
+    since(ms) { since = Number(ms) || 0; if (active && (active.created || active.updated) < since) { active = null; save(); } render(); },
+    // What the AI says first has changed with the step, and so may whether it writes first here.
+    redraw() { firstOff = false; wrongSpoken.clear(); render(); }
   };
   // What the host makes of the page for this learner, where it varies: its AI or none, another agent's
   // look, typed only or not read aloud, what the AI is shown of the panels.
@@ -2083,6 +2201,7 @@ const CHAT_SCRIPT = String.raw`(() => {
     CONFIG.voice = Boolean(v.hears); CONFIG.handsFree = Boolean(v.hears) && CONFIG.handsFreeAllowed !== false; CONFIG.speaks = Boolean(v.speaks);
     mic.hidden = !CONFIG.voice;
     CONFIG.attach = v.attaches || { images: false, files: false }; paintAttach();
+    if (Object.prototype.hasOwnProperty.call(v, 'speaks_up')) speaksAs(v.speaks_up);
     if (!v.ai) { document.body.classList.remove('ai-right', 'ai-left', 'ai-corner'); document.body.classList.add('ai-off'); }
     if (v.look) document.querySelectorAll('#ws-ai span').forEach((label) => { label.textContent = 'Ask ' + v.look.title; });
     // The workspace reads what its panels show the AI from here (workspace.browser.js).
@@ -2091,6 +2210,7 @@ const CHAT_SCRIPT = String.raw`(() => {
     updateSend();
   }
   function joined(data) {
+    if (data && Object.prototype.hasOwnProperty.call(data, 'speaks_up')) speaksAs(data.speaks_up);
     learner = data && data.joined ? { code: data.code, name: data.name || null } : null;
     if (learner) write(LEARNER, learner); else try { localStorage.removeItem(LEARNER); } catch (e) { /* storage unavailable */ }
     if (COURSE) {

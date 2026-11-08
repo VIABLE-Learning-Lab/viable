@@ -232,6 +232,8 @@ export function questions(panel, api) {
         const entry = { tries: data.attempt, response: item.type === 'spoken' ? null : JSON.stringify(response), correct: data.correct ?? null, score: data.score ?? null, explanation: data.explanation, model_answer: data.model_answer || null, kept: data.kept };
         done[item.id] = entry;
         say(entry); renderProgress();
+        // Where they see right and wrong: the AI may write first about it, if the teacher chose that (the chat counts tries and right answers).
+        if (entry.correct != null && (panel.feedback || 'each') === 'each' && window.VIABLE_CHAT && window.VIABLE_CHAT.speakFirst) window.VIABLE_CHAT.speakFirst(entry.correct ? 'right' : 'wrong', { item: item.id, tries: entry.tries });
         check.disabled = false; lock(entry);
       } catch (error) { check.disabled = false; feedback.className = 'ws-feedback no'; feedback.textContent = error.message; }
     };

@@ -16,7 +16,12 @@ const PATHS = {
   close: 'M6.5 6.5l11 11M17.5 6.5l-11 11',
   out: 'M8 16L16.5 7.5M9 7.5h7.5V15',
   upload: 'M12 15.5V5M7.5 9.5L12 5l4.5 4.5M5 15v4.5h14V15',
-  drive: 'M9 4h6l6 10.5l-3 5.5H6l-3-5.5zM9 4l6 10.5H3M15 4L6 20'
+  drive: 'M9 4h6l6 10.5l-3 5.5H6l-3-5.5zM9 4l6 10.5H3M15 4L6 20',
+  folder: 'M3.5 6.5a1.5 1.5 0 0 1 1.5-1.5h4.2l2 2.2H19a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z',
+  inbox: 'M4 13.5l2.2-8h11.6l2.2 8v5.5H4zM4 13.5h4.5l1.2 2.2h4.6l1.2-2.2H20',
+  undo: 'M8.5 6.5L4.5 10.5l4 4M4.5 10.5H15a4.5 4.5 0 0 1 0 9h-3',
+  redo: 'M15.5 6.5l4 4l-4 4M19.5 10.5H9a4.5 4.5 0 0 0 0 9h3',
+  pencil: 'M15.5 5.5l3 3L8 19l-3.8.8L5 16z'
 };
 
 /** An icon as inline SVG: decoration, so what it stands beside says what it means. */

@@ -5,7 +5,7 @@
  */
 import { teachingContext } from './utils/teaching.js';
 
-export { HELP_LEVELS, TEACHING_LIMITS, teacherNote, teachingContext, teachingSettings } from './utils/teaching.js';
+export { HELP_LEVELS, SPEAK_UP_LIMITS, TEACHING_LIMITS, teacherNote, teachingContext, teachingSettings } from './utils/teaching.js';
 export { SKILLS } from './utils/skillsData.js';
 
 /**

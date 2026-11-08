@@ -10,12 +10,17 @@
     {
       "id": "goal-and-help", "description": "The goal and the help level join the reply step's own instructions.",
       "input": { "teaching": { "goal": "Add fractions with unlike denominators.", "help": "ask_first" } },
-      "expect": { "includes": ["You are a tutor.", "From the teacher of this activity", "Add fractions with unlike denominators.", "ask what the learner thinks or has tried"] }
+      "expect": { "includes": ["You are a tutor.", "From the teacher of this activity", "Add fractions with unlike denominators.", "Help only by asking", "Don’t give hints, examples or the answer."] }
     },
     {
       "id": "help-hint", "description": "hint: hints and guiding questions, no answers.",
       "input": { "teaching": { "help": "hint" } },
-      "expect": { "includes": ["Give hints and guiding questions, one step at a time"], "excludes": ["ask what the learner thinks", "show a worked example", "Only check the"] }
+      "expect": { "includes": ["Give hints and guiding questions, one step at a time"], "excludes": ["Help only by asking", "show a worked example", "Only check the"] }
+    },
+    {
+      "id": "help-step-up", "description": "step_up: ask first, then hint, then a worked example once they have really tried.",
+      "input": { "teaching": { "help": "step_up" } },
+      "expect": { "includes": ["Start by asking", "worked example with different numbers"] }
     },
     {
       "id": "help-explain", "description": "explain: explain and show a worked example, then let them try.",

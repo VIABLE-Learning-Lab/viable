@@ -17,11 +17,12 @@
       "enum": [
         "ask_first",
         "hint",
+        "step_up",
         "explain",
         "check_only",
         null
       ],
-      "description": "ask_first: ask what the learner thinks first and build on it; hint: hints and guiding questions, no answers; explain: explain and show a worked example when stuck, then let them try; check_only: only check the learner's own work."
+      "description": "ask_first: ask what the learner thinks first and build on it; hint: hints and guiding questions, no answers; step_up: ask first, then hints, then a worked example with other numbers once they have really tried; explain: explain and show a worked example when stuck, then let them try; check_only: only check the learner's own work."
     },
     "turn_brief": {
       "type": "boolean",
@@ -35,14 +36,6 @@
         "maxLength": 64
       },
       "description": "Tools the AI may not use in this activity, by name: an agent's web, knowledge, memory or agents, or a tool of the app's own."
-    },
-    "watch_for": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "maxLength": 500,
-      "description": "What the teacher wants to hear about. Never sent to the AI."
     },
     "standard": {
       "anyOf": [
@@ -153,7 +146,7 @@
         "null"
       ],
       "maxProperties": 60,
-      "description": "A section's own help level and note, by section ID, applied over the activity's for that section's learners only.",
+      "description": "A section's own help level, note and moments the AI writes first at, by section ID, applied over the activity's for that section's learners only.",
       "propertyNames": {
         "pattern": "^sec_[A-Za-z0-9_-]{1,64}$"
       },
@@ -164,6 +157,7 @@
             "enum": [
               "ask_first",
               "hint",
+              "step_up",
               "explain",
               "check_only",
               null
@@ -175,9 +169,245 @@
               "null"
             ],
             "maxLength": 500
+          },
+          "speaks_up": {
+            "oneOf": [
+              {
+                "const": "off",
+                "description": "The AI never writes first for this section."
+              },
+              {
+                "$ref": "#/properties/speaks_up"
+              }
+            ]
           }
         }
       }
+    },
+    "role": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 600,
+      "description": "Who the AI is in this activity, when it plays someone: a skeptic, a beginner to teach, someone in a scene."
+    },
+    "design": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Which design from research the activity is built on, for the teacher to read. It does not go to the AI.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    },
+    "watch_for": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 500,
+      "description": "What the teacher wants to hear about. Never sent to the AI."
+    },
+    "speaks_up": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "description": "When the AI writes first, unasked: the moments the learner's page watches for, each only where set, at most `most` times in a step and `gap` minutes apart, which the server holds to. The page sends which moment it was, never the learner's words.",
+      "properties": {
+        "quiet": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "minutes"
+          ],
+          "properties": {
+            "minutes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 60,
+              "description": "Minutes without writing, answering or asking anything on a step, with the page open."
+            },
+            "say": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300,
+              "description": "What the AI does at this moment, in the teacher's or researcher's words, in place of the move from research."
+            }
+          }
+        },
+        "alone": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "minutes"
+          ],
+          "properties": {
+            "minutes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 60,
+              "description": "Minutes working on the step without writing to the AI."
+            },
+            "say": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300,
+              "description": "What the AI does at this moment, in the teacher's or researcher's words, in place of the move from research."
+            }
+          }
+        },
+        "wrong": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "after"
+          ],
+          "properties": {
+            "after": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5,
+              "description": "Which wrong answer to a question: 1 for the first, 2 for the second."
+            },
+            "say": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300,
+              "description": "What the AI does at this moment, in the teacher's or researcher's words, in place of the move from research."
+            }
+          }
+        },
+        "right": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "every"
+          ],
+          "properties": {
+            "every": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5,
+              "description": "Every so many right answers."
+            },
+            "say": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300,
+              "description": "What the AI does at this moment, in the teacher's or researcher's words, in place of the move from research."
+            }
+          }
+        },
+        "writing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "words"
+          ],
+          "properties": {
+            "words": {
+              "type": "integer",
+              "minimum": 50,
+              "maximum": 1000,
+              "description": "New words of writing since the AI last looked, at a pause."
+            },
+            "say": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300,
+              "description": "What the AI does at this moment, in the teacher's or researcher's words, in place of the move from research."
+            },
+            "how": {
+              "enum": [
+                "ask",
+                "point",
+                "fix"
+              ],
+              "description": "ask: asks how it is going; point: points to one place to look again, as a question; fix: names one or two things to fix and what to change."
+            },
+            "focus": {
+              "enum": [
+                "language",
+                "ideas",
+                "rubric"
+              ],
+              "description": "What a note on their writing is about: spelling and grammar, ideas and structure, or what makes it good. Left out: whatever matters most."
+            }
+          }
+        },
+        "handed_in": {
+          "type": [
+            "object",
+            "boolean"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "how": {
+              "enum": [
+                "ask",
+                "point",
+                "fix"
+              ],
+              "description": "ask: asks how it is going; point: points to one place to look again, as a question; fix: names one or two things to fix and what to change."
+            },
+            "focus": {
+              "enum": [
+                "language",
+                "ideas",
+                "rubric"
+              ],
+              "description": "What a note on their writing is about: spelling and grammar, ideas and structure, or what makes it good. Left out: whatever matters most."
+            },
+            "say": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300,
+              "description": "What the AI does at this moment, in the teacher's or researcher's words, in place of the move from research."
+            }
+          },
+          "description": "Writing handed in. true is the same as {}."
+        },
+        "most": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "At most this many times in a step (default 2)."
+        },
+        "gap": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30,
+          "description": "At least this many minutes apart (default 3)."
+        }
+      }
+    },
+    "reviewer_reads": {
+      "enum": [
+        "message",
+        null
+      ],
+      "description": "message: a VETTING reviewer reads the learner's message too, as data. Left out: only the reply. A reviewer step's own reviewer_reads wins."
     }
   },
   "$defs": {

@@ -70,45 +70,39 @@ function personRow(person, { code, sections, locked }) {
 <th scope="row" data-label="Name"><a href="/console/courses/${esc(code)}/people/${esc(person.id)}">${esc(who)}</a>${shown}</th>
 ${sections.length ? `<td data-label="Section">${locked ? esc(sections.find((section) => section.id === person.section)?.name || '') : `<label class="sr" for="move-${esc(person.id)}">Section for ${esc(who)}</label><select class="v-input small" id="move-${esc(person.id)}" name="section" data-api="PUT courses/${esc(code)}/people/${esc(person.id)}" data-say-in="list-status"><option value="">No section</option>${sections.map((section) => `<option value="${esc(section.id)}"${section.id === person.section ? ' selected' : ''}>${esc(section.name)}</option>`).join('')}</select>`}</td>` : ''}
 <td data-label="Personal code">${person.personal === false ? '<span class="v-note">None yet</span>' : `<code class="code">${esc(showCode(person.code))}</code>`}</td>
-<td data-label="Last seen" class="seen">${person.last_seen_at ? when(person.last_seen_at) : '<span class="v-note">Not signed in yet</span>'}</td>
+<td data-label="Last seen" class="seen">${person.last_seen_at ? when(person.last_seen_at) : '<span class="v-note">Not yet</span>'}</td>
 </tr>`;
 }
 
-function listBlock({ code, course, people, sections, filter, locked, signIn }) {
+// One box takes a whole class or one person, as a spreadsheet copies them.
+const addForm = (course, sectionsNote = '') => `<form class="add-people" id="paste" data-api="POST courses/PLACEHOLDER/people">
+${text('list', 'Paste your class list', '', { rows: 6, hint: `One per line: a ${entryWord(course) === 'Name' ? 'name' : 'student ID'}, and if you like a tab or a comma and a section, as a spreadsheet copies it. A section that isn’t there yet is made.${sectionsNote}`, placeholder: entryWord(course) === 'Name' ? 'Ada Lovelace, Period 2\nAlan Turing, Period 3' : 'S1042, Period 2\nS1043, Period 3' })}
+<div class="actions"><button class="v-btn is-primary" type="submit">Add to the list</button></div>${say()}
+</form>`;
+
+function listBlock({ code, course, version, people, sections, filter, locked, signIn }) {
   const listed = people.filter((person) => person.listed);
   const inFilter = people.filter((person) => (!filter ? true : filter === 'none' ? !person.section : person.section === filter));
   const counts = Object.fromEntries(sections.map((section) => [section.id, people.filter((person) => person.section === section.id).length]));
   counts.none = people.filter((person) => !person.section).length;
   const signedIn = people.filter((person) => person.last_seen_at).length;
   const shut = !signIn && course.identify === 'code' && !listed.length;
-  const unused = !signIn && wayOf(course) === 'browser' && listed.length > 0;
+  // A list that does nothing yet says so, and the way to make it count is a button here, not a setting to go and find.
+  const unused = !locked && !signIn && wayOf(course) === 'browser' && listed.length > 0;
   const cards = `/console/courses/${esc(code)}/people/cards${filter ? `?section=${esc(filter)}` : ''}`;
+  const add = locked ? '' : addForm(course).replace('courses/PLACEHOLDER/people', `courses/${esc(code)}/people`);
   return `<section class="block" aria-labelledby="list-title">
-<h2 id="list-title">The class list</h2>
+<div class="list-head"><h2 id="list-title">The class list${people.length ? ` <small>${esc(`${plural(listed.length, 'person', 'people')}, ${signedIn} signed in${people.length > listed.length ? `, ${people.length - listed.length} not on the list` : ''}`)}</small>` : ''}</h2>
+${people.length ? `<div class="actions">${listed.length ? `<a class="v-btn is-small is-primary" href="${cards}">Print cards</a>` : ''}<a class="v-btn is-small" href="/console/api/courses/${esc(code)}/people.csv" title="The only file that joins names and personal codes, so keep it somewhere private.">Download</a></div>` : ''}</div>
 ${shut ? '<p class="notice">Nobody is on the list yet, so nobody can open this course. Add your class below.</p>' : ''}
-${unused ? '<p class="notice">Nobody signs in on this course, so a learner reaches their place on this list only by typing their code. To ask everyone, choose personal codes or names above.</p>' : ''}
-${people.length ? `<p class="list-facts">${esc(`${plural(listed.length, 'person', 'people')} on the list · ${signedIn} signed in${people.length > listed.length ? ` · ${people.length - listed.length} not on the list` : ''}`)}</p>
-<div class="actions list-do">${listed.length ? `<a class="v-btn is-small" href="${cards}">Print cards</a>` : ''}<a class="v-btn is-small" href="/console/api/courses/${esc(code)}/people.csv">Download as CSV</a></div>
-<p class="v-note">The CSV is the only file that joins names and personal codes, so keep it somewhere private.</p>
-${sectionChips(sections, filter, `/console/courses/${code}/people`, counts)}
+${unused ? `<div class="notice list-unused" data-say-box><p>This list isn’t in use yet: learners come in without signing in, so nothing ties them to a name here. With personal codes on cards, each one comes in as the person on the list.</p><div class="actions"><button class="v-btn is-small is-primary" type="button" data-api="PUT courses/${esc(code)}/people/how" data-body='${esc(JSON.stringify({ version, identify: 'code' }))}' data-said="They come in with personal codes now. Print the cards.">Use personal codes</button></div>${say()}</div>` : ''}
+${people.length ? `${sectionChips(sections, filter, `/console/courses/${code}/people`, counts)}
 <div id="list-status">${say()}</div>
 ${inFilter.length ? `<div class="list-wrap"><table class="v-table people" aria-labelledby="list-title">
 <thead><tr><th scope="col">${esc(entryWord(course))}</th>${sections.length ? '<th scope="col">Section</th>' : ''}<th scope="col">Personal code</th><th scope="col">Last seen</th></tr></thead>
 <tbody>${inFilter.map((person) => personRow(person, { code, sections, locked })).join('')}</tbody>
-</table></div>` : '<p class="v-empty">Nobody in this section yet.</p>'}` : '<p class="v-empty">Nobody here yet. Add your class below, and each person gets a personal code.</p>'}
-${locked ? '' : `<div class="adds">
-<form class="v-card add" id="paste" data-api="POST courses/${esc(code)}/people">
-<h3>Paste a list</h3>
-${text('list', 'Who to add', '', { rows: 6, hint: `One per line: a ${entryWord(course) === 'Name' ? 'name' : 'student ID'}, then if you like a tab or a comma and a section, as a spreadsheet copies it. A section that isn’t there yet is made.`, placeholder: entryWord(course) === 'Name' ? 'Ada Lovelace, Period 2\nAlan Turing, Period 3' : 'S1042, Period 2\nS1043, Period 3' })}
-<div class="actions"><button class="v-btn is-primary" type="submit">Add to the list</button></div>${say()}
-</form>
-<form class="v-card add" id="add-one" data-api="POST courses/${esc(code)}/people">
-<h3>Add one</h3>
-${text('name', entryWord(course), '', { required: true, maxlength: PEOPLE_LIMITS.name, autocomplete: 'off' })}
-${sections.length ? choose('section', 'Section', filter && filter !== 'none' ? filter : '', [{ value: '', label: 'No section' }, ...sections.map((section) => ({ value: section.id, label: section.name }))]) : ''}
-<div class="actions"><button class="v-btn" type="submit">Add</button></div>${say()}
-</form>
-</div>`}
+</table></div>` : '<p class="v-empty">Nobody in this section yet.</p>'}
+${add ? `<details class="adds" id="add-people"><summary>Add more people</summary>${add}</details>` : ''}` : add ? `<p class="v-empty">Nobody here yet. Add your class, and each person gets a personal code.</p><div class="adds is-first">${add}</div>` : '<p class="v-empty">Nobody here yet.</p>'}
 </section>`;
 }
 
@@ -151,14 +145,28 @@ ${oneOf('sections_from', 'Where a learner’s section comes from', shownFrom, FR
 function peopleView({ code, title, origin, addresses, tabs, closed, course, version, people, sections, filter, locked, signIn, simple }) {
   return `${courseHead({ title, code, origin, addresses, tabs, current: 'People', closed })}
 ${locked ? SAVING : ''}
+${listBlock({ code, course, version, people, sections, filter, locked, signIn })}
+<section class="block" aria-label="How this class is set up">
 <div class="set-up">
 ${howBlock({ course, code, version, locked, signIn, simple })}
 ${sectionsBlock({ code, course, version, sections, people, base: reachOf(origin, addresses).base, locked })}
 </div>
-${listBlock({ code, course, people, sections, filter, locked, signIn })}`;
+</section>`;
 }
 
-const PEOPLE_CSS = `.set-up{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start;margin-top:22px}
+const PEOPLE_CSS = `.set-up{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.list-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px}
+.list-head h2 small{margin-left:6px;color:var(--muted);font-size:.9375rem;font-weight:400;letter-spacing:0}
+.list-unused{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px}
+.list-unused p{flex:1 1 320px;margin:0}
+.list-unused .say{flex-basis:100%}
+.adds{margin-top:16px}
+.adds.is-first{max-width:560px}
+.adds>summary{color:var(--ink-blue);font-size:.9375rem;cursor:pointer}
+.add-people{display:grid;gap:12px;max-width:560px;margin-top:10px}
+.adds.is-first .add-people{margin-top:14px}
+.people .v-menu-button{min-height:32px;padding:3px 8px;border-color:transparent;background:transparent}
+.people tr:hover .v-menu-button,.people .v-menu-button:focus-visible,.people .v-menu-button[aria-expanded=true]{border-color:var(--public-rule-strong)}
 .set{display:grid;gap:6px;min-width:0}
 .set h2{font-size:.9375rem;font-weight:600;letter-spacing:0;color:var(--muted)}
 .set .notice{margin:4px 0}
@@ -175,7 +183,6 @@ const PEOPLE_CSS = `.set-up{display:grid;grid-template-columns:repeat(2,minmax(0
 .people .small{min-height:36px;padding:4px 10px;font-size:.9375rem}
 .code{font-size:.9375rem;letter-spacing:.04em;white-space:nowrap}
 .seen{white-space:nowrap;font-size:.9375rem}
-.adds{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:20px;align-items:start}
 .add{display:grid;gap:12px}
 .add h3{font-size:1rem;font-weight:600;letter-spacing:0}
 .section-rows{display:grid;margin:10px 0 0;padding:0;list-style:none;border-top:1px solid var(--public-rule)}

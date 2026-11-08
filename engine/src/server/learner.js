@@ -22,10 +22,11 @@ import { draftTexts, embedOrigins, keptEvents, openedNow, panelOpenAt, publicWor
 import { gradeResponse, normalizeItems } from '../learner/questions.js';
 import { CONVERSATION_ID, RUN_ID, SSE_HEADERS, annotationTarget, answersSoFar, chatReply, doneButton, doneHow, embedSite, homeUnits, kindOf, learnerInfo, messageAttachments, noteOf, progressHooks, questionReplies, readMessage, readVisitor, releaseState, runEvents, sseStream, stepAllows, stepMove, stepReply, voiceRecording } from '../learner/logic.js';
 import { sanitizeAfter, sanitizeSignals } from '../../../harness/src/utils/researchMetrics.js';
-import { teachingSettings } from '../../../harness/src/utils/teaching.js';
+import { teachingForSection, teachingSettings } from '../../../harness/src/utils/teaching.js';
 import { suggestChanges } from '../../../harness/src/suggest.js';
 import { TEACHER_PAGE_HEADERS, teacherView } from '../../../harness/src/view.js';
-import { settingsShown, watchHooks, watchSlot } from '../learner/watch.js';
+import { keptTurnEvents, settingsShown, turnRecord, watchHooks, watchSlot } from '../learner/watch.js';
+import { SPEAK_UP, speakUpInput, speakUpMove, speakUpNote, speaksUpOf, speaksUpOnPage } from '../../../harness/src/speakUp.js';
 import { isLocalRequest } from '../../../harness/src/net/local.js';
 import { applyModels } from './models.js';
 import { graphOf, hearRecording, readReply } from './runtime.js';
@@ -140,7 +141,7 @@ export function pagesOf(served, { assets = null, documents = null, onBad = null 
       activities.set(key, {
         kind: 'activity', key, id: `${code}/${key}`, slug: `learn-${code}-${key}`, code, title: raw.title, summary: raw.summary || null, role: raw.role || 'instruction', minutes: raw.minutes ?? null,
         release: raw.release === 'hidden' && raw.opens_at ? 'scheduled' : raw.release || 'open', opens_at: raw.opens_at || null, closes_at: raw.closes_at || null, done_when: raw.done_when || 'auto', survey: raw.survey || null, unit_id: raw.unit_ref || null,
-        agent, teaching: raw.teaching || null, open: look.profile.open, workspace: titled, settings, level, sets, how: { identify: 'code' }, doc, dir: from.dir, zip: from.zip
+        agent, teaching: raw.teaching || null, opening: raw.opening || null, open: look.profile.open, workspace: titled, settings, level, sets, how: { identify: 'code' }, doc, dir: from.dir, zip: from.zip
       });
     }
     courses.set(code, { code, doc, title: course.title, description: course.description || null, audience: course.audience || null, data_level: level, shared_devices: Boolean(course.shared_devices), appearance: course.appearance || null, info: learnerInfo(course.info), units, activities, sets });
@@ -586,10 +587,12 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
 
     async function postMessage(page, request, url, context, body) {
       const can = await offers(page);
-      const spoken = body?.audio == null || body.audio === '' ? null : voiceRecording(body.audio, can.voice, page.settings.voice.max_seconds);
-      const attached = messageAttachments(body?.attachments, can.attachments);
+      // A turn the AI writes first (speakUp.js): the page says which moment it was, and sends no words of the learner's.
+      const first = page.kind === 'activity' && Object.hasOwn(SPEAK_UP, String(body?.event?.kind)) ? body.event.kind : null;
+      const spoken = first || body?.audio == null || body.audio === '' ? null : voiceRecording(body.audio, can.voice, page.settings.voice.max_seconds);
+      const attached = first ? [] : messageAttachments(body?.attachments, can.attachments);
       const { settings } = page;
-      const { message, visitor } = readMessage(body, settings, { media: Boolean(spoken || attached.length) });
+      const { message, visitor } = first ? { message: '', visitor: readVisitor(body) } : readMessage(body, settings, { media: Boolean(spoken || attached.length) });
       // What the AI did goes only to a request the host granted it, on that request's own stream.
       const stream = body?.stream === true ? sseStream() : null;
       const watched = stream ? await panelFor(page, request, url, context) : null;
@@ -605,6 +608,18 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
       if (settings.limits.visitor_per_day && await addToDay(keys.day(page.id.replace(/\//g, '-'), date, learner?.id || owner)) > settings.limits.visitor_per_day) throw later('You’ve reached today’s message limit for this assistant. Try again tomorrow.', 3600, 'chat_page_visitor_limit');
       if (await addToDay(keys.day(page.id.replace(/\//g, '-'), date)) > settings.daily_limit) throw later('This assistant has answered all it can for today. Try again tomorrow.', 3600, 'chat_page_daily_limit');
       const at = learner ? await atStep(page, learner, { ai: true }) : null;
+      // Only at a moment the activity's teacher chose, for a learner the course knows, and at most as often as they said in a step each day: the server decides.
+      if (first) {
+        const set = speaksUpOf(teachingForSection(await teachingOf(page), learner?.section ?? null));
+        if (!set?.[first] || !learner) throw pageError('The AI doesn’t write first here.', 409, 'speaks_first_off');
+        // As often as the teacher said in the step today, then not too soon after the last: the same order as VIABLE's.
+        const countKey = keys.day(`speaks-${page.id.replace(/\//g, '-')}-${at?.index ?? 0}`, date, learner.id);
+        const lastKey = keys.day(`speaks-last-${page.id.replace(/\//g, '-')}`, date, learner.id);
+        if (((await store.get(countKey))?.count || 0) >= set.most) throw pageError('The AI has written first as often as it may here.', 429, 'speaks_first_limit');
+        if (now() - ((await store.get(lastKey))?.at || 0) < set.gap * 60000) throw pageError('The AI wrote first a moment ago.', 429, 'speaks_first_soon');
+        await addToDay(countKey);
+        await store.put(lastKey, { at: now() });
+      }
       // A conversation continues only for the visitor who started it; a step that starts afresh takes none begun before it.
       const user = learner?.id || `chat:${owner}`;
       let earlier = null;
@@ -619,12 +634,15 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
       const open = page.workspace?.panels.find((panel) => panel.id === state?.panel);
       const versions = open?.type === 'writing' && open.context?.versions && learner ? await recentVersions(page, learner, open, state) : {};
       const hintsOpened = open?.type === 'questions' && open.hints && learner ? await hintsGiven(page, learner, open, state) : 0;
-      const teaching = await teachingOf(page);
       const section = learner?.section ?? null;
+      // A section's own moments and help level, where it has them, over the activity's.
+      const teaching = teachingForSection(await teachingOf(page), section);
       // Whether their last answer here was right, from the record of marking it: never what the page says.
       const lastCorrect = open?.type === 'questions' && learner && state?.item != null ? answersSoFar((await store.get(keys.answers(page.code, learner.id, page.key, open.id)))?.rows || [])[state.item]?.correct ?? null : null;
-      const context_ = page.kind === 'activity' ? workspaceContext(page.workspace, state, page.sets, { ...versions, hintsOpened, lastCorrect }, page.open, teaching, section) : null;
-      const signals = sanitizeSignals(page.level !== 'minimal' ? body?.signals : { source: body?.signals?.source });
+      const made = page.kind === 'activity' ? workspaceContext(page.workspace, state, page.sets, { ...versions, hintsOpened, lastCorrect }, page.open, teaching, section, at, page.opening) : null;
+      // A turn the AI writes first says so, with what to do at that moment; a brief that reads the moment puts the same in its place.
+      const context_ = first ? { ...made, speaks_first: first, teaching_view: [made?.teaching_view, speakUpNote(first, teaching)].filter(Boolean).join('\n\n') } : made;
+      const signals = first ? { source: 'ai_first', moment: first } : sanitizeSignals(page.level !== 'minimal' ? body?.signals : { source: body?.signals?.source });
       const previous = learner && page.level !== 'minimal' && body?.after && typeof body.after === 'object' ? noteAfter(page, owner, body.after) : null;
       const opened = openedNow(page.workspace, state, page.level);
       const site = embedSite(body?.site);
@@ -637,10 +655,11 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
         await previous;
         let result;
         const hooks = { ...progressHooks(onProgress), ...(settings.stream_replies !== false && onAnswer ? { onAnswer } : {}), ...(onTranscript ? { onTranscript } : {}), ...(can.speech && onSpeech ? { onSpeech } : {}) };
-        trace?.({ kind: 'turn', message, teaching: settingsShown(teaching) });
+        trace?.({ kind: 'turn', message: first ? null : message, ...(first ? { first } : {}), teaching: settingsShown(teaching), ...(at?.step ? { step: { title: at.step.title, brief: at.step.brief || null } } : {}) });
+        if (first && trace && teaching?.turn_brief === false) trace({ kind: 'brief', moment: first, move: speakUpMove(first, speaksUpOf(teaching)?.[first]), move_source: SPEAK_UP[first].sources, by: 'rules', flag: null, went_in: [] });
         const listening = trace ? heardIn(watched, message, teaching).then((items) => { if (items.length) trace({ kind: 'heard', items }); }).catch(() => {}) : null;
         let conversationId;
-        let said = message;
+        let said = first ? speakUpInput(first) : message;
         let heard = null;
         // No signal: a learner who closes the tab mid-turn keeps the turn in their conversation, for when
         // they come back. Only the API's runs stop on a hang-up.
@@ -655,7 +674,7 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
           }
           const content = attached.length || (spoken && stepHears) ? [...(said ? [{ type: 'text', text: said }] : []), ...attached, ...(spoken && stepHears ? [{ type: 'file', file: { filename: spoken.filename, mime_type: spoken.type, file_data: spoken.data } }] : [])] : undefined;
           const note = attached.length ? `[Attached: ${attached.map((part) => part.file?.filename || 'a picture').join(', ')}]` : null;
-          ({ result, conversationId } = await ctx.runInConversation(page.agent, { text: said, content, note, stopWhenSilent: Boolean(spoken), save, briefing: page.kind === 'activity' ? teaching : null, section, history: [], context: context_, teaching: page.kind === 'activity' ? false : teaching || false, silent: !can.speech, user, mode: 'server', conversationId: earlier?.id ?? null }, trace ? watchHooks(trace, hooks) : hooks, store));
+          ({ result, conversationId } = await ctx.runInConversation(page.agent, { text: said, content, note, stopWhenSilent: Boolean(spoken), save, briefing: page.kind === 'activity' ? teaching : null, event: first, section, history: [], context: context_, teaching: page.kind === 'activity' ? false : teaching || false, silent: !can.speech, user, mode: 'server', conversationId: earlier?.id ?? null }, trace ? watchHooks(trace, hooks) : hooks, store));
         } catch (error) {
           ctx.log({ at: new Date().toISOString(), request_id: context.requestId, page: page.slug, run_id: null, code: error?.code || 'agent_run_failed', duration_ms: now() - begun });
           trace?.({ kind: 'failed', message: String(error?.message || error) });
@@ -671,7 +690,8 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
         for (const cite of reply.reply.citations) if (String(cite.url || '').startsWith('/package-files/')) cite.url = `${url.origin}${cite.url}${cite.page ? `#page=${cite.page}` : ''}`;
         await listening;
         trace?.({ kind: 'reached', text: reply.reply.text, citations: reply.reply.citations, outcome: result.steps?.filter((step) => step.nodeType === 'vetting').at(-1)?.output?.outcome ?? null });
-        await keepTurn(page, { learner, owner, runId, startedAt, message: said || result.transcript?.text || '', result, reply, conversationId, turnIndex: Math.floor((earlier?.count || 0) / 2) + 1, signals: signals || (spoken ? { source: 'voice' } : null), opened, site, teaching, section });
+        const record = turnRecord(result.brief || (first ? { moment: first, move: speakUpMove(first, speaksUpOf(teaching)?.[first]), move_source: SPEAK_UP[first].sources } : null), at?.step || null);
+        await keepTurn(page, { learner, owner, runId, startedAt, message: first ? '' : said || result.transcript?.text || '', result, record, reply, conversationId, turnIndex: Math.floor((earlier?.count || 0) / 2) + 1, signals: signals || (spoken ? { source: 'voice' } : null), opened, site, teaching, section });
         ctx.log({ at: new Date().toISOString(), request_id: context.requestId, page: page.slug, run_id: runId, status: 200, duration_ms: now() - begun, model_calls: result.modelCalls, tokens: result.usage?.total });
         return reply;
       };
@@ -697,14 +717,14 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
       return last + 1;
     };
 
-    async function keepTurn(page, { learner, owner, runId, startedAt, message, result, reply, conversationId, turnIndex, signals, opened, site, teaching, section }) {
+    async function keepTurn(page, { learner, owner, runId, startedAt, message, result, reply, conversationId, turnIndex, signals, opened, site, teaching, section, record = null }) {
       // Deleted while this turn ran: what it made goes too, and nothing more is kept.
       if (learner && !await store.get(keys.learner(page.code, learner.id))) { await forgetLearner(store, learner.id); return; }
       const turnKey = `${learner ? keys.turns(page.code, learner.id) : keys.chatTurn(page.slug, owner)}${startedAt}-${runId}`;
-      // Only the steps a teacher reads: the learner's message and each review.
-      const steps = (result.steps || []).filter((step) => ['input', 'vetting'].includes(step.nodeType));
+      // Only the steps a teacher reads: the learner's message, each review and what a search found.
+      const steps = (result.steps || []).filter((step) => ['input', 'vetting', 'knowledge'].includes(step.nodeType));
       const run = { run_id: runId, label: `${page.title || page.slug}, ${startedAt}`, agent: page.agent.name, activity: page.title || null, teaching: teaching || null, output: { text: reply.reply.text }, steps };
-      await store.put(turnKey, { run_id: runId, activity: page.key || page.slug, conversation_id: conversationId, turn_index: turnIndex, started_at: startedAt, message, reply: reply.reply.text, signals: signals || null, after: null, rating: null, opened: opened || null, ...(site ? { site } : {}), ...(section && teachingSettings(teaching)?.sections?.[section] ? { teaching_section: section } : {}), ...(result.brief?.flag ? { flag: result.brief.flag } : {}), run });
+      await store.put(turnKey, { run_id: runId, activity: page.key || page.slug, conversation_id: conversationId, turn_index: turnIndex, started_at: startedAt, message, reply: reply.reply.text, signals: signals || null, after: null, rating: null, opened: opened || null, ...(site ? { site } : {}), ...(section && teachingSettings(teaching)?.sections?.[section] ? { teaching_section: section } : {}), ...(result.brief?.flag ? { flag: result.brief.flag } : {}), ...(record && Object.keys(record).length ? { turn_record: record } : {}), ...(page.trying ? { tried: true } : {}), completed_at: new Date(now()).toISOString(), run });
       await store.put(keys.run(page, runId), { key: turnKey, owner, started_at: startedAt });
       if (traces) await store.put(keys.trace(runId), { object: 'turn.trace', run_id: runId, agent: page.agent.slug, started_at: startedAt, teaching: teaching || null, usage: result.usage || null, steps: result.steps || [], output: { text: reply.reply.text } });
     }
@@ -752,6 +772,17 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
       if (name === 'messages') {
         try { return await postMessage(page, request, url, context, body); } catch (error) { const failure = failed(error, context); return answer(failure.body, failure.status, failure.headers); }
       }
+      // What the AI did on this learner's turns here, read again from what each turn kept: for the panel beside the page, where the teacher asked for it.
+      if (name === 'watch') {
+        return respond(async () => {
+          if (page.kind !== 'activity' || !await panelFor(page, request, url, context)) throw pageError('What the AI did is shown only where the teacher asked for it.', 403, 'watch_not_allowed');
+          const learner = await known(page, readVisitor(body));
+          if (!learner) return { object: 'watch.record', turns: [] };
+          const kept = [];
+          for (const key of (await store.list(keys.turns(page.code, learner.id))).slice(-400)) { const turn = await store.get(key); if (turn?.activity === page.key) kept.push(turn); }
+          return { object: 'watch.record', turns: kept.slice(-200).map((turn) => ({ run_id: turn.run_id, events: keptTurnEvents(turn) })) };
+        }, context);
+      }
       if (name === 'after') {
         // A beacon: never an error the page would have to handle.
         try { readVisitor(body); limited('after', visitor, address); if (page.level !== 'minimal') await noteAfter(page, await owner(), { ...body.after, run_id: body.run_id }); } catch { /* nothing to report */ }
@@ -779,7 +810,9 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
           const learner = await learnerOf(page, visitor);
           // A learner who has yet to say which class they're in goes to the course's home first.
           const needs = learner && asksSection(page, learner, await sectionsOf(store, page.code)) ? { needs: 'section' } : {};
-          return { object: 'chat.learner', identify: howOf(page).identify, joined: Boolean(learner), code: learner?.code || null, name: learner?.name || null, variant: null, ...needs };
+          // Where a section has moments of its own, the page watches for theirs.
+          const theirs = learner?.section && teachingSettings(await teachingOf(page))?.sections?.[learner.section]?.speaks_up ? { speaks_up: speaksUpOnPage(teachingForSection(await teachingOf(page), learner.section)) } : {};
+          return { object: 'chat.learner', identify: howOf(page).identify, joined: Boolean(learner), code: learner?.code || null, name: learner?.name || null, variant: null, ...needs, ...theirs };
         }
         if (page.kind !== 'activity') {
           if (['events', 'draft', 'questions', 'annotations'].includes(name)) { if (name === 'events') return { object: 'workspace.events', recorded: 0 }; throw pageError('That isn’t on this page.', 404, 'panel_not_found'); }
@@ -1024,9 +1057,9 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
       const reads = mode !== 'widget' && (page.workspace?.panels || []).some((item) => item.type === 'reading');
       const watched = mode === 'page' ? await panelFor(page, request, url, context) : null;
       const signedIn = traces === 'token';
-      const beside = watched ? watchSlot({ ...watched, teaching: await teachingOf(page), signOut: signedIn ? '/teacher/signout' : null }, nonce) : null;
+      const beside = watched ? watchSlot({ ...watched, teaching: await teachingOf(page), signOut: signedIn ? '/teacher/signout' : null, record: page.kind === 'activity' && mode === 'page' }, nonce) : null;
       // The panel's page goes on asking for it, and no other site frames it.
-      return html(renderChatPage({ slug: page.slug, mode, settings: page.settings, workspace: page.workspace, course, how: page.how, sets: page.sets, host: { ...await host(page), slots: beside ? { beside } : {}, query: beside && signedIn ? '?panel=1' : '' } }, nonce), 200, chatPageHeaders(nonce, { sites: beside ? "'self'" : sites, frames: embedOrigins(page.workspace), reads, fonts: Boolean(beside) }));
+      return html(renderChatPage({ slug: page.slug, mode, settings: page.settings, workspace: page.workspace, opening: page.opening || null, speaksUp: page.kind === 'activity' ? speaksUpOnPage(await teachingOf(page)) : null, course, how: page.how, sets: page.sets, host: { ...await host(page), slots: beside ? { beside } : {}, query: beside && signedIn ? '?panel=1' : '' } }, nonce), 200, chatPageHeaders(nonce, { sites: beside ? "'self'" : sites, frames: embedOrigins(page.workspace), reads, fonts: Boolean(beside) }));
     };
 
     async function chatRoute(slug, rest, request, url, context) {
@@ -1206,7 +1239,7 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
         }
         // Who's asking isn't known yet on this page, so one that isn't for everyone holds nothing of its panels but their names.
         const waiting = !course.trying && (howOf(course).via !== 'browser' || state.state !== 'open' || own.length > 0);
-        return servePage(activity, 'page', { request, url, context, course: { ...(course.trying ? { preview: true, visitorKey: TRY_VISITOR, query: '?try=1' } : {}), waiting, title: course.title, url: `/course/${code}${course.trying ? '?try=1' : ''}`, activity: activity.title, level: activity.level, identify: howOf(course).identify, shared: course.shared_devices, done: doneButton(activity.done_when, activity.workspace?.panels || []) ? 'button' : 'auto' } });
+        return servePage(activity, 'page', { request, url, context, course: { ...(course.trying ? { preview: true, visitorKey: TRY_VISITOR, query: '?try=1' } : {}), waiting, title: course.title, url: `/course/${code}${course.trying ? '?try=1' : ''}`, activity: activity.title, level: activity.level, identify: howOf(course).identify, asks: Object.values(teachingSettings(await teachingOf(activity))?.sections || {}).some((own) => own.speaks_up), shared: course.shared_devices, done: doneButton(activity.done_when, activity.workspace?.panels || []) ? 'button' : 'auto' } });
       }
       if (more[0] === 'reading' && more.length === 2 && request.method === 'POST') return readingPdf(activity, more[1], request, url, context);
       return more.length === 1 ? pageEndpoint(activity, more[0], request, url, context) : null;

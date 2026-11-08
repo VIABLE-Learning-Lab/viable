@@ -9,6 +9,7 @@ import { readJsonAnswer } from './agentTests.js';
 import { findMisconceptions } from './utils/misconceptions.js';
 import { teachingContext } from './utils/teaching.js';
 import { searchTerms } from './utils/terms.js';
+import { SPEAK_UP, speakUpMove, speaksUpOf } from './speakUp.js';
 
 export const BRIEF_LIMITS = { misconceptions: 2, components: 2, prior: 1, guidance: 2, candidates: 40, turns: 4, turnChars: 500, messageChars: 1000, pickMs: 15000 };
 // After this many tries in a conversation, the learner is told a person can help, and the teacher hears of it.
@@ -23,6 +24,9 @@ export const MOVES = {
   stuck: 'The learner doesn’t know how to go on. Start from something they can already do, and offer one small first step.',
   repeated: 'The learner has tried more than once. Don’t repeat the last hint: try another way in, such as a picture, a simpler case or a number line, and make the next step smaller.'
 };
+
+/** The studies each move rests on, for whoever reads what a turn was given. */
+export const MOVE_SOURCES = { attempt: 'Black & Wiliam (1998); Hattie & Timperley (2007)', asks_answer: 'Bastani et al. (2025)', stuck: 'Hattie & Timperley (2007)', repeated: 'Beck & Gong (2013)' };
 
 // These read English. A picker model reads other languages, so a multilingual class needs one.
 const ASKS_ANSWER = /\b(?:(?:tell|give|show)\s+(?:me\s+)?(?:the\s+|what\s+the\s+)?(?:answer|solution)|what(?:['’]?s|\s+is)\s+the\s+answer|just\s+(?:tell|give|say|do|solve)|(?:do|solve|finish)\s+(?:it|this|that)\s+for\s+me|(?:need|want)\s+(?:the\s+)?answer)\b/i;
@@ -147,7 +151,7 @@ async function pickByModel(candidates, message, history, { call, model }) {
  * { moment, move, by, tries, flag, misconceptions, components, prior, guidance, text, usage, picker_error? }: text is
  * what the reply steps get in place of teachingContext's, the rest what the record keeps.
  */
-export async function turnBrief(teaching, { message = '', history = [], section = null, picker = null, extra = [] } = {}) {
+export async function turnBrief(teaching, { message = '', history = [], section = null, picker = null, extra = [], event = null } = {}) {
   const taught = teachingContext(teaching, section);
   if (!taught) return null;
   const settings = taught.context;
@@ -158,7 +162,9 @@ export async function turnBrief(teaching, { message = '', history = [], section 
   let picked;
   let by = 'rules';
   let pickerError = null;
-  if (picker?.call && picker.model) {
+  // A turn the AI writes first (speakUp.js): the page said which moment, so nothing reads the learner's words for it.
+  const first = event && Object.hasOwn(SPEAK_UP, event) ? event : null;
+  if (picker?.call && picker.model && !first) {
     try {
       picked = await pickByModel(candidates, said, turns, picker);
       by = 'model';
@@ -167,10 +173,11 @@ export async function turnBrief(teaching, { message = '', history = [], section 
     }
   }
   picked ||= pickByWords(candidates, said, turns, settings.goal);
+  if (first) picked = { ...picked, moment: first, guidance: [] };
   // The teacher's sentence for the goal, standard, limit and note, without the lists a turn chooses from.
   const standard = settings.standard ? { ...settings.standard, learning_components: [], prior: [] } : null;
-  const base = teachingContext({ goal: settings.goal, help: settings.help, standard, tools_off: settings.tools_off, sections: settings.note && section ? { [section]: { note: settings.note } } : undefined }, section);
-  const move = MOVES[picked.moment] || null;
+  const base = teachingContext({ role: settings.role, goal: settings.goal, help: settings.help, standard, tools_off: settings.tools_off, sections: settings.note && section ? { [section]: { note: settings.note } } : undefined }, section);
+  const move = first ? speakUpMove(first, speaksUpOf(teaching)?.[first]) : MOVES[picked.moment] || null;
   const flag = picked.moment === 'repeated' && tries >= TRIES_BEFORE_A_PERSON ? 'struggling' : null;
   const lines = [
     ...(move ? [`Right now: ${move}${flag ? ' Tell them it is normal to find this hard, and that their teacher can help too.' : ''}`] : []),
@@ -183,6 +190,8 @@ export async function turnBrief(teaching, { message = '', history = [], section 
   return {
     moment: picked.moment,
     move,
+    ...(move ? { move_source: first ? SPEAK_UP[first].sources : MOVE_SOURCES[picked.moment] } : {}),
+    ...(first ? { first: true } : {}),
     by,
     tries,
     flag,

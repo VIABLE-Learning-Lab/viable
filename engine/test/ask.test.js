@@ -7,6 +7,7 @@ import { memoryStore } from '../../harness/src/store/store.js';
 import { looksLikeClassList, settled } from '../src/console/ask.js';
 import { holdsClassList } from '../src/console/askTools.js';
 import { createApp } from '../src/server/app.js';
+import { consoleAsset } from '../src/console/layout.js';
 
 const TOKEN = 'a-token-of-some-length';
 const BASE = 'http://server.test';
@@ -98,7 +99,7 @@ test('a teacher’s words become a course, by the same routes a page uses, each 
   assert.match(shown, /add_activity/, 'what it did is there for whoever looks');
   assert.match(shown, /2 questions:/);
   assert.match(await s.page('ask'), /What are you teaching\?/);
-  assert.match(await s.page('ask'), /Fractions for my grade 5 class/, 'earlier conversations are on the front door');
+  assert.match(await s.page('ask'), /Fractions, period 2/, 'earlier conversations are on the front door, by what they made');
 });
 
 test('questions it writes are checked as a page’s are: a wrong answer key doesn’t become a question', async () => {
@@ -109,7 +110,7 @@ test('questions it writes are checked as a page’s are: a wrong answer key does
   ]));
   const events = await s.ask('A check');
   const failed = events.find((event) => event.name === 'step' && event.data.state === 'failed');
-  assert.match(failed.data.label, /needs its right answer/);
+  assert.match(failed.data.html, /needs its right answer/);
   assert.match(failed.data.html, /<details open/, 'an error opens by itself');
   const told = s.sent.at(-1).messages.filter((message) => message.role === 'tool').map((message) => message.content).join();
   assert.match(told, /needs its right answer/, 'the model hears why, and can put it right');
@@ -290,7 +291,8 @@ test('a model’s own citation marks don’t reach the page, the thread or its n
   assert.doesNotMatch(html, /citeturn|[\ue200-\ue2ff]/u);
   await s.ask('And?', threadOf(events));
   assert.doesNotMatch(JSON.stringify(s.sent.at(-1).messages.filter((message) => message.role === 'assistant')), /citeturn/);
-  const [, marks] = (await s.page('ask')).match(/live\.words\.replace\(\/(.+)\/g, ''\)/);
+  const [, file] = (await s.page('ask')).match(/src="\/console\/assets\/(ask-[^"]+)"/);
+  const [, marks] = (await consoleAsset(file).text()).match(/live\.words\.replace\(\/(.+)\/g, ''\)/);
   let words = '';
   const shown = ['So cite', 'turn0search1turn0', 'news2. Then\ue200cite', '\ue202turn0', '\ue201 more.'].map((piece) => (words += piece).replace(new RegExp(marks, 'g'), ''));
   assert.deepEqual(shown, ['So cite', 'So', 'So. Then', 'So. Then', 'So. Then more.'], 'words as they arrive lose them too, however they’re cut');
@@ -605,4 +607,145 @@ test('on a button that changes what learners meet, each question shows with its 
   const card = events.find((event) => event.name === 'card' && /Change it/.test(event.data.html)).data.html;
   assert.match(card, /What is 1\/2 \+ 1\/2\?/);
   assert.match(card, /answer: 1/);
+});
+
+const CASE_STEPS = [
+  { title: 'The case', shows: 'page', ai: false, text: 'A beekeeper says **the bees are vanishing** because of phone masts.' },
+  { title: 'Your first call', shows: 'questions', ai: false, feedback: 'none', questions: [{ type: 'single', prompt: 'Is it true?', choices: ['Yes', 'No', 'Can’t tell'], right: ['Can’t tell'] }] },
+  { title: 'Question it', shows: 'page', ai: true, text: 'Defend your call to a skeptic.', ai_does: 'Plays a friendly skeptic. Never says who is right.', ai_says: 'So what’s your call, and what moved you most?', starters: ['I think it’s false'] },
+  { title: 'Make your case', shows: 'writing', ai: true, prompt: 'Write your claim, evidence and reasoning.', rubric: ['Claim: says what you think', 'Evidence: names a source'], ai_does: 'Only checks against the rubric.', keep_earlier: true }
+];
+
+test('an activity is written as steps: what learners read is on the page, and what the AI is told stays off it', async () => {
+  let course;
+  const s = await server((body, at) => {
+    if (at === 0) return [call('create_course', { title: 'Science' })];
+    if (at === 1) { course = JSON.parse(body.messages.at(-1).content).course; return [call('add_activity', { course, title: 'AI Claim Detectives', design: 'claim-evidence-reasoning', goal: 'Weigh a claim', help: 'hint', role: 'A friendly skeptic', minutes: 30, steps: CASE_STEPS })]; }
+    return 'Done.';
+  });
+  const events = await s.ask('An activity on judging AI claims about bees');
+  const added = JSON.parse(s.sent[2].messages.at(-1).content);
+  assert.equal(added.activity, 'ai-claim-detectives');
+  assert.equal(added.review, undefined, 'nothing here for it to fix');
+  const cards = events.filter((event) => event.name === 'card').map((event) => event.data.html).join('');
+  assert.match(cards, /So what’s your call, and what moved you most\?/, 'the first message is on the card');
+  assert.match(cards, /About 30 minutes/);
+  assert.match(cards, /Built on Claim, evidence, reasoning/);
+  assert.doesNotMatch(cards, /Never says who is right/, 'what the AI is told isn’t on a card');
+  const read = await s.ok('GET', 'ask/choices');
+  assert.deepEqual(read.courses[0].activities.map((activity) => [activity.title, activity.kind]), [['AI Claim Detectives', 'several']]);
+  const page = await s.page(`courses/${course}/activities/ai-claim-detectives`);
+  assert.match(page, /The case/);
+});
+
+test('changing a conversation into steps changes that activity: there is no second one, and a wrong key is said without touching anything', async () => {
+  let course;
+  const s = await server((body, at) => {
+    const last = body.messages.at(-1);
+    if (at === 0) return [call('create_course', { title: 'Science' })];
+    if (at === 1) { course = JSON.parse(last.content).course; return [call('add_activity', { course, title: 'Bees', kind: 'chat' })]; }
+    if (at === 2) return 'Done.';
+    if (at === 3) return [call('change_activity', { course, activity: 'nope', title: 'Bees again' })];
+    if (at === 4) { assert.match(last.content, /No activity here goes by “nope”.*bees \(“Bees”\)/); return [call('change_activity', { course, activity: 'Bees', steps: CASE_STEPS, says: undefined })]; }
+    if (at === 5) return [call('add_activity', { course, title: 'bees', kind: 'chat' })];
+    if (at === 6) { assert.match(last.content, /already has “Bees”/); return 'Done.'; }
+    return 'Done.';
+  });
+  const first = await s.ask('A conversation about bees');
+  const review = JSON.parse(s.sent[2].messages.at(-1).content).review;
+  assert.ok(review.some((note) => note.level === 'fix' && /empty box/.test(note.says)), 'a bare conversation is told what is wrong with it');
+  const events = await s.ask('Make it better', threadOf(first));
+  assert.ok(events.some((event) => event.name === 'step' && event.data.state === 'failed' && /this didn’t work/.test(event.data.label)));
+  const { courses } = await s.ok('GET', 'ask/choices');
+  assert.deepEqual(courses[0].activities.map((activity) => activity.title), ['Bees']);
+  const { activities } = courses[0];
+  assert.equal(activities[0].kind, 'several');
+});
+
+test('a reading step needs its PDF, a step needs what it shows, and six steps is the most', async () => {
+  let course;
+  const tries = [
+    [{ title: 'Read', shows: 'reading' }],
+    [{ title: 'Read', shows: 'page', text: '' }],
+    [{ title: 'Write', shows: 'writing' }],
+    [{ title: 'Answer', shows: 'questions' }],
+    Array.from({ length: 7 }, (_, index) => ({ title: `S${index}`, shows: 'page', text: 'x' }))
+  ];
+  const s = await server((body, at) => {
+    const last = body.messages.at(-1);
+    if (at === 0) return [call('create_course', { title: 'Science' })];
+    if (at === 1) course = JSON.parse(last.content).course;
+    if (at >= 1 && at <= tries.length) return [call('add_activity', { course, title: `Try ${at}`, steps: tries[at - 1] })];
+    return 'Done.';
+  });
+  const events = await s.ask('Go');
+  const failed = events.filter((event) => event.name === 'step' && event.data.state === 'failed').map((event) => event.data.html).join('\n');
+  for (const words of [/needs its PDF/, /a page with nothing on it/, /doesn’t say what to write/, /has no questions/, /at most 6 steps/]) assert.match(failed, words);
+  const { courses } = await s.ok('GET', 'ask/choices');
+  assert.deepEqual(courses[0].activities, [], 'nothing half-made is left behind');
+});
+
+test('what a message changed can be undone, and redone, a course at a time and only in order', async () => {
+  let course;
+  const s = await server((body, at) => {
+    const last = body.messages.at(-1);
+    if (at === 0) return [call('create_course', { title: 'Science' })];
+    if (at === 1) { course = JSON.parse(last.content).course; return [call('add_activity', { course, title: 'Bees', goal: 'Weigh a claim', steps: CASE_STEPS })]; }
+    if (at === 2) return 'Made it.';
+    if (at === 3) return [call('change_activity', { course, activity: 'bees', title: 'Bees and phones' })];
+    return 'Changed it.';
+  });
+  const first = await s.ask('An activity on bees');
+  const thread = threadOf(first);
+  const made = first.find((event) => event.name === 'changed');
+  assert.match(made.data.html, /Changed “Science”/);
+  assert.match(made.data.html, /Undo/);
+  const second = await s.ask('Rename it', thread);
+  const changed = second.find((event) => event.name === 'changed');
+  assert.match(changed.data.html, /Undo/);
+  // The first can't be undone until the second has been.
+  await assert.rejects(() => s.ok('POST', `ask/${thread}/undo/${made.data.id}`, {}), /latest change/);
+  let page = await s.page(`ask/${thread}`);
+  assert.equal([...page.matchAll(/\/undo\//g)].length, 1, 'one way back at a time');
+  await s.ok('POST', `ask/${thread}/undo/${changed.data.id}`, {});
+  assert.deepEqual((await s.ok('GET', 'ask/choices')).courses[0].activities.map((item) => item.title), ['Bees'], 'it is as it was');
+  page = await s.page(`ask/${thread}`);
+  assert.match(page, new RegExp(`/redo/${changed.data.id}`), 'and can go forward again');
+  assert.match(page, new RegExp(`/undo/${made.data.id}`), 'and the one before it can go back now');
+  await s.ok('POST', `ask/${thread}/redo/${changed.data.id}`, {});
+  assert.deepEqual((await s.ok('GET', 'ask/choices')).courses[0].activities.map((item) => item.title), ['Bees and phones']);
+  // The model hears of it, so it doesn't work from what it remembers.
+  const told = (await s.store.get(`ask/threads/${thread}`)).messages.filter((message) => message.role === 'user').map((message) => message.content).join('\n');
+  assert.match(told, /pressed Undo/);
+  assert.match(told, /pressed Redo/);
+});
+
+test('a conversation takes its name from what it made, and a teacher can rename it', async () => {
+  let course;
+  const s = await server((body, at) => {
+    if (at === 0) return [call('create_course', { title: 'Science' })];
+    return 'Done.';
+  });
+  const events = await s.ask('Something long about a science course for my class this term');
+  const thread = threadOf(events);
+  assert.equal(events.filter((event) => event.name === 'thread').at(-1).data.title, 'Science');
+  assert.equal(course, undefined);
+  await s.ok('PUT', `ask/${thread}`, { title: 'Term two science' });
+  assert.match(await s.page(`ask/${thread}`), /Term two science/);
+  await assert.rejects(() => s.ok('PUT', `ask/${thread}`, { title: '  ' }), /Give it a name/);
+});
+
+test('sources it read are under the reply, and a card that adds nothing isn’t shown', async () => {
+  let course;
+  const pages = { 'https://en.example.org/bees': () => new Response('<title>Bees</title>Bees are fine.', { headers: { 'content-type': 'text/html' } }) };
+  const s = await server((body, at) => {
+    const last = body.messages.at(-1);
+    if (at === 0) return [call('create_course', { title: 'Science' })];
+    if (at === 1) { course = JSON.parse(last.content).course; return [call('add_activity', { course, title: 'Bees', goal: 'x', steps: CASE_STEPS })]; }
+    if (at === 2) return [call('show_try', { course, activity: 'bees' }), call('show_share', { course })];
+    return 'Done.';
+  }, { pages });
+  const events = await s.ask('An activity on bees');
+  const kinds = events.filter((event) => event.name === 'card').map((event) => /class="ask-card[^"]*"[^>]*><h3>([^<]*)/.exec(event.data.html)?.[1]);
+  assert.deepEqual(kinds, ['Bees', 'Science'], 'the activity with its Try button, and the new course: no separate try card, and no links to share with nothing open');
 });

@@ -7,6 +7,7 @@
 import { suggestChanges, applySuggestion } from '../../../harness/src/suggest.js';
 import hardMoments from '../../../harness/src/tasks/hardMoments.js';
 import { suggestion, treeHtml } from '../../../harness/src/ui/parts.js';
+import { TRACE_CSS, turnTree } from '../learner/watch.js';
 import { VIEW_CSS, viewParts } from '../../../harness/src/view.js';
 import { answersSoFar } from '../learner/logic.js';
 import { activityKeys } from '../server/library.js';
@@ -136,16 +137,18 @@ ${draft.plan ? `<h4>Plan</h4><div class="text">${esc(draft.plan)}</div>` : ''}${
   return '';
 }
 
-function conversations(turns, who) {
+// What the AI did behind a reply: what the Harness read, each draft and the reviewer's word, loaded when it is opened.
+const behind = (code, turn) => (turn.run_id ? `<details class="behind" id="did-${esc(turn.run_id)}" data-load="courses/${esc(code)}/runs/${esc(turn.run_id)}/record"><summary>What the AI did</summary><div data-loaded><p class="v-note">Loading…</p></div></details>` : '');
+function conversations(turns, who, code = null) {
   if (!turns.length) return '';
   const byConversation = new Map();
   for (const turn of turns) byConversation.set(turn.conversation_id, [...(byConversation.get(turn.conversation_id) || []), turn]);
   return `<h3>With the AI</h3>${[...byConversation.values()].map((list, i) => `<details class="talk" id="talk-${esc(list[0].run_id)}" open><summary>${byConversation.size > 1 ? `Conversation ${i + 1}, ` : ''}${plural(list.length, 'message')}, from ${when(list[0].started_at)}</summary>
-${list.map((turn) => `<div class="turn"><p class="by">${esc(who)}</p><div class="text">${esc(turn.message)}</div><p class="by">The AI${turn.rating === -1 ? ' · <span class="v-mark fail">They said this didn’t help</span>' : turn.rating === 1 ? ' · <span class="v-mark pass">They said this helped</span>' : ''}</p><div class="text">${esc(turn.reply)}</div></div>`).join('')}
+${list.map((turn) => `<div class="turn">${turn.first || turn.signals?.source === 'ai_first' ? '<p class="by">The AI wrote first, unasked</p>' : `<p class="by">${esc(who)}</p><div class="text">${esc(turn.message)}</div>`}<p class="by">The AI${turn.rating === -1 ? ' · <span class="v-mark fail">They said this didn’t help</span>' : turn.rating === 1 ? ' · <span class="v-mark pass">They said this helped</span>' : ''}</p><div class="text">${esc(turn.reply)}</div>${code ? behind(code, turn) : ''}</div>`).join('')}
 </details>`).join('')}`;
 }
 
-function learnerView({ code, courseTitle, person, section, activities, sets, work, cut, shown }) {
+function learnerView({ code, courseTitle, person, section, activities, sets, work, cut, shown, records = false }) {
   const who = person.name || showCode(person.code);
   const touched = activities.filter((activity) => work.progress[activity.key] || work.turns[activity.key]?.length);
   const untouched = activities.filter((activity) => !touched.includes(activity));
@@ -158,7 +161,7 @@ ${touched.length ? touched.map((activity) => {
     const state = row?.done_at ? `Done ${when(row.done_at)}${DONE_HOW[row.done_how] ? ` (${DONE_HOW[row.done_how]})` : ''}` : row?.opened_at ? `Started ${when(row.opened_at)}, last worked ${when(row.last_at)}` : '';
     return `<section class="block work" aria-labelledby="w-${esc(activity.key)}" id="activity-${esc(activity.key)}"><h2 id="w-${esc(activity.key)}">${esc(activity.title)}</h2>${state ? `<p class="v-note">${state}</p>` : ''}
 ${(activity.workspace?.panels || []).map((panel) => panelWork(panel, { drafts: work.drafts[activity.key] || {}, answers: work.answers[activity.key] || {}, notes: work.notes[activity.key] || {} }, sets)).join('')}
-${conversations(work.turns[activity.key] || [], who)}</section>`;
+${conversations(work.turns[activity.key] || [], who, records ? code : null)}</section>`;
   }).join('') : '<p class="v-empty block">Nothing here yet.</p>'}
 ${touched.length && untouched.length ? `<p class="v-note block">Not started: ${esc(untouched.map((activity) => activity.title).join(', '))}.</p>` : ''}`;
 }
@@ -272,7 +275,7 @@ async function learnerBody({ library, classes, records }, match) {
   if (!person) throw refused('That learner isn’t in this course anymore.', 404, 'learner_not_found');
   const section = (await classes.sections(code)).find((item) => item.id === person.section)?.name || null;
   const { work, cut, shown } = await records.work(code, person.id);
-  return { title: `${person.name || showCode(person.code)} · ${doc.course.title}`, css: WORK_CSS, body: learnerView({ code, courseTitle: doc.course.title, person, section, activities: activitiesIn(doc), sets: doc.question_sets || [], work, cut, shown }) };
+  return { title: `${person.name || showCode(person.code)} · ${doc.course.title}`, css: `${WORK_CSS}\n${TRACE_CSS}\n.behind{margin:6px 0 4px}.behind>summary{color:var(--ink-blue);font-size:.875rem}.behind[open]>summary{margin-bottom:8px}`, body: learnerView({ records: Boolean(records?.turn),  code, courseTitle: doc.course.title, person, section, activities: activitiesIn(doc), sets: doc.question_sets || [], work, cut, shown }) };
 }
 
 // An activity's evidence, and what it suggests. What was accepted comes back only on what learners did since.
@@ -306,6 +309,12 @@ export const progressPages = [
     api: [
       ...detectorRoutes,
       // A host that keeps its own table of who has done what offers that instead of the records.
+      // What the AI did behind one reply of the course's, as the preview's panel shows it, from what its run kept.
+      ['GET', /^courses\/([\w-]+)\/runs\/(agtr_[\w-]{6,80})\/record$/, async ({ library, records }, match) => {
+        const { code } = await courseAt(library, match[1]);
+        const turn = records?.turn ? await records.turn(code, match[2]) : null;
+        return { html: turn ? treeHtml(turnTree(turn.events)) : '<p class="v-note">This reply’s record isn’t kept.</p>' };
+      }],
       ['GET', /^courses\/([\w-]+)\/progress\.csv$/, async ({ library, records }, match) => {
         const { code } = await courseAt(library, match[1]);
         if (!records.csv) throw refused('Download the records instead.', 404, 'not_found');

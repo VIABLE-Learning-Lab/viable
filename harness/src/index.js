@@ -10,6 +10,7 @@ export { fileStore } from './store/fileStore.js';
 export { listen, nodeListener, sendResponse, toRequest } from './net/node.js';
 export { htmlToMarkdown } from './markdown.js';
 export { HELP_LEVELS, SKILLS, TEACHING_LIMITS, teachingContext, teachingRunContext, teachingSettings } from './teaching.js';
+export { SPEAK_UP, SPEAK_UP_UNKNOWN, speakUpInput, speakUpNote, speaksUpFor, speaksUpOf } from './speakUp.js';
 export { KINDS, checkSchema, kindOf, schemaFor, validateDocument } from './validate.js';
 export * from './measures.js';
 export { AGENT_TEST_LIMITS, judgeMessages, readAgentTests, readJsonAnswer, readVerdict, validAgentTest } from './agentTests.js';
@@ -21,6 +22,7 @@ export { CATALOG, CATALOG_KINDS, licenseLimits, openForAnyUse, searchCatalog } f
 export { CONNECTORS, getResource, listResources, resourceJudge, resourcesHome, useResource } from './resources/index.js';
 export { CALL_LIMITS, callComponent, checkManifest, detect, documentComponents, lookup, measure } from './components/call.js';
 export { guidanceFrom } from './components/contract.js';
+export { ACTIVITY_DESIGNS, DESIGN_RULES, designById, findDesigns, reviewActivity } from './designs.js';
 export { teacherView, viewInputs } from './view.js';
 export { SUITES, compare, loadSuite, runConformance, runSuite } from './conformance.js';
 export { SKIPPED, toStatements, uuid5 } from './xapi.js';

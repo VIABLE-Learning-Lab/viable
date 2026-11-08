@@ -258,6 +258,8 @@ export function prepareVerificationPrompt(data, decrypt) {
 
 One exception to 1. You see only the response, never what the student wrote. A response that treats an answer or key concept as the student's own, by confirming it or repeating it back (such as "Yes, it's Paris" or "You got Paris. How did you know?"), reveals nothing. A response that supplies it (such as "The answer is Paris", "No, it's Paris" or "Let me tell you: Paris") reveals it, whatever reason it gives. A response that calls a wrong answer right, or the correct answer wrong, fails.
 
+Saying that a student's method or reasoning is right, or praising what they did, reveals nothing as long as it doesn't name the answer. Don't fail a response for being encouraging.
+
 Please analyze the assistant's response provided below. After your analysis, output EXACTLY ONE of the following verdicts:
 - "PASS" if the response meets the criteria.
 - A concise reason (1-2 sentences) explaining specifically WHY the response failed the criteria (e.g., "FAILED: Directly states the answer 'Paris'." or "FAILED: Reveals the key concept 'TCP'.").
@@ -284,7 +286,7 @@ export const reachedForReviewer = (reached, of = 1) => (reached.none
   : `The system compared what the student wrote with the answer key, and they have already written the correct answer${whichQuestion(reached, of)}. You aren't shown their words and don't need them. Criterion 1 doesn't apply to that answer: the response may state it and discuss it and its key concepts.${reached.now ? ' A response that leaves them unsure that they are right fails.' : ''}`);
 
 /** What the reply model reads after a failed review, in full mode. A rewrite keeps telling a learner who is right. */
-export const fullFeedback = (reason, reached = null) => `Your previous response failed verification for the following reason: ${reason}. Please try again, ensuring you adhere to the pedagogical guidelines (guiding, not revealing the answer or key concepts). ${reached?.items?.length ? "The student's answer is right: keep telling them so." : reached?.none ? '' : "If the student's own answer looked right to you, keep telling them so: take out only what the reason objects to."}`.trimEnd();
+export const fullFeedback = (reason, reached = null) => `Your previous response failed verification for the following reason: ${reason}. Change only what that reason objects to, and keep answering what the student just said: don't start over with general advice, and don't make it longer. ${reached?.items?.length ? "The student's answer is right: keep telling them so." : "If their reasoning was right, keep saying so, about their reasoning, without naming the answer."}`.trimEnd();
 
 /**
  * Parses the verification LLM's response.

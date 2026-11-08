@@ -3,6 +3,9 @@
  * activities and its settings. A course is a package's document, changed through the library; nothing
  * here keeps anything of its own. No Node built-ins.
  */
+import { HELP_NAMES } from '../../../harness/src/ui/parts.js';
+import { THEMES } from '../learner/themes.js';
+import { flowWords } from './flow.js';
 import { activityKeys } from '../server/library.js';
 import { readPackage } from '../server/runtime.js';
 import { icon } from './icons.js';
@@ -11,13 +14,13 @@ import { courseHead, dropZone, esc, FORMS_CSS, oneOf, plural, say, text, toggle,
 const refused = (message, status = 400, code = 'invalid_course') => Object.assign(new Error(message), { status, code });
 const ARCHIVE_BYTES = 50 * 1024 * 1024;
 const KINDS = {
-  chat: { label: 'Talk with the AI', hint: 'A conversation, with nothing beside it.' },
+  page: { label: 'A page to read', hint: 'What you write, with the AI beside it if you want. You can add steps after it.' },
+  chat: { label: 'A conversation alone', hint: 'Only the AI on screen. Say what it opens with on the next page.' },
   questions: { label: 'Questions', hint: 'Questions to answer, with the AI beside them if you want.' },
   writing: { label: 'Writing', hint: 'A piece of writing, drafted and handed in.' },
   reading: { label: 'Reading', hint: 'A PDF to read and mark up.' },
   embed: { label: 'A web page', hint: 'A simulation, video or tool at an https address.' }
 };
-const HELP_WORDS = { ask_first: 'Ask first', hint: 'Hint', explain: 'Explain', check_only: 'Only check' };
 
 // What every blank course starts with: replies from the model the console sets, and How the AI helps added to each.
 export const starterTutor = (ref = 'tutor', name = 'Tutor') => ({
@@ -143,10 +146,10 @@ export const kindOfActivity = (activity) => {
   if (!panels.length) return activity.workspace ? 'reading' : 'chat';
   return panels.length === 1 ? panels[0].type : 'several';
 };
-const kindWords = (activity) => {
+const kindWords = (activity, doc = null) => {
   const kind = kindOfActivity(activity);
-  const what = kind === 'several' ? `${activity.workspace.panels.length} panels` : KINDS[kind].label;
-  return [what, ...(kind !== 'chat' ? [activity.agent_ref && activity.workspace?.ai !== 'off' ? 'AI beside it' : 'No AI'] : []), ...(activity.minutes ? [`${activity.minutes} min`] : []), ...(activity.teaching?.help ? [HELP_WORDS[activity.teaching.help]] : [])].join(' · ');
+  const what = doc ? flowWords(doc, activity) : kind === 'several' ? `${(activity.workspace.steps || activity.workspace.panels).length} ${activity.workspace.steps ? 'steps' : 'panels'}` : KINDS[kind].label;
+  return [what, ...(!doc && kind !== 'chat' ? [activity.agent_ref && activity.workspace?.ai !== 'off' ? 'AI beside it' : 'No AI'] : []), ...(activity.minutes ? [`${activity.minutes} min`] : []), ...(activity.teaching?.help ? [HELP_NAMES[activity.teaching.help]] : [])].join(' · ');
 };
 const stateWords = (activity) => (activity.release === 'hidden' && activity.opens_at ? `Opens ${new Date(activity.opens_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' })} UTC` : activity.release === 'hidden' ? 'Hidden' : 'Open');
 
@@ -166,12 +169,12 @@ function forSections(activity, code, sections, own, open) {
   return `<details class="by-section" id="for-${esc(activity.key)}"><summary>For one section${differ.length ? `: ${esc(differ.map((section) => `${section.name} ${own[section.id].release === 'open' ? 'open' : 'hidden'}`).join(', '))}` : ''}</summary><ul>${sections.map(row).join('')}</ul></details>`;
 }
 
-function activityRow(activity, code, version, index, count, locked, sections, own) {
+function activityRow(activity, code, version, index, count, locked, sections, own, doc) {
   const key = esc(activity.key);
   const api = `courses/${esc(code)}/activities/${key}`;
   const open = activity.release !== 'hidden';
   return `<li class="row" id="activity-${key}" data-say-box>
-<div class="row-what"><a href="/console/courses/${esc(code)}/activities/${key}"><strong>${esc(activity.title)}</strong></a><span class="v-note">${esc(kindWords(activity))}</span></div>
+<div class="row-what"><a href="/console/courses/${esc(code)}/activities/${key}"><strong>${esc(activity.title)}</strong></a><span class="v-note">${esc(kindWords(activity, doc))}</span></div>
 <span class="v-pill${open ? ' is-open' : ''}">${esc(stateWords(activity))}</span>
 <div class="actions row-do">
 ${locked ? '' : `<button class="v-btn is-small" type="button" data-api="POST ${api}/release" data-body='${esc(JSON.stringify({ version, release: open ? 'hidden' : 'open' }))}' data-said="${open ? 'Hidden from learners.' : 'Open to learners.'}">${open ? 'Hide' : 'Open'}</button>`}
@@ -193,10 +196,11 @@ async function activitiesBody({ library, classes, origin, addresses, signIn, tab
   const locked = !classes.saving;
   const units = course.units || [];
   const inUnit = (ref) => activities.filter((activity) => (activity.unit_ref || null) === ref);
-  const [sections, releases, people] = await Promise.all([classes.sections(code), classes.releases(code), classes.people(code)]);
-  // A course of codes with nobody listed is shut to everyone, and the link gives no hint of it.
-  const shut = classes.saving && !signIn && course.identify === 'code' && !people.some((person) => person.listed);
-  const rows = (list) => list.map((activity) => activityRow(activity, code, meta.version, activities.indexOf(activity), activities.length, locked, sections, releases[activity.key] || {})).join('');
+  // A course of codes with nobody listed is shut to everyone, and the link gives no hint of it. Only then does it matter who is on the list.
+  const needsList = classes.saving && !signIn && course.identify === 'code';
+  const [sections, releases, people] = await Promise.all([classes.sections(code), classes.releases(code), needsList ? classes.people(code) : []]);
+  const shut = needsList && !people.some((person) => person.listed);
+  const rows = (list) => list.map((activity) => activityRow(activity, code, meta.version, activities.indexOf(activity), activities.length, locked, sections, releases[activity.key] || {}, doc)).join('');
   const groups = [...units.map((unit) => ({ title: unit.title, list: inUnit(unit.ref) })), { title: units.length ? 'Not in a unit' : null, list: activities.filter((activity) => !units.some((unit) => unit.ref === activity.unit_ref)) }].filter((group) => group.title && units.length ? group.list.length || group.title !== 'Not in a unit' : group.list.length);
   return {
     title: course.title,
@@ -211,7 +215,7 @@ ${locked ? '' : `<section class="block" aria-labelledby="add-title">
 <form class="v-card add" id="add-activity" data-api="POST courses/${esc(code)}/activities">
 <input type="hidden" name="version" value="${meta.version}">
 ${text('title', 'Its title', '', { required: true, maxlength: 160, autocomplete: 'off', placeholder: 'e.g. Practice: adding fractions' })}
-${oneOf('kind', 'What learners do', 'chat', Object.entries(KINDS).map(([value, kind]) => ({ value, label: kind.label, hint: kind.hint })))}
+${oneOf('kind', 'What learners do first', 'page', Object.entries(KINDS).map(([value, kind]) => ({ value, label: kind.label, hint: kind.hint })))}
 <div data-show-when="kind=embed">${text('url', 'Its address', '', { type: 'url', placeholder: 'https://' })}</div>
 <div class="actions"><button class="v-btn is-primary" type="submit">Add it</button></div>${say()}
 </form>
@@ -251,6 +255,38 @@ const ACTIVITIES_CSS = `.unit{margin:26px 0 8px;font-size:1.0625rem;font-weight:
 
 // --- A course's settings ------------------------------------------------------------------------------
 
+// What learners see of a course: a look, drawn small so it can be chosen by eye, and a color that is the course's own. The page keeps them readable, whichever is chosen.
+const ACCENTS = [['#2447a6', 'Blue'], ['#0e7c86', 'Teal'], ['#1f6b55', 'Green'], ['#6b3fa0', 'Purple'], ['#b8336a', 'Pink'], ['#b03a2e', 'Red'], ['#c26a12', 'Orange'], ['#2a2f36', 'Ink']];
+function looksPart(course, code) {
+  const held = Object.hasOwn(THEMES, course.appearance?.theme || '') ? course.appearance.theme : 'clear';
+  const color = course.appearance?.color || '';
+  return `<fieldset class="looks"><legend class="v-label">How it looks to learners</legend>
+<div class="look-list">${Object.entries(THEMES).map(([id, theme]) => `<label class="look"><input class="sr" type="radio" name="appearance.theme" value="${esc(id)}"${id === held ? ' checked' : ''}><span class="look-sample look-${esc(id)}"><b>${esc(theme.name)}</b><span class="look-line"></span><span class="look-line short"></span><span class="look-go"></span></span></label>`).join('')}</div>
+<div class="swatches" role="radiogroup" aria-label="The course’s color"><label class="swatch"><input class="sr" type="radio" name="appearance.color" value=""${color ? '' : ' checked'}><span class="swatch-own">The look’s own</span></label>${ACCENTS.map(([hex, name], index) => `<label class="swatch" title="${esc(name)}"><input class="sr" type="radio" name="appearance.color" value="${esc(hex)}"${hex === color ? ' checked' : ''}><span class="swatch-dot swatch-${index}" aria-hidden="true"></span><span class="sr">${esc(name)}</span></label>`).join('')}</div>
+<small class="v-note">Learners’ pages follow this, on the course’s home and in every activity. <a href="/console/api/courses/${esc(code)}/try" target="_blank" rel="noopener">See it as a learner</a> once it’s saved.</small>
+</fieldset>`;
+}
+const LOOKS_CSS = `.looks{display:grid;gap:10px;margin:0;padding:0;border:0}
+.looks legend{padding:0;margin-bottom:6px}
+.look-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.look{cursor:pointer}
+.look-sample{display:grid;gap:7px;padding:12px;border:1.5px solid var(--public-rule);border-radius:var(--radius-sm);transition:border-color .12s ease}
+.look-sample b{font-weight:600;font-size:.9375rem;line-height:1.2}
+.look-line{height:5px;border-radius:3px;opacity:.28;background:currentColor}
+.look-line.short{width:62%}
+.look-go{width:44px;height:12px;margin-top:2px;border-radius:6px}
+.look:hover .look-sample{border-color:var(--public-rule-strong)}
+.look input:checked+.look-sample{border-color:var(--ink-blue);box-shadow:0 0 0 1px var(--ink-blue)}
+.look input:focus-visible+.look-sample,.swatch input:focus-visible+span{outline:2px solid var(--ink-blue);outline-offset:2px}
+${Object.entries(THEMES).map(([id, theme]) => `.look-${id}{background:${theme.light.bg};color:${theme.light.ink};font-family:${theme.type.font}}.look-${id} b{font-family:${theme.type.head}}.look-${id} .look-go{background:${theme.accent}}`).join('\n')}
+.swatches{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.swatch{display:inline-flex;cursor:pointer}
+.swatch-own{padding:4px 12px;border:1.5px solid var(--public-rule);border-radius:var(--radius-pill);font-size:.875rem}
+.swatch input:checked+.swatch-own{border-color:var(--ink-blue);color:var(--public-ink)}
+.swatch-dot{width:26px;height:26px;border:2px solid transparent;border-radius:50%;background-clip:padding-box}
+.swatch input:checked+.swatch-dot{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink-blue)}
+${ACCENTS.map(([hex], index) => `.swatch-${index}{background-color:${hex}}`).join('')}`;
+
 async function settingsBody({ library, classes, origin, addresses, tabs }, match) {
   const entry = await courseAt(library, match[1]);
   const { doc, meta, code } = entry;
@@ -272,6 +308,7 @@ ${oneOf('audience', 'Who it is for', course.audience || 'adults', [
     { value: 'teens', label: 'Teenagers', hint: 'Ages 13 to 17.' },
     { value: 'children', label: 'Children', hint: 'Under 13: the page uses simpler words and bigger controls.' }
   ])}
+${looksPart(course, code)}
 ${toggle('shared_devices', 'Learners share computers', course.shared_devices, { hint: 'Each visit asks who is here, and so does the page after 20 idle minutes.' })}
 ${oneOf('data_level', 'What is kept of what learners do', course.data_level || 'minimal', [
     { value: 'minimal', label: 'The least', hint: 'Who has done what, and the conversations. No writing history or events.' },
@@ -298,7 +335,7 @@ ${locked || given ? '' : `<section class="block" aria-labelledby="end-title" dat
 ${library.archives ? `<div><p class="v-note">Archived, learners can’t open it and it leaves your list. What they did stays, on the VIABLE Developer Platform under Learners.</p><button class="v-btn danger" type="button" data-api="DELETE courses/${esc(code)}" data-confirm="This archives “${esc(course.title)}”: learners can’t open it any more." data-yes="Archive">Archive this course</button></div>` : `<div><p class="v-note">Deleted, the course and its versions are gone from this server, with every learner’s work in it. This can’t be undone. Download it first if you may want it.</p><button class="v-btn danger" type="button" data-api="DELETE courses/${esc(code)}" data-confirm="This deletes “${esc(course.title)}”, its versions and everything its learners did. It can’t be undone." data-type="DELETE" data-yes="Delete">Delete this course</button></div>`}
 </div>${say()}
 </section>`}`,
-    css: `.settings{display:grid;gap:18px;max-width:640px}.versions{margin:12px 0 0;padding:0;list-style:none;border-top:1px solid var(--public-rule)}.versions li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;padding:10px 0;border-bottom:1px solid var(--public-rule)}.file-actions{margin-top:12px}.end{display:grid;gap:18px;margin-top:12px}.end>div{display:grid;gap:10px;justify-items:start}.danger{border-color:var(--pencil-red);color:var(--pencil-red)}.danger:hover{border-color:var(--pencil-red);background:color-mix(in srgb,var(--pencil-red) 8%,transparent)}`
+    css: `${LOOKS_CSS}\n.settings{display:grid;gap:18px;max-width:640px}.versions{margin:12px 0 0;padding:0;list-style:none;border-top:1px solid var(--public-rule)}.versions li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;padding:10px 0;border-bottom:1px solid var(--public-rule)}.file-actions{margin-top:12px}.end{display:grid;gap:18px;margin-top:12px}.end>div{display:grid;gap:10px;justify-items:start}.danger{border-color:var(--pencil-red);color:var(--pencil-red)}.danger:hover{border-color:var(--pencil-red);background:color-mix(in srgb,var(--pencil-red) 8%,transparent)}`
   };
 }
 
@@ -350,6 +387,7 @@ export const coursePages = [
           doc.course.description = clean(body.description, 4000) || null;
           if (['adults', 'teens', 'children'].includes(body.audience)) doc.course.audience = body.audience;
           doc.course.shared_devices = body.shared_devices === true;
+          if (body.appearance) doc.course.appearance = { ...doc.course.appearance, theme: Object.hasOwn(THEMES, body.appearance.theme || '') ? body.appearance.theme : null, color: /^#[0-9a-f]{6}$/i.test(String(body.appearance.color || '')) ? body.appearance.color : null };
           if (['minimal', 'process', 'detailed'].includes(body.data_level)) doc.course.data_level = body.data_level;
           doc.course.learner_daily_messages = Number.isInteger(body.learner_daily_messages) && body.learner_daily_messages > 0 ? Math.min(body.learner_daily_messages, 1000) : null;
         }, 'Settings');

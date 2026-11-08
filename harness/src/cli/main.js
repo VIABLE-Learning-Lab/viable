@@ -24,12 +24,14 @@ import { resourceJudge, useResource } from '../resources/index.js';
 import { MOMENT_USAGE, prepareCommand } from './prepare.js';
 import { printReview, reviewProject } from '../builders/review.js';
 import { findGuidance } from '../components/guidance.js';
+import { DESIGN_RULES, findDesigns } from '../designs.js';
 
 export const HARNESS_COMMANDS = ['review', 'guidance', 'prepare', 'check', 'test', 'draft-tests', 'tests-from-records', 'calibrate', 'misconceptions', 'components', 'catalog', 'resources', 'component', 'view', 'suggest', 'mcp', 'gateway', 'measure', 'xapi', 'validate', 'conformance'];
 
 const USAGE = `Usage:
   viable-harness review [<folder>] [--json]
   viable-harness guidance ["<a few words>"] [--json]
+  viable-harness designs ["<a few words>"] [--json]
 ${MOMENT_USAGE}
   viable-harness check --reply "..." [--message "..."] (--guideline "..." | --question "..." --answer-key "...")
                        [--key-concepts "a, b"] [--teaching teaching.json] [--section <id>] [--rewrite <n>]
@@ -196,6 +198,17 @@ export async function harnessMain(argv, host = {}) {
       console.log(`  ${entry.url}  (checked ${entry.verified_at})`);
     }
     return console.log(`\n${plural(found.entries.length, 'public good')}${found.match === 'most_words' ? ' sharing the most words (none had them all)' : ''}. Entries describe, not endorse: check each license before you use it.`);
+  }
+  if (command === 'designs') {
+    const asked = positionals.slice(1).join(' ');
+    const designs = findDesigns({ words: asked, limit: asked ? 3 : 20 });
+    if (values.json) return console.log(JSON.stringify({ rules: DESIGN_RULES, designs }, null, 2));
+    for (const design of designs) {
+      console.log(`${design.label} (${design.minutes} minutes)\n  For: ${design.for}\n  What it rests on: ${design.shows}\n  What isn't known: ${design.unknown}`);
+      design.steps.forEach((step, index) => console.log(`  ${index + 1}. ${step.title} [${step.panel}, AI ${step.ai}]: ${step.write}${step.ai_does ? ` The AI: ${step.ai_does}` : ''}`));
+      console.log(`  Sources: ${design.sources.join('; ')}\n`);
+    }
+    return;
   }
   if (command === 'guidance') {
     const topics = findGuidance({ topic: positionals.slice(1).join(' ') });

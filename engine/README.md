@@ -6,7 +6,7 @@ For a school, a library or a lab that wants this running on its own machines, on
 service, and nothing is held back because it is open: add a model and what it makes possible turns on.
 
 <p align="center">
-  <img src="../docs/images/console.gif" width="100%" alt="The Engine's console. A teacher writes the goal of an activity and how far the AI may go, types what a learner might say, and sees what the AI would be told at that moment. Then a learner's page opens with that activity, and the AI replies by asking how they got their answer.">
+  <img src="../docs/images/console.gif" width="100%" alt="The Engine's console. A teacher writes the goal of an activity and how much the AI does, types what a learner might say, and sees what the AI would be told at that moment. Then a learner's page opens with that activity, and the AI replies by asking how they got their answer.">
 </p>
 
 <sub>A real server, from empty. Only the model's words are scripted here.</sub>
@@ -22,7 +22,7 @@ It keeps everything in `~/.viable-engine`, and opens its console, signed in.
 1. **Models.** Add a provider (OpenAI, OpenRouter, Ollama, LM Studio, or any OpenAI-compatible address), test it, and say what each
    of its models is for.
 2. **Courses.** Start from nothing, from an example, or from a file.
-3. **An activity.** Say what learners do, the goal, and how far the AI may go. Type what a learner might say to see exactly what the
+3. **An activity.** Say what learners do, the goal, and how much the AI does. Type what a learner might say to see exactly what the
    AI would be told at that moment. **Try it**, as a learner, without being counted. Then open it.
 4. **People.** Let anyone with the link in, or paste your class list and print a card for each learner with their personal code.
 5. **Share** the link or its QR code. A class on your network needs `--host 0.0.0.0`, on a network you trust, since that's plain

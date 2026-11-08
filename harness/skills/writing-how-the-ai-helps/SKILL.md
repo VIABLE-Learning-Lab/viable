@@ -27,15 +27,37 @@ show what the agent does.
 
 - `goal` (at most 1,000 characters): what learners should be able to do, in the teacher's words.
   Write it about the learner, not the AI.
-- `help`: how far the AI may go. Each value becomes this sentence in the instructions:
-  - `ask_first`: Before helping, ask what the learner thinks or has tried, and build on their
-    answer. Don't give the answer.
-  - `hint`: Give hints and guiding questions, one step at a time. Don't give the answer or do the
-    work for them.
-  - `explain`: When they are stuck, explain the idea and show a worked example, then let them try a
-    similar one themselves.
-  - `check_only`: Only check the learner's own work: say what is right and what to look at again.
-    Don't explain new ideas or give answers.
+- `help`: how much the AI does for a learner, one scale from the least to the most, each level the
+  one before and one thing more. Each value becomes this sentence in the instructions:
+  - `check_only` (Only checks), for their own writing, a quiz or showing what they know: Only check
+    the learner's own work: say what is right and which part to look at again. Don't teach: no
+    hints, no explanations, no answers.
+  - `ask_first` (Asks questions), for discussion and reasoning: Help only by asking: say what is
+    right, and ask questions that let them find the way themselves, one at a time, built on what
+    they say. When they have it, say so. Don't give hints, examples or the answer.
+  - `hint` (Gives hints), for practice on what they've been taught: Give hints and guiding
+    questions, one step at a time. When they have it, say so. Don't give the answer or do the work
+    for them.
+  - `step_up` (Shows an example), for most activities: Start by asking what they think or have
+    tried, and build on it. If they are stuck, give a hint, one step at a time. If they have really
+    tried and are still stuck, show a worked example with different numbers or a similar case, then
+    send them back to their own. When they have it, say so. Don't give the answer to their own
+    question.
+  - `explain` (Explains), for something new to them: When they are stuck, explain the idea and show
+    a worked example, then let them try a similar one themselves. When they have it, say so.
+- `speaks_up`: when the AI writes first, unasked. Leave it out unless the teacher asks for it or the
+  activity needs a nudge, and never in a first try or a test: help that comes unasked can also
+  interrupt. Each moment optional: `quiet: { minutes }` (nothing done on a step, 1 to 60),
+  `alone: { minutes }` (working without writing to the AI, 1 to 60), `wrong: { after }` (an answer
+  wrong this many times, 1 to 5, where learners see right and wrong), `right: { every }` (every so
+  many right answers, 1 to 5), `writing: { words, how, focus }` (about so many new words, 50 to 1,000,
+  at a pause), `handed_in: { how, focus }`. `how`: `ask`, `point` or `fix`; `focus`: `language`,
+  `ideas` or `rubric`. Each may have `say` (at most 300): what the AI does then, in place of the move
+  from research. `most` (1 to 10, default 2) times in a step each day, `gap` (1 to 30, default 3)
+  minutes apart. The learner's page sees the moment; the server holds to how often.
+- `reviewer_reads`: `"message"` lets a VETTING reviewer read the learner's last message too, as
+  data: it holds back fewer good replies, and a learner could write to it. Leave it out for only
+  the reply. A step's own `reviewer_reads` wins.
 - `watch_for` (at most 500): what the teacher wants to hear about. Never sent to the AI, so never
   put an instruction for the AI here.
 - `standard`: one K-12 standard or durable skill, kept as it was chosen, or `null`.

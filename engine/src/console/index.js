@@ -7,7 +7,7 @@
 import { signInHeaders, signInPage, teacherSession, withCookies } from '../server/session.js';
 import { hearRecording, onRole } from '../server/runtime.js';
 import { storeClasses, storeRecords, storeThreads } from '../server/teacherData.js';
-import { consoleHeaders, consolePage, missingBody, standalonePage } from './layout.js';
+import { consoleHeaders, consolePage, missingBody, standalonePage, consoleAsset } from './layout.js';
 import { activityPages } from './activity.js';
 import { askPages } from './ask.js';
 import { agentPages } from './agentPages.js';
@@ -43,7 +43,7 @@ const serverAskModel = (settings, fetch, store) => ({
     const { roles } = await settings.resolve();
     const role = roles.assistant ?? roles.reply;
     const { baseUrl, apiKey, fetch: reach } = onRole(role, fetch);
-    const response = await reach(`${String(baseUrl).replace(/\/+$/, '')}/chat/completions`, { method: 'POST', headers: { 'content-type': 'application/json', ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}) }, body: JSON.stringify({ model: role.model, messages, tools, tool_choice: 'auto', temperature: 0.2 }) });
+    const response = await reach(`${String(baseUrl).replace(/\/+$/, '')}/chat/completions`, { method: 'POST', headers: { 'content-type': 'application/json', ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}) }, body: JSON.stringify({ model: role.model, messages, ...(tools?.length ? { tools, tool_choice: 'auto' } : {}), temperature: 0.2 }) });
     const data = await response.json().catch(() => null);
     if (!response.ok || !data?.choices?.[0]?.message) throw Object.assign(new Error(`The model (${role.model}) answered ${response.status}${data?.error?.message ? `: ${data.error.message}` : ''}.`), { status: 502, code: 'model_failed' });
     return { content: data.choices[0].message.content, calls: data.choices[0].message.tool_calls };
@@ -126,6 +126,7 @@ export function consoleRoutes({ settings = null, library = null, teacherToken = 
       // A server with nothing to serve yet starts here, to be set up.
       if (request.method === 'GET' && path === '/' && !ctx.served.size) return Response.redirect(new URL('/console', url), 302);
       if (path !== '/console' && !path.startsWith('/console/')) return null;
+      if (path.startsWith('/console/assets/')) return consoleAsset(path.slice('/console/assets/'.length));
       // The person who started the server, once: this address signs them in, and there is no token in it.
       const once = /^\/console\/welcome\/([\w-]{16,128})$/.exec(path);
       if (once && request.method === 'GET') {

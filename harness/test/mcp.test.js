@@ -10,7 +10,7 @@ import { handleMcpMessage } from '../src/mcpProtocol.js';
 import { mcpTools } from '../src/mcpTools.js';
 
 const json = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
-const TOOL_NAMES = ['check_reply', 'prepare_task', 'teaching_instructions', 'find_misconceptions', 'find_guidance', 'compute_measures', 'validate_document', 'run_agent', 'draft_tests', 'run_agent_tests', 'calibrate_judge', 'suggest_changes', 'list_components', 'find_public_goods'];
+const TOOL_NAMES = ['check_reply', 'prepare_task', 'teaching_instructions', 'find_misconceptions', 'find_guidance', 'find_designs', 'compute_measures', 'validate_document', 'run_agent', 'draft_tests', 'run_agent_tests', 'calibrate_judge', 'suggest_changes', 'list_components', 'find_public_goods'];
 
 // A scripted OpenAI-compatible endpoint: each call takes the next reply (the last one repeats).
 function scripted(...replies) {
@@ -345,7 +345,7 @@ test('suggest_changes: suggestions with their evidence, and the settings once th
   const { structuredContent: out } = await call(mcpServer(), 'suggest_changes', { teaching, runs });
   assert.equal(out.suggestions[0].id, 'answers_given_away');
   const { structuredContent: accepted } = await call(mcpServer(), 'suggest_changes', { teaching, runs, accept: 'answers_given_away' });
-  assert.equal(accepted.teaching.help, 'hint');
+  assert.equal(accepted.teaching.help, 'step_up');
   const wrong = await call(mcpServer(), 'suggest_changes', { teaching, runs, accept: 'nope' });
   assert.equal(wrong.isError, true);
 });

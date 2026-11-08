@@ -119,5 +119,6 @@ test('where code can\'t tell, a rewrite keeps a right answer the reply model jud
   const { fetch, calls } = scripted('FAILED: Too much.', 'Exactly. Why does that happen?', 'PASS');
   await checkReply({ reply: 'Yes, and here is more.', message: 'because it goes around us and we see different parts', question: 'Why does the Moon seem to change shape?', answerKey: 'As the Moon orbits Earth we see different amounts of its sunlit half.', reviewer: 'judge', model: 'writer', rewrite: 1, ...endpoint(fetch) });
   assert.doesNotMatch(calls[0].messages[0].content, /The system compared/);
-  assert.match(calls[1].messages.at(-1).content, /If the student's own answer looked right to you, keep telling them so/);
+  assert.match(calls[1].messages.at(-1).content, /If their reasoning was right, keep saying so/);
+  assert.match(calls[1].messages.at(-1).content, /Change only what that reason objects to, and keep answering what the student just said/);
 });

@@ -22,7 +22,7 @@ import { ExpressionError, evaluateCondition, evaluateExpression, expressionPaths
 import { sanitizeRequestPayloadForLogging } from '../utils/logRedaction.js';
 import { DEFAULT_VETTING_REVIEWER, GUARDRAIL_MODEL_CHECKS, parallelPaths, routerRoutes } from './graph.js';
 import { learnerWords, reachedAmong } from '../../../harness/src/checks/answerReached.js';
-import { readReview, redraftTurns, replyText, reviewMessages, reviewRounds, vettingPromptSet, withTeacher } from '../../../harness/src/checks/vetting.js';
+import { readReview, redraftTurns, replyText, reviewMessages, reviewRounds, vettingPromptSet, withLearnerMessage, withTeacher } from '../../../harness/src/checks/vetting.js';
 import { agentVettingControls, reasoningBudget, REVIEW_TOKENS, thinkingBudget, vettingModelOptions } from '../../../harness/src/utils/vettingControls.js';
 import { teacherNote } from '../../../harness/src/utils/teaching.js';
 import { answerStream, citationOf, finalizeCitations, normalizeCitationMarks, SOURCE_STYLES, stripModelSourceList } from './citations.js';
@@ -1202,7 +1202,8 @@ const HANDLERS = {
     // Whether the learner has already written the answer, by code: both models get the fact, and no model reads their words for it.
     // The learner's real turns, never cfg.input. A summary leads the first kept message and can hold what the assistant said.
     const reached = full ? reachedAmong(vettingItems(cfg, ctx.scope()), learnerWords([...(cfg.includeHistory !== false ? ctx.messages.slice(ctx.historySummary ? 1 : 0) : []), { role: 'user', content: ctx.inputContent }]), {
-      checked: ctx.scope().context?.answer_reached === true && /\bcontext\.answer_key\b/.test(String(cfg.answer_key ?? ''))
+      checked: ctx.scope().context?.answer_reached === true && /\bcontext\.answer_key\b/.test(String(cfg.answer_key ?? '')),
+      holds: ctx.scope().context?.answer_holds === true && /\bcontext\.answer_key\b/.test(String(cfg.answer_key ?? ''))
     }) : null;
     const prompts = (scope) => vettingPromptSet({
       full,
@@ -1220,7 +1221,12 @@ const HANDLERS = {
     }
     // The activity teacher's instructions go to the reply model, and the reviewer checks them too.
     const teaching = teachingNote(ctx, node, ctx.scope());
-    const [live, trace] = (await Promise.all([prompts(ctx.scope()), prompts(ctx.traceScope())])).map((set) => withTeacher(set, teaching));
+    // What the reviewer reads: only the reply, unless this step says otherwise or, where it says nothing, the activity's teacher lets it read the learner's message.
+    // On a turn the AI writes first (context.speaks_first) there is no message of theirs to read.
+    const readsMessage = !ctx.scope().context?.speaks_first && (cfg.reviewer_reads || (ctx.scope().context?.workspace?.teaching?.reviewer_reads === 'message' ? 'message' : 'reply')) === 'message';
+    const said = readsMessage ? learnerWords([{ role: 'user', content: ctx.inputContent }]).join(' ') || null : null;
+    const traceSaid = readsMessage ? learnerWords([{ role: 'user', content: ctx.traceInputContent }]).join(' ') || null : null;
+    const [live, trace] = (await Promise.all([prompts(ctx.scope()), prompts(ctx.traceScope())])).map((set) => withTeacher(readsMessage ? withLearnerMessage(set) : set, teaching));
     // An earlier step's answer (e.g. {{answer.content}}) is reviewed as written: it is the first
     // attempt, and the reply model only revises it after a failed review. Empty: the reply model writes.
     const draft = cfg.draft != null ? String(renderTemplate(cfg.draft, ctx.scope()) ?? '').trim() : '';
@@ -1251,8 +1257,8 @@ const HANDLERS = {
         { messages: [{ role: 'system', content: live.chat }, ...history], ...chatOptions },
         { messages: [{ role: 'system', content: trace.chat }, ...traceHistory], ...chatOptions }, 0)),
       review: async (reply) => {
-        const check = (prompt) => ({ messages: reviewMessages(full, prompt, reply), ...verificationOptions });
-        return readReview(full, (await call(verifier, check(live.verify), check(trace.verify), 0)).content);
+        const check = (prompt, words) => ({ messages: reviewMessages(full, prompt, reply, words), ...verificationOptions });
+        return readReview(full, (await call(verifier, check(live.verify, said), check(trace.verify, traceSaid), 0)).content);
       },
       redraft: (reply, verdict) => {
         for (const list of [history, traceHistory]) list.push(...redraftTurns(reply, live.feedback(verdict.verificationOutput)));
@@ -1269,6 +1275,7 @@ const HANDLERS = {
         attempts: reviewed.length, verification: reviewed.at(-1)?.verification ?? null, attempt_details: attempts,
         ...(draft ? { revised: response !== draft } : {}),
         model: cfg.model, verification_model: verifier, usage, cost,
+        ...(readsMessage ? { reviewer_read: 'message' } : {}),
         ...(reached?.items?.length ? { answer_reached: true } : {})
       },
       next: branches[outcome] ?? node.next ?? null
@@ -2426,9 +2433,9 @@ function workspaceNote(ctx, node, scope) {
 // The activity teacher's instructions (how the AI helps, teaching.js), for the same steps as what the
 // learner has open. Unlike that, they are instructions: they join the step's own, after the builder's.
 function teachingNote(ctx, node, scope) {
-  const text = scope.context?.teaching_view;
+  const text = [scope.context?.teaching_view, scope.context?.step_view].filter((part) => typeof part === 'string' && part).join('\n\n');
   const every = scope.context?.workspace_reach === 'every' || !ctx.replySteps.size;
-  if (typeof text !== 'string' || !text || !(node.type === 'vetting' || ctx.replySteps.has(node.id) || every)) return null;
+  if (!text || !(node.type === 'vetting' || ctx.replySteps.has(node.id) || every)) return null;
   return teacherNote(text);
 }
 

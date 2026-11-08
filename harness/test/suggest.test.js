@@ -14,10 +14,10 @@ test('drafts that keep giving answers away suggest asking the AI for less help',
   const runs = [run('fail', 'FAILED: Directly states the answer 5/6.'), run('fail', 'FAILED: Gives away the solution.'), run('pass'), run('pass'), run('fail', 'FAILED: Off topic.')];
   const [suggestion] = suggestChanges({ teaching: { goal, help: 'explain' }, runs });
   assert.equal(suggestion.rule, 'answers_given_away');
-  assert.deepEqual(suggestion.patch, { help: 'hint' });
+  assert.deepEqual(suggestion.patch, { help: 'step_up' });
   assert.match(suggestion.evidence[0], /^2 of 5 \(40%\)/);
   assert.match(suggestion.evidence[1], /states the answer/);
-  assert.deepEqual(applySuggestion({ goal, help: 'explain' }, suggestion), { goal, help: 'hint', watch_for: null, standard: null });
+  assert.deepEqual(applySuggestion({ goal, help: 'explain' }, suggestion), { goal, help: 'step_up', watch_for: null, standard: null });
   assert.deepEqual(suggestChanges({ teaching: { goal, help: 'explain' }, runs: runs.slice(0, 4) }), [], 'too few runs to say');
   assert.equal(suggestChanges({ teaching: { goal, help: 'check_only' }, runs })[0].patch, null, 'nothing lower than check only');
   const labelled = suggestChanges({ teaching: { goal, help: 'explain' }, runs: runs.map((item, i) => ({ ...item, label: `L-AAAA0${i} on Nov 2` })) })[0];
@@ -80,5 +80,5 @@ test('the sample class in examples/ gives the README’s two suggestions without
   const found = suggestChanges(inputs);
   assert.match(teacherView({ ...inputs, suggestions: found }), /<del>3\/4 \+ 1\/8 = 7\/8\.<\/del>/);
   assert.deepEqual(found.map((item) => item.rule), ['misconception_heard', 'stuck_on_a_skill']);
-  assert.deepEqual(found[1].patch, { sections: { sec_p2: { help: 'explain' } } });
+  assert.deepEqual(found[1].patch, { sections: { sec_p2: { help: 'step_up' } } });
 });

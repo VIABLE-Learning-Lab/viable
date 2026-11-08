@@ -6,7 +6,7 @@
 // active while the learner does something in it (gaps over 2 minutes not counted).
 import { CONFIG, IDLE, button, el, emit, flush, icon, recorded, store } from './core.js';
 
-const TYPE_ICON = { writing: 'pen', questions: 'list', embed: 'puzzle', reading: 'book' };
+const TYPE_ICON = { writing: 'pen', questions: 'list', embed: 'puzzle', reading: 'book', page: 'book' };
 const LAYOUT = { ai_width: 36, resizable: true, collapsible: true, ...(CONFIG.layout || {}) };
 // Where the AI sits, read when the shell is made (the host may have taken it away for this learner).
 let AI = CONFIG.ai || 'right';
@@ -151,6 +151,7 @@ export function createShell({ panels, factories }) {
   function setCollapsed(on) {
     if (!LAYOUT.collapsible && on) return;
     state.collapsed = on;
+    if (!on) document.body.classList.remove('ai-new');
     document.body.classList.toggle('ai-collapsed', on);
     remember(); reportLayout();
     if (!on) setTimeout(() => document.getElementById('input')?.focus(), 60);
@@ -194,6 +195,7 @@ export function createShell({ panels, factories }) {
   // The AI as a corner panel (ai: corner) or, on narrow screens, a sheet opened from the button.
   function setOpen(on) {
     document.body.classList.toggle('ai-open', on);
+    if (on) document.body.classList.remove('ai-new');
     if (floating) floating.setAttribute('aria-expanded', String(on));
     if (on) setTimeout(() => document.getElementById('input')?.focus(), 60);
     syncFloating(); reportLayout();
@@ -231,6 +233,8 @@ export function createShell({ panels, factories }) {
     const parts = panel.sees || [];
     chipSummary.replaceChildren(icon(parts.length ? 'eye' : 'eyeOff', 13), el('span', null, parts.length ? 'Sees ' + (parts.length > 2 ? parts.slice(0, 2).join(', ') + '…' : parts.join(' and ')) : 'Doesn’t see this tab'));
     pop.replaceChildren(el('strong', null, panel.title), el('p', null, seesSentence(panel)));
+    // Where the teacher lets the AI write first, it says so here, before it ever does.
+    if (window.VIABLE_CHAT && window.VIABLE_CHAT.writesFirst ? window.VIABLE_CHAT.writesFirst() : CONFIG.speaks_up) pop.append(el('p', null, name + ' may also write to you first while you work, and then it sees the same.'));
     pop.append(el('p', 'ws-muted', recorded()));
   }
 
@@ -273,6 +277,12 @@ export function createShell({ panels, factories }) {
     },
     state: () => (state.current && views.get(state.current.id) ? views.get(state.current.id).state() : null),
     start: () => { resume(); syncFloating(); },
+    // The AI wrote first while it was out of sight (folded to its rail, or a closed corner or sheet): a dot until it is opened.
+    nudge() {
+      if (AI === 'off') return;
+      const away = (docked && state.collapsed) || ((AI === 'corner' || narrow.matches) && !document.body.classList.contains('ai-open'));
+      if (away) document.body.classList.add('ai-new');
+    },
     api
   };
 }

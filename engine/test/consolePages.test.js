@@ -702,14 +702,17 @@ test('guidance from research: browsed by topic with what isn\'t known, chosen on
   const api = `courses/${code}/activities/${key}`;
   const shown = await page(`courses/${code}/activities/${key}`);
   assert.match(shown, /Choose from what research says/);
-  for (const framework of GUIDANCE) assert.ok(shown.includes(framework.label), framework.label);
+  // A long list a person may never open comes when they open it.
+  assert.match(shown, /data-load="[^"]*guidance-library"/);
+  const library = (await ok('GET', `${api}/guidance-library`)).html;
+  for (const framework of GUIDANCE) assert.ok(library.includes(framework.label), framework.label);
   assert.ok(GUIDANCE.every((framework) => framework.evidence.unknown), 'each says what isn’t known');
 
   const framework = GUIDANCE[0];
   await ok('POST', `${api}/guidance`, { component: framework.id, item: 1 });
   await ok('POST', `${api}/guidance`, { component: framework.id, item: 1 });
   const after = await page(`courses/${code}/activities/${key}`);
-  assert.ok(after.includes('Chosen'));
+  assert.ok((await ok('GET', `${api}/guidance-library`)).html.includes('Chosen'));
   assert.ok(after.includes(`DELETE ${api}/guidance/0`));
   assert.ok(!after.includes(`DELETE ${api}/guidance/1`), 'chosen once');
 

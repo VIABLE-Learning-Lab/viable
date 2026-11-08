@@ -206,6 +206,31 @@ test('a course: a browser’s own learner with a code, questions graded here wit
   assert.match(teacherView({ records, runs, teaching: doc.course.activities[0].teaching, suggestions: suggestChanges({ teaching: doc.course.activities[0].teaching, runs, records }) }), /Equivalent|fractions|learner/i);
 });
 
+test('the AI writes first only at a moment the teacher chose, as often as they said, and the page carries only those moments', async () => {
+  const doc = example('fractions-practice.json');
+  const activities = doc.course.activities.map((activity, index) => (index ? activity : { ...activity, teaching: { ...activity.teaching, speaks_up: { wrong: { after: 2 }, most: 1 } } }));
+  // The reply, then its review, which passes.
+  const { call, post, calls, store } = server([courseFile({ ...doc, course: { ...doc.course, activities } })], { modelReply: (n) => (n % 2 ? 'How did you get that?' : 'PASS') });
+  await post('/course/equivalent-fractions/home', { visitor: VISITOR });
+  const base = '/course/equivalent-fractions/practice-equivalent-fractions';
+  const html = await (await call(base)).text();
+  assert.match(html, /"speaksUp":\{"wrong":\{"after":2\},"most":1,"gap":3\}/, 'the page knows the moments, and nothing else of the teacher’s settings');
+  // Its scripts parse, whatever the page holds.
+  for (const [, code] of html.matchAll(/<script nonce="[^"]+">([\s\S]*?)<\/script>/g)) assert.doesNotThrow(() => new Function(code));
+  const first = await post(`${base}/messages`, { visitor: VISITOR, event: { kind: 'wrong' }, workspace: { panel: 'practice' } });
+  assert.equal(first.status, 200);
+  assert.equal(first.data.reply.text, 'How did you get that?');
+  const asked = calls.find((sent) => /Right now:/.test(sent.messages[0].content)).messages;
+  assert.match(asked[0].content, /Right now: The learner has just checked an answer and it wasn’t right, for the second time\./);
+  assert.match(asked.at(-1).content, /^\[Not from the learner: /);
+  assert.equal((await post(`${base}/messages`, { visitor: VISITOR, event: { kind: 'wrong' } })).data.error.code, 'speaks_first_limit', 'once a step, as the teacher said');
+  assert.equal((await post(`${base}/messages`, { visitor: VISITOR, event: { kind: 'quiet' } })).data.error.code, 'speaks_first_off', 'not a moment the teacher chose');
+  const { records } = await learnerRecords(store, 'equivalent-fractions');
+  const turn = records.flatMap((record) => record.turns || []).find((item) => item.signals?.source === 'ai_first');
+  if (turn) assert.equal(turn.message, '', 'no message of the learner’s is kept for it');
+  assert.equal((await post(`${base}/watch`, { visitor: VISITOR })).status, 403, 'what the AI did only where the teacher asked for it');
+});
+
 test('a shared computer: “Not you?” starts over, and a code brings a learner’s work back anywhere', async () => {
   const { post } = server([courseFile(example('argument-writing.json'))]);
   const code = 'should-high-schools-start-later';

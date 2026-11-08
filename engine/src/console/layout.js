@@ -78,6 +78,25 @@ dialog.v-dialog .actions{display:flex;flex-direction:row-reverse;flex-wrap:wrap;
 @media (prefers-reduced-motion:reduce){dialog.v-dialog[open],.v-pop:popover-open{animation:none}.v-menu-button .v-icon{transition:none}}
 @media (max-width:760px){.console{display:block}.side{position:static;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 12px;height:auto;padding:10px 16px;border-right:0;border-bottom:1px solid var(--public-rule)}.brand{padding:0}.side nav{grid-column:1/-1;grid-row:2;margin:0 -16px;padding:0 16px;overflow-x:auto;scrollbar-width:none}.side ul{display:flex;gap:2px}.side li a{white-space:nowrap}.side-foot{display:flex;align-items:center;gap:2px;margin:0}.side-foot a:not(:first-child),.side-who{display:none}.side-foot button{width:auto}}`;
 
+// What every page shares is one file each, kept by the browser for good under a name that changes with what is in it, so a click fetches only what is new on the next page.
+const hashOf = (text) => { let hash = 0x811c9dc5; for (let at = 0; at < text.length; at += 1) { hash ^= text.charCodeAt(at); hash = Math.imul(hash, 0x01000193); } return (hash >>> 0).toString(36); };
+const SPEED_CSS = `html.is-going::before,html.is-working::before{content:"";position:fixed;top:0;left:0;right:0;z-index:100;height:2px;background:var(--ink-blue);transform-origin:left;animation:v-going 1.4s var(--ease-out) .08s both}
+@keyframes v-going{from{transform:scaleX(0)}to{transform:scaleX(.9)}}
+.v-btn.is-busy,button.is-busy{opacity:.65;cursor:progress}
+.side a:active,.tabs a:active{opacity:.7}
+.side{view-transition-name:v-side}
+@media (prefers-reduced-motion:no-preference){@view-transition{navigation:auto}::view-transition-old(root),::view-transition-new(root){animation-duration:.14s}}
+@media (prefers-reduced-motion:reduce){html.is-going::before,html.is-working::before{animation:none;transform:scaleX(.9)}}`;
+const SHARED_CSS = `${themeCss()}\n${CONSOLE_CSS}\n${SPEED_CSS}`;
+const ASSETS = Object.fromEntries([[`base-${hashOf(SHARED_CSS)}.css`, { type: 'text/css; charset=utf-8', body: SHARED_CSS }], [`base-${hashOf(CONSOLE_SCRIPT)}.js`, { type: 'text/javascript; charset=utf-8', body: CONSOLE_SCRIPT }]]);
+const [SHARED_CSS_FILE, SHARED_JS_FILE] = Object.keys(ASSETS);
+/** A page's own large stylesheet or script as a shared file too, named when the module loads so every copy of the server knows it. */
+export const pageFile = (prefix, kind, body) => { const name = `${prefix}-${hashOf(body)}.${kind}`; ASSETS[name] = { type: kind === 'css' ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8', body }; return name; };
+/** A shared file of the console's by its name, or null. It holds no one's anything, so it needs no sign-in. */
+export const consoleAsset = (name) => (Object.hasOwn(ASSETS, name) ? new Response(ASSETS[name].body, { status: 200, headers: { 'Content-Type': ASSETS[name].type, 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff' } }) : null);
+// The pages a person is likely to go to next, fetched as they rest on a link, where the browser can.
+const NEXT_PAGES = JSON.stringify({ prefetch: [{ where: { and: [{ href_matches: '/console/*' }, { not: { href_matches: '/console/api/*' } }, { not: { selector_matches: '[target],[data-no-ahead]' } }] }, eagerness: 'moderate' }] });
+
 // The mark, as this page's icon: nothing to fetch, so it shows under the page's own rules.
 const FAVICON = `data:image/svg+xml,${encodeURIComponent(markSvg({ size: 64 }))}`;
 /** The tag that gives a page VIABLE's mark in its browser tab. */
@@ -86,12 +105,12 @@ export const faviconTag = `<link rel="icon" type="image/svg+xml" href="${FAVICON
 /** The headers every page of the console is served with. Nothing loads from elsewhere, no site frames it, and it is never kept. */
 export const consoleHeaders = (nonce) => ({
   'Content-Type': 'text/html; charset=utf-8',
-  'Content-Security-Policy': `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; font-src data:; img-src data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`,
+  'Content-Security-Policy': `default-src 'none'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'nonce-${nonce}'; connect-src 'self'; font-src data:; img-src data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`,
   'X-Robots-Tag': 'noindex', 'Referrer-Policy': 'same-origin', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff'
 });
 
 /** A page of the console. pages: [{ id, title }], the navigation: only what exists. links: [{ href, title }] beside it. home: where its name leads. who: who is signed in. */
-export const consolePage = ({ title, pages, current, body, script = '', css = '', links = [], brand = 'VIABLE Engine', signOut = '/teacher/signout?next=console', notice = '', home = null, who = null }, nonce) => {
+export const consolePage = ({ title, pages, current, body, script = '', css = '', cssFile = null, scriptFile = null, links = [], brand = 'VIABLE Engine', signOut = '/teacher/signout?next=console', notice = '', home = null, who = null }, nonce) => {
   const name = `${markSvg({ size: 28 })}<span class="brand-name"><strong>${escapeHtml(brand.split(' ')[0])}</strong><small>${escapeHtml(brand.split(' ').slice(1).join(' '))}</small></span>`;
   return `<!doctype html>
 <html lang="en">
@@ -101,21 +120,23 @@ export const consolePage = ({ title, pages, current, body, script = '', css = ''
 <meta name="robots" content="noindex">
 <title>${escapeHtml(title)} · ${escapeHtml(brand)}</title>
 ${faviconTag}
-<style nonce="${nonce}">${themeCss()}
-${CONSOLE_CSS}
-${css}</style>
+<link rel="stylesheet" href="/console/assets/${SHARED_CSS_FILE}">
+${cssFile ? `<link rel="stylesheet" href="/console/assets/${cssFile}">` : ''}
+${css ? `<style nonce="${nonce}">${css}</style>` : ''}
+<script type="speculationrules" nonce="${nonce}">${NEXT_PAGES}</script>
 </head>
 <body>
 <div class="console">
 <header class="side">
 ${home ? `<a class="brand" href="${escapeHtml(home)}">${name}</a>` : `<div class="brand">${name}</div>`}
-<nav aria-label="The console"><ul>${pages.filter((page) => page.nav !== false).map((page) => `<li><a href="/console/${escapeHtml(page.id)}"${page.id === current ? ' aria-current="page"' : ''}>${escapeHtml(page.title)}</a></li>`).join('')}</ul></nav>
+<nav aria-label="The console"><ul>${pages.filter((page) => page.nav !== false).map((page) => `<li><a href="/console/${escapeHtml(page.id)}"${page.id === current ? ' aria-current="page"' : ''}${page.fill ? ` data-fill="${escapeHtml(page.fill)}"` : ''}>${escapeHtml(page.title)}</a></li>`).join('')}</ul></nav>
 <div class="side-foot">${links.map((link) => `<a href="${escapeHtml(link.href)}" target="_blank" rel="noopener">${escapeHtml(link.title)}${icon('out', 15)}</a>`).join('')}${who ? `<p class="side-who" title="${escapeHtml(who)}">${escapeHtml(who)}</p>` : ''}<form method="post" action="${escapeHtml(signOut)}" data-confirm="Sign out of ${escapeHtml(brand)}?" data-yes="Sign out"><button type="submit">Sign out</button></form></div>
 </header>
 <main class="page" id="main">${notice}${body}</main>
 </div>
-<script nonce="${nonce}">${CONSOLE_SCRIPT}
-${script}</script>
+<script src="/console/assets/${SHARED_JS_FILE}" nonce="${nonce}"></script>
+${scriptFile ? `<script src="/console/assets/${scriptFile}" nonce="${nonce}"></script>` : ''}
+${script ? `<script nonce="${nonce}">${script}</script>` : ''}
 </body>
 </html>`;
 };

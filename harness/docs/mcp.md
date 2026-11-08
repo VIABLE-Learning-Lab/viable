@@ -15,7 +15,7 @@ ignore; the [gateway](with-your-stack.md) or your own calls make it run. There a
 | **What you send** | Goes to VIABLE | Stays on your computer, apart from what you send to your model endpoint |
 | **Model calls** | VIABLE's model services, billed to your key | Your own endpoint and key |
 | **Standards** | `find_standards`, `get_standard`, through VIABLE's Learning Commons access | Not here: they need Learning Commons' key |
-| **`prepare_task`, `find_misconceptions`, `find_guidance`, `teaching_instructions`, `find_public_goods`, `validate_document`, `list_components`** | Yes, with no key | Yes |
+| **`prepare_task`, `find_misconceptions`, `find_guidance`, `find_designs`, `teaching_instructions`, `find_public_goods`, `validate_document`, `list_components`** | Yes, with no key | Yes |
 | **`check_reply`** | With a VIABLE API key (`model:request`) | With your endpoint |
 | **Running agents** | `list_published_agents`, `run_published_agent`: your project's published agents, with a key (`agents:execute`) | with `viable-engine mcp`, `run_agent`: an agent file or course package you pass it |
 | **`draft_tests`, `run_agent_tests`, `calibrate_judge`** | No | Yes |
@@ -39,7 +39,7 @@ assistant](https://developers.viablelab.org/docs/connect/assistants) has the set
 
 | Tier | Auth | Tools | Limits |
 | --- | --- | --- | --- |
-| Open | none | `find_standards`, `get_standard`, `find_misconceptions`, `find_guidance`, `teaching_instructions`, `find_public_goods`, `validate_document`, `list_components`. No model calls | the API's limit per address (10,000 requests an hour, shared with whatever else that address sends), 256 KiB a request |
+| Open | none | `find_standards`, `get_standard`, `find_misconceptions`, `find_guidance`, `find_designs`, `teaching_instructions`, `find_public_goods`, `validate_document`, `list_components`. No model calls | the API's limit per address (10,000 requests an hour, shared with whatever else that address sends), 256 KiB a request |
 | Project | a VIABLE API key | the open tier, plus `check_reply`, `list_published_agents` and `run_published_agent`, billed to the key's project | the same per address, and the key's own: requests per minute, allowed models, daily tokens, monthly cost, account credit; 1 MB of arguments a call |
 
 - **A key that is sent must be good.** A wrong, revoked or expired key is a `401`, never the open tier.
@@ -89,6 +89,7 @@ logs go to stderr.
 | `suggest_changes` | Suggested changes to an activity's teaching settings from runs and learners' records, each with its evidence; with `accept`, the settings once the teacher accepts one. | no |
 | `list_components` | The component manifests (`docs/components.md`). | no |
 | `find_guidance` | A moment and a topic to what research says to do then: short instructions for a model, each naming its studies, and for each topic what isn't known |
+| `find_designs` | A few words to ways of arranging a whole activity that research supports: what each suits, what it shows, what isn't known, its sources and its steps, with the rules that hold for any of them |
 | `find_public_goods` | A few words, a kind, a slot, `open` or `connected` to entries of the public goods catalog ([catalog.md](catalog.md)): each with its license and a note on its terms, how to get it, how it would fit, how far it is connected and the command ([resources.md](resources.md)), and the date it was checked. Entries describe, not endorse. | no |
 
 Each tool has a JSON Schema for its arguments, and each result carries `structuredContent` and the

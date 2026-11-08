@@ -15,7 +15,7 @@ How the teacher wants you to help in this activity:
 
 Goal: Learners rewrite fractions with a common denominator before adding or subtracting.
 Standard: 5.NF.A.1 (Multi-State, grade 5) Add and subtract fractions with unlike denominators...
-How far to go: Give hints and guiding questions, one step at a time. Don't give the answer or do the work for them.
+How far to go: Give hints and guiding questions, one step at a time. When they have it, say so. Don't give the answer or do the work for them.
 
 For this turn (how far to go still comes first):
 
@@ -112,7 +112,7 @@ take from them, credits them, and measures whether it helped. It carries their o
 ## Reference
 
 [How it works](docs/how-it-works.md) · [With your stack](docs/with-your-stack.md) · [MCP](docs/mcp.md) · [Skills](skills/) · [Agent tests](docs/agent-tests.md) ·
-[Components](docs/components.md) · [Open resources](docs/resources.md) · [Catalog](docs/catalog.md) · [xAPI](docs/xapi.md) ·
+[Ways to arrange an activity](docs/designs.md) · [Components](docs/components.md) · [Open resources](docs/resources.md) · [Catalog](docs/catalog.md) · [xAPI](docs/xapi.md) ·
 [Conformance](conformance/README.md)
 
 ```sh

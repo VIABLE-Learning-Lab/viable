@@ -37,7 +37,7 @@ test('what doesn’t fit says where and why', () => {
   assert.match(validateDocument(agent).errors[0], /^\$\.graph: .*references missing node "nowhere"/, 'VIABLE’s own graph checks run too');
   const pkg = json('../../examples/fractions-practice.json');
   pkg.course.activities[1].teaching = { help: 'do_it_for_them' };
-  assert.deepEqual(validateDocument(pkg).errors, ['$.course.activities[1].teaching.help: must be one of "ask_first", "hint", "explain", "check_only", null']);
+  assert.deepEqual(validateDocument(pkg).errors, ['$.course.activities[1].teaching.help: must be one of "ask_first", "hint", "step_up", "explain", "check_only", null']);
   const unresolved = json('../../examples/fractions-practice.json');
   unresolved.course.activities[0].workspace.panels[0].set_ref = 'gone';
   assert.deepEqual(validateDocument(unresolved).errors, ['$.course.activities[0].workspace.panels[0].set_ref: the package has no question set "gone"'], 'refs are checked once the shape fits');

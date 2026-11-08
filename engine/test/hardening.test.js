@@ -277,3 +277,28 @@ test('links a course shows are web addresses, and odd addresses and themes aren�
   assert.equal((await handler(new Request(`${BASE}/console/api/%E0%A4%A`, { headers }))).status, 400);
   assert.equal((await handler(new Request(`${BASE}/embed.js`))).headers.get('vary'), 'host');
 });
+
+test('a section’s own moments the AI writes first at, set on the activity’s page, replace the activity’s for its learners only', async () => {
+  const store = memoryStore();
+  const handler = await app(store);
+  const made = await ok(await upload(handler, pkg('Speaks', {}, { sections_from: 'choose' })));
+  const { section: a } = await addSection(store, 'speaks', { name: 'Period A' });
+  const { section: b } = await addSection(store, 'speaks', { name: 'Period B' });
+  const form = { version: made.version, title: 'First', release: 'open', teaching: { goal: 'Practice.', speaks_up: { wrong: '1' }, sections: { [a.id]: { help: '', note: '', speaks: 'own', speaks_up: { quiet: '3', most: '2', gap: '3' } }, [b.id]: { help: '', note: '', speaks: 'off' } } } };
+  const saved = await ok(await api(handler, 'PUT', 'courses/speaks/activities/first', form));
+  assert.ok(saved);
+  const html = await (await handler(new Request(`${BASE}/console/courses/speaks/activities/first`, { headers: { accept: 'text/html', authorization: `Bearer ${TOKEN}` } }))).text();
+  assert.match(html, /Period A’s moments/, 'each section’s moments are on the activity’s page');
+  const say = async (visitor, kind) => (await post(handler, '/course/speaks/first/messages', { visitor, event: { kind } })).json();
+  const join = async (visitor, section) => { await ok(await post(handler, '/course/speaks/home', { visitor })); await ok(await post(handler, '/course/speaks/section', { visitor, section: section.key })); };
+  const inA = 'a'.repeat(32), inB = 'b'.repeat(32);
+  await join(inA, a);
+  await join(inB, b);
+  assert.equal((await say(inA, 'wrong')).error?.code, 'speaks_first_off', 'Period A has moments of its own, and a wrong answer isn’t one');
+  assert.equal((await say(inA, 'quiet')).reply?.text, 'Fine.');
+  assert.equal((await say(inB, 'wrong')).error?.code, 'speaks_first_off', 'never, for Period B');
+  const learner = async (visitor) => ok(await post(handler, '/course/speaks/first/learner', { visitor }));
+  assert.deepEqual((await learner(inA)).speaks_up, { quiet: { minutes: 3 }, most: 2, gap: 3 });
+  assert.equal((await learner(inB)).speaks_up, null);
+  assert.match(await page(handler, '/course/speaks/first'), /"asks":true/, 'the page asks who it is, to watch for their section’s moments');
+});

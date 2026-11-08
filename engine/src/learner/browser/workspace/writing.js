@@ -163,9 +163,15 @@ export function writing(panel, api) {
     f.text.addEventListener('compositionstart', () => { f.composing = true; });
     f.text.addEventListener('compositionend', () => { f.composing = false; changed(name, f); });
     f.text.addEventListener('paste', (e) => { f.pasting = (e.clipboardData && e.clipboardData.getData('text/plain')) || ''; });
-    f.text.addEventListener('input', () => { grow(f.text); if (!f.composing) changed(name, f); });
+    f.text.addEventListener('input', () => { grow(f.text); if (!f.composing) changed(name, f); if (name === 'draft') pausing(); });
     f.text.addEventListener('blur', () => { endBurst(f); report(name, f); save(false); });
   });
+  // A pause in writing, 8 s after the last key: the AI may look in, if the teacher chose that and enough new words came since it last did (the chat counts).
+  let pauseTimer = 0, startWords = null;
+  function pausing() {
+    clearTimeout(pauseTimer);
+    pauseTimer = setTimeout(() => { if (window.VIABLE_CHAT && window.VIABLE_CHAT.speakFirst) window.VIABLE_CHAT.speakFirst('writing', { panel: panel.id, words: words(fields.draft.text.value), start: startWords || 0 }); }, 8000);
+  }
   function changed(name, f) {
     const now = Date.now();
     const before = f.last;
@@ -254,6 +260,8 @@ export function writing(panel, api) {
         Object.entries(fields).forEach(([name, f]) => { endBurst(f); report(name, f); snapshot(name, f); });
         emit(panel.id, 'submit', { words: words(fields.draft.text.value), chars: fields.draft.text.value.length });
         showHanded(data.submitted_at);
+        // Handed in: the AI may write first about it, if the teacher chose that.
+        if (window.VIABLE_CHAT && window.VIABLE_CHAT.speakFirst) window.VIABLE_CHAT.speakFirst('handed_in');
         flush(false);
       }
     } catch (error) {
@@ -288,6 +296,7 @@ export function writing(panel, api) {
         return;
       }
       loaded = true;
+      setTimeout(() => { if (startWords == null) startWords = words(fields.draft.text.value); }, 0);
       Object.values(fields).forEach((f) => { f.text.readOnly = false; f.text.placeholder = f.text.dataset.placeholder; });
       const saved = drafts[panel.id];
       base = saved ? saved.updated_at || null : null;

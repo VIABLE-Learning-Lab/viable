@@ -84,7 +84,7 @@ test('one sign-in opens the console and the teacher’s page, and signing out en
   assert.equal(page.status, 200);
   assert.match(await page.text(), /<h1>Models<\/h1>/);
   assert.equal((await globalThis.fetch(`${url}/teacher/records.json`, { headers: { cookie: cookieFor(cookies, '/teacher') } })).status, 200);
-  assert.match(page.headers.get('content-security-policy'), /script-src 'nonce-[a-f0-9]+'/);
+  assert.match(page.headers.get('content-security-policy'), /script-src 'self' 'nonce-[a-f0-9]+'/);
   assert.match(page.headers.get('content-security-policy'), /frame-ancestors 'none'/);
   assert.equal(page.headers.get('cache-control'), 'no-store');
   const wrong = await globalThis.fetch(`${url}/teacher?next=console`, { method: 'POST', redirect: 'manual', headers: { ...FORM, origin: url }, body: 'token=nope' });
@@ -198,7 +198,7 @@ test('what a person saved can’t inject into the page', async (t) => {
   const page = await (await globalThis.fetch(`${url}/console/models`, { headers: { authorization: `Bearer ${TOKEN}` } })).text();
   assert.ok(!page.includes('<img src=x'));
   assert.ok(!page.includes('<script>alert(2)'));
-  assert.equal([...page.matchAll(/<script/g)].length, 1, 'only the page’s own, under its nonce');
+  assert.equal([...page.matchAll(/<script(?![^>]* nonce="[a-f0-9]+")/g)].length, 0, 'only the page’s own, under its nonce');
 });
 
 test('on a server with no token of its own, it opens with the one made at start, on this computer only', async (t) => {

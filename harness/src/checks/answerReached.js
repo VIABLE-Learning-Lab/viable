@@ -133,11 +133,12 @@ export function answerReached({ answer, question = '', said = [] }) {
  * For VETTING's items ([{ question: { text }, answerKey: { correctAnswer } }]) and the learner's turns: { now,
  * items: [their numbers from 1] } when they have written one; { now: false, items: [], none: true } when code could
  * check every one and they have written none, so a reply can't be confirming what they said; null when it can't tell.
- * checked: the page already marked the answer to the first item right, as it does for a question panel.
+ * checked: the page already marked the answer to the first item right, as it does for a question panel. holds: what they have
+ * chosen or written there is right, whether or not they have sent it, so what they say now is about having it.
  */
-export function reachedAmong(items, said, { checked = false } = {}) {
+export function reachedAmong(items, said, { checked = false, holds = false } = {}) {
   const found = (Array.isArray(items) ? items : []).map((item, index) => ({ number: index + 1, ...answerReached({ answer: item?.answerKey?.correctAnswer, question: item?.question?.text, said }) }));
   const has = found.filter((item) => item.reached || (checked && item.number === 1));
-  if (has.length) return { now: has.some((item) => item.now), items: has.map((item) => item.number) };
+  if (has.length) return { now: has.some((item) => item.now) || holds, items: has.map((item) => item.number) };
   return found.length && found.every((item) => item.checkable) ? { now: false, items: [], none: true } : null;
 }

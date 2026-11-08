@@ -3461,6 +3461,22 @@
           "tip": "Replaces the reviewer’s default criteria for answer-key reviews."
         },
         {
+          "key": "reviewer_reads",
+          "label": "What the reviewer reads",
+          "widget": "select",
+          "level": "option",
+          "options": [
+            "reply",
+            "message"
+          ],
+          "option_labels": {
+            "reply": "Only the reply",
+            "message": "The reply and the learner’s message"
+          },
+          "empty": "as the activity’s teacher chooses",
+          "tip": "With their message it can tell their own idea from one handed to them, and a learner could write to it. Default: only the reply, unless the teacher says."
+        },
+        {
           "key": "require_closing_question",
           "label": "End every reply with a question",
           "widget": "boolean",

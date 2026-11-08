@@ -55,8 +55,8 @@ test('a section’s own level and note, and misconceptions a record names', () =
   const id = teaching.misconceptions[0].id;
   const learner = { user: 'app:b41c07e2', events: [{ type: 'app.event', at: '2026-10-30T10:04:00Z', data: { misconception: id } }], turns: [{ message: '1/2 + 1/3 = 2/5?', started_at: '2026-10-30T10:00:00Z', misconceptions: [id, { id: '00000000-0000-4000-8000-000000000000', description: 'Something else' }] }] };
   const html = teacherView({ teaching, records: [learner, { user: 'app:b41c07e2', events: [] }] });
-  assert.match(html, /<code>sec_p2<\/code><\/th><td><strong>Explain\.<\/strong>/);
-  assert.match(html, /<code>sec_p5<\/code><\/th><td><span class="muted">The activity’s \(Hint\)<\/span><\/td><td>No common denominators yet\.<\/td>/);
+  assert.match(html, /<code>sec_p2<\/code><\/th><td><strong>Explains\.<\/strong>/);
+  assert.match(html, /<code>sec_p5<\/code><\/th><td><span class="muted">The activity’s \(Gives hints\)<\/span><\/td><td>No common denominators yet\.<\/td>/);
   assert.match(html, new RegExp(`${teaching.misconceptions[0].description}</h3>\\n<p class="who">.*</span> 1 of 1 learner, 2 times</p>\\n<ul class="names"><li class="v-pill">app:b41c07e2</li></ul>`), 'heard twice, from one learner');
   assert.match(html, /Something else <span class="muted">\(not one chosen in How the AI helps\)<\/span>/);
   assert.match(html, /From 2 learner records \(1 learner\)/, 'one learner’s records are measured together');
@@ -96,9 +96,9 @@ test('suggestions say in words what accepting them changes, with the scale from 
   const teaching = { goal: 'Add fractions.', help: 'hint' };
   const page = (patch, settings = teaching) => teacherView({ teaching: settings, suggestions: [{ id: 's', change: 'c', why: 'w', evidence: [], patch }] });
   const scale = (html) => html.match(/<div class="grounds">.*?<ol class="scale"[^>]*>(.*?)<\/ol>/s)?.[1];
-  assert.match(page({ help: 'explain' }), /set how far the AI may go to <strong>Explain<\/strong>\./);
-  assert.match(scale(page({ help: 'explain' })), /<li class="from">Hint<\/li><li class="on">Explain<\/li>/);
-  assert.match(page({ sections: { sec_p2: { help: 'explain' } } }), /<strong>Explain<\/strong> for section <code>sec_p2<\/code>\./);
+  assert.match(page({ help: 'explain' }), /how much the AI does becomes <strong>Explains<\/strong>\./);
+  assert.match(scale(page({ help: 'explain' })), /<li class="from">Gives hints<\/li><li>Shows an example<\/li><li class="on">Explains<\/li>/);
+  assert.match(page({ sections: { sec_p2: { help: 'explain' } } }), /<strong>Explains<\/strong> for section <code>sec_p2<\/code>\./);
   assert.match(page({ misconceptions: [] }), /add it to the misconceptions the AI listens for/);
   assert.match(page({ help: '<b>' }), /It proposes: <code>\{&quot;help&quot;:&quot;&lt;b&gt;&quot;\}<\/code>/, 'a patch it can’t read is shown, as text');
 });

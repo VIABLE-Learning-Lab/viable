@@ -22,14 +22,14 @@
  * the agent's steps read; where it enters the prompt and which steps it reaches are the agent's own
  * (settings.js profileSettings). Answer keys are never part of what the AI is shown.
  */
-import { keyText, publicItem, questionText } from './questions.js';
+import { gradeResponse, keyText, publicItem, questionText } from './questions.js';
 import { teachingContext } from '../../../harness/src/utils/teaching.js';
 
 const agentError = (message, status = 400, code = 'agent_error') => Object.assign(new Error(message), { status, code });
 
-export const WORKSPACE_LIMITS = Object.freeze({ steps: 4, panels: 6, title: 60, workspaceTitle: 80, prompt: 4000, rubric: 12, criterion: 120, description: 600, planLabel: 80, planTemplate: 4000, url: 2000, words: 20000, events: 100, snapshot: 20000, viewChars: 6000, starters: 4, starter: 160, versions: 5 });
+export const WORKSPACE_LIMITS = Object.freeze({ steps: 6, panels: 8, page: 12000, says: 800, brief: 1500, title: 60, workspaceTitle: 80, prompt: 4000, rubric: 12, criterion: 120, description: 600, planLabel: 80, planTemplate: 4000, url: 2000, words: 20000, events: 100, snapshot: 20000, viewChars: 6000, starters: 4, starter: 160, versions: 5 });
 export const AI_PLACES = ['right', 'left', 'corner', 'off'];
-export const PANEL_TYPES = ['writing', 'embed', 'questions', 'reading'];
+export const PANEL_TYPES = ['writing', 'embed', 'questions', 'reading', 'page'];
 
 const pick = (value, allowed, fallback) => (allowed.includes(value) ? value : fallback);
 const line = (value, max) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
@@ -74,6 +74,12 @@ const CONTEXT = {
     presets: { page: { page: true, selection: true, highlights: true, document: false }, selection: { page: false, selection: true, highlights: false, document: false }, document: { page: true, selection: true, highlights: true, document: true }, nothing: { page: false, selection: false, highlights: false, document: false } },
     custom: (input, base) => ({ page: flag(input.page, base.page), selection: flag(input.selection, base.selection), highlights: flag(input.highlights, base.highlights), document: flag(input.document, base.document) }),
     extra: (input) => ({ max_chars: within(input.max_chars, 1000, 24000, 8000) })
+  },
+  // What the teacher wrote on a page, which learners have in front of them.
+  page: {
+    presets: { page: { text: true }, nothing: { text: false } },
+    custom: (input, base) => ({ text: flag(input.text, base.text) }),
+    extra: () => ({})
   }
 };
 function panelContext(type, input) {
@@ -86,6 +92,8 @@ function panelContext(type, input) {
 }
 
 const PANELS = {
+  // A page the teacher wrote, in Markdown: the case, the task, what to read before talking to the AI.
+  page: (input) => ({ text: block(input.text, WORKSPACE_LIMITS.page) }),
   writing: (input) => ({
     prompt: block(input.prompt, WORKSPACE_LIMITS.prompt),
     // On with true, or an object (as stored) unless it says on: false. template: what the plan area
@@ -152,7 +160,11 @@ function stepsOf(input, panels) {
     let id = PANEL_ID.test(String(raw?.id || '')) ? String(raw.id) : `step-${i + 1}`;
     while (ids.has(id)) id = `step-${i + 1}-${ids.size}`;
     ids.add(id);
-    const step = { id, title: line(raw?.title, WORKSPACE_LIMITS.title) || `Step ${i + 1}`, panels: shown, ai: raw?.ai === 'off' ? 'off' : 'on', chat: raw?.chat === 'new' ? 'new' : 'continue' };
+    // says: what the AI says first here, which learners see. brief: what it does here, for the AI only. Kept only when set, so steps saved before them read the same.
+    const says = block(raw?.says, WORKSPACE_LIMITS.says);
+    const brief = block(raw?.brief, WORKSPACE_LIMITS.brief);
+    const ai = raw?.ai === 'off' ? 'off' : 'on';
+    const step = { id, title: line(raw?.title, WORKSPACE_LIMITS.title) || `Step ${i + 1}`, panels: shown, ai, chat: raw?.chat === 'new' ? 'new' : 'continue', ...(says && ai === 'on' ? { says } : {}), ...(brief && ai === 'on' ? { brief } : {}) };
     if (!i) return step;
     const move = pick(raw?.move, ['ready', 'auto'], 'ready');
     const minutes = within(raw?.minutes, 0, 240, 0);
@@ -183,7 +195,7 @@ export function workspaceSettings(input) {
     ids.add(id);
     // starters: what the AI pane offers to ask while this panel is open (the page's own otherwise).
     const starters = (Array.isArray(raw.starters) ? raw.starters : []).map((entry) => line(entry, WORKSPACE_LIMITS.starter)).filter(Boolean).slice(0, WORKSPACE_LIMITS.starters);
-    panels.push({ id, type: raw.type, title: line(raw.title, WORKSPACE_LIMITS.title) || { writing: 'Writing', embed: 'Activity', questions: 'Questions', reading: 'Reading' }[raw.type], ...PANELS[raw.type](raw), ...panelContext(raw.type, raw), starters });
+    panels.push({ id, type: raw.type, title: line(raw.title, WORKSPACE_LIMITS.title) || { writing: 'Writing', embed: 'Activity', questions: 'Questions', reading: 'Reading', page: 'Read this' }[raw.type], ...PANELS[raw.type](raw), ...panelContext(raw.type, raw), starters });
   }
   if (!panels.length) return null;
   // Without panels there is nothing to show beside a hidden AI, so off needs at least one.
@@ -198,6 +210,14 @@ export function workspaceSettings(input) {
     panels,
     ...((() => { const steps = stepsOf(input.steps, panels); return steps ? { steps } : {}; })())
   };
+}
+
+/** What the AI says first in an activity without steps, and what it offers to ask. Null when it says nothing, so activities saved before it read the same. */
+export function openingSettings(input) {
+  if (!input || typeof input !== 'object') return null;
+  const says = block(input.says, WORKSPACE_LIMITS.says);
+  const starters = (Array.isArray(input.starters) ? input.starters : []).map((entry) => line(entry, WORKSPACE_LIMITS.starter)).filter(Boolean).slice(0, WORKSPACE_LIMITS.starters);
+  return says || starters.length ? { says: says || null, starters } : null;
 }
 
 /** The question sets a workspace's panels use. */
@@ -224,7 +244,8 @@ export function publicWorkspace(workspace, sets = new Map(), { through = 0, wait
       sees: seesParts(panel),
       ...(panel.type === 'questions' ? { items: (sets.get(panel.set_id)?.items || []).map(publicItem) } : {})
     })),
-    ...(steps ? { steps } : {})
+    // What the AI is told to do in a step is the teacher's, as what it is told in How the AI helps is.
+    ...(steps ? { steps: steps.map(({ brief: _brief, ...step }) => step) } : {})
   };
 }
 
@@ -237,6 +258,7 @@ export function seesParts(panel) {
   }
   if (panel.type === 'questions') return [c.question && 'the question you’re on', c.answer && 'your answer so far', c.attempts && 'how your tries went', c.hints && 'the hints you opened'].filter(Boolean);
   if (panel.type === 'embed') return [c.events && 'what you last did in this activity', c.state && 'what it shows now'].filter(Boolean);
+  if (panel.type === 'page') return [c.text && 'this page'].filter(Boolean);
   if (panel.type === 'reading') return [c.document ? 'the whole document' : c.page && 'the page you’re on', c.selection && 'what you select', c.highlights && panel.highlights && 'your highlights there'].filter(Boolean);
   return [];
 }
@@ -449,6 +471,11 @@ export function workspaceRunContext(workspace, state, sets = new Map(), { versio
   const c = panelContextOf(panel);
   const base = { panel: { id: panel.id, type: panel.type, title: panel.title }, ai: workspace.ai };
   const done = (context, lines) => ({ context, view: lines.length > 1 ? lines.join('\n\n') : null });
+  if (panel.type === 'page') {
+    const lines = [`The learner has “${panel.title}” open.`];
+    if (c.text && panel.text) lines.push(`It says:\n${clip(panel.text, WORKSPACE_LIMITS.viewChars)}`);
+    return done({ ...base, page: c.text ? { text: clip(panel.text, WORKSPACE_LIMITS.viewChars) } : {} }, lines);
+  }
   if (panel.type === 'writing') {
     const writing = {};
     const lines = [`The learner is working on the writing task “${panel.title}”.`];
@@ -508,8 +535,11 @@ export function workspaceRunContext(workspace, state, sets = new Map(), { versio
     // Whether their last answer was right comes from the host's own record of marking it, never from the page: said by the page, it would let a
     // learner lift the check. Where the panel keeps that from them until the end, the AI doesn't have it either.
     const lastCorrect = (panel.feedback ?? 'each') === 'each' && typeof marked === 'boolean' ? marked : null;
+    // What they have chosen or written and not yet sent is theirs too: a learner who has it, and says why in words that don't name it, is told so. Only where
+    // pressing Check would tell them anyway. It says yes or no and nothing else, and the server works it out from the key.
+    const holdsIt = (panel.feedback ?? 'each') === 'each' && state?.response != null && state.response !== '' && gradeResponse(item, state.response)?.correct === true;
     // The key, for a step that checks replies against it (VETTING's answer_key): never in the view.
-    const key = { answer_key: keyText(item), ...(lastCorrect === true ? { answer_reached: true } : {}) };
+    const key = { answer_key: keyText(item), ...(lastCorrect === true || holdsIt ? { answer_reached: true } : {}), ...(holdsIt ? { answer_holds: true } : {}) };
     const given = responseText(item, state?.response);
     const tries = Number.isInteger(state?.tries) ? state.tries : 0;
     const opened = panel.hints ? Math.min(hintsOpened, item.hints?.length || 0) : 0;
@@ -544,6 +574,20 @@ export function openedNow(workspace, state, level) {
   return out;
 }
 
+// Where the learner is and what the teacher wants from the AI there, as instructions.
+function stepWords(workspace, at, opening) {
+  const step = at?.step;
+  const lines = [];
+  if (step) {
+    lines.push(`The learner is on step ${at.index + 1} of ${workspace.steps.length}, “${step.title}”.`);
+    if (step.brief) lines.push(`In this step: ${step.brief}`);
+    if (step.says) lines.push(`You began this step by saying: “${step.says}”`);
+    const next = workspace.steps[at.index + 1];
+    if (next) lines.push(`The next step is “${next.title}”. When they have done what this one asks, say they can go on.`);
+  } else if (opening?.says) lines.push(`You began this conversation by saying: “${opening.says}”`);
+  return lines.length ? lines.join('\n') : null;
+}
+
 // The run's context from what the learner has open. A question also sets context.question and
 // context.answer_key, the fields a VETTING step's question and answer key read, and context.answer_reached
 // once the page has marked the learner's answer right.
@@ -553,19 +597,22 @@ export function openedNow(workspace, state, level) {
 // context.workspace.teaching for templates and, unless the profile keeps both to variables,
 // teaching_view, which the engine gives the same steps as instructions rather than as data. section:
 // the learner's, when it has its own help level or note (teaching.sections).
-export const workspaceContext = (workspace, state, sets, versions = {}, open = {}, teaching = null, section = null) => {
+// at: the step they have reached, { index, step }, whose own instructions go with the teacher's. opening: what the AI said first where there are no steps, so what comes next follows from it.
+export const workspaceContext = (workspace, state, sets, versions = {}, open = {}, teaching = null, section = null, at = null, opening = null) => {
   const run = workspace ? workspaceRunContext(workspace, state, sets, versions) : null;
   const taught = teachingContext(teaching, section);
-  if (!run && !taught) return null;
-  const { answer_key: key, answer_reached: reached, question_text: question, ...view } = run?.context || {};
+  const told_step = stepWords(workspace, at, opening);
+  if (!run && !taught && !told_step) return null;
+  const { answer_key: key, answer_reached: reached, answer_holds: holds, question_text: question, ...view } = run?.context || {};
   const place = open.place || 'message';
   const told = Boolean(run?.view) && place !== 'variables';
   const instructed = Boolean(taught) && place !== 'variables';
   return {
     workspace: { ...view, ...(taught ? { teaching: taught.context } : {}) },
-    ...(key ? { answer_key: key } : {}), ...(reached ? { answer_reached: true } : {}), ...(question ? { question } : {}),
+    ...(key ? { answer_key: key } : {}), ...(reached ? { answer_reached: true } : {}), ...(holds ? { answer_holds: true } : {}), ...(question ? { question } : {}),
     ...(told ? { workspace_view: run.view, workspace_place: place } : {}),
     ...(instructed ? { teaching_view: taught.text } : {}),
-    ...(told || instructed ? { workspace_reach: open.reaches || 'reply' } : {})
+    ...(told_step && place !== 'variables' ? { step_view: told_step } : {}),
+    ...(told || instructed || (told_step && place !== 'variables') ? { workspace_reach: open.reaches || 'reply' } : {})
   };
 };

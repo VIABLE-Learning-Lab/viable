@@ -15,10 +15,11 @@
  *   data-busy                     what a form or button says while its data-api is working
  *   data-copy, data-print        copies that text; prints the page
  *   data-guard                   a form that warns before leaving with what isn't saved
+ *   data-together, data-save-bar forms that one Save saves, whichever of them changed; the bar it sits in shows there is something to save
  *   data-say-in="id"             where a form says how it went, when that is outside it
  *   data-iso                     a datetime-local input showing, and sending, an instant
  *   data-local                   a time element shown in the reader's own time
- *   data-show-when="name=value"  shown while that field of its form says so
+ *   data-show-when="name=value"  shown while that field of its form says so (a|b for either, != for anything else, ; between rules for any)
  *
  * An answer's go goes there; its said is said where the form or button's [data-say] is, kept by id across
  * the refresh. What someone has typed in any other form stays through a refresh.
@@ -29,6 +30,26 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
   const ICON = ${JSON.stringify({ check: icon('check', 16), chevron: icon('chevron', 16) })};
   let line = Promise.resolve();
   const inLine = (work) => { line = line.then(work, work); return line; };
+  // A click answers at once: a line across the top until the next page or the answer comes.
+  let working = 0;
+  const busy = (by) => { working = Math.max(0, working + by); document.documentElement.classList.toggle('is-working', working > 0); };
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest && event.target.closest('a[href]');
+    if (!link || event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0 || link.target || link.hasAttribute('download') || link.origin !== location.origin || link.pathname === location.pathname) return;
+    document.documentElement.classList.add('is-going');
+  });
+  addEventListener('pageshow', () => document.documentElement.classList.remove('is-going'));
+  // What a page shows that needn't hold it up, such as what is left of a budget, comes in after it.
+  // A long part a person may never open comes when they open it.
+  const loadOpened = (details) => { const place = details.querySelector('[data-loaded]'); if (!place || place.dataset.has) return; place.dataset.has = '1'; call('GET ' + details.dataset.load).then((data) => { place.innerHTML = data.html || ''; dress(place); }).catch(() => { delete place.dataset.has; }); };
+  document.addEventListener('toggle', (event) => { if (event.target.matches && event.target.matches('details[data-load]') && event.target.open) loadOpened(event.target); }, true);
+  const fill = () => {
+    for (const details of document.querySelectorAll('details[data-load][open]')) loadOpened(details);
+    const parts = [...document.querySelectorAll('[data-fill]')];
+    for (const path of new Set(parts.map((part) => part.dataset.fill))) {
+      call('GET ' + path).then((data) => { for (const part of parts) if (part.dataset.fill === path) { if (part.dataset.fillAs === 'html') part.innerHTML = data.html || ''; else if (data.words) part.textContent = data.words; } }).catch(() => {});
+    }
+  };
   const call = async (spec, body, file) => {
     const [method, path] = spec.split(' ');
     // A name from a package can't climb out of the address it is part of.
@@ -36,7 +57,8 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     const init = file
       ? { method, headers: { 'content-type': 'application/octet-stream', 'x-file-name': encodeURIComponent(file.name) }, body: file }
       : { method, headers: { 'content-type': 'application/json' }, ...(method === 'GET' ? {} : { body: JSON.stringify(body || {}) }) };
-    const response = await fetch('/console/api/' + path, init);
+    if (method !== 'GET') busy(1);
+    const response = await fetch('/console/api/' + path, init).finally(() => { if (method !== 'GET') busy(-1); });
     const data = await response.json().catch(() => ({}));
     if (response.status === 401) { location.reload(); throw new Error('Sign in again.'); }
     if (!response.ok) throw new Error((data.error && data.error.message) || 'That didn’t work. Try again.');
@@ -179,15 +201,29 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     for (const part of root.querySelectorAll('[data-show-when]')) {
       const form = part.dataset.form ? (root.getElementById ? root : root.ownerDocument).getElementById(part.dataset.form) || root.querySelector('#' + CSS.escape(part.dataset.form)) : part.closest('form');
       if (!form) continue;
-      const [name, wanted] = part.dataset.showWhen.split('=');
-      const field = form.elements[name];
-      const value = !field ? '' : field.type === 'checkbox' ? String(field.checked) : field.value;
-      part.hidden = !wanted.split('|').includes(value);
+      // name=a|b, or name!=a for anything else; several, split by ;, show it when any holds.
+      const holds = (rule) => {
+        const not = rule.includes('!=');
+        const [name, wanted] = rule.split(not ? '!=' : '=');
+        const field = form.elements[name];
+        const value = !field ? '' : field.type === 'checkbox' ? String(field.checked) : field.value;
+        return wanted.split('|').includes(value) !== not;
+      };
+      part.hidden = !part.dataset.showWhen.split(';').some(holds);
     }
   };
   const isChanged = (item) => (['checkbox', 'radio'].includes(item.type) ? item.checked !== item.defaultChecked : item.tagName === 'SELECT' ? [...item.options].some((option) => option.selected !== option.defaultSelected) : item.type !== 'hidden' && item.type !== 'file' && item.value !== item.defaultValue);
   const fieldsOf = (form) => [...form.elements].filter((item) => item.name);
   const dirty = (form) => fieldsOf(form).some(isChanged);
+  const together = () => [...document.querySelectorAll('form[data-together]')];
+  const saveBar = () => {
+    const bar = document.querySelector('[data-save-bar]');
+    if (!bar) return;
+    const changed = together().some(dirty);
+    bar.classList.toggle('is-changed', changed);
+    const button = bar.querySelector('button');
+    button.disabled = !changed || button.dataset.locked != null;
+  };
 
   const setPath = (target, path, value) => {
     const steps = path.split('.');
@@ -199,7 +235,8 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     const body = {};
     const lists = new Set();
     for (const item of fieldsOf(form)) {
-      if (item.disabled || item.type === 'file' || item.closest('[hidden]')) continue;
+      // A part hidden because it doesn't apply sends nothing; a tab that isn't showing still holds the form.
+      if (item.disabled || item.type === 'file' || item.closest('[hidden]:not([role=tabpanel])')) continue;
       if (item.type === 'checkbox' && item.dataset.many != null) {
         const steps = item.name;
         if (!lists.has(steps)) { lists.add(steps); setPath(body, steps, []); }
@@ -232,13 +269,16 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
         else { other.value = item.value; other.dataset.typed = '1'; }
       }
     }
-    // What someone has opened stays open.
+    // What someone has opened stays open, and so does the tab they are on.
     for (const open of document.querySelectorAll('main details[id][open]')) next.querySelector('#' + CSS.escape(open.id))?.setAttribute('open', '');
+    for (const panel of document.querySelectorAll('main [role=tabpanel][id]')) { const twin = next.querySelector('#' + CSS.escape(panel.id)); if (twin) twin.hidden = panel.hidden; }
+    for (const tab of document.querySelectorAll('main [role=tab][id]')) { const twin = next.querySelector('#' + CSS.escape(tab.id)); if (twin) { twin.setAttribute('aria-selected', tab.getAttribute('aria-selected')); twin.tabIndex = tab.tabIndex; } }
     dress(next);
     document.querySelector('main').replaceWith(next);
     for (const item of next.querySelectorAll('[data-typed]')) item.removeAttribute('data-typed');
     const again = focused && document.getElementById(focused);
     if (again) again.focus({ preventScroll: true });
+    fill();
     document.dispatchEvent(new Event('viable:refreshed'));
   };
   const say = (where, text, kind) => {
@@ -318,9 +358,40 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     }
     if (form.dataset.search) {
       event.preventDefault();
-      const query = new URLSearchParams(Object.entries(valuesOf(form)).filter(([, value]) => value != null && value !== '')).toString();
+      // A named button that sent it says which, as a field of its own.
+      const query = new URLSearchParams(Object.entries({ ...valuesOf(form), ...(event.submitter?.name ? { [event.submitter.name]: event.submitter.value } : {}) }).filter(([, value]) => value != null && value !== '')).toString();
       const into = document.getElementById(form.dataset.into);
       inLine(async () => { const data = await call('GET ' + form.dataset.search + (query ? '?' + query : '')); into.innerHTML = data.html; }).catch((error) => { into.textContent = error.message; });
+      return;
+    }
+    if (form.dataset.together != null) {
+      event.preventDefault();
+      inLine(async () => {
+        const bar = document.querySelector('[data-save-bar]');
+        say(bar, 'Saving…');
+        // One at a time: each save moves the activity's version, and the refresh carries what is left across.
+        for (let left = together().length; left > 0; left -= 1) {
+          const next = together().find(dirty);
+          if (!next) break;
+          try {
+            await call(next.dataset.api, valuesOf(next));
+          } catch (error) {
+            const details = next.closest('details');
+            if (details) details.open = true;
+            say(next, error.message, 'bad');
+            if (next.dataset.sayIn !== 'save-bar') say(document.querySelector('[data-save-bar]'), 'Not everything is saved. See what it says above.', 'bad');
+            next.closest('[data-say-box]')?.scrollIntoView({ block: 'nearest' });
+            return;
+          }
+          guardedOff(next);
+          await refresh(next);
+        }
+        saveBar();
+        const done = document.querySelector('[data-save-bar]');
+        done.classList.add('is-saved');
+        say(done, 'Saved.', 'good');
+        setTimeout(() => { done.classList.remove('is-saved'); }, 2600);
+      }).catch((error) => say(document.querySelector('[data-save-bar]'), error.message, 'bad'));
       return;
     }
     if (!form.dataset.api) {
@@ -348,8 +419,11 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     const body = button.dataset.body ? JSON.parse(button.dataset.body) : {};
     agreed(button).then((yes) => { if (yes) return inLine(async () => { if (button.dataset.busy) say(button, button.dataset.busy); const data = await call(button.dataset.api, body); await after(button, data, button.dataset.said); }).catch((error) => say(button, error.message, 'bad')); });
   });
+  document.addEventListener('input', saveBar);
+  document.addEventListener('viable:refreshed', saveBar);
   document.addEventListener('change', (event) => {
     const item = event.target;
+    saveBar();
     if (item.form) showing(document);
     if (item.tagName === 'SELECT' && item.dataset.api) {
       inLine(async () => { const data = await call(item.dataset.api, { [item.name]: item.value }); await after(item, data); }).catch((error) => say(again(item), error.message, 'bad'));
@@ -410,5 +484,7 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     if (guarded && [...document.querySelectorAll('form[data-guard]')].some(dirty)) event.preventDefault();
   });
   dress(document);
+  fill();
+  saveBar();
   window.viableConsole = { ask, call, closePop, dress, float, refresh, say };
 })();`;

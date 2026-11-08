@@ -71,6 +71,7 @@
     "xapi:build": "node harness/scripts/build-xapi-profile.mjs",
     "components:build": "node harness/scripts/build-component-pages.mjs",
     "catalog:build": "node harness/scripts/build-catalog-page.mjs",
+    "designs:build": "node harness/scripts/build-designs-page.mjs",
     "fonts:build": "node harness/scripts/build-fonts.mjs",
     "build:assets": "node engine/scripts/build-learner-assets.mjs",
     "prepack": "node engine/scripts/build-learner-assets.mjs",

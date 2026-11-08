@@ -5,6 +5,7 @@
  */
 import { acceptedOf, addLines, addSection, changeLearner, changeSection, forgetActivity, keepAccepted, learnersNamed, makeLearner, newCodeFor, peopleOf, releasesOf, removeFromList, removeSection, sectionsOf, setRelease } from './classList.js';
 import { forgetChat, forgetCourse, forgetLearner, learnerRecords } from './learner.js';
+import { keptTurnEvents } from '../learner/watch.js';
 
 const TURNS_SHOWN = 200;
 
@@ -38,6 +39,20 @@ export function storeClasses(store) {
 export function storeRecords(store) {
   return {
     saving: Boolean(store),
+    /** What the AI did on one of the course's turns, for the page of a learner's work: { run_id, events } or null. */
+    async turn(code, runId) {
+      if (!store) return null;
+      const name = (await store.list(`courses/${code}/turns/`)).find((key) => key.endsWith(`-${runId}`));
+      const turn = name ? await store.get(name) : null;
+      return turn ? { run_id: turn.run_id, events: keptTurnEvents(turn) } : null;
+    },
+    /** What the AI did on the teacher's own tries of one activity (Try it), the latest last: [{ run_id, events }]. */
+    async tried(code, key, limit = 30) {
+      if (!store) return [];
+      const kept = [];
+      for (const name of (await store.list(`courses/${code}/turns/`)).slice(-2000)) { const turn = await store.get(name); if (turn?.tried && turn.activity === key) kept.push(turn); }
+      return kept.sort((a, b) => String(a.started_at).localeCompare(String(b.started_at))).slice(-limit).map((turn) => ({ run_id: turn.run_id, events: keptTurnEvents(turn) }));
+    },
     /** { learner's id: { activity's key: { opened_at, last_at, done_at, done_how } } } */
     async cells(code) {
       const cells = {};
@@ -75,6 +90,8 @@ export function storeThreads(store) {
     get: (id) => store.get(key(id)),
     put: (thread) => store.put(key(thread.id), thread),
     remove: (id) => store.delete(key(id)),
+    keepCheckpoint: (body) => store.put(`ask/checkpoints/${body.id}`, body),
+    checkpoint: (id) => store.get(`ask/checkpoints/${id}`),
     /** The latest first: { id, title, updated_at }. */
     async list() {
       const held = await Promise.all((await store.list('ask/threads/')).slice(-40).map((name) => store.get(name)));

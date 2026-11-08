@@ -20,8 +20,16 @@ export const OUTCOMES = {
 };
 export const VERDICTS = { pass: 'Passed', fail: 'Did not pass', error: 'The review couldn’t run', safety: 'Safety concern, not reviewed' };
 export const TEST_VERDICTS = { pass: 'Passed', fail: 'Failed', error: 'Error' };
-// From the least help to the most.
-export const HELP_NAMES = { check_only: 'Only check', ask_first: 'Ask first', hint: 'Hint', explain: 'Explain' };
+// How much the AI does for a learner, from the least to the most: each level does what the one before does, and one thing more.
+// The words people read. What the AI is told is HELP_LEVELS (utils/teaching.js); the ids are the API's.
+export const HELP_LADDER = [
+  { id: 'check_only', name: 'Only checks', adds: 'Says what is right and which part to look at again. Nothing more.', for: 'Their own writing, a quiz, showing what they know.', sounds: 'Your second step is right. Look again at your first.' },
+  { id: 'ask_first', name: 'Asks questions', adds: 'Also asks questions that help them find the way, one at a time. No hints.', for: 'Discussion and reasoning, where the thinking has to stay theirs.', sounds: 'What makes you say that?' },
+  { id: 'hint', name: 'Gives hints', adds: 'Also gives hints, one step at a time. Never the answer.', for: 'Practice on what they have been taught.', sounds: 'What do the pieces need in common?' },
+  { id: 'step_up', name: 'Shows an example', adds: 'Also, once they have really tried and are still stuck, works through an example with other numbers, then sends them back to their own.', for: 'Most activities.', sounds: 'Here’s one with other numbers. Now try yours.' },
+  { id: 'explain', name: 'Explains', adds: 'Also explains the idea directly, then has them try one.', for: 'Something new to them.', sounds: 'Fractions need pieces of one size. Here’s how…' }
+];
+export const HELP_NAMES = Object.fromEntries(HELP_LADDER.map((level) => [level.id, level.name]));
 // The mark each one gets (.v-mark in ui/theme.js).
 export const MARKS = { passed: 'pass', unverified: 'unverified', attention: 'attention', pass: 'pass', fail: 'fail', error: 'unverified', safety: 'attention' };
 
@@ -80,7 +88,7 @@ export function testCase(result, item) {
       h('dd', null, quote(result?.reply, result?.reply == null ? 'No reply: the run failed.' : 'The agent gave no reply.')))));
 }
 
-/** How far the AI may go, as a scale. `from` marks where a suggested change starts. Hidden from screen readers: the sentence beside it says the same. */
+/** How much the AI does, as a scale from the least to the most. `from` marks where a suggested change starts. Hidden from screen readers: the sentence beside it says the same. */
 export function helpScale(level, from = null) {
   return h('ol', { class: 'scale', 'aria-hidden': 'true' }, ...Object.entries(HELP_NAMES).map(([key, name]) => h('li', { class: key === level ? 'on' : key === from ? 'from' : null }, name)));
 }
@@ -90,12 +98,12 @@ export function nextStep(item, settings) {
   const patch = item?.patch;
   const named = (level) => Object.hasOwn(HELP_NAMES, String(level));
   if (named(patch?.help)) {
-    return [h('p', null, 'If you agree, set how far the AI may go to ', h('strong', null, HELP_NAMES[patch.help]), '.'), helpScale(patch.help, settings?.help)];
+    return [h('p', null, 'If you agree, how much the AI does becomes ', h('strong', null, HELP_NAMES[patch.help]), '.'), helpScale(patch.help, settings?.help)];
   }
   const section = Object.entries(patch?.sections || {}).find(([id, own]) => named(own?.help) && own.help !== settings?.sections?.[id]?.help);
   if (section) {
     const [id, own] = section;
-    return [h('p', null, 'If you agree, set how far the AI may go to ', h('strong', null, HELP_NAMES[own.help]), ' for section ', h('code', null, id), '.'), helpScale(own.help, settings?.sections?.[id]?.help ?? settings?.help)];
+    return [h('p', null, 'If you agree, how much the AI does becomes ', h('strong', null, HELP_NAMES[own.help]), ' for section ', h('code', null, id), '.'), helpScale(own.help, settings?.sections?.[id]?.help ?? settings?.help)];
   }
   if (Array.isArray(patch?.misconceptions)) return [h('p', null, 'If you agree, add it to the misconceptions the AI listens for, in How the AI helps.')];
   if (patch) return [h('p', null, 'It proposes: ', h('code', null, JSON.stringify(patch)))];
@@ -188,7 +196,7 @@ del{color:var(--muted);text-decoration:line-through 1.5px var(--pencil-red);whit
 .case dt:first-child{margin-top:0}
 .case dd{margin:2px 0 0;color:var(--public-text)}
 .case blockquote{margin:0;color:var(--public-ink);white-space:pre-wrap}
-.scale{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0 0 10px;padding:0;list-style:none;color:var(--muted);font-size:.8125rem;line-height:1.3}
+.scale{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);margin:0 0 10px;padding:0;list-style:none;color:var(--muted);font-size:.8125rem;line-height:1.3}
 .scale li{position:relative;padding-top:14px;border-top:1px solid var(--public-rule-strong)}
 .scale li::before{content:"";position:absolute;top:-5px;left:0;width:9px;height:9px;border-radius:50%;background:var(--public-rule-strong);-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .scale .on{color:var(--ink-blue);font-weight:700}

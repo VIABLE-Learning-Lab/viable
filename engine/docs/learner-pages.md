@@ -2,7 +2,7 @@
 
 `viable-engine serve` and every scaffold from `viable-engine deploy` serve the same pages VIABLE does,
 from the same code: an agent's chat page, the chat button for your website, a course's home and its
-activities (questions, writing, reading, embedded pages, with the AI beside them).
+activities (a page to read, questions, writing, a PDF to read, embedded pages, in steps if you want, with the AI beside them where you say).
 
 ```sh
 export OPENAI_BASE_URL=https://your-endpoint/v1 OPENAI_API_KEY=...
@@ -81,8 +81,9 @@ store, not the package. A learner's section comes from the class list, from a se
 choice, once (`sections_from`: `roster`, `link`, `choose`); only a teacher changes it after that. Someone who opens the
 course's own link where sections come from links is asked which class they're in, once.
 
-A section can have its own help level and a note for the AI, on the activity (`teaching.sections`); they reach only that
-section's learners' runs. An activity can also be opened or hidden for one section at once, on Activities. That is kept
+A section can have its own help level, a note for the AI and its own moments the AI writes first at, or none, on the
+activity (`teaching.sections`); they reach only that section's learners' runs, and their page watches for their section's
+moments. An activity can also be opened or hidden for one section at once, on Activities. That is kept
 in the store and isn't a new version of the course, since a teacher does it mid-class. It applies on the home and on every
 endpoint. While an activity is open for one section, its page is served to anyone with its address, because a page
 doesn't know who is asking until it has loaded; everyone else is told it isn't open for them, and nothing they send is
@@ -164,3 +165,19 @@ To let someone read what the AI did on a turn (its instructions, drafts and revi
 It is off by default, and a learner never gets it: `GET /teacher/turns/<run>/trace`. With `panel` too, a page
 shows it beside itself only when its address asks (`?panel=1`) and its request holds the token, and no other
 site may frame that page.
+
+The panel reads every turn of the page's learner in that activity again when it opens (`POST …/watch`, under the
+same rule), from the kept turn: its review, what a search found and `turn_record` (the step, and what the Harness
+read of the moment). A teacher's try-out (Try it on the console, `?try=1` with the token) marks its turns `tried`,
+and the console's activity page lists them under **What the AI did in your tries**.
+
+## When the AI writes first
+
+An activity's `teaching.speaks_up` lets the AI write first, unasked: quiet on a step, working a while without asking,
+an answer wrong or right where the learner sees which, every so many new words of writing at a pause, writing handed
+in. The page carries only when each moment comes, not what the AI is told then, and posts `messages` with
+`event: { kind }` and no words when one comes; it never asks on a clock of its own. The server checks the teacher
+chose it, for a learner it knows, and counts it against `most` in a step each day and `gap` minutes since the last
+(409 `speaks_first_off`, 429 `speaks_first_limit`, 429 `speaks_first_soon`). The AI is told what to do at that moment, its reviewer reads no
+message, and the turn is kept with `signals.source` `ai_first`, its `moment`, and no message. The learner sees
+why it began, and a message of theirs goes first.

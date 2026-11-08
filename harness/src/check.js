@@ -28,7 +28,7 @@ export async function checkReply({ teaching = null, section = null, baseUrl, api
   const taught = teachingContext(teaching, section);
   const items = full ? [{ question: { text: context.question }, answerKey: { correctAnswer: context.answer_key, ...(concepts.length ? { keyConcepts: concepts } : {}), ...(context.explanation ? { explanation: context.explanation } : {}) } }] : [];
   const turns = [...history.map((turn) => ({ role: turn.role, content: turn.content })), { role: 'user', content: String(input ?? '') }];
-  const reached = full ? reachedAmong(items, learnerWords(turns)) : null;
+  const reached = full ? reachedAmong(items, learnerWords(turns), { checked: check.answer_reached === true, holds: check.answer_holds === true }) : null;
   const prompts = withTeacher(await vettingPromptSet({
     full,
     chatPrompt: cfg.chat_prompt ? context.instructions : null,

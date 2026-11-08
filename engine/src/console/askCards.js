@@ -6,10 +6,11 @@
 import { showCode } from '../server/classList.js';
 import { activityKeys } from '../server/library.js';
 import { kindOfActivity, courseAt } from './course.js';
+import { flowOf, flowWords, PANEL_WORDS, reviewOf } from './flow.js';
 import { esc, qrSvg, reachOf, say } from './forms.js';
 
-const HELP_WORDS = { ask_first: 'asks what they think first', hint: 'gives hints only, never the answer', explain: 'explains when they are stuck', check_only: 'only checks their work' };
-const KIND_WORDS = { chat: 'A conversation', questions: 'Questions', writing: 'Writing', reading: 'Reading', embed: 'A web page', several: 'Several panels' };
+const HELP_WORDS = { step_up: 'asks first, then hints, then shows an example', ask_first: 'asks what they think first', hint: 'gives hints only, never the answer', explain: 'explains when they are stuck', check_only: 'only checks their work' };
+const KIND_WORDS = { chat: 'A conversation', page: 'A page to read', questions: 'Questions', writing: 'Writing', reading: 'Reading', embed: 'A web page', several: 'Several panels' };
 const SIGN_IN = { code: 'with a personal code on a card', ask: 'by typing their name or ID', browser: 'without signing in: each browser is one learner' };
 
 export const activitiesOf = (doc) => { const list = doc.course?.activities || []; const keys = activityKeys(list); return list.map((activity, index) => ({ ...activity, key: keys[index] })); };
@@ -18,11 +19,34 @@ const isOpen = (activity) => activity.release !== 'hidden';
 const card = (title, body, { id = '', className = '' } = {}) => `<section class="ask-card v-card ${className}"${id ? ` id="${esc(id)}" data-say-box` : ''}><h3>${esc(title)}</h3>${body}</section>`;
 const copyRow = (label, link, state = '') => `<li><div><strong>${esc(label)}</strong>${state}<code>${esc(link)}</code></div><button class="v-btn is-small" type="button" data-copy="${esc(link)}">Copy</button></li>`;
 
+// Opening something a learner would trip on says so first.
+function openButton(doc, code, activity, meta) {
+  const trips = reviewOf(doc, activity).filter((note) => note.level === 'fix');
+  return `<button class="v-btn is-small" type="button" data-api="POST courses/${esc(code)}/activities/${esc(activity.key)}/release" data-body='${esc(JSON.stringify({ version: meta.version, release: 'open' }))}' data-said="Open to learners."${trips.length ? ` data-confirm="${esc(`Learners can reach “${activity.title}” once it’s open, and ${trips.map((note) => note.says.charAt(0).toLowerCase() + note.says.slice(1)).join(' ')} Open it anyway?`)}" data-yes="Open it"` : ''}>Open it</button>`;
+}
+
+const SHOWS = { page: 'to read', questions: 'to answer', writing: 'to write', reading: 'to read', embed: 'to try' };
+
+/** One activity as what learners do, so a teacher can see at a glance whether it is any good, and the way to try it. */
+async function activityCard(here, spec) {
+  const { code, doc, meta } = await courseAt(here.library, spec.course);
+  const activity = activitiesOf(doc).find((item) => item.key === spec.activity);
+  if (!activity) return card('This has moved on', '<p class="v-note">That activity isn’t in this course anymore.</p>');
+  const steps = flowOf(doc, activity);
+  const taught = activity.teaching || {};
+  const notes = reviewOf(doc, activity);
+  const row = (step, index) => `<li><span class="ask-flow-n">${index + 1}</span><div><strong>${esc(step.title)}</strong><small>${esc(step.panels.map((panel) => (panel.type === 'questions' ? `${panel.questions} question${panel.questions === 1 ? '' : 's'}` : SHOWS[panel.type] || PANEL_WORDS[panel.type])).join(', '))}${step.has_ai ? ', with the AI' : ''}</small>${step.says ? `<q>${esc(step.says)}</q>` : ''}</div></li>`;
+  return card(activity.title, `<div class="ask-activity-head"><span class="v-pill${isOpen(activity) ? ' is-open' : ''}">${isOpen(activity) ? 'Open' : 'Hidden'}</span>${activity.minutes ? `<span class="v-note">About ${esc(activity.minutes)} minutes</span>` : ''}${taught.design?.label ? `<span class="v-note">Built on ${esc(taught.design.label)}</span>` : ''}</div>
+${taught.goal ? `<p class="ask-goal">${esc(taught.goal)}</p>` : ''}
+${steps.length ? `<ol class="ask-flow">${steps.map(row).join('')}</ol>` : `<p class="v-note">A conversation with the AI${activity.opening?.says ? `, which starts: “${esc(activity.opening.says)}”` : ''}.</p>`}
+${notes.length ? `<ul class="ask-notes">${notes.map((note) => `<li class="is-${esc(note.level)}">${esc(note.says)}</li>`).join('')}</ul>` : ''}${say()}
+<div class="actions"><a class="v-btn is-small is-primary" href="/console/api/courses/${esc(code)}/try/${esc(activity.key)}" target="_blank" rel="noopener">Try it as a learner</a><a class="v-btn is-small" href="/console/courses/${esc(code)}/activities/${esc(activity.key)}">See all of it</a>${isOpen(activity) ? '' : openButton(doc, code, activity, meta)}</div>`, { id: `activity-${code}-${activity.key}` });
+}
+
 async function courseCard(here, spec) {
   const { code, doc, meta } = await courseAt(here.library, spec.course);
   const list = activitiesOf(doc);
-  const openIt = (activity) => `<button class="v-btn is-small" type="button" data-api="POST courses/${esc(code)}/activities/${esc(activity.key)}/release" data-body='${esc(JSON.stringify({ version: meta.version, release: 'open' }))}' data-said="Open to learners.">Open it</button>`;
-  return card(doc.course.title, `${list.length ? `<ul class="ask-rows">${list.map((activity) => `<li><div><a href="/console/courses/${esc(code)}/activities/${esc(activity.key)}"><strong>${esc(activity.title)}</strong></a><small>${esc(KIND_WORDS[kindOfActivity(activity)] || '')}${activity.teaching?.help ? ` · the AI ${esc(HELP_WORDS[activity.teaching.help])}` : ''}</small></div><span class="v-pill${isOpen(activity) ? ' is-open' : ''}">${isOpen(activity) ? 'Open' : 'Hidden'}</span>${isOpen(activity) ? '' : openIt(activity)}</li>`).join('')}</ul>` : '<p class="v-note">No activities yet.</p>'}${say()}
+  return card(doc.course.title, `${list.length ? `<ul class="ask-rows ask-activities">${list.map((activity) => `<li><div><a href="/console/courses/${esc(code)}/activities/${esc(activity.key)}"><strong>${esc(activity.title)}</strong></a><small>${esc(flowWords(doc, activity))}${activity.teaching?.help ? `. The AI ${esc(HELP_WORDS[activity.teaching.help])}` : ''}</small></div><span class="v-pill${isOpen(activity) ? ' is-open' : ''}">${isOpen(activity) ? 'Open' : 'Hidden'}</span><span class="ask-row-do">${isOpen(activity) ? '' : openButton(doc, code, activity, meta)}</span></li>`).join('')}</ul>` : '<p class="v-note">No activities yet.</p>'}${say()}
 <div class="actions"><a class="v-btn is-small is-primary" href="/console/api/courses/${esc(code)}/try" target="_blank" rel="noopener">Try it as a learner</a><a class="v-btn is-small" href="/console/courses/${esc(code)}">Change it</a><a class="v-btn is-small" href="/console/courses/${esc(code)}/share">Share</a></div>`, { id: `course-${code}` });
 }
 
@@ -115,7 +139,7 @@ const notAListCard = (_here, spec, { thread, id }) => (spec.allowed
 
 const toolsCard = (here) => card('Other tools for your teaching', `<ul class="ask-rows">${(here.otherTools || []).map((tool) => `<li><div><a href="${esc(tool.url)}" target="_blank" rel="noopener"><strong>${esc(tool.name)}</strong></a><small>${esc(tool.summary)}</small></div></li>`).join('')}</ul>`);
 
-const DRAW = { course: courseCard, try: tryCard, share: shareCard, 'class-list': classListCard, progress: progressCard, open: openCard, change: changeCard, 'not-a-list': notAListCard, tools: toolsCard };
+const DRAW = { course: courseCard, activity: activityCard, try: tryCard, share: shareCard, 'class-list': classListCard, progress: progressCard, open: openCard, change: changeCard, 'not-a-list': notAListCard, tools: toolsCard };
 
 /** A card as HTML, from what is true now. One whose course has gone says so. */
 export async function drawCard(here, spec, context = {}) {
@@ -137,6 +161,24 @@ export const ASK_CARD_CSS = `.ask-card.v-card{display:grid;gap:12px;padding:16px
 .ask-rows strong{font-weight:600}
 .ask-rows small{color:var(--muted);font-size:.8125rem}
 .ask-rows code{font-size:.8125rem;overflow-wrap:anywhere}
+.ask-rows.ask-activities li{display:grid;grid-template-columns:minmax(0,1fr) 74px 92px;justify-content:initial}
+.ask-activities .v-pill{justify-self:start}
+.ask-row-do{display:flex;justify-content:flex-end}
+.ask-activity-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:-4px}
+.ask-activity-head .v-note{font-size:.875rem}
+.ask-goal{margin:0;color:var(--public-text);line-height:1.5}
+.ask-flow{display:grid;gap:0;margin:0;padding:0;list-style:none;counter-reset:none}
+.ask-flow li{position:relative;display:grid;grid-template-columns:26px minmax(0,1fr);gap:10px;padding:8px 0}
+.ask-flow li+li::before{content:"";position:absolute;left:12.5px;top:-6px;height:14px;border-left:1px solid var(--public-rule-strong)}
+.ask-flow-n{display:grid;place-items:center;width:26px;height:26px;border:1px solid var(--public-rule-strong);border-radius:50%;color:var(--public-ink);font-size:.8125rem;font-variant-numeric:tabular-nums}
+.ask-flow div{display:grid;gap:1px;min-width:0}
+.ask-flow strong{color:var(--public-ink);font-weight:600}
+.ask-flow small{color:var(--muted);font-size:.8125rem}
+.ask-flow q{margin-top:3px;color:var(--public-text);font-size:.875rem;line-height:1.45;quotes:"“" "”"}
+.ask-notes{display:grid;gap:6px;margin:0;padding:10px 12px;border-radius:var(--radius-sm);background:var(--field-mist);list-style:none;font-size:.875rem;line-height:1.45}
+.ask-notes li{position:relative;padding-left:14px;color:var(--public-text)}
+.ask-notes li::before{content:"";position:absolute;left:0;top:.55em;width:6px;height:6px;border-radius:50%;background:var(--public-rule-strong)}
+.ask-notes li.is-fix::before{background:var(--pencil-red)}
 .ask-share{display:grid;grid-template-columns:minmax(0,1fr) 132px;gap:16px;align-items:start}
 .ask-share>div{display:grid;gap:10px}
 .ask-share .qr{width:132px;height:auto;border-radius:var(--radius-sm)}
@@ -146,4 +188,4 @@ export const ASK_CARD_CSS = `.ask-card.v-card{display:grid;gap:12px;padding:16px
 .ask-more .ask-rows{margin-top:8px}
 .ask-list{display:grid;gap:8px}
 .ask-facts{display:grid;gap:4px;margin:0;padding-left:1.2em;color:var(--public-text);font-size:.9375rem}
-@media (max-width:560px){.ask-share{grid-template-columns:minmax(0,1fr)}.ask-share .qr{width:180px}}`;
+@media (max-width:560px){.ask-share{grid-template-columns:minmax(0,1fr)}.ask-share .qr{width:180px}.ask-rows.ask-activities li{grid-template-columns:minmax(0,1fr) auto}.ask-activities .ask-row-do{grid-column:1/-1;justify-content:flex-start}}`;

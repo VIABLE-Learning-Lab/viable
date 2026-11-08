@@ -357,7 +357,7 @@ const httpComponents = (fetch) => (manifest, payload, options) => callOut(manife
  * teaching settings of a turn whose context already holds them (a page's), for a brief when a model
  * reads the moment.
  */
-export async function runWithServices(doc, { input = '', inputContent = undefined, stopWhenSilent = false, history = [], context = null, pictures = undefined, teaching = null, briefing = null, section = null, agent = null, model = null, speechModel = null, imageModel = null, models = null, using = null, conversation = null, baseUrl, apiKey, fetch, save = dataUrls, learner = null, silent = false, services = {}, hooks = {}, brief = null } = {}) {
+export async function runWithServices(doc, { input = '', inputContent = undefined, stopWhenSilent = false, history = [], context = null, pictures = undefined, teaching = null, briefing = null, section = null, agent = null, model = null, speechModel = null, imageModel = null, models = null, using = null, conversation = null, baseUrl, apiKey, fetch, save = dataUrls, learner = null, silent = false, services = {}, hooks = {}, brief = null, event = null } = {}) {
   const picked = pickAgent(doc, agent);
   const isPackage = doc?.format === 'viable.course-package';
   // With nothing set, a learner's message goes nowhere, rather than to a default address.
@@ -388,7 +388,8 @@ export async function runWithServices(doc, { input = '', inputContent = undefine
   // Loaded here because the graph it searches is large. brief: how a turn reads the moment: true for rules, { model } for a small model, and a picker set in the console wins. briefing: settings a page has already put in the context, as an activity's are; the brief replaces their text there.
   const asked = using?.roles.picker ? { model: using.plan.picker } : brief;
   const reading = settings ?? (context?.teaching_view ? briefing : null);
-  const made = asked && reading && reading.turn_brief !== false ? await (await import('../../../harness/src/brief.js')).turnBrief(reading, { message: input, history, section, picker: asked.model ? { call: own.callChatModel, model: asked.model } : null }) : null;
+  // event: a turn the AI writes first (speakUp.js), whose moment the page said.
+  const made = asked && reading && reading.turn_brief !== false ? await (await import('../../../harness/src/brief.js')).turnBrief(reading, { message: event ? '' : input, history, section, event, picker: asked.model ? { call: own.callChatModel, model: asked.model } : null }) : null;
   if (made) hooks.onBrief?.(made);
   const runContext = teachingRunContext(settings, context, section, made);
   try {
@@ -438,7 +439,7 @@ export function createRuntime({ fetch = (...args) => globalThis.fetch(...args), 
       const search = searchOf(agent);
       return runWithServices(agent.doc, {
         ...endpoint, input: turn.text, history: turn.history, context: turn.context, teaching: turn.teaching ?? null, section: turn.section ?? null,
-        inputContent: turn.content, stopWhenSilent: turn.stopWhenSilent === true, briefing: turn.briefing ?? null, using: settings ? await settings.resolve() : null, ...(turn.save ? { save: turn.save } : {}),
+        inputContent: turn.content, stopWhenSilent: turn.stopWhenSilent === true, briefing: turn.briefing ?? null, event: turn.event ?? null, using: settings ? await settings.resolve() : null, ...(turn.save ? { save: turn.save } : {}),
         conversation: turn.conversation ?? null, agent: agent.ref, fetch: timed(fetch), learner: memory ? turn.user : null, hooks, brief, ...(turn.silent ? { silent: true } : {}),
         services: { ...(search ? { searchKnowledge: search } : {}), ...(memory ? { memory } : {}), ...services, httpFetch: timed(services.httpFetch ?? ((...args) => globalThis.fetch(...args))) }
       });
