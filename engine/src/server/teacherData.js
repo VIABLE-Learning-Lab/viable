@@ -6,7 +6,7 @@
 import { acceptedOf, addLines, addSection, changeLearner, changeSection, forgetActivity, keepAccepted, learnersNamed, makeLearner, newCodeFor, peopleOf, releasesOf, removeFromList, removeSection, sectionsOf, setRelease } from './classList.js';
 import { forgetChat, forgetCourse, forgetLearner, learnerRecords } from './learner.js';
 import { keptTurnEvents } from '../learner/watch.js';
-import { MEMORY_LIMITS, searchConversations } from '../../../harness/src/memory.js';
+import { MEMORY_LIMITS, foldText, searchConversations } from '../../../harness/src/memory.js';
 
 const TURNS_SHOWN = 200;
 
@@ -107,9 +107,12 @@ export function storeThreads(store) {
   };
 }
 
-/** What the person and Ask said in a conversation, as plain text to search: never what a tool sent back. */
-export const threadText = (thread) => (thread?.messages || []).filter((message) => ['user', 'assistant'].includes(message.role) && typeof message.content === 'string' && message.content.trim())
-  .map((message) => message.content.trim()).join('\n').slice(0, 40_000);
+/**
+ * What the person and Ask said in a conversation, as plain text to search, never what a tool sent back: folded (memory.js foldText),
+ * so a platform's database finds fracción by fraccion and Дробь by дробь.
+ */
+export const threadText = (thread) => foldText((thread?.messages || []).filter((message) => ['user', 'assistant'].includes(message.role) && typeof message.content === 'string' && message.content.trim())
+  .map((message) => message.content.trim()).join('\n')).slice(0, 40_000);
 
 /**
  * A person's memory for Ask on this server (open/harness/src/memory.js): what they or Ask kept, and their two switches, keep (Ask keeps
@@ -142,6 +145,8 @@ export function storeMemory(store, { now = () => Date.now() } = {}) {
     }),
     drop: (id) => change((doc) => { const before = doc.items.length; doc.items = doc.items.filter((entry) => entry.id !== id); if (doc.items.length === before) throw missing(); return { id, deleted: true }; }),
     dropAll: () => change((doc) => { const count = doc.items.length; doc.items = []; return { deleted: count }; }),
+    // A conversation deleted: what Ask kept in it stays, and says where it came from without a link to it.
+    unlink: (threadId) => change((doc) => { for (const item of doc.items) if (item.source?.kind === 'ask' && item.source.id === threadId) item.source = { ...item.source, id: null }; return null; }),
     used: (ids) => change((doc) => { const stamp = at(); for (const item of doc.items) if (ids.includes(item.id)) item.used_at = stamp; return null; })
   };
 }

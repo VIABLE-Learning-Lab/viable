@@ -658,22 +658,26 @@ export const askPages = (getPages) => [{
       await here.threads.put(thread);
       return { said: 'Stopping after this step.' };
     }],
-    // A conversation goes, and what it set up stays.
+    // A conversation goes, and what it set up stays, and what Ask kept in it.
     ['DELETE', /^ask\/(thr_[a-f0-9]{24})$/, async (here, match) => {
       const thread = await here.threads?.get(match[1]);
       if (!thread) return { removed: 0 };
       if (isRunning(here, thread)) throw refused('It’s still working on this one. Stop it first.', 409, 'still_working');
       await here.threads.remove(thread.id);
+      await here.memory?.unlink(thread.id);
       return { removed: 1 };
     }],
     ['DELETE', /^ask$/, async (here) => {
       let removed = 0;
+      const gone = [];
       // A list is at most a page long; the rest come up as each goes.
       for (let pages = 0; pages < 25; pages += 1) {
         const list = await here.threads.list();
-        const kept = await Promise.all(list.map(async (item) => { const thread = await here.threads.get(item.id); if (isRunning(here, thread)) return true; await here.threads.remove(item.id); removed += 1; return false; }));
+        const kept = await Promise.all(list.map(async (item) => { const thread = await here.threads.get(item.id); if (isRunning(here, thread)) return true; await here.threads.remove(item.id); gone.push(item.id); removed += 1; return false; }));
         if (!list.length || kept.every(Boolean)) break;
       }
+      // One at a time: on the Engine, memory is one document.
+      for (const id of gone) await here.memory?.unlink(id);
       return { removed };
     }],
     // A file that read as a list of names, which the teacher says isn't one. Only a person's click lets it through.
@@ -1495,7 +1499,7 @@ const ASK_SCRIPT = String.raw`(() => {
     }
     const forget = hit('[data-forget]');
     if (forget) {
-      V.ask('Delete this conversation? What it set up stays: your courses and activities don’t change.', { yes: 'Delete', danger: true }).then(async (yes) => {
+      V.ask('Delete this conversation? What it set up stays: your courses, your activities and what Ask remembers don’t change.', { yes: 'Delete', danger: true }).then(async (yes) => {
         if (!yes) return;
         try {
           await V.call('DELETE ask/' + forget.dataset.forget);
@@ -1509,7 +1513,7 @@ const ASK_SCRIPT = String.raw`(() => {
       return;
     }
     if (hit('[data-forget-all]')) {
-      V.ask('Delete all your earlier conversations? What they set up stays: your courses and activities don’t change.', { yes: 'Delete all', danger: true }).then(async (yes) => {
+      V.ask('Delete all your earlier conversations? What they set up stays: your courses, your activities and what Ask remembers don’t change.', { yes: 'Delete all', danger: true }).then(async (yes) => {
         if (!yes) return;
         try { await V.call('DELETE ask'); $('ask-earlier')?.remove(); } catch (error) { setStatus(error.message, true); }
       });

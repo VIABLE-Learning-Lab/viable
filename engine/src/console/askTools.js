@@ -462,7 +462,7 @@ export const ASK_TOOLS = [
   {
     name: 'recall', tier: 'look', available: (here) => Boolean(here.memory && here.remembering?.keep),
     says: (args) => (clean(args.words, 60) ? `Looking through what it remembers for “${clean(args.words, 60)}”` : 'Looking through what it remembers'),
-    description: 'What you keep about the person beyond what is already in front of you: by a few words, or with no words, the latest 30.',
+    description: 'What you keep about the person beyond what is already in front of you: by a few words, or with no words, the latest 30. Each is in the words and the language it was kept in, which may not be this message’s: search with words of that language as well.',
     parameters: { type: 'object', properties: { words: string('A few words, such as grade 5 writing.') } },
     async run(here, args) {
       const items = await here.memory.list();
@@ -479,7 +479,7 @@ export const ASK_TOOLS = [
   {
     name: 'search_conversations', tier: 'look', available: (here) => Boolean(here.threads?.search && here.remembering?.look_back),
     says: (args) => `Looking back through earlier conversations for “${clean(args.words, 60)}”`,
-    description: 'Searches what you and the person said in their earlier conversations here, by words that would be in them: when they mention something from before that you don’t know. Try other words if nothing comes up. Each result has its title, date and the part that matched.',
+    description: 'Searches what you and the person said in their earlier conversations here, by words that would be in them: when they mention something from before that you don’t know. Try other words if nothing comes up, and the words of the language those conversations were held in. Each result has its title, date and the part that matched.',
     parameters: { type: 'object', required: ['words'], properties: { words: string('Words likely to be in it, such as writing prompt grade 5.') } },
     async run(here, args) {
       const found = (await here.threads.search(clean(args.words, 200), { limit: 7 })).filter((item) => item.id !== here.thread?.id).slice(0, 6);

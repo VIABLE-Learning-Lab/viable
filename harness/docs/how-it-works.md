@@ -76,9 +76,12 @@ Using both generally finds more than keywords alone: meaning catches a paraphras
 code. The space is rarely the issue: a vector of 1,024 numbers is 4 KB, so 10,000 passages are 40 MB, and a class's guides
 are hundreds of passages.
 
-What an assistant remembers of a person is matched by words as well: `pickMemories` gives a message what the person keeps
-always in mind and the few other memories its words meet, and `searchConversations` finds their earlier conversations when
-they mention one. A person's few hundred sentences need no index, and words keep it plain why something came up.
+What an assistant remembers of a person is matched by words as well, in any language: accents are set aside and other
+alphabets read (`foldText`, `memoryTerms`). `pickMemories` gives a message what the person keeps always in mind and the few
+other memories its words meet, and says how many it left; `memoryNote` tells the model to look those up in the language they
+were kept in, since a message in one language meets no memory kept in another. `searchConversations` finds their earlier
+conversations when they mention one. A person's few hundred sentences need no index, and words keep it plain why something
+came up.
 
 Giving the misconceptions vectors too is possible, at about 32 MB and an embedding model on every turn. It isn't built, and
 whether it would beat a small picker model is for the evaluation to say.

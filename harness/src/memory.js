@@ -11,19 +11,30 @@ export const MEMORY_LIMITS = { items: 200, text: 300, always: 8, fits: 4, found:
 
 // Scripts written without spaces between words: pairs of characters stand in for words.
 const UNSPACED = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Thai}]+/gu;
+// Words searchTerms or the pairs already read: those with Latin letters, or in the scripts above.
+const READ = /[\p{Script=Latin}\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Thai}]/u;
 
-/** The words a sentence is matched on: searchTerms' stems, every number (grade 5, 2026), and for Chinese, Japanese, Korean or Thai, each pair of characters. */
+/** Lowercase, with accents and other marks set aside, in any script: what words are matched on, so fracción meets fracciones. */
+export const foldText = (text) => String(text || '').normalize('NFKD').replace(/\p{M}/gu, '').normalize('NFC').toLowerCase();
+
+/**
+ * The words a sentence is matched on, in any language: searchTerms' stems once accents are set aside, every number (grade 5, 2026),
+ * each pair of characters in Chinese, Japanese, Korean or Thai, and words in other alphabets (Cyrillic, Greek, Arabic, Hebrew,
+ * Devanagari…) whole and, from five letters, by their first four, a rough stem that meets most of their endings.
+ */
 export function memoryTerms(text) {
-  const value = String(text || '');
+  const value = foldText(text);
   const pairs = (value.match(UNSPACED) || []).flatMap((run) => (run.length < 2 ? [run] : Array.from({ length: run.length - 1 }, (_, i) => run.slice(i, i + 2))));
-  return [...new Set([...searchTerms(value), ...(value.match(/\d+/g) || []), ...pairs])];
+  const words = (value.match(/\p{L}+/gu) || []).filter((word) => !READ.test(word) && [...word].length >= 3)
+    .flatMap((word) => ([...word].length >= 5 ? [word, [...word].slice(0, 4).join('')] : [word]));
+  return [...new Set([...searchTerms(value), ...(value.match(/\d+/g) || []), ...pairs, ...words])];
 }
 
 const score = (terms, text) => { const own = new Set(memoryTerms(text)); return terms.reduce((sum, term) => sum + (own.has(term) ? 1 : 0), 0); };
 
 /**
  * Which memories reach this message: those the person keeps always in mind (the latest first, up to `always`), then up to `fits` others
- * whose words meet the request's, the best first. The rest wait to be looked up.
+ * whose words meet the request's, the best first. The rest wait to be looked up: `rest` says how many.
  */
 export function pickMemories(items, request, { always = MEMORY_LIMITS.always, fits = MEMORY_LIMITS.fits } = {}) {
   const latest = (a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || ''));
@@ -31,19 +42,23 @@ export function pickMemories(items, request, { always = MEMORY_LIMITS.always, fi
   const first = kept.filter((item) => item.always).slice(0, always);
   const terms = memoryTerms(request);
   const fitting = terms.length ? kept.filter((item) => !item.always).map((item) => ({ item, at: score(terms, item.text) })).filter(({ at }) => at > 0).sort((a, b) => b.at - a.at).slice(0, fits).map(({ item }) => item) : [];
-  return { always: first, fits: fitting };
+  return { always: first, fits: fitting, rest: kept.length - first.length - fitting.length };
 }
 
 const day = (iso) => String(iso || '').slice(0, 10);
 
-/** The words for the model's instructions: what it knows of the person, each with its id and when it was kept, as context. */
-export function memoryNote({ always = [], fits = [] }) {
-  if (!always.length && !fits.length) return '';
+/**
+ * The words for the model's instructions: what it knows of the person, each with its id and when it was kept, as context, and how many
+ * more it can look up. Those may be in another language than the message, whose words then meet none of them.
+ */
+export function memoryNote({ always = [], fits = [], rest = 0 }) {
+  if (!always.length && !fits.length && !rest) return '';
   const line = (item) => `- [${item.id}] ${item.text} (kept ${day(item.updated_at || item.created_at)})`;
   return [
     'What you know about this person from before. They can see and change all of it. It may be out of date, and what they say now comes first: use it where it fits, set it aside where they ask for something else, and never narrow what they can ask for because of it.',
     ...(always.length ? ['Always in mind:', ...always.map(line)] : []),
-    ...(fits.length ? ['Fits this message:', ...fits.map(line)] : [])
+    ...(fits.length ? ['Fits this message:', ...fits.map(line)] : []),
+    ...(rest ? [`${always.length || fits.length ? 'Beyond these, you' : 'You'} keep ${rest} other ${rest === 1 ? 'thing' : 'things'} about them that this message's words didn't meet. Look with recall when what they ask might touch them, using the words of the language they were kept in as well as this message's.`] : [])
   ].join('\n');
 }
 
@@ -55,8 +70,8 @@ export function memoryRefusal(text, { names = [] } = {}) {
   if (!value) return 'Say what to remember.';
   if (value.length > MEMORY_LIMITS.text) return `Keep it to one sentence, under ${MEMORY_LIMITS.text} characters.`;
   if (ADDRESS.test(value)) return 'Ask doesn’t keep email addresses or phone numbers.';
-  const lower = value.toLowerCase();
-  const named = names.map((name) => String(name || '').trim()).filter((name) => name.length >= 2).find((name) => new RegExp(`(^|[^\\p{L}])${name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^\\p{L}]|$)`, 'u').test(lower));
+  const lower = foldText(value);
+  const named = names.map((name) => String(name || '').trim()).filter((name) => name.length >= 2).find((name) => new RegExp(`(^|[^\\p{L}])${foldText(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^\\p{L}]|$)`, 'u').test(lower));
   if (named) return 'That names a learner on your class lists, so Ask won’t keep it.';
   return null;
 }
@@ -82,7 +97,7 @@ export function searchConversations(threads, query, { limit = MEMORY_LIMITS.foun
 
 // Around the first place a found word is, about 240 characters, on word edges.
 function snippetOf(text, hits) {
-  const lower = text.toLowerCase();
+  const lower = foldText(text);
   const at = Math.max(0, Math.min(...hits.map((hit) => { const i = lower.indexOf(hit); return i < 0 ? Infinity : i; }).filter(Number.isFinite), 0));
   const start = Math.max(0, at - 80);
   const piece = text.slice(start, start + 240).replace(/\s+/g, ' ').trim();

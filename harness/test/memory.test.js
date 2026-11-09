@@ -55,3 +55,28 @@ test('earlier conversations are found by their words, the best first, with a pie
   assert.deepEqual(searchConversations(threads, ''), []);
   assert.ok(memoryTerms('grade 5 in 2026').includes('5') && memoryTerms('grade 5 in 2026').includes('2026'), 'numbers count: grade 5 isn’t grade 6');
 });
+
+test('words meet in any language: accents set aside, other alphabets read, their endings roughly met', () => {
+  const kept = [
+    { id: 's1', text: 'Mis alumnos de quinto usan fracciones con pizza', updated_at: '2026-11-01T00:00:00Z' },
+    { id: 'r1', text: 'Дроби в 5 классе объясняю на пицце', updated_at: '2026-11-02T00:00:00Z' },
+    { id: 'e1', text: 'Taught equivalent fractions to grade 5', updated_at: '2026-11-03T00:00:00Z' }
+  ];
+  assert.deepEqual(pickMemories(kept, 'Una práctica de fracción para quinto').fits.map((item) => item.id), ['s1'], 'fracción meets fracciones');
+  assert.deepEqual(pickMemories(kept, 'Сделай задание: дробь для класса').fits.map((item) => item.id), ['r1'], 'дробь meets Дроби, класса meets классе');
+  assert.ok(memoryTerms('Übungen für die Klasse').includes('ubungen'), 'Übungen is read, as ubungen');
+  const threads = [{ id: 'r', title: 'Дроби', updated_at: '2026-11-01', text: 'Дробь и пицца для пятого класса' }];
+  assert.deepEqual(searchConversations(threads, 'дроби пицца').map((item) => item.id), ['r']);
+  const names = ['José Pérez', 'José', 'Pérez'];
+  assert.match(memoryRefusal('Pide más tiempo para Jose', { names }), /names a learner/, 'a name typed without its accent');
+});
+
+test('a message whose words meet none of the memories is told how many it can look up, in the language they were kept in', () => {
+  const english = [{ id: 'e1', text: 'Taught equivalent fractions to grade 5 with a pizza prompt', updated_at: '2026-11-03T00:00:00Z' }];
+  const picked = pickMemories(english, '再做一个分数练习');
+  assert.deepEqual([picked.always.length, picked.fits.length, picked.rest], [0, 0, 1]);
+  const note = memoryNote(picked);
+  assert.match(note, /You keep 1 other thing about them that this message's words didn't meet\. Look with recall/);
+  assert.match(note, /the language they were kept in/);
+  assert.match(memoryNote(pickMemories([...items, ...english], 'grade 5 fractions')), /Beyond these, you keep 2 other things/);
+});

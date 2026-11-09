@@ -162,3 +162,36 @@ test('switched off, Ask neither keeps nor uses nor looks back; it never keeps a 
   assert.doesNotMatch(system(sentNow), /Prefers short replies|What you know about the person/);
   assert.deepEqual(toolNames(sentNow).filter((name) => ['remember', 'forget', 'recall', 'search_conversations'].includes(name)), []);
 });
+
+test('a deleted conversation leaves what Ask kept in it, said to come from a conversation since deleted', async () => {
+  const s = await server((body, at) => (at === 0 ? [call('remember', { text: 'Periods are 45 minutes long' })] : 'Kept.'));
+  const first = await s.ask('Remember that my periods are 45 minutes long.');
+  const id = threadOf(first);
+  assert.match(await s.page('ask/memory'), new RegExp(`from <a href="/console/ask/${id}">`));
+  await s.ok('DELETE', `ask/${id}`, {});
+  const [kept] = (await s.store.get('ask/memory')).items;
+  assert.equal(kept.text, 'Periods are 45 minutes long');
+  assert.equal(kept.source.id, null, 'no link to what is gone');
+  const shown = await s.page('ask/memory');
+  assert.doesNotMatch(shown, new RegExp(`/console/ask/${id}`));
+  assert.match(shown, /, since deleted/);
+});
+
+test('a message whose words meet none of the memories still tells Ask how many it can look up, in their own language', async () => {
+  let sentNow;
+  const s = await server((body) => { sentNow = body; return 'Hecho.'; });
+  await s.ok('POST', 'ask/memory', { text: 'Taught equivalent fractions to grade 5 with a pizza prompt' });
+  await s.ask('Haz una práctica de fracciones');
+  assert.match(system(sentNow), /You keep 1 other thing about them that this message's words didn't meet/);
+  assert.match(JSON.stringify(sentNow.tools.find((tool) => tool.function.name === 'recall')), /the language it was kept in/);
+});
+
+test('clearing every conversation leaves what Ask kept in each, every link gone', async () => {
+  const s = await server((body, at) => (at % 2 === 0 ? [call('remember', { text: at === 0 ? 'Periods are 45 minutes long' : 'Learners share iPads in class' })] : 'Kept.'));
+  await s.ask('Remember that my periods are 45 minutes long.');
+  await s.ask('Remember that learners share iPads in class.');
+  await s.ok('DELETE', 'ask', {});
+  const items = (await s.store.get('ask/memory')).items;
+  assert.equal(items.length, 2);
+  assert.deepEqual(items.map((item) => item.source.id), [null, null]);
+});

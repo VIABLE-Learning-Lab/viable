@@ -23,7 +23,7 @@ export async function keepable(here, text) {
   return String(text).trim();
 }
 
-const where = (item) => (item.source?.kind === 'ask' && item.source.id ? `from <a href="/console/ask/${esc(item.source.id)}">${esc(item.source.title || 'a conversation')}</a>` : 'added here');
+const where = (item) => (item.source?.kind !== 'ask' ? 'added here' : item.source.id ? `from <a href="/console/ask/${esc(item.source.id)}">${esc(item.source.title || 'a conversation')}</a>` : `from ${esc(item.source.title || 'a conversation')}, since deleted`);
 
 function itemHtml(item) {
   const other = item.always ? { always: false, label: 'Only when it fits' } : { always: true, label: 'Keep always in mind' };
