@@ -1,7 +1,7 @@
 /**
  * What Ask remembers of the person (open/harness/src/memory.js), on a page of its own: everything kept, to read, change, move
  * between always in mind and when it fits, or delete, and two switches. A host passes here.memory (the Engine's store, or a
- * platform's database) with the same shape; the page doesn't change. Nothing about a learner is ever kept. No Node built-ins.
+ * platform's database) with the same shape; the page doesn't change. A name on the person's class lists is never kept. No Node built-ins.
  */
 import { MEMORY_LIMITS, memoryRefusal } from '../../../harness/src/memory.js';
 import { esc, FORMS_CSS, say, toggle } from './forms.js';
@@ -48,7 +48,7 @@ async function memoryBody(here) {
   return {
     title: 'What Ask remembers',
     body: `<div class="page-head"><div><p class="crumbs"><a href="/console/ask">Ask</a></p><h1>What Ask remembers</h1>
-<p class="v-lead">What you told Ask about how you work, so you needn’t say it again. Read it, change it or delete it here. What you say in a conversation always comes first, and Ask never keeps anything about a learner.</p></div></div>
+<p class="v-lead">What you told Ask about how you work, so you needn’t say it again. Read it, change it or delete it here. What you say in a conversation always comes first. Ask is told to keep nothing about a learner, and refuses any name on your class lists.</p></div></div>
 ${settings.keep ? '' : '<p class="notice">Memory is off: Ask doesn’t keep or use anything here. What’s here stays until you delete it.</p>'}
 <section class="block" aria-labelledby="mem-how" data-say-box>
 <h2 id="mem-how">How Ask uses it</h2>

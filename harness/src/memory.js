@@ -1,7 +1,8 @@
 /**
  * A person's memory for an assistant such as Ask: what they told it that isn't written anywhere else, kept as short sentences they can
- * read and change. It informs; what they say now comes first. Nothing about a learner is kept. The host keeps the items (a store on the
- * Engine, a database on a platform); this decides which of them reach a message, words them for the model, and refuses what can't be kept.
+ * read and change. It informs; what they say now comes first. Nothing about a learner belongs in it: this refuses a name on their class
+ * lists, and the assistant's instructions forbid the rest. The host keeps the items (a store on the Engine, a database on a platform);
+ * this decides which of them reach a message, words them for the model, and refuses what can't be kept.
  * No Node built-ins.
  */
 import { searchTerms } from './utils/terms.js';
@@ -56,7 +57,7 @@ export function memoryRefusal(text, { names = [] } = {}) {
   if (ADDRESS.test(value)) return 'Ask doesn’t keep email addresses or phone numbers.';
   const lower = value.toLowerCase();
   const named = names.map((name) => String(name || '').trim()).filter((name) => name.length >= 2).find((name) => new RegExp(`(^|[^\\p{L}])${name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^\\p{L}]|$)`, 'u').test(lower));
-  if (named) return 'That names a learner. Ask never keeps anything about a learner.';
+  if (named) return 'That names a learner on your class lists, so Ask won’t keep it.';
   return null;
 }
 
