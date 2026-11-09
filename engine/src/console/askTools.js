@@ -405,11 +405,13 @@ function setLines(after) {
 export const ASK_TOOLS = [
   {
     name: 'list_courses', tier: 'look', says: () => 'Looking at your courses',
-    description: 'The courses here, with their addresses.',
+    description: 'The courses here, with their addresses and activities, and those archived: what the person made before. Read one with read_course.',
     parameters: { type: 'object', properties: {} },
     async run(here) {
       const courses = await here.library.courses();
-      return { done: courses.length ? `You have ${courses.length} course${courses.length === 1 ? '' : 's'}` : 'You have no courses yet', forModel: courses.map(({ code, doc, meta }) => ({ course: code, title: doc.course.title, activities: (doc.course.activities || []).length, closed: meta.status === 'closed' })) };
+      // What they made before and put away is theirs too: when they ask what they made, it counts.
+      const archived = here.library.archived ? await here.library.archived().catch(() => []) : [];
+      return { done: courses.length ? `You have ${courses.length} course${courses.length === 1 ? '' : 's'}${archived.length ? `, and ${archived.length} archived` : ''}` : archived.length ? `You have ${archived.length} archived course${archived.length === 1 ? '' : 's'}` : 'You have no courses yet', forModel: [...courses.map(({ code, doc, meta }) => ({ course: code, title: doc.course.title, activities: (doc.course.activities || []).slice(0, 12).map((activity) => activity.title), ...((doc.course.activities || []).length > 12 ? { more_activities: doc.course.activities.length - 12 } : {}), closed: meta.status === 'closed' })), ...archived.map(({ code, title, archived_at }) => ({ course: code, title, archived: true, archived_on: String(archived_at || '').slice(0, 10) }))] };
     }
   },
   {
@@ -445,7 +447,7 @@ export const ASK_TOOLS = [
       const item = args.replaces
         ? await here.memory.change(clean(args.replaces, 40), { text, ...(typeof args.always === 'boolean' ? { always: args.always } : {}) })
         : await here.memory.keep({ text, always: args.always === true, source: { kind: 'ask', id: here.thread?.id || null, title: here.thread?.title || null } });
-      return { done: args.replaces ? 'Changed what it remembers' : 'Remembered this', detail: `“${item.text}”${item.always ? '\nKept in mind with every message.' : ''}`, link: { href: `/console/ask/memory#${item.id}`, label: 'Change or delete it' }, forModel: { kept: item.id, always: item.always } };
+      return { done: args.replaces ? 'Changed what it remembers' : 'Remembered this', detail: `“${item.text}”${item.always ? '\nKept in mind with every message.' : ''}`, link: { href: `/console/memory#${item.id}`, label: 'Change or delete it' }, forModel: { kept: item.id, always: item.always } };
     }
   },
   {
@@ -456,7 +458,7 @@ export const ASK_TOOLS = [
       const id = clean(args.id, 40);
       const item = (await here.memory.list()).find((entry) => entry.id === id);
       await here.memory.drop(id);
-      return { done: 'Forgot it', detail: item ? `“${item.text}”` : null, link: { href: '/console/ask/memory', label: 'What Ask remembers' }, forModel: { forgot: id } };
+      return { done: 'Forgot it', detail: item ? `“${item.text}”` : null, link: { href: '/console/memory', label: 'What Ask remembers' }, forModel: { forgot: id } };
     }
   },
   {
@@ -471,7 +473,7 @@ export const ASK_TOOLS = [
       return {
         done: found.length ? `Found ${plural(found.length, 'thing')} it remembers` : 'Found nothing it remembers about that',
         detail: found.length ? `${found.slice(0, 4).map((item) => `“${item.text}”`).join('\n')}${found.length > 4 ? `\nAnd ${found.length - 4} more` : ''}` : null,
-        link: { href: '/console/ask/memory', label: 'What Ask remembers' },
+        link: { href: '/console/memory', label: 'What Ask remembers' },
         forModel: found.map((item) => ({ id: item.id, text: item.text, always: item.always, kept: String(item.updated_at || '').slice(0, 10) }))
       };
     }
@@ -483,10 +485,12 @@ export const ASK_TOOLS = [
     parameters: { type: 'object', required: ['words'], properties: { words: string('Words likely to be in it, such as writing prompt grade 5.') } },
     async run(here, args) {
       const found = (await here.threads.search(clean(args.words, 200), { limit: 7 })).filter((item) => item.id !== here.thread?.id).slice(0, 6);
+      if (found.length) return { done: `Found it in ${plural(found.length, 'earlier conversation')}`, links: found.map((item) => ({ href: `/console/ask/${item.id}`, label: `${item.title} · ${String(item.at || '').slice(0, 10)}` })), forModel: found.map((item) => ({ title: item.title, date: String(item.at || '').slice(0, 10), said: item.snippet })) };
+      const latest = (await here.threads.list()).filter((item) => item.id !== here.thread?.id).slice(0, 8);
       return {
-        done: found.length ? `Found it in ${plural(found.length, 'earlier conversation')}` : 'Found nothing in earlier conversations',
-        links: found.map((item) => ({ href: `/console/ask/${item.id}`, label: `${item.title} · ${String(item.at || '').slice(0, 10)}` })),
-        forModel: found.map((item) => ({ title: item.title, date: String(item.at || '').slice(0, 10), said: item.snippet }))
+        done: 'Found nothing with those words',
+        ...(latest.length ? { detail: 'Their latest conversations:', links: latest.map((item) => ({ href: `/console/ask/${item.id}`, label: `${item.title || 'A conversation'} · ${String(item.updated_at || '').slice(0, 10)}` })) } : {}),
+        forModel: { found: [], note: 'Nothing had those words. Try other words or fewer, the name of the course, or the words of the language they spoke then; or ask which of these it was.', latest: latest.map((item) => ({ title: item.title, date: String(item.updated_at || '').slice(0, 10) })) }
       };
     }
   },
@@ -935,6 +939,26 @@ export const ASK_TOOLS = [
     async apply(_here, card, call) { await call('POST', `courses/${card.course}/activities/${card.activity}/release`, { release: 'hidden' }); }
   },
 
+  {
+    name: 'offer_choices', tier: 'look', says: () => 'Asking you to choose',
+    description: 'When you must ask before you can go on, ask one question with its 2 to 4 likely answers as buttons: one press answers. They can also type their own. Stop after it and wait.',
+    parameters: { type: 'object', required: ['question', 'choices'], properties: { question: string('The one question, short.'), choices: { type: 'array', minItems: 2, maxItems: 4, items: string('A likely answer, a few words.') } } },
+    async run(_here, args) {
+      const question = clean(args.question, 160);
+      const choices = [...new Set((Array.isArray(args.choices) ? args.choices : []).map((choice) => clean(choice, 80)).filter(Boolean))].slice(0, 4);
+      if (!question || choices.length < 2) throw refused('Give one question and two to four answers to choose from.');
+      return { done: 'Asked you to choose', cards: [{ kind: 'choices', question, choices }], forModel: { shown: true, note: 'Wait for their answer: say nothing more now.' } };
+    }
+  },
+  {
+    name: 'check_course', tier: 'look', says: () => 'Checking it before learners come',
+    description: 'A checklist card for a course before learners come: its activities and their goals, anything learners would trip on, how they get in, a model for the AI, whether the teacher has tried it, and what is open. Show it when the teacher is about to open or share a course, or asks whether it is ready.',
+    parameters: { type: 'object', required: ['course'], properties: { course: COURSE } },
+    async run(here, args) {
+      const { code } = await courseAt(here.library, args.course);
+      return { done: 'Checked it', cards: [{ kind: 'checklist', course: code }], course: code, forModel: { shown: true, note: 'The card lists each check and where to fix it. Say only the one that matters most, if any.' } };
+    }
+  },
   {
     name: 'show_try', tier: 'look', says: () => 'Getting it ready to try',
     description: 'A card to try the course or an activity as a learner. Offer it once something is set up: nothing a teacher tries counts in Progress.',

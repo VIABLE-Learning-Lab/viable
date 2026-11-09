@@ -8,6 +8,9 @@ import { activityKeys } from '../server/library.js';
 import { kindOfActivity, courseAt } from './course.js';
 import { flowOf, flowWords, PANEL_WORDS, reviewOf } from './flow.js';
 import { esc, qrSvg, reachOf, say } from './forms.js';
+import { icon } from './icons.js';
+
+const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 const HELP_WORDS = { step_up: 'asks first, then hints, then shows an example', ask_first: 'asks what they think first', hint: 'gives hints only, never the answer', explain: 'explains when they are stuck', check_only: 'only checks their work' };
 const KIND_WORDS = { chat: 'A conversation', page: 'A page to read', questions: 'Questions', writing: 'Writing', reading: 'Reading', embed: 'A web page', several: 'Several panels' };
@@ -149,7 +152,48 @@ const notAListCard = (_here, spec, { thread, id }) => (spec.allowed
 
 const toolsCard = (here) => card('Other tools for your teaching', `<ul class="ask-rows">${(here.otherTools || []).map((tool) => `<li><div><a href="${esc(tool.url)}" target="_blank" rel="noopener"><strong>${esc(tool.name)}</strong></a><small>${esc(tool.summary)}</small></div></li>`).join('')}</ul>`);
 
-const DRAW = { course: courseCard, activity: activityCard, try: tryCard, share: shareCard, 'class-list': classListCard, progress: progressCard, open: openCard, change: changeCard, 'not-a-list': notAListCard, tools: toolsCard };
+// Before learners come: what would stop the course working or trip them, each with where to fix it, and what is open. Drawn from what is
+// true now, so pressing a fix and coming back shows it ticked.
+async function checklistCard(here, spec) {
+  const { code, doc } = await courseAt(here.library, spec.course);
+  const list = activitiesOf(doc);
+  const named = (activities) => activities.map((activity) => `“${activity.title}”`).join(', ');
+  const place = (activity) => `/console/courses/${code}/activities/${activity.key}`;
+  const checks = [];
+  const check = (ok, words, href = null, label = 'Fix it') => checks.push({ ok, words, href, label });
+  check(list.length > 0, list.length ? plural(list.length, 'activity', 'activities') : 'No activities yet', `/console/courses/${code}#add-title`, 'Add one');
+  const aimless = list.filter((activity) => !(activity.teaching?.goal || activity.teaching?.standard?.description));
+  if (list.length) check(!aimless.length, aimless.length ? `No goal yet: ${named(aimless)}` : 'Each activity has a goal', aimless[0] && place(aimless[0]), 'Set one');
+  const tripping = list.filter((activity) => reviewOf(doc, activity).some((note) => note.level === 'fix'));
+  if (list.length) check(!tripping.length, tripping.length ? `Learners would trip on something in ${named(tripping)}` : 'Nothing learners would trip on', tripping[0] && place(tripping[0]), 'See what');
+  // How they get in: a course of codes with nobody on its list is shut to everyone, and its link gives no hint of it.
+  if (here.classes?.saving && !here.signIn && doc.course.identify === 'code') {
+    const listed = (await here.classes.people(code)).some((person) => person.listed);
+    check(listed, listed ? 'Learners on the class list have their codes' : 'Only codes on the class list open it, and nobody is on it', `/console/courses/${code}/people`, 'Add your class');
+  }
+  if (here.settings) {
+    const { roles } = await here.settings.resolve();
+    check(Boolean(roles.reply), roles.reply ? 'A model writes the AI’s replies' : 'No model writes the AI’s replies yet', '/console/models', 'Choose one');
+  }
+  if (here.records?.tried && list.length) {
+    const tried = (await Promise.all(list.map((activity) => here.records.tried(code, activity.key, 1).catch(() => [])))).some((turns) => turns.length);
+    check(tried, tried ? 'You have tried it as a learner' : 'You haven’t tried it as a learner yet', `/console/api/courses/${code}/try`, 'Try it');
+  }
+  const open = list.filter(isOpen);
+  const left = checks.filter((item) => !item.ok).length;
+  const row = (item) => `<li class="${item.ok ? 'is-ok' : 'is-todo'}">${icon(item.ok ? 'check' : 'alert', 15)}<span>${esc(item.words)}</span>${!item.ok && item.href ? `<a class="v-btn is-small" href="${esc(item.href)}"${item.href.includes('/try') ? ' target="_blank" rel="noopener"' : ''}>${esc(item.label)}</a>` : ''}</li>`;
+  return card(left ? `Before learners come: ${plural(left, 'thing')} to look at` : 'Ready for learners', `<ul class="ask-checks">${checks.map(row).join('')}</ul>
+<p class="v-note">${open.length ? `Open to learners: ${esc(named(open))}.` : 'Nothing is open to learners yet: each activity opens with its own button, when you choose.'}</p>
+<div class="actions"><a class="v-btn is-small" href="/console/courses/${esc(code)}">See the course</a><a class="v-btn is-small" href="/console/courses/${esc(code)}/share">Share</a></div>`, { id: `checklist-${code}` });
+}
+
+// A question with its likely answers as buttons: one press says it. Once the conversation has gone on, the choices are history.
+const choicesCard = (_here, spec, { past = false } = {}) => card(spec.question, past
+  ? `<p class="v-note">${esc(spec.choices.join(' · '))}</p>`
+  : `<div class="ask-choices">${spec.choices.map((choice) => `<button class="chip" type="button" data-say-this="${esc(choice)}">${esc(choice)}</button>`).join('')}</div>
+<p class="v-note">Or say it your own way below.</p>`);
+
+const DRAW = { choices: choicesCard, checklist: checklistCard, course: courseCard, activity: activityCard, try: tryCard, share: shareCard, 'class-list': classListCard, progress: progressCard, open: openCard, change: changeCard, 'not-a-list': notAListCard, tools: toolsCard };
 
 /** A card as HTML, from what is true now. One whose course has gone says so. */
 export async function drawCard(here, spec, context = {}) {
@@ -159,7 +203,16 @@ export async function drawCard(here, spec, context = {}) {
   }
 }
 
-export const ASK_CARD_CSS = `.ask-card.v-card{display:grid;gap:12px;padding:16px 18px;border:1px solid var(--public-rule);box-shadow:none}
+export const ASK_CARD_CSS = `.ask-choices{display:flex;flex-wrap:wrap;gap:8px}
+.ask-choices .chip{background:transparent;font:inherit;font-size:.875rem;cursor:pointer}
+.ask-choices .chip:hover{background:var(--field-mist);color:var(--public-ink)}
+.ask-checks{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.ask-checks li{display:flex;align-items:center;gap:10px;min-height:30px}
+.ask-checks li span{flex:1;min-width:0}
+.ask-checks .is-ok .v-icon{color:var(--pass-green)}
+.ask-checks .is-todo .v-icon{color:var(--query-ochre)}
+.ask-checks .is-todo span{color:var(--public-ink)}
+.ask-card.v-card{display:grid;gap:12px;padding:16px 18px;border:1px solid var(--public-rule);box-shadow:none}
 .ask-card h3{font-size:1rem;font-weight:600;letter-spacing:0;color:var(--public-ink);overflow-wrap:anywhere}
 .ask-card.is-waiting.v-card{border-color:var(--ink-blue)}
 .ask-card.is-settled.v-card{background:transparent}

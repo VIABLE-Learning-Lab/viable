@@ -75,6 +75,18 @@ ${saving && !cards.length ? await startParts(tools) : ''}
 ${archived.length ? archivedPart(archived, { forGood: !library.archives, just: tools.url?.searchParams.get('archived') }) : ''}`;
 }
 
+// An activity taken off a course waits at the foot of its activities: learners can't open it, and it comes back as it was, last in the
+// course, or is deleted. Where a host keeps what learners did, deleting takes it out of the course; here it takes their work too.
+function archivedActivitiesPart(list, { code, forGood, just }) {
+  const sure = (entry) => (forGood ? `This deletes “${entry.title}” and what learners did in it from this server. It can’t be undone.` : `Delete “${entry.title}”? It leaves the course, and you can’t bring it back.`);
+  const row = (entry) => `<li id="archived-activity-${esc(entry.ref)}"${entry.ref === just ? ' class="is-just"' : ''} data-say-box><div><strong>${esc(entry.title)}</strong><small>${entry.ref === just ? 'Archived just now' : `Archived <time data-local datetime="${esc(entry.archived_at)}">${esc(String(entry.archived_at).slice(0, 10))}</time>`}</small></div>
+<div class="actions"><button class="v-btn is-small" type="button" data-api="POST courses/${esc(code)}/archived-activities/${esc(entry.ref)}/restore" data-busy="Restoring…">Restore</button><button class="v-btn is-small danger" type="button" data-api="DELETE courses/${esc(code)}/archived-activities/${esc(entry.ref)}" data-confirm="${esc(sure(entry))}" data-yes="Delete">Delete</button></div><p class="say" data-say role="status"></p></li>`;
+  return `<details class="archived" id="archived-activities"${just != null ? ' open' : ''}><summary>Archived <small>${list.length}</small></summary>
+<p class="v-note">Learners can’t open these. Restore one to have it back as it was, last in the course, or delete it.</p>
+<ul class="archived-list">${list.map(row).join('')}</ul>
+</details>`;
+}
+
 // What waits under Archived: learners can't open it, and it can come back as it was or be deleted. Where a host keeps what learners did
 // (library.archives), deleting takes it out of the teacher's courses; here it takes it, and their work, off the server.
 function archivedPart(list, { forGood, just }) {
@@ -129,16 +141,8 @@ ${say()}
 <p class="v-note start-ask">Rather say it in your own words? <a href="/console/ask">Tell Ask what you’re teaching</a>, and it sets up the course.</p>`;
 }
 
-const LIST_CSS = `.page-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px 32px}
-.page-head>div{flex:1 1 320px;min-width:0}
-.course-list{display:grid;gap:10px;margin:28px 0 0;padding:0;list-style:none}
-.course-card{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;border:1px solid var(--public-rule);border-radius:var(--radius);background:var(--surface);color:var(--public-ink);text-decoration:none;transition:border-color .16s ease}
-.course-card:hover{border-color:var(--public-rule-strong)}
-.course-card>span:first-child{display:grid;gap:2px;min-width:0}
-.course-card strong{font-size:1.0625rem;font-weight:600;overflow-wrap:anywhere}
-.course-card small{color:var(--muted);font-size:.875rem}
-.first-door{margin-top:14px}
-.archived{margin-top:36px;border-top:1px solid var(--public-rule);padding-top:14px}
+// Archived, on Courses and at the foot of a course's activities: the same list, restored or deleted from it.
+const ARCHIVED_CSS = `.archived{margin-top:36px;border-top:1px solid var(--public-rule);padding-top:14px}
 .archived summary{width:fit-content;color:var(--public-text);font-size:.9375rem;font-weight:600;cursor:pointer}
 .archived summary small{margin-left:4px;color:var(--muted);font-weight:400}
 .archived>.v-note{margin:10px 0 0}
@@ -149,7 +153,17 @@ const LIST_CSS = `.page-head{display:flex;flex-wrap:wrap;align-items:flex-start;
 .archived-list small{color:var(--muted);font-size:.8125rem}
 .archived-list .actions{display:flex;flex-wrap:wrap;gap:8px}
 .archived-list li.is-just strong{color:var(--public-ink)}
-.archived-list .danger{border-color:var(--pencil-red);color:var(--pencil-red)}
+.archived-list .danger{border-color:var(--pencil-red);color:var(--pencil-red)}`;
+const LIST_CSS = `.page-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px 32px}
+.page-head>div{flex:1 1 320px;min-width:0}
+.course-list{display:grid;gap:10px;margin:28px 0 0;padding:0;list-style:none}
+.course-card{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;border:1px solid var(--public-rule);border-radius:var(--radius);background:var(--surface);color:var(--public-ink);text-decoration:none;transition:border-color .16s ease}
+.course-card:hover{border-color:var(--public-rule-strong)}
+.course-card>span:first-child{display:grid;gap:2px;min-width:0}
+.course-card strong{font-size:1.0625rem;font-weight:600;overflow-wrap:anywhere}
+.course-card small{color:var(--muted);font-size:.875rem}
+.first-door{margin-top:14px}
+${ARCHIVED_CSS}
 .start-part{display:grid;gap:12px;max-width:720px}
 .start-part>h2+*{margin-top:0}
 .new-blank{display:flex;flex-wrap:wrap;gap:10px}
@@ -217,7 +231,7 @@ ${say()}
 </li>`;
 }
 
-async function activitiesBody({ library, classes, origin, addresses, signIn, tabs, simple }, match) {
+async function activitiesBody({ library, classes, origin, addresses, signIn, tabs, simple, url }, match) {
   const entry = await courseAt(library, match[1]);
   const { doc, meta, code } = entry;
   const course = doc.course;
@@ -229,7 +243,7 @@ async function activitiesBody({ library, classes, origin, addresses, signIn, tab
   const inUnit = (ref) => activities.filter((activity) => (activity.unit_ref || null) === ref);
   // A course of codes with nobody listed is shut to everyone, and the link gives no hint of it. Only then does it matter who is on the list.
   const needsList = classes.saving && !signIn && course.identify === 'code';
-  const [sections, releases, people] = await Promise.all([classes.sections(code), classes.releases(code), needsList ? classes.people(code) : []]);
+  const [sections, releases, people, archived] = await Promise.all([classes.sections(code), classes.releases(code), needsList ? classes.people(code) : [], library.archivedActivities ? library.archivedActivities(entry.id) : []]);
   const shut = needsList && !people.some((person) => person.listed);
   const rows = (list) => list.map((activity) => activityRow(activity, code, meta.version, activities.indexOf(activity), activities.length, locked, sections, releases[activity.key] || {}, doc)).join('');
   const groups = [...units.map((unit) => ({ title: unit.title, list: inUnit(unit.ref) })), { title: units.length ? 'Not in a unit' : null, list: activities.filter((activity) => !units.some((unit) => unit.ref === activity.unit_ref)) }].filter((group) => group.title && units.length ? group.list.length || group.title !== 'Not in a unit' : group.list.length);
@@ -259,7 +273,8 @@ ${oneOf('kind', 'What learners do first', 'page', Object.entries(KINDS).map(([va
 ${text('titles', 'Units', units.map((unit) => unit.title).join('\n'), { rows: Math.max(3, units.length + 1) })}
 <div class="actions"><button class="v-btn" type="submit">Save units</button></div>${say()}
 </form>
-</section>`}`,
+</section>`}
+${archived.length ? archivedActivitiesPart(archived, { code, forGood: !library.archives, just: url?.searchParams.get('archived-activity') }) : ''}`,
     css: ACTIVITIES_CSS
   };
 }
@@ -282,7 +297,8 @@ const ACTIVITIES_CSS = `.unit{margin:26px 0 8px;font-size:1.0625rem;font-weight:
 .v-pill.is-open{border-color:transparent;background:var(--field-sage);color:var(--public-ink)}
 .add,.units{display:grid;gap:14px}
 .units{max-width:520px}
-@media (max-width:720px){.row{grid-template-columns:minmax(0,1fr) auto}.row-do{grid-column:1/-1}.by-section li{grid-template-columns:minmax(0,1fr)}}`;
+@media (max-width:720px){.row{grid-template-columns:minmax(0,1fr) auto}.row-do{grid-column:1/-1}.by-section li{grid-template-columns:minmax(0,1fr)}}
+${ARCHIVED_CSS}`;
 
 // --- A course's settings ------------------------------------------------------------------------------
 
@@ -293,7 +309,7 @@ function looksPart(course, code) {
   const color = course.appearance?.color || '';
   return `<fieldset class="looks"><legend class="v-label">How it looks to learners</legend>
 <div class="look-list">${Object.entries(THEMES).map(([id, theme]) => `<label class="look"><input class="sr" type="radio" name="appearance.theme" value="${esc(id)}"${id === held ? ' checked' : ''}><span class="look-sample look-${esc(id)}"><b>${esc(theme.name)}</b><span class="look-line"></span><span class="look-line short"></span><span class="look-go"></span></span></label>`).join('')}</div>
-<div class="swatches" role="radiogroup" aria-label="The course’s color"><label class="swatch"><input class="sr" type="radio" name="appearance.color" value=""${color ? '' : ' checked'}><span class="swatch-own">The look’s own</span></label>${ACCENTS.map(([hex, name], index) => `<label class="swatch" title="${esc(name)}"><input class="sr" type="radio" name="appearance.color" value="${esc(hex)}"${hex === color ? ' checked' : ''}><span class="swatch-dot swatch-${index}" aria-hidden="true"></span><span class="sr">${esc(name)}</span></label>`).join('')}</div>
+<div class="swatches" role="radiogroup" aria-label="The course’s color"><label class="swatch"><input class="sr" type="radio" name="appearance.color" value=""${color ? '' : ' checked'}><span class="swatch-own">The look’s own</span></label>${ACCENTS.map(([hex, name], index) => `<label class="swatch" data-tip="${esc(name)}"><input class="sr" type="radio" name="appearance.color" value="${esc(hex)}"${hex === color ? ' checked' : ''}><span class="swatch-dot swatch-${index}" aria-hidden="true"></span><span class="sr">${esc(name)}</span></label>`).join('')}</div>
 <small class="v-note">Learners’ pages follow this, on the course’s home and in every activity. <a href="/console/api/courses/${esc(code)}/try" target="_blank" rel="noopener">See it as a learner</a> once it’s saved.</small>
 </fieldset>`;
 }
@@ -439,6 +455,16 @@ export const coursePages = [
       ['POST', /^archived\/([\w-]+)\/restore$/, async ({ library }, match) => {
         await library.unarchive((await archivedAt(library, match[1])).id);
         return go('/console/courses');
+      }],
+      ['POST', /^courses\/([\w-]+)\/archived-activities\/([\w-]+)\/restore$/, async ({ library }, match) => {
+        await library.restoreActivity((await courseAt(library, match[1])).id, match[2]);
+        return go(`/console/courses/${match[1]}`);
+      }],
+      ['DELETE', /^courses\/([\w-]+)\/archived-activities\/([\w-]+)$/, async ({ library, classes }, match) => {
+        const { key } = await library.deleteActivity((await courseAt(library, match[1])).id, match[2]);
+        // Where the host keeps what learners did, it has nothing here to forget.
+        if (key) await classes.forgetActivity(match[1], key);
+        return go(`/console/courses/${match[1]}?archived-activity=#archived-activities`);
       }],
       ['DELETE', /^archived\/([\w-]+)$/, async ({ library, classes }, match) => {
         const entry = await archivedAt(library, match[1]);

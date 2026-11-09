@@ -83,6 +83,7 @@ export function storeRecords(store) {
   };
 }
 
+const TEMPORARY_MS = 86_400_000;
 /** Where Ask keeps its conversations. A thread holds no learner's name: a class list never goes in one. */
 export function storeThreads(store) {
   if (!store) return null;
@@ -93,14 +94,15 @@ export function storeThreads(store) {
     remove: (id) => store.delete(key(id)),
     keepCheckpoint: (body) => store.put(`ask/checkpoints/${body.id}`, body),
     checkpoint: (id) => store.get(`ask/checkpoints/${id}`),
-    /** The latest first: { id, title, updated_at }. */
+    /** The latest first: { id, title, updated_at }. A conversation that isn't remembered is never here, and goes a day after it was last used. */
     async list() {
-      const held = await Promise.all((await store.list('ask/threads/')).slice(-40).map((name) => store.get(name)));
-      return held.filter(Boolean).map(({ id, title, updated_at }) => ({ id, title, updated_at })).sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
+      const held = (await Promise.all((await store.list('ask/threads/')).slice(-60).map((name) => store.get(name)))).filter(Boolean);
+      for (const thread of held) if (thread.temporary && Date.now() - Date.parse(thread.updated_at) > TEMPORARY_MS) await store.delete(key(thread.id));
+      return held.filter((thread) => !thread.temporary).slice(-40).map(({ id, title, updated_at }) => ({ id, title, updated_at })).sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
     },
     /** Earlier conversations whose words meet the query, the best first (memory.js searchConversations), from the latest 200. */
     async search(query, { limit } = {}) {
-      const held = (await Promise.all((await store.list('ask/threads/')).map((name) => store.get(name)))).filter(Boolean)
+      const held = (await Promise.all((await store.list('ask/threads/')).map((name) => store.get(name)))).filter((thread) => thread && !thread.temporary)
         .sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at))).slice(0, 200);
       return searchConversations(held.map((thread) => ({ id: thread.id, title: thread.title, updated_at: thread.updated_at, text: threadText(thread) })), query, { limit });
     }

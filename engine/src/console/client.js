@@ -30,6 +30,48 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
   const ICON = ${JSON.stringify({ check: icon('check', 16), chevron: icon('chevron', 16) })};
   let line = Promise.resolve();
   const inLine = (work) => { line = line.then(work, work); return line; };
+  // Tooltips are the console's own, never the browser's: data-tip on a control, shown after a beat on hover and at once on keyboard
+  // focus. Its words are already the control's name for a screen reader, so the tip itself is hidden from one.
+  const tip = Object.assign(document.createElement('div'), { className: 'v-tip', hidden: true });
+  tip.setAttribute('aria-hidden', 'true');
+  document.body.append(tip);
+  let tipOn = null;
+  let tipWait = 0;
+  const hideTip = () => { clearTimeout(tipWait); tipOn = null; tip.classList.remove('is-on'); tip.hidden = true; };
+  const showTip = (target, now) => {
+    clearTimeout(tipWait);
+    tipOn = target;
+    const show = () => {
+      if (tipOn !== target || !target.isConnected || !target.dataset.tip) return;
+      tip.textContent = target.dataset.tip;
+      tip.hidden = false;
+      const at = target.getBoundingClientRect();
+      const size = tip.getBoundingClientRect();
+      const top = at.top - size.height - 8 >= 8 ? at.top - size.height - 8 : at.bottom + 8;
+      const left = Math.max(8, Math.min(at.left + at.width / 2 - size.width / 2, innerWidth - size.width - 8));
+      tip.style.transform = 'translate(' + Math.round(left) + 'px,' + Math.round(top) + 'px)';
+      tip.classList.add('is-on');
+    };
+    if (now) show(); else tipWait = setTimeout(show, 450);
+  };
+  document.addEventListener('pointerover', (event) => {
+    if (event.pointerType === 'touch') return;
+    const target = event.target.closest && event.target.closest('[data-tip]');
+    if (target && target !== tipOn) showTip(target, tip.classList.contains('is-on'));
+    else if (!target && tipOn) hideTip();
+  });
+  document.addEventListener('focusin', (event) => { const target = event.target.closest && event.target.closest('[data-tip]'); if (target && target.matches(':focus-visible')) showTip(target, true); });
+  // A menu that is a details element closes when a click lands elsewhere, or on Escape, back on its button.
+  document.addEventListener('click', (event) => { for (const menu of document.querySelectorAll('details[data-close-outside][open]')) if (!menu.contains(event.target)) menu.open = false; });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    const menu = event.target.closest && event.target.closest('details[data-close-outside][open]');
+    if (menu) { menu.open = false; menu.querySelector('summary').focus(); }
+  });
+  document.addEventListener('focusout', hideTip);
+  document.addEventListener('pointerdown', hideTip);
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && tipOn) hideTip(); });
+  addEventListener('scroll', hideTip, true);
   // A click answers at once: a line across the top until the next page or the answer comes.
   let working = 0;
   const busy = (by) => { working = Math.max(0, working + by); document.documentElement.classList.toggle('is-working', working > 0); };
@@ -47,7 +89,16 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     for (const details of document.querySelectorAll('details[data-load][open]')) loadOpened(details);
     const parts = [...document.querySelectorAll('[data-fill]')];
     for (const path of new Set(parts.map((part) => part.dataset.fill))) {
-      call('GET ' + path).then((data) => { for (const part of parts) if (part.dataset.fill === path) { if (part.dataset.fillAs === 'html') part.innerHTML = data.html || ''; else if (data.words) part.textContent = data.words; } }).catch(() => {});
+      call('GET ' + path).then((data) => {
+        for (const part of parts) {
+          if (part.dataset.fill !== path) continue;
+          // A meter's width, a mark that something needs a look, or words.
+          if (part.dataset.fillAs === 'html') part.innerHTML = data.html || '';
+          else if (part.dataset.fillAs === 'meter') { part.style.width = data.share == null ? '0' : Math.round(data.share * 100) + '%'; part.parentElement.hidden = data.share == null; part.parentElement.classList.toggle('is-low', Boolean(data.low)); }
+          else if (part.dataset.fillAs === 'low') part.hidden = !data.low;
+          else if (data.words) part.textContent = data.words;
+        }
+      }).catch(() => {});
     }
   };
   const call = async (spec, body, file) => {

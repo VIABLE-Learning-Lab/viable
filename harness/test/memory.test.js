@@ -80,3 +80,13 @@ test('a message whose words meet none of the memories is told how many it can lo
   assert.match(note, /the language they were kept in/);
   assert.match(memoryNote(pickMemories([...items, ...english], 'grade 5 fractions')), /Beyond these, you keep 2 other things/);
 });
+
+test('a search whose words are not all there still finds what has some, the best first', () => {
+  const threads = [
+    { id: 'a', title: 'Test course', updated_at: '2026-11-01', text: 'A fractions activity with a pizza.' },
+    { id: 'b', title: 'Lab safety', updated_at: '2026-11-02', text: 'Goggles and gloves.' }
+  ];
+  assert.deepEqual(searchConversations(threads, 'activity work').map((item) => item.id), ['a'], 'activity is there, work isn’t');
+  assert.deepEqual(searchConversations(threads, 'fractions pizza').map((item) => item.id), ['a']);
+  assert.deepEqual(searchConversations(threads, 'volcano eruption'), []);
+});

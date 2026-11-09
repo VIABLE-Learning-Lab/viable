@@ -47,7 +47,7 @@ async function memoryBody(here) {
   const list = (title, id, note, entries) => `<section class="block mem-part" aria-labelledby="${id}"><h2 id="${id}">${title} <small>${entries.length}</small></h2><p class="v-note">${note}</p>${entries.length ? `<ul class="mem-list">${entries.map(itemHtml).join('')}</ul>` : ''}</section>`;
   return {
     title: 'What Ask remembers',
-    body: `<div class="page-head"><div><p class="crumbs"><a href="/console/ask">Ask</a></p><h1>What Ask remembers</h1>
+    body: `<div class="page-head"><div><h1>What Ask remembers</h1>
 <p class="v-lead">What you told Ask about how you work, so you needn’t say it again. Read it, change it or delete it here. What you say in a conversation always comes first. Ask is told to keep nothing about a learner, and refuses any name on your class lists.</p></div></div>
 ${settings.keep ? '' : '<p class="notice">Memory is off: Ask doesn’t keep or use anything here. What’s here stays until you delete it.</p>'}
 <section class="block" aria-labelledby="mem-how" data-say-box>
@@ -96,8 +96,9 @@ const MEMORY_CSS = `.mem-part h2 small{margin-left:6px;color:var(--muted);font-w
 const clean = (value) => String(value ?? '').trim();
 
 export const memoryPages = [{
-  id: 'ask-memory', title: 'What Ask remembers', section: 'ask', nav: false,
-  match: /^ask\/memory$/,
+  // The person's, not Ask's: under their account. The address it had before still leads here.
+  id: 'memory', title: 'What Ask remembers', section: 'memory', nav: false,
+  match: /^(ask\/)?memory$/,
   render: memoryBody,
   api: [
     ['PATCH', /^ask\/memory\/settings$/, async (here, _match, body) => {

@@ -78,18 +78,19 @@ export function memoryRefusal(text, { names = [] } = {}) {
 
 /**
  * Earlier conversations whose words meet the query, the best first: [{ id, title, at, snippet }]. threads: [{ id, title, updated_at, text }],
- * text being what the person and the assistant said. Every word of a short query must be there; a long one ranks by how many are.
+ * text being what the person and the assistant said. Every word of a short query must be there, and half of a long one's; when nothing
+ * has that many, those with any come back, the best first, since a person rarely remembers the words they used.
  */
 export function searchConversations(threads, query, { limit = MEMORY_LIMITS.found } = {}) {
   const terms = memoryTerms(query);
   if (!terms.length) return [];
   const need = terms.length <= 2 ? terms.length : Math.ceil(terms.length / 2);
-  return threads.map((thread) => {
-    const words = memoryTerms(`${thread.title || ''} ${thread.text || ''}`);
-    const own = new Set(words);
-    const hits = terms.filter((term) => own.has(term));
-    return { thread, hits };
-  }).filter(({ hits }) => hits.length >= need)
+  const scored = threads.map((thread) => {
+    const own = new Set(memoryTerms(`${thread.title || ''} ${thread.text || ''}`));
+    return { thread, hits: terms.filter((term) => own.has(term)) };
+  });
+  const enough = scored.filter(({ hits }) => hits.length >= need);
+  return (enough.length ? enough : scored.filter(({ hits }) => hits.length))
     .sort((a, b) => b.hits.length - a.hits.length || String(b.thread.updated_at).localeCompare(String(a.thread.updated_at)))
     .slice(0, limit)
     .map(({ thread, hits }) => ({ id: thread.id, title: thread.title || 'A conversation', at: thread.updated_at, snippet: snippetOf(thread.text || '', hits) }));

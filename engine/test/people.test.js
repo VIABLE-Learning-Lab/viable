@@ -625,7 +625,7 @@ test('an activity that has closed can be opened again for one section', async ()
   assert.equal((await s.post(`/course/${code}/practice/open`, { visitor: inTwo })).status, 200);
 });
 
-test('an activity removed takes its section openings, so a new one with its title doesn’t inherit them', async () => {
+test('an archived activity keeps its address and its section openings; a new one with its title gets another, and deleting takes them', async () => {
   const s = await server();
   const code = await course(s);
   await s.ok('POST', `courses/${code}/sections`, { name: 'Period 2' });
@@ -633,5 +633,12 @@ test('an activity removed takes its section openings, so a new one with its titl
   await s.ok('POST', `courses/${code}/activities`, { title: 'Quiz', kind: 'chat', version: await version(s, code) });
   await s.ok('POST', `courses/${code}/activities/quiz/for-section`, { section: two.id, release: 'open' });
   await s.ok('DELETE', `courses/${code}/activities/quiz`, {});
-  assert.deepEqual(await s.store.list(`courses/${code}/release/`), []);
+  const kept = await s.store.list(`courses/${code}/release/`);
+  assert.equal(kept.length, 1, 'kept for when it comes back');
+  await s.ok('POST', `courses/${code}/activities`, { title: 'Quiz', kind: 'chat', version: await version(s, code) });
+  const page = await (await s.page(`/console/courses/${code}`)).text();
+  assert.match(page, /href="\/console\/courses\/[\w-]+\/activities\/quiz-2"/, 'the new one answers at an address of its own');
+  assert.deepEqual(await s.store.list(`courses/${code}/release/`), kept, 'and inherits nothing');
+  await s.ok('DELETE', `courses/${code}/archived-activities/quiz`, {});
+  assert.deepEqual(await s.store.list(`courses/${code}/release/`), [], 'deleting it takes its openings');
 });

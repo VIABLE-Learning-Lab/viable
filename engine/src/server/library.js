@@ -23,7 +23,8 @@ const keyOf = {
   item: (id) => `library/items/${id}/`,
   meta: (id) => `library/items/${id}/meta`,
   doc: (id, version) => `library/items/${id}/v${version}`,
-  file: (id, path) => `library/items/${id}/files/${encodeURIComponent(path)}`
+  file: (id, path) => `library/items/${id}/files/${encodeURIComponent(path)}`,
+  archived: (id) => `library/items/${id}/archived-activities`
 };
 const toBase64 = (bytes) => { let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte); return btoa(binary); };
 const fromBase64 = (text) => Uint8Array.from(atob(text), (char) => char.charCodeAt(0));
@@ -351,6 +352,13 @@ export function courseLibrary({ store = null, given = [], readPath = null, fetch
         doc.course.code = courseCodes(served.map((entry) => entry.doc)).get(found.doc);
       }
       const answer = await work(doc);
+      // An archived activity keeps its address, and with it what learners did there: one made or renamed since takes another.
+      const reserved = new Set(((await store.get(keyOf.archived(id))) || []).map((entry) => entry.activity.key));
+      if (reserved.size && doc.course?.activities?.length) {
+        const keys = activityKeys(doc.course.activities);
+        const taken = new Set([...keys, ...reserved]);
+        doc.course.activities.forEach((activity, index) => { if (reserved.has(keys[index])) { activity.key = firstFree(keys[index], taken); taken.add(activity.key); } });
+      }
       await roomFor(doc, id);
       withQuestionIds(doc);
       checked(doc, { trial });
@@ -390,6 +398,45 @@ export function courseLibrary({ store = null, given = [], readPath = null, fetch
       await store.put(keyOf.meta(id), meta);
       await changed();
     }),
+    /** An activity taken off a course, kept as it was under Archived on it until it is restored or deleted: [{ ref, title, archived_at }]. */
+    async keepActivity(id, activity) {
+      needStore();
+      await inLine(async () => {
+        const kept = (await store.get(keyOf.archived(id))) || [];
+        await store.put(keyOf.archived(id), [{ activity, archived_at: new Date(now()).toISOString() }, ...kept.filter((entry) => entry.activity.key !== activity.key)].slice(0, 100));
+      });
+    },
+    archivedActivities: async (id) => ((store ? await store.get(keyOf.archived(id)) : null) || []).map(({ activity, archived_at }) => ({ ref: activity.key, title: activity.title, archived_at })),
+    /** Back on its course as it was, last in it, and in its unit if that is still there. */
+    async restoreActivity(id, ref) {
+      needStore();
+      const entry = ((await store.get(keyOf.archived(id))) || []).find((item) => item.activity.key === ref);
+      if (!entry) throw refused('That activity isn’t under Archived.', 404, 'activity_not_found');
+      // Out of Archived first, so its address is its own again as it goes back; back under Archived if it can't.
+      const without = async () => store.put(keyOf.archived(id), ((await store.get(keyOf.archived(id))) || []).filter((item) => item.activity.key !== ref));
+      await inLine(without);
+      try {
+        await this.change(id, null, (doc) => {
+          const list = (doc.course.activities ||= []);
+          const activity = structuredClone(entry.activity);
+          if (activity.unit_ref != null && !(doc.course.units || []).some((unit) => unit.ref === activity.unit_ref)) activity.unit_ref = null;
+          list.push(activity);
+        }, `Restored “${entry.activity.title}”`);
+      } catch (error) {
+        await inLine(async () => store.put(keyOf.archived(id), [entry, ...((await store.get(keyOf.archived(id))) || [])]));
+        throw error;
+      }
+    },
+    /** Out of Archived for good. What learners did in it goes with it here: the console forgets it by its key. */
+    async deleteActivity(id, ref) {
+      needStore();
+      return inLine(async () => {
+        const kept = (await store.get(keyOf.archived(id))) || [];
+        if (!kept.some((item) => item.activity.key === ref)) throw refused('That activity isn’t under Archived.', 404, 'activity_not_found');
+        await store.put(keyOf.archived(id), kept.filter((item) => item.activity.key !== ref));
+        return { key: ref };
+      });
+    },
     /** Off this server, with its versions and files. Learners' work goes separately. */
     remove: (id) => inLine(async () => {
       needStore();

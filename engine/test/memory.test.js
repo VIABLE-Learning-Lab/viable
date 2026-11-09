@@ -49,7 +49,7 @@ test('the page shows everything Ask remembers, to add, change, move, delete or s
   assert.match(shown, /Remember what I tell it/);
   assert.match(shown, /Look back through my earlier conversations/);
   assert.match(shown, /Nothing yet/);
-  assert.match(await s.page('ask'), /href="\/console\/ask\/memory"[^>]*>[\s\S]*?What Ask remembers<\/a><span class="v-note">Nothing yet<\/span>/, 'Ask’s home says where it is');
+  assert.match(await s.page('ask'), /href="\/console\/memory"[^>]*>[\s\S]*?What Ask remembers<\/a><span class="v-note">Nothing yet<\/span>/, 'Ask’s home says where it is');
 
   await s.ok('POST', 'ask/memory', { text: 'My periods are 45 minutes, and learners share iPads', always: true });
   await s.ok('POST', 'ask/memory', { text: 'Working toward a unit on persuasive writing after the break', always: false });
@@ -92,7 +92,7 @@ test('Ask keeps what the person says in front of them, and a later conversation 
     return 'Here is a plan.';
   });
   const first = await s.ask('Keep your replies short from now on, please.');
-  assert.match(steps(first), /Remembered this[\s\S]*“Prefers short replies”[\s\S]*Kept in mind with every message[\s\S]*href="\/console\/ask\/memory#mem_[a-f0-9]+"/);
+  assert.match(steps(first), /Remembered this[\s\S]*“Prefers short replies”[\s\S]*Kept in mind with every message[\s\S]*href="\/console\/memory#mem_[a-f0-9]+"/);
   const [kept] = (await s.store.get('ask/memory')).items;
   assert.equal(kept.source.kind, 'ask');
   assert.equal(kept.source.id, threadOf(first), 'it says where it was kept');

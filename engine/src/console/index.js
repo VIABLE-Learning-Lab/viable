@@ -66,9 +66,9 @@ export const TEACHING_TABS = TEACHING_PAGES.filter((page) => page.courseTab);
 
 /**
  * The console's pages and routes, for whichever host has signed someone in. tools: what they reach a course through (library,
- * classes, records, threads, askModel, tryLink...). pages: which it shows. notice: HTML above every page, the host's to say. origin, if given: where learners reach pages, when that isn't here. home: where its name leads. who: who is signed in.
+ * classes, records, threads, askModel, tryLink...). pages: which it shows. notice: HTML above every page, the host's to say. origin, if given: where learners reach pages, when that isn't here. home: where its name leads. who: who is signed in, person: their name, credit: where the account menu reads their AI credit ({ fill, href }).
  */
-export function consoleApp({ tools, pages = PAGES, readBody, readJson, brand, signOut, links, notice, origin = null, home = null, who = null }) {
+export function consoleApp({ tools, pages = PAGES, readBody, readJson, brand, signOut, links, notice, origin = null, home = null, who = null, person = null, credit = null }) {
   const place = (url) => origin || url.origin;
   async function api(path, request, url) {
     if (!['GET', 'HEAD'].includes(request.method) && !fromHere(request, url)) return refusal(403, 'origin_not_allowed', 'Open the console to change this.');
@@ -96,14 +96,14 @@ export function consoleApp({ tools, pages = PAGES, readBody, readJson, brand, si
   async function renderPage(rest, request, url) {
     const page = pages.find((item) => (item.match ? item.match.test(rest) : rest === item.id));
     const nonce = nonceOf();
-    const missing = (message) => new Response(consolePage({ title: 'Page not found', pages, current: null, brand, signOut, links, home, who, body: missingBody(message) }, nonce), { status: 404, headers: consoleHeaders(nonce) });
+    const missing = (message) => new Response(consolePage({ title: 'Page not found', pages, current: null, brand, signOut, links, home, who, person, credit, body: missingBody(message) }, nonce), { status: 404, headers: consoleHeaders(nonce) });
     if (!page) return missing();
     let made;
     try { made = await page.render({ ...tools, url, origin: place(url), request }, page.match?.exec(rest)); } catch (error) {
       if (error?.status !== 404) throw error;
       return missing(error.message);
     }
-    return new Response(consolePage({ title: made.title || page.title, pages, current: page.section || page.id, brand, signOut, links, notice, home, who, ...made }, nonce), { status: 200, headers: consoleHeaders(nonce) });
+    return new Response(consolePage({ title: made.title || page.title, pages, current: page.section || page.id, brand, signOut, links, notice, home, who, person, credit, ...made }, nonce), { status: 200, headers: consoleHeaders(nonce) });
   }
   return { api, renderPage };
 }

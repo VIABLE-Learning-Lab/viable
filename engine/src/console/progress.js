@@ -61,7 +61,7 @@ ${subNav(code, 'grid')}
 <h2 id="grid-title" class="sr">Who has done what</h2>
 ${people.length && activities.length ? `${sectionChips(sections, filter, `/console/courses/${code}/progress`)}
 ${shown.length ? `<div class="grid-wrap" tabindex="0" role="region" aria-labelledby="grid-title"><table class="grid">
-<thead><tr><th scope="col" class="who">${plural(shown.length, 'learner')}</th>${activities.map((activity, i) => `<th scope="col" class="col"><span class="long" title="${esc(activity.title)}">${esc(activity.title)}</span><span class="short" aria-hidden="true">${i + 1}</span><small>${doneOf(activity)}/${shown.length}<span class="word"> done</span></small></th>`).join('')}</tr></thead>
+<thead><tr><th scope="col" class="who">${plural(shown.length, 'learner')}</th>${activities.map((activity, i) => `<th scope="col" class="col"><span class="long" data-tip="${esc(activity.title)}">${esc(activity.title)}</span><span class="short" aria-hidden="true">${i + 1}</span><small>${doneOf(activity)}/${shown.length}<span class="word"> done</span></small></th>`).join('')}</tr></thead>
 <tbody>${shown.map((person) => gridRow(person, { code, activities, cells, sections })).join('')}</tbody>
 </table></div>
 <ol class="legend-activities" aria-label="The activities, by number">${activities.map((activity) => `<li>${esc(activity.title)}</li>`).join('')}</ol>

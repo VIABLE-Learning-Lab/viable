@@ -405,7 +405,7 @@ async function activityBody({ library, classes, records, settings, origin, simpl
     title: activity.title,
     body: `<nav class="crumbs" aria-label="Where you are"><a href="/console/courses">Courses</a> / <a href="/console/courses/${esc(code)}">${esc(doc.course.title)}</a></nav>
 <h1>${esc(activity.title)}</h1>
-<div class="share-line"><a class="v-pill status-pill" href="#details" title="Open, hide or schedule it">${esc({ open: 'Open', hidden: 'Hidden', scheduled: 'Scheduled' }[release])}</a><a class="v-btn is-small" href="/console/api/courses/${esc(code)}/try/${esc(activity.key)}" target="_blank" rel="noopener">Try it</a><a class="v-btn is-small" href="/console/ask?course=${esc(code)}&amp;activity=${esc(activity.key)}">Ask about it</a></div>
+<div class="share-line"><a class="v-pill status-pill" href="#details" data-tip="Open, hide or schedule it">${esc({ open: 'Open', hidden: 'Hidden', scheduled: 'Scheduled' }[release])}</a><a class="v-btn is-small" href="/console/api/courses/${esc(code)}/try/${esc(activity.key)}" target="_blank" rel="noopener">Try it</a><a class="v-btn is-small" href="/console/ask?course=${esc(code)}&amp;activity=${esc(activity.key)}">Ask about it</a></div>
 <form id="${FORM}" data-api="PUT ${api}" data-guard data-together data-say-in="save-bar"><input type="hidden" name="version" value="${meta.version}"></form>
 ${beforeBlock(doc, activity)}
 <div class="act-tabs" role="tablist" aria-label="This activity">
@@ -469,7 +469,7 @@ ${units.length ? choose('unit_ref', 'Unit', activity.unit_ref ?? '', [{ value: '
 <h2 id="more-title">More</h2>
 <div class="actions">
 <button class="v-btn is-small" type="button" data-api="POST ${api}/copy" ${locked ? 'disabled' : ''}>Make a copy</button>
-<button class="v-btn is-small danger" type="button" data-api="DELETE ${api}" data-confirm="Remove “${esc(activity.title)}” from the course? What learners did in it stays in their records${library.archives ? '' : ', and an older version of the course still has it'}." data-yes="Remove" ${locked ? 'disabled' : ''}>Remove it</button>
+<button class="v-btn is-small" type="button" data-api="DELETE ${api}" data-confirm="Archive “${esc(activity.title)}”? Learners can’t open it. It waits under Archived at the foot of the course, to restore or delete." data-yes="Archive" ${locked ? 'disabled' : ''}>Archive it</button>
 </div>${say()}
 </section>
 </div>
@@ -916,10 +916,13 @@ export const activityPages = [
         await changeCourse(library, match[1], body?.version, (doc) => applyForm(activityIn(doc, match[2]).activity, body, doc), clean(body?.title, 80));
         return { said: 'Saved. Learners get it on their next message.' };
       }],
+      // Archived: off the course and learners' pages, waiting at the foot of the course to be restored or deleted.
       ['DELETE', /^courses\/([\w-]+)\/activities\/([\w-]+)$/, async ({ library, classes }, match) => {
-        await changeCourse(library, match[1], null, (doc) => { const { index, list } = activityIn(doc, match[2]); list.splice(index, 1); }, 'Removed an activity');
-        await classes.forgetActivity(match[1], match[2]);
-        return { go: `/console/courses/${match[1]}` };
+        let held = null;
+        await changeCourse(library, match[1], null, (doc) => { const { index, list } = activityIn(doc, match[2]); [held] = list.splice(index, 1); held.key = match[2]; }, 'Archived an activity');
+        if (library.keepActivity) await library.keepActivity((await courseAt(library, match[1])).id, held);
+        else await classes.forgetActivity(match[1], match[2]);
+        return { go: `/console/courses/${match[1]}?archived-activity=${encodeURIComponent(match[2])}#archived-activities` };
       }],
       ['POST', /^courses\/([\w-]+)\/activities\/([\w-]+)\/release$/, async ({ library }, match, body) => {
         await changeCourse(library, match[1], body?.version, (doc) => { const { activity } = activityIn(doc, match[2]); activity.release = body.release === 'open' ? 'open' : 'hidden'; activity.opens_at = null; if (body.release === 'open' && activity.closes_at && Date.parse(activity.closes_at) <= Date.now()) activity.closes_at = null; }, body?.release === 'open' ? 'Opened an activity' : 'Hid an activity');
