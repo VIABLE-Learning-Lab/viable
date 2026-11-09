@@ -4,6 +4,7 @@ import { casePictures, judgeMessages, readAgentTests, readVerdict, validAgentTes
 import { callComponent, checkManifest } from './components/call.js';
 import { draftMessages, readDrafts } from './testCases.js';
 import { openAICompatible } from './models.js';
+import { prepare } from './harness.js';
 
 const invalid = (message) => Object.assign(new Error(message), { status: 400, code: 'invalid_agent_test' });
 
@@ -107,12 +108,16 @@ export async function runAgentTests(doc, cases, { runAgent, judgeModel, judgeCom
 
 /**
  * runAgent for any agent behind an OpenAI-compatible endpoint: each case's conversation is sent to it as it
- * is, so a team can test what they already have. doc is ignored.
+ * is, so a team can test what they already have. doc is ignored. With teaching (How the AI helps) and a
+ * section, each turn also gets what prepare makes of it, after the endpoint's own system prompt, as the
+ * gateway gives it: so a team can see what the teaching layer changes in their own model's replies.
  */
 export function agentAt({ baseUrl, apiKey, model, fetch, system = null } = {}) {
   const call = openAICompatible({ baseUrl, apiKey, fetch });
-  return async (_doc, { input, history = [] }) => {
-    const answer = await call(null, { model, messages: [...(system ? [{ role: 'system', content: system }] : []), ...history, { role: 'user', content: input }] });
+  return async (_doc, { input, history = [], teaching = null, section = null }) => {
+    const turn = teaching ? await prepare({ teaching, section, message: input, history }) : null;
+    const said = [system, turn?.instructions].filter(Boolean).join('\n\n');
+    const answer = await call(null, { model, messages: [...(said ? [{ role: 'system', content: said }] : []), ...history, { role: 'user', content: input }] });
     return { output: { text: answer.content }, usage: answer.usage };
   };
 }

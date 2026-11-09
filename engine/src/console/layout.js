@@ -6,6 +6,7 @@ import { markSvg, themeCss } from '../../../harness/src/ui/theme.js';
 import { escapeHtml } from '../learner/shell.js';
 import { CONSOLE_SCRIPT } from './client.js';
 import { DATE_PICKER_CSS } from './datePicker.js';
+import { DRAG_ORDER_CSS } from './dragOrder.js';
 import { icon } from './icons.js';
 
 const CONSOLE_CSS = `[hidden]{display:none!important}
@@ -128,7 +129,7 @@ const SPEED_CSS = `html.is-going::before,html.is-working::before{content:"";posi
 .side{view-transition-name:v-side}
 @media (prefers-reduced-motion:no-preference){@view-transition{navigation:auto}::view-transition-old(root),::view-transition-new(root){animation-duration:.14s}}
 @media (prefers-reduced-motion:reduce){html.is-going::before,html.is-working::before{animation:none;transform:scaleX(.9)}}`;
-const SHARED_CSS = `${themeCss()}\n${CONSOLE_CSS}\n${SPEED_CSS}\n${DATE_PICKER_CSS}`;
+const SHARED_CSS = `${themeCss()}\n${CONSOLE_CSS}\n${SPEED_CSS}\n${DATE_PICKER_CSS}\n${DRAG_ORDER_CSS}`;
 const ASSETS = Object.fromEntries([[`base-${hashOf(SHARED_CSS)}.css`, { type: 'text/css; charset=utf-8', body: SHARED_CSS }], [`base-${hashOf(CONSOLE_SCRIPT)}.js`, { type: 'text/javascript; charset=utf-8', body: CONSOLE_SCRIPT }]]);
 const [SHARED_CSS_FILE, SHARED_JS_FILE] = Object.keys(ASSETS);
 /** A page's own large stylesheet or script as a shared file too, named when the module loads so every copy of the server knows it. */

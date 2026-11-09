@@ -632,6 +632,45 @@ export const CATALOG = [
     "verified_at": "2026-11-03"
   },
   {
+    "id": "amber-tutoring-transcripts",
+    "name": "Amber tutoring transcripts",
+    "kind": "dataset",
+    "summary": "Transcripts of 45 online tutoring sessions of about an hour, in which one tutor, Amber, works with an 8th or 9th grader on a single problem about reading a graph, recorded by the XQ Institute in 2022.",
+    "subjects": [
+      "math"
+    ],
+    "grades": "8-9 (typically, its README says)",
+    "url": "https://github.com/laurenceholt/amber",
+    "repository": null,
+    "license": {
+      "spdx": [],
+      "note": "Neither the repository nor its README states a license or terms of use. Edu-ConvoKit's repository holds a copy for a tutorial.",
+      "source": "https://github.com/laurenceholt/amber"
+    },
+    "access": "open download",
+    "formats": [
+      "JSON"
+    ],
+    "made_by": [
+      "XQ Institute",
+      "Laurence Holt"
+    ],
+    "cite": "XQ Institute (2022). Amber tutoring transcripts. GitHub. https://github.com/laurenceholt/amber",
+    "status": "released",
+    "fits": {
+      "slots": [],
+      "how": "Speech-to-text transcripts of one tutor using productive struggle with many students on the same problem, with no labels: material to read or to label, not yet a check on a judge or a detector."
+    },
+    "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "No license is stated, so nothing here fetches it. It has no labels to check a judge or a detector against, and its file names look like dates and initials, which a connector would leave out."
+    },
+    "verified_at": "2026-11-09"
+  },
+  {
     "id": "asap-2",
     "name": "ASAP 2.0",
     "kind": "dataset",
@@ -851,6 +890,57 @@ export const CATALOG = [
     "verified_at": "2026-11-03"
   },
   {
+    "id": "conversational-uptake",
+    "name": "Conversational uptake annotations",
+    "kind": "dataset",
+    "summary": "2,246 exchanges from 4th and 5th grade math lessons, a student's turn and the teacher's reply, each rated by experts for how much the teacher builds on what the student said.",
+    "subjects": [
+      "math"
+    ],
+    "grades": "4-5",
+    "url": "https://github.com/ddemszky/conversational-uptake",
+    "repository": null,
+    "license": {
+      "spdx": [
+        "MIT"
+      ],
+      "note": "The repository's LICENSE is MIT, and the repository holds the data. Its exchanges are excerpts of the anonymized NCTE transcripts, which as a whole are for research only (ncte-transcripts). The uptake model from the same paper has its own terms (uptake-model).",
+      "source": "https://github.com/ddemszky/conversational-uptake/blob/67fb30cf7c3ea6f619487e33d2f99692dca107d0/LICENSE"
+    },
+    "access": "open download",
+    "formats": [
+      "CSV"
+    ],
+    "made_by": [
+      "Dorottya Demszky",
+      "Jing Liu",
+      "Zid Mancenido",
+      "Julie Cohen",
+      "Heather Hill",
+      "Dan Jurafsky",
+      "Tatsunori Hashimoto"
+    ],
+    "cite": "Demszky, D., Liu, J., Mancenido, Z., Cohen, J., Hill, H., Jurafsky, D., & Hashimoto, T. (2021). Measuring Conversational Uptake: A Case Study on Student-Teacher Interactions. ACL 2021, 1638-1653. https://doi.org/10.18653/v1/2021.acl-long.130",
+    "status": "released",
+    "fits": {
+      "slots": [
+        "judge",
+        "detector"
+      ],
+      "how": "Experts' ratings to check a judge model that rates whether a reply builds on what the learner said, or a detector of uptake that wasn't trained on them."
+    },
+    "in_harness": null,
+    "connect": {
+      "level": 2,
+      "as": [
+        "calibration-set"
+      ],
+      "command": "viable-harness calibrate --set conversational-uptake --judge-model <model> --limit 30",
+      "note": "Checks your judge model against experts, with no labels of your own: a teacher's reply most of three raters called high uptake should pass, and one they called low should fail, half each. It describes your judge on classroom talk and this rubric, not your agent. The students are children, anonymized: running it sends their words to the model you name. Never try to identify a student or a teacher."
+    },
+    "verified_at": "2026-11-09"
+  },
+  {
     "id": "convolearn",
     "name": "ConvoLearn",
     "kind": "dataset",
@@ -892,6 +982,56 @@ export const CATALOG = [
     "status": "released",
     "in_harness": null,
     "verified_at": "2026-11-04"
+  },
+  {
+    "id": "eedi-tutoring-dialogues",
+    "name": "Eedi Question-Anchored Tutoring Dialogues (QATD-2k)",
+    "kind": "dataset",
+    "summary": "1,971 real chat conversations between Eedi's math tutors and students aged about 11 to 13, each starting from the diagnostic question the student asked for help with, anonymized with PIIvot.",
+    "subjects": [
+      "math"
+    ],
+    "grades": "not stated (students aged 11 to 13 on average, mostly in the UK)",
+    "url": "https://huggingface.co/datasets/Eedi/Question-Anchored-Tutoring-Dialogues-2k",
+    "repository": null,
+    "license": {
+      "spdx": [
+        "CC-BY-NC-4.0",
+        "CC-BY-NC-SA-4.0"
+      ],
+      "unclear": true,
+      "note": "The card's metadata says CC BY-NC 4.0 and its text CC BY-NC-SA 4.0. For commercial use, its card says to contact Eedi.",
+      "terms": "non-commercial research only; never try to identify or re-identify anyone in it",
+      "source": "https://huggingface.co/datasets/Eedi/Question-Anchored-Tutoring-Dialogues-2k"
+    },
+    "access": "open download",
+    "formats": [
+      "CSV",
+      "Parquet"
+    ],
+    "made_by": [
+      "Eedi",
+      "Matthew Zent",
+      "Digory Smith",
+      "Simon Woodhead"
+    ],
+    "cite": "Zent, M., Smith, D., & Woodhead, S. (2025). PIIvot: A Lightweight NLP Anonymization Framework for Question-Anchored Tutoring Dialogues. EMNLP 2025. https://doi.org/10.18653/v1/2025.emnlp-main.1397",
+    "status": "released",
+    "fits": {
+      "slots": [
+        "judge",
+        "simulated-learner"
+      ],
+      "how": "Real learners' turns, each anchored to a diagnostic question whose wrong answers are known: test cases that end on a learner's turn, and patterns for a simulated learner, which agent tests don't use yet."
+    },
+    "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "No connector is written yet. A test suite could end each case on a learner's turn. These are children's real words, so it would ask each person to accept its terms, and send them only to a model whose provider's terms allow it."
+    },
+    "verified_at": "2026-11-09"
   },
   {
     "id": "ellipse",
@@ -1035,6 +1175,56 @@ export const CATALOG = [
       "note": "Gated: a form reviewed weekly, for non-commercial research and education. A connector can't fetch it for you."
     },
     "verified_at": "2026-11-03"
+  },
+  {
+    "id": "funneling-focusing-questions",
+    "name": "Funneling and focusing questions",
+    "kind": "dataset",
+    "summary": "2,348 exchanges from 4th and 5th grade math lessons, a student's turn and the teacher's reply, each labelled by three raters as a funneling question, a focusing question or neither.",
+    "subjects": [
+      "math"
+    ],
+    "grades": "4-5",
+    "url": "https://github.com/sterlingalic/funneling-focusing",
+    "repository": null,
+    "license": {
+      "spdx": [
+        "MIT"
+      ],
+      "note": "The repository's LICENSE is MIT, and the repository holds the data. Its exchanges are excerpts of the anonymized NCTE transcripts, which as a whole are for research only (ncte-transcripts).",
+      "source": "https://github.com/sterlingalic/funneling-focusing/blob/0bcda55da92853c3e26b1d6b2b62f3577094a097/LICENSE"
+    },
+    "access": "open download",
+    "formats": [
+      "CSV"
+    ],
+    "made_by": [
+      "Sterling Alic",
+      "Dorottya Demszky",
+      "Zid Mancenido",
+      "Jing Liu",
+      "Heather Hill",
+      "Dan Jurafsky"
+    ],
+    "cite": "Alic, S., Demszky, D., Mancenido, Z., Liu, J., Hill, H., & Jurafsky, D. (2022). Computationally Identifying Funneling and Focusing Questions in Classroom Discourse. BEA 2022, 224-233. https://doi.org/10.18653/v1/2022.bea-1.27",
+    "status": "released",
+    "fits": {
+      "slots": [
+        "judge",
+        "detector"
+      ],
+      "how": "Raters' labels to check a judge model that rates whether a tutor's question asks the learner to reflect on their own thinking or funnels them toward an answer, a move a tutor that gives hints has to get right."
+    },
+    "in_harness": null,
+    "connect": {
+      "level": 2,
+      "as": [
+        "calibration-set"
+      ],
+      "command": "viable-harness calibrate --set funneling-focusing-questions --judge-model <model> --limit 30",
+      "note": "Checks your judge model against raters, with no labels of your own: a teacher's reply most of three raters called a focusing question should pass, and a funneling one should fail, half each; neither is left out. It describes your judge on classroom talk and this rubric, not your agent. The students are children, anonymized: running it sends their words to the model you name. Never try to identify a student or a teacher."
+    },
+    "verified_at": "2026-11-09"
   },
   {
     "id": "mathdial",
@@ -1384,6 +1574,51 @@ export const CATALOG = [
       "note": "Its terms conflict: a CC BY-SA tag on the dataset card, and \"Do not distribute\" and \"Non-commercial use only\" in its original download. Not connected until that is clear."
     },
     "verified_at": "2026-11-03"
+  },
+  {
+    "id": "comta",
+    "name": "CoMTA",
+    "kind": "benchmark",
+    "summary": "188 math tutoring conversations from Khan Academy's Khanmigo, anonymized and reworded, each ending on a student's answer with whether the tutor should accept it: does an AI tutor get the math right while it tutors?",
+    "subjects": [
+      "math"
+    ],
+    "grades": "not stated (elementary math to calculus)",
+    "url": "https://github.com/Khan/tutoring-accuracy-dataset",
+    "repository": null,
+    "license": {
+      "spdx": [
+        "LicenseRef-Khan-Academy-Evaluation-Dataset-License"
+      ],
+      "note": "Khan Academy's Evaluation Dataset License: internal, non-commercial evaluation of models only. No redistribution, publication, training or production use, and anything made from it stays under the same terms.",
+      "terms": "internal, non-commercial evaluation of models only; no redistribution, publication, training or production use",
+      "source": "https://github.com/Khan/tutoring-accuracy-dataset/blob/fbbeff86b5c1a689161b8f6092a6be7d0532a6dd/LICENSE"
+    },
+    "access": "open download",
+    "formats": [
+      "JSON"
+    ],
+    "made_by": [
+      "Khan Academy",
+      "Pepper Miller",
+      "Kristen DiCerbo"
+    ],
+    "cite": "Miller, P., & DiCerbo, K. (2024). LLM Based Math Tutoring: Challenges and Dataset. Khan Academy. https://github.com/Khan/tutoring-accuracy-dataset",
+    "status": "released",
+    "fits": {
+      "slots": [
+        "judge"
+      ],
+      "how": "Each conversation could be a test case that ends on the student's answer, with whether to accept it as the rubric, the way GSM8K's right and wrong answers are, in a real tutoring conversation."
+    },
+    "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "No connector is written yet. One would fetch it into each person's own folder for their own evaluation, which its license allows, and ask them to accept its terms first."
+    },
+    "verified_at": "2026-11-09"
   },
   {
     "id": "drawedumath",
@@ -2065,6 +2300,104 @@ export const CATALOG = [
     "verified_at": "2026-11-03"
   },
   {
+    "id": "uptake-model",
+    "name": "Conversational uptake model",
+    "kind": "model",
+    "summary": "A BERT model from Stanford that scores how much a teacher's reply builds on what a student just said, learned without labels from math classroom transcripts and checked against experts' ratings.",
+    "subjects": [
+      "math"
+    ],
+    "grades": "not stated (trained on 4th and 5th grade math lessons)",
+    "url": "https://huggingface.co/stanford-nlpxed/uptake-model",
+    "repository": "https://github.com/ddemszky/conversational-uptake",
+    "license": {
+      "spdx": [
+        "CC-BY-NC-ND-4.0"
+      ],
+      "note": "Its card asks each user to agree to three terms before using it. The code and data in its GitHub repository are MIT (conversational-uptake).",
+      "terms": "non-commercial use only; never try to recover its training data; don't share it beyond your research team and project",
+      "source": "https://huggingface.co/stanford-nlpxed/uptake-model"
+    },
+    "access": "open download",
+    "access_note": "About 440 MB, not gated. Edu-ConvoKit 0.4.0 calls it ddemszky/uptake-model, which now leads here.",
+    "formats": [
+      "PyTorch"
+    ],
+    "made_by": [
+      "Dorottya Demszky",
+      "Jing Liu",
+      "Zid Mancenido",
+      "Julie Cohen",
+      "Heather Hill",
+      "Dan Jurafsky",
+      "Tatsunori Hashimoto"
+    ],
+    "cite": "Demszky, D., Liu, J., Mancenido, Z., Cohen, J., Hill, H., Jurafsky, D., & Hashimoto, T. (2021). Measuring Conversational Uptake: A Case Study on Student-Teacher Interactions. ACL 2021, 1638-1653. https://doi.org/10.18653/v1/2021.acl-long.130",
+    "status": "released",
+    "fits": {
+      "slots": [
+        "detector"
+      ],
+      "how": "Marks the turns where the AI builds on what the learner said: the Edu-ConvoKit component runs it on the person's own computer once they download it."
+    },
+    "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Runs in the Edu-ConvoKit component's detector (edu-convokit) once you download it yourself. Its terms ask each user to agree not to share it, so nothing here fetches it. Trained on classroom talk; nobody has checked it on chats with an AI."
+    },
+    "verified_at": "2026-11-09"
+  },
+  {
+    "id": "focusing-questions-model",
+    "name": "Focusing question classifier",
+    "kind": "model",
+    "summary": "A BERT classifier from Stanford that finds focusing questions in a teacher's turn, the questions that ask students to reflect on their own thinking, trained on raters' labels from math lessons.",
+    "subjects": [
+      "math"
+    ],
+    "grades": "not stated (trained on 4th and 5th grade math lessons)",
+    "url": "https://huggingface.co/stanford-nlpxed/focusing-questions",
+    "repository": "https://github.com/sterlingalic/funneling-focusing",
+    "license": {
+      "spdx": [
+        "CC-BY-NC-3.0"
+      ],
+      "note": "Stated in its card's metadata, which is all the card holds. The labelled data in its GitHub repository are MIT (funneling-focusing-questions).",
+      "source": "https://huggingface.co/stanford-nlpxed/focusing-questions"
+    },
+    "access": "open download",
+    "access_note": "About 440 MB, not gated. Edu-ConvoKit 0.4.0 calls it ddemszky/focusing-questions, which now leads here.",
+    "formats": [
+      "PyTorch"
+    ],
+    "made_by": [
+      "Sterling Alic",
+      "Dorottya Demszky",
+      "Zid Mancenido",
+      "Jing Liu",
+      "Heather Hill",
+      "Dan Jurafsky"
+    ],
+    "cite": "Alic, S., Demszky, D., Mancenido, Z., Liu, J., Hill, H., & Jurafsky, D. (2022). Computationally Identifying Funneling and Focusing Questions in Classroom Discourse. BEA 2022, 224-233. https://doi.org/10.18653/v1/2022.bea-1.27",
+    "status": "released",
+    "fits": {
+      "slots": [
+        "detector"
+      ],
+      "how": "Marks the turns where the AI asks a focusing question: the Edu-ConvoKit component runs it on the person's own computer once they download it. Its paper's best model, a RoBERTa, correlated .76 with experts; this released one is a BERT."
+    },
+    "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Runs in the Edu-ConvoKit component's detector (edu-convokit) once you download it yourself. It is non-commercial, so it stays each person's choice and out of any package. Trained on classroom talk; nobody has checked it on chats with an AI."
+    },
+    "verified_at": "2026-11-09"
+  },
+  {
     "id": "simulated-student-pipeline",
     "name": "Simulated student models for fractions (Princeton)",
     "kind": "model",
@@ -2104,6 +2437,51 @@ export const CATALOG = [
       "note": "Not released yet, so there is nothing to fetch or check."
     },
     "verified_at": "2026-11-03"
+  },
+  {
+    "id": "student-reasoning-model",
+    "name": "Student reasoning classifier",
+    "kind": "model",
+    "summary": "A BERT classifier from Stanford that finds a student's turn in which they explain their mathematical reasoning, trained on annotations of 4th and 5th grade math lessons (the NCTE transcripts).",
+    "subjects": [
+      "math"
+    ],
+    "grades": "not stated (trained on 4th and 5th grade math lessons)",
+    "url": "https://huggingface.co/stanford-nlpxed/student-reasoning",
+    "repository": "https://github.com/ddemszky/classroom-transcript-analysis",
+    "license": {
+      "spdx": [
+        "LicenseRef-GPL-no-version"
+      ],
+      "unclear": true,
+      "note": "Its card's metadata says GPL and names no version, and the card holds nothing else. GPL sets the terms for passing a work on, so ask its authors which version they mean before you share it or anything built from it.",
+      "source": "https://huggingface.co/stanford-nlpxed/student-reasoning"
+    },
+    "access": "open download",
+    "access_note": "About 440 MB, not gated. Edu-ConvoKit 0.4.0 calls it ddemszky/student-reasoning, which now leads here; the NCTE repository points to Edu-ConvoKit to run it.",
+    "formats": [
+      "PyTorch"
+    ],
+    "made_by": [
+      "Dorottya Demszky",
+      "Heather Hill"
+    ],
+    "cite": "Demszky, D., & Hill, H. (2023). The NCTE Transcripts: A Dataset of Elementary Math Classroom Transcripts. BEA 2023, 528-538. https://doi.org/10.18653/v1/2023.bea-1.44",
+    "status": "released",
+    "fits": {
+      "slots": [
+        "detector"
+      ],
+      "how": "Marks the turns where the learner explains their reasoning: the Edu-ConvoKit component runs it on messages of 8 words or more, on the person's own computer, once they download it."
+    },
+    "in_harness": null,
+    "connect": {
+      "level": 0,
+      "as": [],
+      "command": null,
+      "note": "Runs in the Edu-ConvoKit component's detector (edu-convokit) once you download it yourself. Its license is unclear, so nothing here fetches it. Trained on spoken classroom talk; nobody has checked it on chats with an AI."
+    },
+    "verified_at": "2026-11-09"
   },
   {
     "id": "tutorrl",
@@ -2189,6 +2567,54 @@ export const CATALOG = [
       "note": "Python code to clone and run yourself. It would play the learner, and no agent test uses a simulated learner yet."
     },
     "verified_at": "2026-11-03"
+  },
+  {
+    "id": "edu-convokit",
+    "name": "Edu-ConvoKit",
+    "kind": "tool",
+    "summary": "A Python library from Stanford that annotates conversations in education: talk time, math vocabulary, student reasoning, focusing questions and how much teachers build on what students say.",
+    "subjects": [
+      "math"
+    ],
+    "grades": "not stated (its classifiers were trained on 4th and 5th grade math lessons)",
+    "url": "https://github.com/EduNLP/edu-convokit",
+    "repository": null,
+    "license": {
+      "spdx": [
+        "MIT"
+      ],
+      "note": "MIT covers the library. The classifiers it downloads from Hugging Face carry their own licenses, non-commercial or unclear (uptake-model, focusing-questions-model, student-reasoning-model). Its repository also holds samples of other datasets for its tutorials, under their own terms.",
+      "source": "https://github.com/EduNLP/edu-convokit/blob/d845ffdafda3f710dc0b5a2834e4f756d8eeb312/LICENSE"
+    },
+    "access": "open download",
+    "access_note": "pip install edu-convokit. Version 0.4.0, the latest on PyPI, needs Python 3.10 or 3.11.",
+    "formats": [
+      "PyPI package"
+    ],
+    "made_by": [
+      "Stanford University",
+      "Rose E. Wang",
+      "Dorottya Demszky"
+    ],
+    "cite": "Wang, R. E., & Demszky, D. (2024). Edu-ConvoKit: An Open-Source Library for Education Conversation Data. NAACL 2024 (System Demonstrations), 61-69. https://doi.org/10.18653/v1/2024.naacl-demo.6",
+    "status": "released",
+    "fits": {
+      "slots": [
+        "detector",
+        "measure"
+      ],
+      "how": "Runs out of process over a learner's turns (integrations/stanford-edu-convokit): a measure gives talk time and math density with no model, and a detector marks reasoning, focusing questions and uptake with classifiers each person downloads."
+    },
+    "in_harness": null,
+    "connect": {
+      "level": 2,
+      "as": [
+        "measure"
+      ],
+      "command": "viable-harness resources use edu-convokit",
+      "note": "Writes the adapter. Install Edu-ConvoKit (Python 3.10 or 3.11) and start server.py; then viable-harness measure record.json --component measure.json gives the learner's share of the words and math terms per message. Its detector's classifiers come under their own terms, non-commercial or unclear. They learned from spoken classroom talk, and nobody has checked them on chats with an AI."
+    },
+    "verified_at": "2026-11-09"
   },
   {
     "id": "oatutor",

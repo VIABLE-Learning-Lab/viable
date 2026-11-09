@@ -55,18 +55,19 @@ export function columnOf(reference) {
   return index - 1;
 }
 
-/** An .xlsx file's first sheet: { rows: [[cell text]], sheet: its name, sheets: every sheet's name }. */
-export async function sheetRows(bytes) {
+/** One sheet of an .xlsx file, the first unless which names another by its place: { rows: [[cell text]], sheet: its name, sheets: every sheet's name, index }. */
+export async function sheetRows(bytes, which = 0) {
   const entries = zipEntries(bytes);
   const read = async (name) => (entries.has(name) ? zipText(bytes, entries.get(name)) : null);
   const book = await read('xl/workbook.xml');
   if (book == null) throw new Error('That zip holds no spreadsheet. Save it as .xlsx or CSV, or copy its columns and paste them.');
   const sheets = [...book.matchAll(/<sheet\b[^>]*>/g)].map((found) => ({ name: xmlAttribute(found[0], 'name') || 'Sheet', id: xmlAttribute(found[0], 'r:id') }));
   const links = new Map([...((await read('xl/_rels/workbook.xml.rels')) || '').matchAll(/<Relationship\b[^>]*>/g)].map((found) => [xmlAttribute(found[0], 'Id'), xmlAttribute(found[0], 'Target') || '']));
-  const target = (sheets[0] && links.get(sheets[0].id)) || 'worksheets/sheet1.xml';
+  const index = Number.isInteger(which) && sheets[which] ? which : 0;
+  const target = (sheets[index] && links.get(sheets[index].id)) || `worksheets/sheet${index + 1}.xml`;
   const path = target.startsWith('/') ? target.slice(1) : `xl/${target.replace(/^\.\//, '')}`;
   const sheet = await read(path);
-  if (sheet == null) throw new Error('That spreadsheet’s first sheet couldn’t be found. Save it as CSV, or copy its columns and paste them.');
+  if (sheet == null) throw new Error('That sheet couldn’t be found in the file. Save it as CSV, or copy its columns and paste them.');
   // Shared strings: a cell of text points into this list. Rich text runs are joined; phonetic hints are left out.
   const shared = [...((await read('xl/sharedStrings.xml')) || '').matchAll(/<si>([\s\S]*?)<\/si>/g)]
     .map((found) => [...found[1].replace(/<rPh\b[\s\S]*?<\/rPh>/g, '').matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((part) => xmlText(part[1])).join(''));
@@ -93,7 +94,7 @@ export async function sheetRows(bytes) {
     }
     if (cells.some((text) => String(text).trim())) rows.push(cells);
   }
-  return { rows, sheet: sheets[0]?.name || 'Sheet1', sheets: sheets.map((item) => item.name) };
+  return { rows, sheet: sheets[index]?.name || `Sheet${index + 1}`, sheets: sheets.map((item) => item.name), index };
 }
 
 /** Rows as a spreadsheet copies them: a tab between cells, a line for each row. */

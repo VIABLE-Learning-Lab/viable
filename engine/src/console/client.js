@@ -25,7 +25,7 @@
  *                                data-empty says what it shows with nothing chosen, data-default-time the time a day takes
  *   data-local                   a time element shown in the reader's own time
  *   data-min-from="name"         a date field whose earliest day is that field's, as a range's end is its start's
- *   data-arrange="PUT …", data-drag  rows and units dragged into a new order by their handles; the whole order is sent
+ *   data-arrange="PUT …"         a board whose items and blocks drag into a new order (dragOrder.js marks); the whole order is sent
  *   data-show-when="name=value"  shown while that field of its form says so (a|b for either, != for anything else, ; between rules for any)
  *
  * An answer's go goes there; its said is said where the form or button's [data-say] is, kept by id across
@@ -34,13 +34,16 @@
 import { icon } from './icons.js';
 import { DATE_PICKER_SCRIPT } from './datePicker.js';
 import { SHEETS_SCRIPT } from './sheets.js';
+import { DRAG_ORDER_SCRIPT } from './dragOrder.js';
 
 export const CONSOLE_SCRIPT = String.raw`(() => {
   const ICON = ${JSON.stringify({ check: icon('check', 16), chevron: icon('chevron', 16) })};
   // The date and time picker every VIABLE screen shares (datePicker.js): dressDate(input) and tidyDates().
   ${DATE_PICKER_SCRIPT}
-  // An Excel file's first sheet, read here (sheets.js): sheetRows(bytes) and rowsText(rows).
+  // An Excel file's sheets, read here (sheets.js): sheetRows(bytes, which) and rowsText(rows).
   ${SHEETS_SCRIPT}
+  // Dragging into order by a handle, as every VIABLE screen does it (dragOrder.js): arrangeable(board, onDrop).
+  ${DRAG_ORDER_SCRIPT}
   let line = Promise.resolve();
   const inLine = (work) => { line = line.then(work, work); return line; };
   // Tooltips are the console's own, never the browser's: data-tip on a control, shown after a beat on hover and at once on keyboard
@@ -138,6 +141,11 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     for (const select of root.querySelectorAll('select.v-input')) dressSelect(select);
     for (const input of root.querySelectorAll('input[data-list]')) dressSuggest(input);
     for (const input of root.querySelectorAll('input.v-input[type=date],input.v-input[type=datetime-local]')) dressDate(input);
+    // A board's new order goes in one request (data-arrange), and the page is drawn again from what was kept.
+    for (const board of root.querySelectorAll('[data-arrange]')) arrangeable(board, (order) => inLine(async () => {
+      await call(board.dataset.arrange, { units: order.blocks, activities: order.items.map((entry) => ({ key: entry.key, unit_ref: entry.group })) });
+      await refresh();
+    }).catch((error) => refresh().then(() => say(document.querySelector('[data-arrange]'), error.message, 'bad'))));
     showing(root);
   };
 
@@ -406,7 +414,10 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     for (const panel of document.querySelectorAll('main [role=tabpanel][id]')) { const twin = next.querySelector('#' + CSS.escape(panel.id)); if (twin) twin.hidden = panel.hidden; }
     for (const tab of document.querySelectorAll('main [role=tab][id]')) { const twin = next.querySelector('#' + CSS.escape(tab.id)); if (twin) { twin.setAttribute('aria-selected', tab.getAttribute('aria-selected')); twin.tabIndex = tab.tabIndex; } }
     dress(next);
+    // A date picker open on the page that goes would be left floating, its field gone.
+    for (const pop of document.querySelectorAll('.vd-pop')) { if (pop.matches && typeof pop.hidePopover === 'function' && pop.matches(':popover-open')) pop.hidePopover(); pop.remove(); }
     document.querySelector('main').replaceWith(next);
+    tidyDates();
     for (const item of next.querySelectorAll('[data-typed]')) item.removeAttribute('data-typed');
     const again = focused && document.getElementById(focused);
     if (again) again.focus({ preventScroll: true });
@@ -628,6 +639,24 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
   document.addEventListener('viable:refreshed', () => { for (const form of document.querySelectorAll('form[data-preview]')) if (dirty(form)) preview(form); });
   // Sent, the list is done with: its choices don't carry to the next one.
   document.addEventListener('submit', (event) => { const held = event.target.dataset && event.target.dataset.preview && previews.get(event.target.id || event.target); if (held) held.kept = null; }, true);
+  // A spreadsheet's sheets, to read another (data-sheets-in names where they show): the file stays in this page, read again.
+  const showSheets = (input, field, view, sheet) => {
+    const place = input.dataset.sheetsIn && document.getElementById(input.dataset.sheetsIn);
+    if (!place) return;
+    place.textContent = '';
+    if (!sheet || sheet.sheets.length < 2) return;
+    place.append(Object.assign(document.createElement('span'), { className: 'v-note', textContent: 'Sheet' }));
+    sheet.sheets.forEach((name, index) => {
+      const button = Object.assign(document.createElement('button'), { type: 'button', className: 'v-btn is-small', textContent: name });
+      button.setAttribute('aria-pressed', String(index === sheet.index));
+      button.addEventListener('click', () => sheetRows(view, index).then((next) => {
+        field.value = rowsText(next.rows);
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        showSheets(input, field, view, next);
+      }).catch((error) => say(input.form, error.message, 'bad')));
+      place.append(button);
+    });
+  };
   // A file read into a field (data-read-into): a school's export may be UTF-16 or an older Windows encoding, not only UTF-8.
   document.addEventListener('change', (event) => {
     const input = event.target;
@@ -645,8 +674,10 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
       if (/\.xlsx?$/i.test(file.name) || (view[0] === 0x50 && view[1] === 0x4b) || (view[0] === 0xd0 && view[1] === 0xcf)) {
         const sheet = await sheetRows(view);
         words = rowsText(sheet.rows);
-        note = 'Read the sheet “' + sheet.sheet + '”' + (sheet.sheets.length > 1 ? ', the first of ' + sheet.sheets.length + '. To use another, move it first in the file, or copy its columns and paste them.' : '.');
+        note = sheet.sheets.length > 1 ? '' : 'Read the sheet “' + sheet.sheet + '”.';
+        showSheets(input, field, view, sheet);
       } else {
+        showSheets(input, field, view, null);
         const encoding = view[0] === 0xff && view[1] === 0xfe ? 'utf-16le' : view[0] === 0xfe && view[1] === 0xff ? 'utf-16be' : 'utf-8';
         try { words = new TextDecoder(encoding, { fatal: true }).decode(view); } catch { words = new TextDecoder('windows-1252').decode(view); }
       }
@@ -656,78 +687,6 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
       field.focus({ preventScroll: true });
     }).catch((error) => say(input.form, error.message, 'bad'));
   });
-  // Dragging a row or a unit to a new place in what holds them (data-arrange="PUT …"): a press on a handle (data-drag=
-  // "activity" on a row's, "unit" on a unit's), then a move. The row itself moves to where it would land, a copy follows
-  // the pointer, and letting go sends the whole order: { units: [ref], activities: [{ key, unit_ref }] }. Pointer events,
-  // so a finger drags as a mouse does; the arrows and menus stay for the keyboard.
-  let dragging = null;
-  const endDrag = (event) => {
-    if (!dragging || (event && event.pointerId !== dragging.pointer)) return;
-    const done = dragging;
-    dragging = null;
-    document.documentElement.classList.remove('is-dragging-now');
-    done.board.classList.remove('is-arranging');
-    if (!done.moved) return;
-    done.ghost.remove();
-    done.item.classList.remove('is-dragging');
-    if (event && event.type === 'pointercancel') { refresh(); return; }
-    const units = [...done.board.querySelectorAll('.unit-block[data-unit]')].map((block) => block.dataset.unit);
-    const activities = [...done.board.querySelectorAll('ul.rows[data-unit] > li.row[data-key]')].map((row) => ({ key: row.dataset.key, unit_ref: row.parentElement.dataset.unit || null }));
-    if (JSON.stringify({ units, activities }) === done.before) return;
-    inLine(async () => { await call(done.board.dataset.arrange, { units, activities }); await refresh(); }).catch((error) => refresh().then(() => say(document.querySelector('[data-arrange]'), error.message, 'bad')));
-  };
-  document.addEventListener('pointerdown', (event) => {
-    const handle = event.target.closest && event.target.closest('[data-drag]');
-    if (!handle || event.button !== 0) return;
-    const item = handle.closest(handle.dataset.drag === 'unit' ? '.unit-block' : 'li.row');
-    const board = item && item.closest('[data-arrange]');
-    if (!board) return;
-    event.preventDefault();
-    const order = () => JSON.stringify({ units: [...board.querySelectorAll('.unit-block[data-unit]')].map((block) => block.dataset.unit), activities: [...board.querySelectorAll('ul.rows[data-unit] > li.row[data-key]')].map((row) => ({ key: row.dataset.key, unit_ref: row.parentElement.dataset.unit || null })) });
-    dragging = { kind: handle.dataset.drag, item, board, pointer: event.pointerId, x: event.clientX, y: event.clientY, moved: false, before: order() };
-    try { handle.setPointerCapture(event.pointerId); } catch {}
-  });
-  document.addEventListener('pointermove', (event) => {
-    const drag = dragging;
-    if (!drag || event.pointerId !== drag.pointer) return;
-    if (!drag.moved) {
-      if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 5) return;
-      drag.moved = true;
-      const box = drag.item.getBoundingClientRect();
-      drag.offset = event.clientY - box.top;
-      drag.ghost = drag.item.cloneNode(true);
-      drag.ghost.removeAttribute('id');
-      for (const named of drag.ghost.querySelectorAll('[id]')) named.removeAttribute('id');
-      drag.ghost.classList.add('drag-ghost');
-      drag.ghost.style.width = box.width + 'px';
-      drag.ghost.style.left = box.left + 'px';
-      document.body.append(drag.ghost);
-      drag.item.classList.add('is-dragging');
-      drag.board.classList.add('is-arranging');
-      document.documentElement.classList.add('is-dragging-now');
-    }
-    drag.ghost.style.top = (event.clientY - drag.offset) + 'px';
-    const y = event.clientY;
-    const middle = (element) => { const box = element.getBoundingClientRect(); return box.top + box.height / 2; };
-    if (drag.kind === 'activity') {
-      const lists = [...drag.board.querySelectorAll('ul.rows[data-unit]')].filter((list) => list.getClientRects().length);
-      const list = lists.find((each) => { const box = each.getBoundingClientRect(); return y >= box.top - 14 && y <= box.bottom + 14; })
-        || lists.reduce((best, each) => (Math.abs(middle(each) - y) < Math.abs(middle(best) - y) ? each : best), lists[0]);
-      const after = [...list.querySelectorAll(':scope > li.row')].filter((row) => row !== drag.item).find((row) => y < middle(row));
-      if (after) { if (drag.item.nextElementSibling !== after) list.insertBefore(drag.item, after); }
-      else { const empty = list.querySelector(':scope > .unit-empty'); if (drag.item.parentElement !== list || (empty ? drag.item.nextElementSibling !== empty : drag.item.nextElementSibling)) list.insertBefore(drag.item, empty); }
-    } else {
-      const blocks = [...drag.board.querySelectorAll('.unit-block')].filter((block) => block !== drag.item);
-      const after = blocks.find((block) => y < middle(block)) || drag.board.querySelector('.loose-block');
-      if (drag.item.nextElementSibling !== after) after ? after.before(drag.item) : blocks.at(-1)?.after(drag.item);
-    }
-    if (y < 64) scrollBy(0, -14);
-    else if (y > innerHeight - 64) scrollBy(0, 14);
-  });
-  document.addEventListener('pointerup', endDrag);
-  document.addEventListener('pointercancel', endDrag);
-  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && dragging) { const done = dragging; dragging = null; document.documentElement.classList.remove('is-dragging-now'); done.board.classList.remove('is-arranging'); if (done.ghost) done.ghost.remove(); refresh(); } });
-
   // An end that can't come before its start (data-min-from="starts_on"): the start's day is its earliest.
   document.addEventListener('change', (event) => {
     const form = event.target.form;

@@ -1,0 +1,24 @@
+{
+  "measures": [
+    {
+      "id": "convokit.talk_time.learner_share",
+      "value": 0.39
+    },
+    {
+      "id": "convokit.talk_time.learner_words",
+      "value": 39
+    },
+    {
+      "id": "convokit.talk_time.ai_words",
+      "value": 61
+    },
+    {
+      "id": "convokit.math_density.learner",
+      "value": 0.25
+    },
+    {
+      "id": "convokit.math_density.ai",
+      "value": 0.5
+    }
+  ]
+}

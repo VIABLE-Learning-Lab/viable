@@ -45,7 +45,7 @@ record can say exactly what the AI was given.
 | Standards ([Learning Commons](https://learningcommons.org)) | About 1 GB for every state | Not in the package. Hosted: `find_standards`. Yours: `viable-harness resources` downloads the release and keeps one state's | The teacher picks one, kept with its learning components | At most 2 components, 1 earlier standard |
 | [Guidance from research](components.md) | 77 pieces on 8 topics, each naming its studies, in the package; anyone's own, up to 500 in a component's file | In the package or that file, and up to 20 copied into an activity | A person, then the moment | At most 2 |
 | Your own documents | Whatever you have | Not in the Harness: your agent's retrieval, or the Engine's knowledge | Search | What search finds |
-| [The catalog](catalog.md) | 55 public goods, described | Descriptions in the package. Data comes from its makers when you fetch it | You | Nothing directly. It becomes test suites, judges and knowledge |
+| [The catalog](catalog.md) | 64 public goods, described | Descriptions in the package. Data comes from its makers when you fetch it | You | Nothing directly. It becomes test suites, judges and knowledge |
 
 ## How a turn chooses
 

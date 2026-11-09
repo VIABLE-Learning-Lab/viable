@@ -220,11 +220,14 @@ viable-engine test <agent.json | package.json> (<cases.json> | --suite <resource
                     --judge-model <id> [--judge <resource>/<name>] [--model <id>] [--agent <ref>]
                     [--teaching teaching.json] [--section <id>] [--accept-license] [--html [--out report.html]] [--json]
 viable-harness test (<cases.json> | --suite <resource>) --endpoint <url> --endpoint-model <id> [--system "..."]
-                    --judge-model <id> [--judge <resource>/<name>] [--accept-license] [--json]
+                    [--teaching teaching.json] [--section <id>] --judge-model <id> [--judge <resource>/<name>] [--accept-license] [--json]
 ```
 
 The judge and the agent's models go to `OPENAI_BASE_URL` (default `https://api.openai.com/v1`) with
-`OPENAI_API_KEY`; `--endpoint` sends the agent's calls to that address instead, with the same key.
+`OPENAI_API_KEY`; `--endpoint` sends the agent's calls to that address instead, with the same key. With
+`--endpoint`, `--teaching` (and `--section`) give each case what the Harness prepares for that turn, after your
+`--system` prompt, as the gateway does: run the same cases with and without it to see what How the AI helps changes
+in your own model's replies.
 
 `runAgentTests` (or the `run_agent_tests` MCP tool) runs each case through the agent, then sends the
 judge model the case's reference data, the pictures already shown, the conversation, the reply, what

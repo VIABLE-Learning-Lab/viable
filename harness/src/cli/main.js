@@ -37,8 +37,8 @@ ${MOMENT_USAGE}
                        [--key-concepts "a, b"] [--teaching teaching.json] [--section <id>] [--rewrite <n>]
                        --model <id> [--reviewer <id>] [--json]
   viable-harness test (<cases.json> | --suite <resource> [--limit <n>] [--standard <code>]) --endpoint <url> --endpoint-model <id>
-                      --judge-model <id> [--system "..."] [--judge <resource>/<name>] [--accept-license] [--dir <folder>]
-                      [--html [--out report.html] [--no-open]] [--json]
+                      --judge-model <id> [--system "..."] [--teaching teaching.json] [--section <id>] [--split <set>]
+                      [--judge <resource>/<name>] [--accept-license] [--dir <folder>] [--html [--out report.html] [--no-open]] [--json]
   viable-harness draft-tests <package.json | teaching.json> --model <id> [--count <n>] [--section <id>] [--out cases.json]
   viable-harness tests-from-records <record.json...> [--teaching teaching.json | package.json] [--count <n>] [--out cases.json]
   viable-harness calibrate (<results.json> <labels.json> | --set <resource> --judge-model <id> [--limit <n>] [--evaluator <name>]

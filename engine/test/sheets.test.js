@@ -55,6 +55,9 @@ test('an Excel file’s first sheet is read in the browser as a spreadsheet copi
   assert.deepEqual(read.rows, [['Last Name', 'First Name', '', 'Period'], ['Lovelace', 'Ada', '', '2'], ['Turing', 'Alan', '', '3']], 'shared and inline text, a formula’s value, gaps kept, an empty row left out, phonetic hints left out');
   assert.equal(rowsText(read.rows), 'Last Name\tFirst Name\t\tPeriod\nLovelace\tAda\t\t2\nTuring\tAlan\t\t3');
   assert.deepEqual(readClassLines(rowsText(read.rows), []).lines.map(({ name, section }) => [name, section]), [['Ada Lovelace', 'Period 2'], ['Alan Turing', 'Period 3']]);
+  const other = await sheetRows(zip(BOOK), 1);
+  assert.deepEqual([other.sheet, other.index, other.rows], ['Notes', 1, []], 'another sheet, by its place');
+  assert.equal((await sheetRows(zip(BOOK), 7)).index, 0, 'a place past the last is the first');
 });
 
 test('what isn’t an .xlsx says what to do instead', async () => {

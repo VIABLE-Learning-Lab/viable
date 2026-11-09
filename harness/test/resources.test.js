@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CATALOG, CONNECTORS, calibrateJudge, checkSchema, getResource, judgeReplies, licenseLimits, listResources, runAgent, runAgentTests, readAgentTests, resourceJudge, searchCatalog, teachingContext, teachingSettings, useResource } from '../../engine/src/index.js';
-import { measure } from '../src/components/call.js';
+import { detect, measure } from '../src/components/call.js';
 import { validAgentTest } from '../src/agentTests.js';
 import { mcpServer } from '../../engine/src/mcp.js';
 import { parseCsv } from '../src/resources/csv.js';
@@ -682,7 +682,7 @@ test('TutorMoments: its terms come first, then each moment is a case ending on t
   assert.match(scaffold.name, /^TutorMoments 00000001 \(turns 1–3\): scaffold$/);
   assert.match(scaffold.rubric, /scaffolds[\s\S]*The teacher who marked this moment saw: They had the steps but not why\.$/);
   assert.match(rigor.rubric, /pushes for rigor/);
-  assert.deepEqual(scaffold.context, { moment: 'balanced_520:00000001-aaaa_bbbb__hum_1_3', needs: 'scaffolding' }, 'its platform label isn’t context');
+  assert.deepEqual(scaffold.context, { moment: 'balanced_520:00000001-aaaa_bbbb__hum_1_3' }, 'the agent can read context, so the teachers’ label isn’t in it');
   const all = await useResource('tutormoments', { dir, fetch, options: { limit: 25 } });
   assert.equal(all.cases.length, 4, 'a moment cut on the tutor’s own words is left out');
   // Each case says where it came from and its license, and keeps it through the case's own checks.
@@ -690,4 +690,53 @@ test('TutorMoments: its terms come first, then each moment is a case ending on t
   assert.match(scaffold.source.cite, /When Help is Unhelpful/);
   for (const item of used.cases) assert.deepEqual(validAgentTest(item).source, item.source);
   assert.throws(() => validAgentTest({ ...scaffold, source: { name: 'X', url: 'http://plain.example' } }), /https/);
+});
+
+// Their real columns, with invented words: a student's turn, the teacher's reply and the raters' majority.
+const UPTAKE_CSV = ['obs_id,exchange_idx,student_text,teacher_text,student_on_task,student_on_task_num_agree,student_on_task_majority,student_on_task_zscore,teacher_on_task,teacher_on_task_num_agree,teacher_on_task_majority,teacher_on_task_zscore,uptake,uptake_num_agree,uptake_majority,uptake_zscore',
+  ...[[1, '2.0'], [2, '2.0'], [3, '0.0'], [4, '0.0'], [5, '1.0'], [6, ''], [7, '2.0']].map(([n, majority]) => `${n},${n}0,"I think it is ${n}, because of the halves.",${n === 7 ? '' : `"So you used halves, ${n}?"`},1.0,3,1,0.4,1.0,3,1,0.4,1.3,2,${majority},0.1`)].join('\n');
+const FOCUSING_CSV = ['uidx,obs_id,exchange_idx,student_text,teacher_text,follow_up_unfiltered_zscore,follow_up_unfiltered_majority,follow_up_filtered_zscore,follow_up_filtered_majority',
+  ...[['1_1', '2.0'], ['2_2', '0.0'], ['3_3', '1.0'], ['4_4', '']].map(([id, majority]) => `${id},${id[0]},${id},I got nine.,"Where did nine come from, ${id}?",0.2,${majority},0.1,`)].join('\n');
+
+test('conversational-uptake and funneling-focusing-questions: your judge against raters of classroom talk, half pass and half fail', async (t) => {
+  const dir = scratch(t);
+  const { fetch, asked } = source([has('conversational-uptake/67fb30cf'), UPTAKE_CSV], [has('funneling-focusing/0bcda55d'), FOCUSING_CSV]);
+  const uptake = await useResource('conversational-uptake', { dir, fetch, options: { limit: 4 } });
+  assert.deepEqual(uptake.license.limits, [], 'MIT: nothing to accept');
+  assert.deepEqual(uptake.labels, { 'Uptake 1-10': 'pass', 'Uptake 2-20': 'pass', 'Uptake 3-30': 'fail', 'Uptake 4-40': 'fail' }, 'mid, no majority and an empty reply are left out');
+  assert.deepEqual(uptake.cases[0].messages, [{ role: 'user', content: 'I think it is 1, because of the halves.' }]);
+  assert.equal(uptake.cases[0].reply, 'So you used halves, 1?');
+  assert.match(uptake.cases[0].rubric, /building on what they just said/);
+  assert.deepEqual(Object.keys(uptake.cases[0]).sort(), ['messages', 'name', 'reply', 'rubric', 'source'], 'only the two turns and the rubric');
+  const judged = async (_, request) => ({ content: JSON.stringify({ verdict: /used halves, [12]\?/.test(request.messages[1].content) ? 'pass' : 'fail', reason: 'Read.' }), usage: { total: 1 } });
+  const checked = calibrateJudge(await judgeReplies(uptake.cases, { judgeModel: 'judge', services: { callChatModel: judged } }), uptake.labels);
+  assert.deepEqual(checked.confusion, { person_pass: { judge_pass: 2, judge_fail: 0 }, person_fail: { judge_pass: 0, judge_fail: 2 } });
+
+  const focusing = await useResource('funneling-focusing-questions', { dir, fetch, options: { limit: 4 } });
+  assert.deepEqual(focusing.labels, { 'Focusing 1_1': 'pass', 'Focusing 3_3': 'fail' }, 'focusing passes, funneling fails, and neither is left out');
+  assert.match(focusing.cases[0].rubric, /focusing question/);
+  assert.equal(asked.length, 2, 'each comes down once, from its pinned commit');
+});
+
+test('edu-convokit: the adapter as a folder of your own, its manifests fit, and its fixtures read as their slots', async (t) => {
+  const dir = scratch(t);
+  const used = await useResource('edu-convokit', { dir, fetch: async () => { throw new Error('nothing is downloaded'); } });
+  assert.equal(used.manifest, join(used.folder, 'measure.json'));
+  assert.ok(['server.py', 'README.md'].every((name) => existsSync(join(used.folder, name))));
+  const schema = JSON.parse(readFileSync(new URL('../schemas/component.schema.json', import.meta.url), 'utf8'));
+  const [measures, detector] = ['measure.json', 'manifest.json'].map((name) => JSON.parse(readFileSync(join(used.folder, name), 'utf8')));
+  for (const manifest of [measures, detector]) {
+    assert.deepEqual(checkSchema(schema, manifest), [], manifest.id);
+    assert.deepEqual([manifest.receives, manifest.sends_to], [['learning_events'], ['127.0.0.1']]);
+  }
+  assert.deepEqual([measures.slot, measures.uses_models, detector.slot, detector.uses_models], ['measure', false, 'detector', true]);
+  // What the adapter answered for the fixture with Edu-ConvoKit, read back through the harness's own slots.
+  const fixture = (name) => readFileSync(join(used.folder, 'fixtures', name), 'utf8');
+  const record = JSON.parse(fixture('input.json')).learning_events;
+  const answers = (name) => async (_, init) => {
+    assert.deepEqual(JSON.parse(init.body), { learning_events: record });
+    return new Response(fixture(name));
+  };
+  assert.deepEqual(await measure(measures, record, { fetch: answers('expected-measures.json') }), JSON.parse(fixture('expected-measures.json')));
+  assert.deepEqual(await detect(detector, record, { fetch: answers('expected.json') }), JSON.parse(fixture('expected.json')));
 });

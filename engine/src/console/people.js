@@ -82,7 +82,7 @@ const addForm = (course, code, sections) => {
   return `<form class="add-people" id="paste" data-api="POST courses/${esc(code)}/people" data-preview="POST courses/${esc(code)}/people/preview" data-into="paste-preview">
 <div class="paste-in" data-drop>
 ${text('list', ids ? 'Their student IDs' : 'Who is in this class', '', { rows: 7, id: 'paste-list', spellcheck: 'false', autocomplete: 'off', placeholder: ids ? 'S1042\nS1043\nS1044' : 'Ada Lovelace\nAlan Turing\nGrace Hopper', hint: `${ids ? 'Type one on each line' : 'Type a name on each line'}, or paste a list as it comes: columns from a spreadsheet, a file from your school’s system, names from an email. You see who each line becomes before anyone is added.` })}
-<div class="paste-file"><label class="v-btn is-small" for="paste-file">${icon('upload', 14)}<span>Open a file</span></label><input class="sr" id="paste-file" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain,text/tab-separated-values" data-read-into="list"><small class="v-note">An Excel, CSV or text file, read on this computer. Or copy the columns from any spreadsheet and paste them.</small></div>
+<div class="paste-file"><label class="v-btn is-small" for="paste-file">${icon('upload', 14)}<span>Open a file</span></label><input class="sr" id="paste-file" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain,text/tab-separated-values" data-read-into="list" data-sheets-in="paste-sheets"><small class="v-note">An Excel, CSV or text file, read on this computer. Or copy the columns from any spreadsheet and paste them.</small><div class="paste-sheets" id="paste-sheets" role="group" aria-label="Which sheet to read"></div></div>
 </div>
 <div class="v-form paste-section"><label class="v-label" for="paste-section">In the section</label><input class="v-input" id="paste-section" name="section" data-list="paste-sections" autocomplete="off" maxlength="${PEOPLE_LIMITS.sectionName}" placeholder="${sections.length ? 'None' : 'None: everyone is one class'}"><datalist id="paste-sections">${sections.map((section) => `<option value="${esc(section.name)}">`).join('')}</datalist><small class="v-note">For lines that don’t say one. A new name makes that section.</small></div>
 <div class="paste-preview" id="paste-preview" aria-live="polite"></div>
@@ -239,6 +239,9 @@ const PEOPLE_CSS = `.set-up{display:grid;grid-template-columns:repeat(2,minmax(0
 .paste-in.is-over textarea{border-color:var(--ink-blue);background:var(--field-mist)}
 .paste-file{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
 .paste-file .v-note{font-size:.875rem}
+.paste-sheets{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex-basis:100%}
+.paste-sheets:empty{display:none}
+.paste-sheets .v-btn[aria-pressed=true]{border-color:var(--ink-blue);background:var(--field-mist);color:var(--public-ink);font-weight:600}
 .paste-section{max-width:360px}
 .paste-preview{display:grid;gap:12px;padding-top:14px;border-top:1px solid var(--public-rule)}
 .paste-preview:empty{display:none}

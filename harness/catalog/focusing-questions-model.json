@@ -1,0 +1,48 @@
+{
+  "id": "focusing-questions-model",
+  "name": "Focusing question classifier",
+  "kind": "model",
+  "summary": "A BERT classifier from Stanford that finds focusing questions in a teacher's turn, the questions that ask students to reflect on their own thinking, trained on raters' labels from math lessons.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "not stated (trained on 4th and 5th grade math lessons)",
+  "url": "https://huggingface.co/stanford-nlpxed/focusing-questions",
+  "repository": "https://github.com/sterlingalic/funneling-focusing",
+  "license": {
+    "spdx": [
+      "CC-BY-NC-3.0"
+    ],
+    "note": "Stated in its card's metadata, which is all the card holds. The labelled data in its GitHub repository are MIT (funneling-focusing-questions).",
+    "source": "https://huggingface.co/stanford-nlpxed/focusing-questions"
+  },
+  "access": "open download",
+  "access_note": "About 440 MB, not gated. Edu-ConvoKit 0.4.0 calls it ddemszky/focusing-questions, which now leads here.",
+  "formats": [
+    "PyTorch"
+  ],
+  "made_by": [
+    "Sterling Alic",
+    "Dorottya Demszky",
+    "Zid Mancenido",
+    "Jing Liu",
+    "Heather Hill",
+    "Dan Jurafsky"
+  ],
+  "cite": "Alic, S., Demszky, D., Mancenido, Z., Liu, J., Hill, H., & Jurafsky, D. (2022). Computationally Identifying Funneling and Focusing Questions in Classroom Discourse. BEA 2022, 224-233. https://doi.org/10.18653/v1/2022.bea-1.27",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "detector"
+    ],
+    "how": "Marks the turns where the AI asks a focusing question: the Edu-ConvoKit component runs it on the person's own computer once they download it. Its paper's best model, a RoBERTa, correlated .76 with experts; this released one is a BERT."
+  },
+  "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Runs in the Edu-ConvoKit component's detector (edu-convokit) once you download it yourself. It is non-commercial, so it stays each person's choice and out of any package. Trained on classroom talk; nobody has checked it on chats with an AI."
+  },
+  "verified_at": "2026-11-09"
+}

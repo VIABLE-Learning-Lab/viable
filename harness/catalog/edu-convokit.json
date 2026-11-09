@@ -1,0 +1,48 @@
+{
+  "id": "edu-convokit",
+  "name": "Edu-ConvoKit",
+  "kind": "tool",
+  "summary": "A Python library from Stanford that annotates conversations in education: talk time, math vocabulary, student reasoning, focusing questions and how much teachers build on what students say.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "not stated (its classifiers were trained on 4th and 5th grade math lessons)",
+  "url": "https://github.com/EduNLP/edu-convokit",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "MIT"
+    ],
+    "note": "MIT covers the library. The classifiers it downloads from Hugging Face carry their own licenses, non-commercial or unclear (uptake-model, focusing-questions-model, student-reasoning-model). Its repository also holds samples of other datasets for its tutorials, under their own terms.",
+    "source": "https://github.com/EduNLP/edu-convokit/blob/d845ffdafda3f710dc0b5a2834e4f756d8eeb312/LICENSE"
+  },
+  "access": "open download",
+  "access_note": "pip install edu-convokit. Version 0.4.0, the latest on PyPI, needs Python 3.10 or 3.11.",
+  "formats": [
+    "PyPI package"
+  ],
+  "made_by": [
+    "Stanford University",
+    "Rose E. Wang",
+    "Dorottya Demszky"
+  ],
+  "cite": "Wang, R. E., & Demszky, D. (2024). Edu-ConvoKit: An Open-Source Library for Education Conversation Data. NAACL 2024 (System Demonstrations), 61-69. https://doi.org/10.18653/v1/2024.naacl-demo.6",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "detector",
+      "measure"
+    ],
+    "how": "Runs out of process over a learner's turns (integrations/stanford-edu-convokit): a measure gives talk time and math density with no model, and a detector marks reasoning, focusing questions and uptake with classifiers each person downloads."
+  },
+  "in_harness": null,
+  "connect": {
+    "level": 2,
+    "as": [
+      "measure"
+    ],
+    "command": "viable-harness resources use edu-convokit",
+    "note": "Writes the adapter. Install Edu-ConvoKit (Python 3.10 or 3.11) and start server.py; then viable-harness measure record.json --component measure.json gives the learner's share of the words and math terms per message. Its detector's classifiers come under their own terms, non-commercial or unclear. They learned from spoken classroom talk, and nobody has checked them on chats with an AI."
+  },
+  "verified_at": "2026-11-09"
+}

@@ -26,7 +26,7 @@ viable-harness check --reply "..." [--message "..."] (--guideline "..." | --ques
 viable-engine test <agent.json | package.json> (<cases.json> | --suite resource [--limit n]) --judge-model id
                     [--judge resource/name] [--model id] [--agent ref] [--teaching teaching.json] [--section id]
                     [--accept-license] [--html [--out report.html]] [--json]
-viable-harness test (<cases.json> | --suite resource) --endpoint url --endpoint-model id [--system "..."] --judge-model id [--json]
+viable-harness test (<cases.json> | --suite resource) --endpoint url --endpoint-model id [--system "..."] [--teaching file] [--section id] --judge-model id [--json]
 viable-harness draft-tests <package.json | teaching.json> --model id [--count n] [--section id] [--out cases.json]
 viable-harness tests-from-records <record.json...> [--teaching teaching.json | package.json] [--count n] [--out cases.json]
 viable-harness calibrate (<results.json> <labels.json> | --set resource --judge-model id) [--json]

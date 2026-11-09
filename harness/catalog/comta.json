@@ -1,0 +1,45 @@
+{
+  "id": "comta",
+  "name": "CoMTA",
+  "kind": "benchmark",
+  "summary": "188 math tutoring conversations from Khan Academy's Khanmigo, anonymized and reworded, each ending on a student's answer with whether the tutor should accept it: does an AI tutor get the math right while it tutors?",
+  "subjects": [
+    "math"
+  ],
+  "grades": "not stated (elementary math to calculus)",
+  "url": "https://github.com/Khan/tutoring-accuracy-dataset",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "LicenseRef-Khan-Academy-Evaluation-Dataset-License"
+    ],
+    "note": "Khan Academy's Evaluation Dataset License: internal, non-commercial evaluation of models only. No redistribution, publication, training or production use, and anything made from it stays under the same terms.",
+    "terms": "internal, non-commercial evaluation of models only; no redistribution, publication, training or production use",
+    "source": "https://github.com/Khan/tutoring-accuracy-dataset/blob/fbbeff86b5c1a689161b8f6092a6be7d0532a6dd/LICENSE"
+  },
+  "access": "open download",
+  "formats": [
+    "JSON"
+  ],
+  "made_by": [
+    "Khan Academy",
+    "Pepper Miller",
+    "Kristen DiCerbo"
+  ],
+  "cite": "Miller, P., & DiCerbo, K. (2024). LLM Based Math Tutoring: Challenges and Dataset. Khan Academy. https://github.com/Khan/tutoring-accuracy-dataset",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "judge"
+    ],
+    "how": "Each conversation could be a test case that ends on the student's answer, with whether to accept it as the rubric, the way GSM8K's right and wrong answers are, in a real tutoring conversation."
+  },
+  "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "No connector is written yet. One would fetch it into each person's own folder for their own evaluation, which its license allows, and ask them to accept its terms first."
+  },
+  "verified_at": "2026-11-09"
+}

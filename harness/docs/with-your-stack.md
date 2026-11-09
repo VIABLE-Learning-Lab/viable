@@ -399,7 +399,7 @@ viable-engine test tutor.agent.json cases.json --judge-model your-judge-model --
 
 `--teaching` takes a plain teaching settings file. Point this at your model endpoint (`OPENAI_BASE_URL`),
 not at the gateway: the judge's own verdicts shouldn't be checked. To test a prompt alone, with no agent
-file and no teaching settings:
+file (add `--teaching fractions-teaching.json` to give each turn what the Harness prepares for it):
 
 ```bash
 viable-harness test cases.json --endpoint https://api.openai.com/v1 --endpoint-model your-model \

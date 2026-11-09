@@ -1,0 +1,50 @@
+{
+  "id": "funneling-focusing-questions",
+  "name": "Funneling and focusing questions",
+  "kind": "dataset",
+  "summary": "2,348 exchanges from 4th and 5th grade math lessons, a student's turn and the teacher's reply, each labelled by three raters as a funneling question, a focusing question or neither.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "4-5",
+  "url": "https://github.com/sterlingalic/funneling-focusing",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "MIT"
+    ],
+    "note": "The repository's LICENSE is MIT, and the repository holds the data. Its exchanges are excerpts of the anonymized NCTE transcripts, which as a whole are for research only (ncte-transcripts).",
+    "source": "https://github.com/sterlingalic/funneling-focusing/blob/0bcda55da92853c3e26b1d6b2b62f3577094a097/LICENSE"
+  },
+  "access": "open download",
+  "formats": [
+    "CSV"
+  ],
+  "made_by": [
+    "Sterling Alic",
+    "Dorottya Demszky",
+    "Zid Mancenido",
+    "Jing Liu",
+    "Heather Hill",
+    "Dan Jurafsky"
+  ],
+  "cite": "Alic, S., Demszky, D., Mancenido, Z., Liu, J., Hill, H., & Jurafsky, D. (2022). Computationally Identifying Funneling and Focusing Questions in Classroom Discourse. BEA 2022, 224-233. https://doi.org/10.18653/v1/2022.bea-1.27",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "judge",
+      "detector"
+    ],
+    "how": "Raters' labels to check a judge model that rates whether a tutor's question asks the learner to reflect on their own thinking or funnels them toward an answer, a move a tutor that gives hints has to get right."
+  },
+  "in_harness": null,
+  "connect": {
+    "level": 2,
+    "as": [
+      "calibration-set"
+    ],
+    "command": "viable-harness calibrate --set funneling-focusing-questions --judge-model <model> --limit 30",
+    "note": "Checks your judge model against raters, with no labels of your own: a teacher's reply most of three raters called a focusing question should pass, and a funneling one should fail, half each; neither is left out. It describes your judge on classroom talk and this rubric, not your agent. The students are children, anonymized: running it sends their words to the model you name. Never try to identify a student or a teacher."
+  },
+  "verified_at": "2026-11-09"
+}

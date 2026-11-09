@@ -233,7 +233,7 @@ function activityRow(activity, code, version, index, count, locked, sections, ow
   const units = doc.course.units || [];
   // Into another unit from here, as its menu says it: the row moves under that unit's heading.
   const unitMenu = units.length && !locked ? `<select class="v-input small row-unit" name="unit_ref" data-api="POST ${api}/unit" aria-label="Unit for ${esc(activity.title)}">${[{ ref: '', title: 'No unit' }, ...units].map((unit) => `<option value="${esc(unit.ref)}"${(activity.unit_ref || '') === unit.ref ? ' selected' : ''}>${esc(unit.title)}</option>`).join('')}</select>` : '';
-  return `<li class="row" id="activity-${key}" data-key="${key}" data-say-box>
+  return `<li class="row" id="activity-${key}" data-key="${key}"${locked ? '' : ` data-drag-item="${key}"`} data-say-box>
 ${locked ? '' : `<span class="drag-handle" data-drag="activity" aria-hidden="true">${icon('grip', 16)}</span>`}
 <div class="row-what"><a href="/console/courses/${esc(code)}/activities/${key}"><strong>${esc(activity.title)}</strong></a><span class="v-note">${esc(kindWords(activity, doc))}</span></div>
 <span class="v-pill${open ? ' is-open' : ''}">${esc(stateWords(activity))}</span>
@@ -284,7 +284,7 @@ ${locked ? '' : `<div class="actions unit-do">
 </div>`}
 ${say()}
 </div>`;
-  const rowsOf = (list, ref, empty) => `<ul class="rows" data-unit="${esc(ref)}">${rows(list)}${empty ? `<li class="unit-empty">${empty}</li>` : ''}</ul>`;
+  const rowsOf = (list, ref, empty) => `<ul class="rows" data-unit="${esc(ref)}" data-drop-group="${esc(ref)}">${rows(list)}${empty ? `<li class="unit-empty">${empty}</li>` : ''}</ul>`;
   const startOpen = !activities.length || url?.searchParams.get('add') === '1';
   return {
     title: course.title,
@@ -311,7 +311,7 @@ ${text('title', 'Its name', '', { required: true, maxlength: 160, autocomplete: 
 </details>
 </div>`}
 ${!activities.length ? '<p class="v-empty">No activities yet. Add the first one above: it stays hidden from learners until you open it.</p>' : units.length
-    ? `${units.map((unit, index) => `<div class="unit-block" data-unit="${esc(unit.ref)}">${unitHead(unit, index)}${rowsOf(inUnit(unit.ref), unit.ref, locked ? 'Nothing in this unit.' : 'Nothing here yet: add an activity here, or drag one in.')}</div>`).join('')}${loose.length
+    ? `${units.map((unit, index) => `<div class="unit-block" data-unit="${esc(unit.ref)}"${locked ? '' : ` data-drag-block="${esc(unit.ref)}"`}>${unitHead(unit, index)}${rowsOf(inUnit(unit.ref), unit.ref, locked ? 'Nothing in this unit.' : 'Nothing here yet: add an activity here, or drag one in.')}</div>`).join('')}${loose.length
       ? `<div class="loose-block"><div class="unit-head"><h2 class="unit">Not in a unit <small>${esc(plural(loose.length, 'activity', 'activities'))}</small></h2></div>${rowsOf(loose, '', '')}</div>`
       : locked ? '' : `<div class="loose-block is-empty"><p class="unit loose-drop">Not in a unit</p>${rowsOf([], '', 'Drop it here to take it out of its unit.')}</div>`}`
     : rowsOf(activities, '', '')}
@@ -387,11 +387,8 @@ const ACTIVITIES_CSS = `.unit{margin:26px 0 8px;font-size:1.0625rem;font-weight:
 .row:not(:has(>.drag-handle))>.row-what{grid-column:1}
 .unit-head{justify-content:flex-start}
 .unit-head>.unit{flex:1}
-.row.is-dragging,.unit-block.is-dragging{opacity:.4}
-.row.is-dragging{border-bottom-style:dashed}
-.drag-ghost{position:fixed;z-index:70;margin:0;padding:10px 14px;border:1px solid var(--public-rule-strong);border-radius:var(--radius-sm);background:var(--surface);box-shadow:0 22px 48px -20px rgb(10 16 28/.45);list-style:none;pointer-events:none;transform:rotate(-.6deg)}
+.drag-ghost{padding:10px 14px}
 .drag-ghost .actions,.drag-ghost .by-section,.drag-ghost .say,.drag-ghost .unit-do{display:none}
-html.is-dragging-now,html.is-dragging-now *{cursor:grabbing!important;user-select:none}
 .row-unit{width:auto;max-width:200px}
 .row-unit.v-menu-button{min-height:34px;padding:0 12px;font-size:.875rem}
 .row-move{display:inline-flex;gap:6px}

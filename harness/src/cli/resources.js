@@ -18,7 +18,7 @@ export const resourceOptions = (values) => ({
   refresh: values.refresh === true,
   onProgress: (url) => console.error(`Fetching ${url}`)
 });
-export const CONNECTOR_OPTIONS = ['limit', 'standard', 'evaluator', 'dimension', 'jurisdiction', 'subject', 'grade', 'unit', 'code'];
+export const CONNECTOR_OPTIONS = ['limit', 'standard', 'evaluator', 'dimension', 'jurisdiction', 'subject', 'grade', 'unit', 'code', 'split'];
 export const connectorChoices = (values) => Object.fromEntries(CONNECTOR_OPTIONS.filter((name) => values[name] != null).map((name) => [name, values[name]]));
 
 /** The lines of credit a person keeps with what a resource made. */

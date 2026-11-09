@@ -1,0 +1,50 @@
+{
+  "id": "eedi-tutoring-dialogues",
+  "name": "Eedi Question-Anchored Tutoring Dialogues (QATD-2k)",
+  "kind": "dataset",
+  "summary": "1,971 real chat conversations between Eedi's math tutors and students aged about 11 to 13, each starting from the diagnostic question the student asked for help with, anonymized with PIIvot.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "not stated (students aged 11 to 13 on average, mostly in the UK)",
+  "url": "https://huggingface.co/datasets/Eedi/Question-Anchored-Tutoring-Dialogues-2k",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "CC-BY-NC-4.0",
+      "CC-BY-NC-SA-4.0"
+    ],
+    "unclear": true,
+    "note": "The card's metadata says CC BY-NC 4.0 and its text CC BY-NC-SA 4.0. For commercial use, its card says to contact Eedi.",
+    "terms": "non-commercial research only; never try to identify or re-identify anyone in it",
+    "source": "https://huggingface.co/datasets/Eedi/Question-Anchored-Tutoring-Dialogues-2k"
+  },
+  "access": "open download",
+  "formats": [
+    "CSV",
+    "Parquet"
+  ],
+  "made_by": [
+    "Eedi",
+    "Matthew Zent",
+    "Digory Smith",
+    "Simon Woodhead"
+  ],
+  "cite": "Zent, M., Smith, D., & Woodhead, S. (2025). PIIvot: A Lightweight NLP Anonymization Framework for Question-Anchored Tutoring Dialogues. EMNLP 2025. https://doi.org/10.18653/v1/2025.emnlp-main.1397",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "judge",
+      "simulated-learner"
+    ],
+    "how": "Real learners' turns, each anchored to a diagnostic question whose wrong answers are known: test cases that end on a learner's turn, and patterns for a simulated learner, which agent tests don't use yet."
+  },
+  "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "No connector is written yet. A test suite could end each case on a learner's turn. These are children's real words, so it would ask each person to accept its terms, and send them only to a model whose provider's terms allow it."
+  },
+  "verified_at": "2026-11-09"
+}

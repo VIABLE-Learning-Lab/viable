@@ -233,3 +233,16 @@ test('tests of what is behind an endpoint, with no agent file, make a page named
     server.close();
   }
 });
+
+test('an endpoint under test gets what How the AI helps prepares for each turn, after its own system prompt', async () => {
+  const { agentAt } = await import('../src/testRuns.js');
+  const sent = [];
+  const fetch = async (_url, init) => { sent.push(JSON.parse(init.body)); return Response.json({ choices: [{ message: { role: 'assistant', content: 'What do the two fractions need?' }, finish_reason: 'stop' }], usage: { total_tokens: 3 } }); };
+  const run = agentAt({ baseUrl: 'http://127.0.0.1:9/v1', model: 'my-tutor', fetch, system: 'You tutor fractions.' });
+  await run(null, { input: 'What is 3/4 + 1/8?', history: [], teaching: { goal: 'Add fractions with unlike denominators.', help: 'hint' } });
+  await run(null, { input: 'What is 3/4 + 1/8?', history: [] });
+  const [taught, plain] = sent.map((body) => body.messages[0]);
+  assert.match(taught.content, /^You tutor fractions\.\n\n/);
+  assert.match(taught.content, /Add fractions with unlike denominators/);
+  assert.equal(plain.content, 'You tutor fractions.', 'with no teaching, only its own prompt');
+});

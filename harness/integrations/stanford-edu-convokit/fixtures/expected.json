@@ -1,0 +1,29 @@
+{
+  "marks": [
+    {
+      "turn_index": 0,
+      "label": "AI asked a focusing question",
+      "evidence": "Focusing question classifier, on the AI's reply: “What could you do to compare them? Think about what the two fractions need to have in common.”"
+    },
+    {
+      "turn_index": 1,
+      "label": "Learner explained their reasoning",
+      "evidence": "Student reasoning classifier, on the learner's message: “I think 3/4 is bigger because when the denominators are both 12, 3/4 is 9/12 and 2/3 is 8/12.”"
+    },
+    {
+      "turn_index": 1,
+      "label": "AI asked a focusing question",
+      "evidence": "Focusing question classifier, on the AI's reply: “You changed both to twelfths, 9/12 and 8/12. Why does 12 work as a common denominator for thirds and fourths?”"
+    },
+    {
+      "turn_index": 2,
+      "label": "AI asked a focusing question",
+      "evidence": "Focusing question classifier, on the AI's reply: “You compared 9/12 and 8/12 yourself. Which of those is more, and what does that tell you?”"
+    },
+    {
+      "turn_index": 4,
+      "label": "Learner explained their reasoning",
+      "evidence": "Student reasoning classifier, on the learner's message: “9/12 is more, so 3/4 is bigger than 2/3.”"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "learning_events": {
+    "events": [
+      { "type": "questions.answer", "panel": "check", "item": "q1", "at": "2026-10-29T14:06:30Z", "seq": 1, "data": { "response": "3/4", "correct": true, "attempt": 1, "skill": "Comparing fractions" } }
+    ],
+    "turns": [
+      { "message": "Is 2/3 bigger than 3/4?", "reply": "What could you do to compare them? Think about what the two fractions need to have in common.", "started_at": "2026-10-29T14:01:00Z", "conversation_id": "c1", "turn_index": 1 },
+      { "message": "I think 3/4 is bigger because when the denominators are both 12, 3/4 is 9/12 and 2/3 is 8/12.", "reply": "You changed both to twelfths, 9/12 and 8/12. Why does 12 work as a common denominator for thirds and fourths?", "started_at": "2026-10-29T14:03:00Z", "conversation_id": "c1", "turn_index": 2 },
+      { "message": "Just tell me if I'm right.", "reply": "You compared 9/12 and 8/12 yourself. Which of those is more, and what does that tell you?", "started_at": "2026-10-29T14:04:00Z", "conversation_id": "c1", "turn_index": 3 },
+      { "started_at": "2026-10-29T14:05:00Z", "conversation_id": "c1", "turn_index": 4, "words": 6 },
+      { "message": "9/12 is more, so 3/4 is bigger than 2/3.", "reply": "Yes. 3/4 is bigger than 2/3.", "started_at": "2026-10-29T14:06:00Z", "conversation_id": "c1", "turn_index": 5 }
+    ]
+  }
+}

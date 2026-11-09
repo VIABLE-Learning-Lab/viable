@@ -1,0 +1,50 @@
+{
+  "id": "uptake-model",
+  "name": "Conversational uptake model",
+  "kind": "model",
+  "summary": "A BERT model from Stanford that scores how much a teacher's reply builds on what a student just said, learned without labels from math classroom transcripts and checked against experts' ratings.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "not stated (trained on 4th and 5th grade math lessons)",
+  "url": "https://huggingface.co/stanford-nlpxed/uptake-model",
+  "repository": "https://github.com/ddemszky/conversational-uptake",
+  "license": {
+    "spdx": [
+      "CC-BY-NC-ND-4.0"
+    ],
+    "note": "Its card asks each user to agree to three terms before using it. The code and data in its GitHub repository are MIT (conversational-uptake).",
+    "terms": "non-commercial use only; never try to recover its training data; don't share it beyond your research team and project",
+    "source": "https://huggingface.co/stanford-nlpxed/uptake-model"
+  },
+  "access": "open download",
+  "access_note": "About 440 MB, not gated. Edu-ConvoKit 0.4.0 calls it ddemszky/uptake-model, which now leads here.",
+  "formats": [
+    "PyTorch"
+  ],
+  "made_by": [
+    "Dorottya Demszky",
+    "Jing Liu",
+    "Zid Mancenido",
+    "Julie Cohen",
+    "Heather Hill",
+    "Dan Jurafsky",
+    "Tatsunori Hashimoto"
+  ],
+  "cite": "Demszky, D., Liu, J., Mancenido, Z., Cohen, J., Hill, H., Jurafsky, D., & Hashimoto, T. (2021). Measuring Conversational Uptake: A Case Study on Student-Teacher Interactions. ACL 2021, 1638-1653. https://doi.org/10.18653/v1/2021.acl-long.130",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "detector"
+    ],
+    "how": "Marks the turns where the AI builds on what the learner said: the Edu-ConvoKit component runs it on the person's own computer once they download it."
+  },
+  "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Runs in the Edu-ConvoKit component's detector (edu-convokit) once you download it yourself. Its terms ask each user to agree not to share it, so nothing here fetches it. Trained on classroom talk; nobody has checked it on chats with an AI."
+  },
+  "verified_at": "2026-11-09"
+}

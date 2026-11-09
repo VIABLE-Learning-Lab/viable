@@ -1,0 +1,51 @@
+{
+  "id": "conversational-uptake",
+  "name": "Conversational uptake annotations",
+  "kind": "dataset",
+  "summary": "2,246 exchanges from 4th and 5th grade math lessons, a student's turn and the teacher's reply, each rated by experts for how much the teacher builds on what the student said.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "4-5",
+  "url": "https://github.com/ddemszky/conversational-uptake",
+  "repository": null,
+  "license": {
+    "spdx": [
+      "MIT"
+    ],
+    "note": "The repository's LICENSE is MIT, and the repository holds the data. Its exchanges are excerpts of the anonymized NCTE transcripts, which as a whole are for research only (ncte-transcripts). The uptake model from the same paper has its own terms (uptake-model).",
+    "source": "https://github.com/ddemszky/conversational-uptake/blob/67fb30cf7c3ea6f619487e33d2f99692dca107d0/LICENSE"
+  },
+  "access": "open download",
+  "formats": [
+    "CSV"
+  ],
+  "made_by": [
+    "Dorottya Demszky",
+    "Jing Liu",
+    "Zid Mancenido",
+    "Julie Cohen",
+    "Heather Hill",
+    "Dan Jurafsky",
+    "Tatsunori Hashimoto"
+  ],
+  "cite": "Demszky, D., Liu, J., Mancenido, Z., Cohen, J., Hill, H., Jurafsky, D., & Hashimoto, T. (2021). Measuring Conversational Uptake: A Case Study on Student-Teacher Interactions. ACL 2021, 1638-1653. https://doi.org/10.18653/v1/2021.acl-long.130",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "judge",
+      "detector"
+    ],
+    "how": "Experts' ratings to check a judge model that rates whether a reply builds on what the learner said, or a detector of uptake that wasn't trained on them."
+  },
+  "in_harness": null,
+  "connect": {
+    "level": 2,
+    "as": [
+      "calibration-set"
+    ],
+    "command": "viable-harness calibrate --set conversational-uptake --judge-model <model> --limit 30",
+    "note": "Checks your judge model against experts, with no labels of your own: a teacher's reply most of three raters called high uptake should pass, and one they called low should fail, half each. It describes your judge on classroom talk and this rubric, not your agent. The students are children, anonymized: running it sends their words to the model you name. Never try to identify a student or a teacher."
+  },
+  "verified_at": "2026-11-09"
+}

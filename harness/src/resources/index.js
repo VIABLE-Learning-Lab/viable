@@ -8,6 +8,8 @@ import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node
 import { homedir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { CATALOG, licenseLimits } from '../catalog.js';
+import { conversationalUptake, funnelingFocusing } from './classroomExchanges.js';
+import eduConvokit from './eduConvokit.js';
 import { asap2, ellipse } from './essays.js';
 import evaluators from './evaluators.js';
 import fairytaleqa from './fairytaleqa.js';
@@ -22,7 +24,7 @@ import pybkt from './pybkt.js';
 import standards from './standards.js';
 import wwc from './wwc.js';
 
-export const CONNECTORS = [gsm8k, mathcamps, mathdial, tutormoments, fairytaleqa, evaluators, mrbench, asap2, ellipse, standards, wwc, illustrativeMath, pybkt, ...fetchable];
+export const CONNECTORS = [gsm8k, mathcamps, mathdial, tutormoments, fairytaleqa, evaluators, mrbench, conversationalUptake, funnelingFocusing, asap2, ellipse, standards, wwc, illustrativeMath, pybkt, eduConvokit, ...fetchable];
 const RECORD = 'fetched.json';
 const MOST_BYTES = 256 * 1024 * 1024;
 const fail = (message, code, status = 400) => Object.assign(new Error(message), { code, status });

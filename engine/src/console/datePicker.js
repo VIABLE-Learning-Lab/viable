@@ -187,7 +187,7 @@ export function dressDate(input) {
     pop.setAttribute('role', 'dialog');
     pop.setAttribute('aria-label', kind === 'date' ? 'Choose a date' : 'Choose a date and time');
     pop.innerHTML = `<div class="vd-head"><button type="button" class="vd-nav" data-by="-1" aria-label="Previous month">${CHEVRON_LEFT}</button><strong class="vd-month" id="${id}-month" aria-live="polite"></strong><button type="button" class="vd-nav" data-by="1" aria-label="Next month">${CHEVRON_RIGHT}</button></div>
-<div class="vd-body"><table class="vd-grid" role="grid" aria-labelledby="${id}-month"><thead><tr></tr></thead><tbody></tbody></table>${kind === 'date' ? '' : '<div class="vd-times" role="group" aria-label="Time"></div>'}</div>
+<div class="vd-body"><table class="vd-grid" role="grid" aria-labelledby="${id}-month"><thead><tr></tr></thead><tbody></tbody></table>${kind === 'date' ? '' : '<div class="vd-time-col"><span class="vd-times-head" aria-hidden="true">Time</span><div class="vd-times" role="group" aria-label="Time"></div></div>'}</div>
 <div class="vd-foot"><button type="button" class="vd-link vd-today">Today</button><span class="vd-chosen" aria-live="polite"></span><button type="button" class="vd-link vd-remove">Clear</button><button type="button" class="vd-done">Done</button></div>`;
     const head = pop.querySelector('thead tr');
     for (const cell of monthCells(2026, 10, firstDay).slice(0, 7)) {
@@ -401,7 +401,9 @@ export const DATE_PICKER_CSS = `.vd-field,.vd-pop{--vd-accent:var(--ink-blue,var
 .vd-day[aria-disabled=true]{color:var(--vd-muted);opacity:.38;text-decoration:line-through;cursor:not-allowed}
 .vd-day[aria-disabled=true]:hover{background:transparent}
 .vd-day:focus-visible,.vd-time:focus-visible,.vd-nav:focus-visible,.vd-link:focus-visible,.vd-done:focus-visible,.vd-clear:focus-visible{outline:2px solid var(--vd-accent);outline-offset:1px}
-.vd-times{display:flex;flex-direction:column;gap:2px;width:112px;height:262px;padding:0 2px 0 12px;overflow-y:auto;border-left:1px solid var(--vd-rule);scrollbar-width:thin}
+.vd-time-col{display:flex;flex-direction:column;gap:6px;padding-left:12px;border-left:1px solid var(--vd-rule)}
+.vd-times-head{padding:6px 10px 0;color:var(--vd-muted);font-size:.75rem;font-weight:600}
+.vd-times{display:flex;flex-direction:column;gap:2px;width:112px;height:228px;padding:0 2px 0 0;overflow-y:auto;scrollbar-width:thin}
 .vd-time{flex:none;padding:7px 10px;border:0;border-radius:8px;background:transparent;color:var(--vd-text);font-variant-numeric:tabular-nums;text-align:left;white-space:nowrap}
 .vd-time:hover{background:var(--vd-soft);color:var(--vd-ink)}
 .vd-time[aria-pressed=true]{background:var(--vd-accent);color:var(--vd-on-accent);font-weight:600}
@@ -411,6 +413,6 @@ export const DATE_PICKER_CSS = `.vd-field,.vd-pop{--vd-accent:var(--ink-blue,var
 .vd-link:hover{background:var(--vd-soft)}
 .vd-link[hidden]{display:none}
 .vd-done{min-height:34px;padding:0 16px;border:1px solid var(--vd-accent);border-radius:999px;background:var(--vd-accent);color:var(--vd-on-accent);font-size:.875rem;font-weight:600}
-@media (max-width:519px){.vd-body{flex-direction:column}.vd-pop .vd-grid{margin:0 auto}.vd-times{flex-direction:row;width:auto;height:auto;padding:10px 0 2px;overflow-x:auto;overflow-y:hidden;border-top:1px solid var(--vd-rule);border-left:0}.vd-day{width:calc((100vw - 60px) / 7);max-width:44px;height:40px}.vd-pop .vd-grid th{width:calc((100vw - 60px) / 7);max-width:44px}}
+@media (max-width:519px){.vd-body{flex-direction:column}.vd-pop .vd-grid{margin:0 auto}.vd-time-col{padding:10px 0 0;border-top:1px solid var(--vd-rule);border-left:0}.vd-times-head{padding:0 2px}.vd-times{flex-direction:row;width:auto;height:auto;padding:0 0 2px;overflow-x:auto;overflow-y:hidden}.vd-day{width:calc((100vw - 60px) / 7);max-width:44px;height:40px}.vd-pop .vd-grid th{width:calc((100vw - 60px) / 7);max-width:44px}}
 @keyframes vd-rise{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.vd-pop:popover-open,.vd-pop.is-open{animation:none}.vd-day{transition:none}}`;

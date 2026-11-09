@@ -1,0 +1,39 @@
+{
+  "id": "amber-tutoring-transcripts",
+  "name": "Amber tutoring transcripts",
+  "kind": "dataset",
+  "summary": "Transcripts of 45 online tutoring sessions of about an hour, in which one tutor, Amber, works with an 8th or 9th grader on a single problem about reading a graph, recorded by the XQ Institute in 2022.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "8-9 (typically, its README says)",
+  "url": "https://github.com/laurenceholt/amber",
+  "repository": null,
+  "license": {
+    "spdx": [],
+    "note": "Neither the repository nor its README states a license or terms of use. Edu-ConvoKit's repository holds a copy for a tutorial.",
+    "source": "https://github.com/laurenceholt/amber"
+  },
+  "access": "open download",
+  "formats": [
+    "JSON"
+  ],
+  "made_by": [
+    "XQ Institute",
+    "Laurence Holt"
+  ],
+  "cite": "XQ Institute (2022). Amber tutoring transcripts. GitHub. https://github.com/laurenceholt/amber",
+  "status": "released",
+  "fits": {
+    "slots": [],
+    "how": "Speech-to-text transcripts of one tutor using productive struggle with many students on the same problem, with no labels: material to read or to label, not yet a check on a judge or a detector."
+  },
+  "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "No license is stated, so nothing here fetches it. It has no labels to check a judge or a detector against, and its file names look like dates and initials, which a connector would leave out."
+  },
+  "verified_at": "2026-11-09"
+}

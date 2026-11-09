@@ -1,0 +1,25 @@
+{
+  "id": "stanford/edu-convokit-measures",
+  "version": "0.1.0",
+  "slot": "measure",
+  "label": "Edu-ConvoKit: talk time and math density",
+  "summary": "The learner's share of the words in their conversation with the AI, and how many terms from Edu-ConvoKit's math glossary the learner and the AI use per message. Edu-ConvoKit computes them on this computer, with no model.",
+  "runs": { "kind": "http", "entry": "http://127.0.0.1:8790/measure" },
+  "receives": ["learning_events"],
+  "sends_to": ["127.0.0.1"],
+  "uses_models": false,
+  "license": { "code": "MIT" },
+  "authors": ["Rose E. Wang", "Dorottya Demszky"],
+  "cite": "Wang, R. E., & Demszky, D. (2024). Edu-ConvoKit: An Open-Source Library for Education Conversation Data. NAACL 2024 (System Demonstrations), 61-69. https://doi.org/10.18653/v1/2024.naacl-demo.6",
+  "attribution": "Edu-ConvoKit (Wang & Demszky, 2024). Its math density follows Himmelsbach, Hill, Liu & Demszky (2024), A Quantitative Study of Mathematical Language in Upper Elementary Classrooms, EdWorkingPaper 24-1029.",
+  "evidence": {
+    "original": "Talk time counts words. Math density counts terms from a glossary of math vocabulary; measured that way in 1,657 4th and 5th grade lessons, teachers who used more mathematical language were more effective at raising students' test scores (Himmelsbach et al., 2024).",
+    "integration": "Its fixtures pass through the adapter with Edu-ConvoKit 0.4.0, and through the harness's measure call. Not compared with anything on learners' chats with an AI.",
+    "unknown": "What these numbers say about a learner's chat with an AI, where the AI writes most of the words; nobody has related them to learning there."
+  },
+  "risk": "medium",
+  "risk_notes": "A number can mislead a teacher: the glossary holds everyday words such as line, value and total, and a short chat gives a number that means little. It runs on this computer, calls no model and sends nothing elsewhere.",
+  "maintainer": { "name": "VIABLE Lab", "issues": "https://github.com/VIABLE-Learning-Lab/viable/issues" },
+  "harness": ">=0.3.0 <1.0.0",
+  "fixtures": "fixtures/"
+}

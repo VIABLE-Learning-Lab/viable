@@ -1,0 +1,45 @@
+{
+  "id": "student-reasoning-model",
+  "name": "Student reasoning classifier",
+  "kind": "model",
+  "summary": "A BERT classifier from Stanford that finds a student's turn in which they explain their mathematical reasoning, trained on annotations of 4th and 5th grade math lessons (the NCTE transcripts).",
+  "subjects": [
+    "math"
+  ],
+  "grades": "not stated (trained on 4th and 5th grade math lessons)",
+  "url": "https://huggingface.co/stanford-nlpxed/student-reasoning",
+  "repository": "https://github.com/ddemszky/classroom-transcript-analysis",
+  "license": {
+    "spdx": [
+      "LicenseRef-GPL-no-version"
+    ],
+    "unclear": true,
+    "note": "Its card's metadata says GPL and names no version, and the card holds nothing else. GPL sets the terms for passing a work on, so ask its authors which version they mean before you share it or anything built from it.",
+    "source": "https://huggingface.co/stanford-nlpxed/student-reasoning"
+  },
+  "access": "open download",
+  "access_note": "About 440 MB, not gated. Edu-ConvoKit 0.4.0 calls it ddemszky/student-reasoning, which now leads here; the NCTE repository points to Edu-ConvoKit to run it.",
+  "formats": [
+    "PyTorch"
+  ],
+  "made_by": [
+    "Dorottya Demszky",
+    "Heather Hill"
+  ],
+  "cite": "Demszky, D., & Hill, H. (2023). The NCTE Transcripts: A Dataset of Elementary Math Classroom Transcripts. BEA 2023, 528-538. https://doi.org/10.18653/v1/2023.bea-1.44",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "detector"
+    ],
+    "how": "Marks the turns where the learner explains their reasoning: the Edu-ConvoKit component runs it on messages of 8 words or more, on the person's own computer, once they download it."
+  },
+  "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "Runs in the Edu-ConvoKit component's detector (edu-convokit) once you download it yourself. Its license is unclear, so nothing here fetches it. Trained on spoken classroom talk; nobody has checked it on chats with an AI."
+  },
+  "verified_at": "2026-11-09"
+}
