@@ -36,7 +36,9 @@ const inPackage = (path) => !/^[A-Za-z]:|^[\\/]|(?:^|[\\/])\.\.(?:[\\/]|$)/.test
 // Everything a document names by path: its files, their text copies, its websites' pages.
 const pathsOf = (doc) => [...(doc.files || []).flatMap((file) => [file.path, file.text_path]), ...(doc.knowledge_bases || []).flatMap((kb) => (kb.websites || []).flatMap((site) => (site.snapshot || []).map((page) => page.path)))].filter((path) => path != null);
 
-export const slugOf = (text, fallback) => String(text ?? '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || fallback;
+// Cut at a word, so an address never ends in half of one; a single word longer than that is cut where it must be.
+export const cutWords = (slug, max) => { if (slug.length <= max) return slug; const cut = slug.slice(0, max + 1).replace(/-[^-]*$/, ''); return cut && cut.length <= max ? cut : slug.slice(0, max); };
+export const slugOf = (text, fallback) => cutWords(String(text ?? '').toLowerCase().normalize('NFKD').replace(/\p{M}/gu, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''), 60) || fallback;
 const firstFree = (base, taken) => { let name = base; for (let n = 2; taken.has(name); n += 1) name = `${base}-${n}`; return name; };
 
 /** Where each course answers: the code it holds, else one from its title. Every course of the same documents, in order, gets the same one each time. */

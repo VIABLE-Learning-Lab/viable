@@ -219,7 +219,8 @@ test('text from a model is text: a page can’t be written into, and a link stay
   assert.match(html, /<strong>bold<\/strong>/);
   assert.match(html, /<a href="https:\/\/example.org\/x" target="_blank" rel="noopener noreferrer">theirs<\/a>/);
   assert.doesNotMatch(html, /viable\.math/);
-  assert.match(html, /the link on the card/);
+  // A made-up address goes, with no words of ours in its place: a reply may be in any language.
+  assert.match(html, /made up see/);
   assert.doesNotMatch(html, /href="javascript/);
 });
 
@@ -303,7 +304,7 @@ test('a link’s words: a bracket stays in an address, and a full stop after one
   const s = await server(['See [Mercury](https://en.example.org/wiki/Mercury_(planet)) and https://en.example.org/x. Also https://made.up/y.']);
   const events = await s.ask('Use https://en.example.org/wiki/Mercury_(planet) and https://en.example.org/x');
   const html = events.find((event) => event.name === 'said').data.html;
-  assert.match(html, /<a href="https:\/\/en\.example\.org\/wiki\/Mercury_\(planet\)"[^>]*>Mercury<\/a> and https:\/\/en\.example\.org\/x\. Also the link on the card\./);
+  assert.match(html, /<a href="https:\/\/en\.example\.org\/wiki\/Mercury_\(planet\)"[^>]*>Mercury<\/a> and https:\/\/en\.example\.org\/x\. Also\./);
 });
 
 test('a class list in a table is found in any column, and a table of something else isn’t', () => {
@@ -474,6 +475,10 @@ test('an activity card says it opens to learners, and once open, shows how they 
   const opened = await s.api('POST', button[1], JSON.parse(button[2].replaceAll('&quot;', '"')));
   assert.equal(opened.status, 200);
   assert.equal(opened.headers.get('clear-site-data'), '"prefetchCache"');
+  // Children sign in with codes from the class list, so with nobody on it the card doesn't say they can open it.
+  const before = await s.page(`ask/${thread}`);
+  assert.match(before.slice(before.indexOf('Practice: adding fractions')), /<h4>Before learners can open it<\/h4><p class="notice">Only personal codes on the class list open this course, and nobody is on it yet\./);
+  await s.ok('POST', 'courses/fractions-period-2/people', { list: 'Ada Lovelace' });
   // Drawn again from what is true now, the card has the class link, the poster and a QR code to scan.
   const page = await s.page(`ask/${thread}`);
   const shown = page.slice(page.indexOf('Practice: adding fractions'));
@@ -659,6 +664,44 @@ test('on a button that changes what learners meet, each question shows with its 
   assert.match(card, /answer: 1/);
 });
 
+test('where several steps have questions, a change names its step, and none is changed by guess', async () => {
+  let code;
+  const TWO = [
+    { title: 'Warm up', shows: 'questions', ai: false, questions: [{ type: 'fill', prompt: 'Warm up one?', accept: ['1'] }] },
+    { title: 'On your own', shows: 'questions', ai: false, questions: [{ type: 'fill', prompt: 'On your own one?', accept: ['2'] }] }
+  ];
+  const changed = { type: 'fill', prompt: 'Changed?', accept: ['3'] };
+  const s = await server(following([
+    () => [call('add_activity', { course: code, title: 'Practice', steps: TWO })],
+    () => [call('change_questions', { course: code, activity: 'practice', replace: [{ id: 'q1', ...changed }] })],
+    () => [call('change_questions', { course: code, activity: 'practice', step: 'On your own', replace: [{ id: 'q1', ...changed }] })],
+    'Done.'
+  ]));
+  ({ go: code } = await s.ok('POST', 'courses', { title: 'Fractions' }));
+  code = code.split('/').at(-1);
+  const events = await s.ask('Make it, then change the first question of On your own.');
+  assert.ok(events.some((event) => event.name === 'step' && event.data.state === 'failed' && /Questions are in “Warm up”, “On your own”: say which step/.test(event.data.html)));
+  const doc = await s.ok('GET', `courses/${code}/download`);
+  assert.deepEqual(doc.question_sets.map((set) => set.items.map((item) => item.prompt)), [['Warm up one?'], ['Changed?']]);
+});
+
+test('a change waiting on a button says each value in words, and every part of it', async () => {
+  let code;
+  let key;
+  const s = await server(following([
+    () => [call('change_activity', { course: code, activity: key, help: 'ask_first', feedback: 'end', tries: 0, starters: ['I’m stuck'] })],
+    'Asked.'
+  ]));
+  ({ go: code } = await s.ok('POST', 'courses', { title: 'Fractions' }));
+  code = code.split('/').at(-1);
+  ({ go: key } = await s.ok('POST', `courses/${code}/activities`, { title: 'Practice', kind: 'questions' }));
+  key = key.split('/').at(-1);
+  await s.ok('POST', `courses/${code}/activities/${key}/release`, { release: 'open' });
+  const card = (await s.ask('Make it ask first.')).find((event) => event.name === 'card' && /Change it/.test(event.data.html)).data.html;
+  for (const words of ['How far the AI may go: Asks questions', 'When they find out: Once all are answered', 'Tries per question: As many as they like', 'What learners can tap to say: I’m stuck']) assert.ok(card.includes(words), words);
+  assert.doesNotMatch(card, /ask_first|: end\b|: 0\b/);
+});
+
 const CASE_STEPS = [
   { title: 'The case', shows: 'page', ai: false, text: 'A beekeeper says **the bees are vanishing** because of phone masts.' },
   { title: 'Your first call', shows: 'questions', ai: false, feedback: 'none', questions: [{ type: 'single', prompt: 'Is it true?', choices: ['Yes', 'No', 'Can’t tell'], right: ['Can’t tell'] }] },
@@ -770,7 +813,7 @@ test('what a message changed can be undone, and redone, a course at a time and o
   assert.match(told, /pressed Redo/);
 });
 
-test('a conversation takes its name from what it made, and a teacher can rename it', async () => {
+test('a conversation keeps the teacher’s words for its name, not what it made, and a teacher can rename it', async () => {
   let course;
   const s = await server((body, at) => {
     if (at === 0) return [call('create_course', { title: 'Science' })];
@@ -778,7 +821,7 @@ test('a conversation takes its name from what it made, and a teacher can rename 
   });
   const events = await s.ask('Something long about a science course for my class this term');
   const thread = threadOf(events);
-  assert.equal(events.filter((event) => event.name === 'thread').at(-1).data.title, 'Science');
+  assert.equal(events.filter((event) => event.name === 'thread').at(-1).data.title, 'Something long about a science course for my class this term');
   assert.equal(course, undefined);
   await s.ok('PUT', `ask/${thread}`, { title: 'Term two science' });
   assert.match(await s.page(`ask/${thread}`), /Term two science/);

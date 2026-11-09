@@ -3,7 +3,7 @@
  * a package, since refs are per package and a course travels as one file: a course's stay in its package,
  * and anything else is on its own, in a package with no course. No Node built-ins.
  */
-import { slugOf } from '../server/library.js';
+import { cutWords, slugOf } from '../server/library.js';
 import { agentsToServe, pickAgent } from '../server/runtime.js';
 import { esc } from './forms.js';
 
@@ -17,7 +17,7 @@ export const NO_STORE = '<p class="notice">This server has no store, so nothing 
 
 /** A ref no other of its kind in the package has. */
 export function freeRef(base, taken, fallback) {
-  const start = slugOf(base, fallback).slice(0, 40);
+  const start = cutWords(slugOf(base, fallback), 40);
   let ref = start;
   for (let n = 2; taken.has(ref); n += 1) ref = `${start}-${n}`;
   return ref;

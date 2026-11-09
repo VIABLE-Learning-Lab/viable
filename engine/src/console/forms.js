@@ -112,7 +112,7 @@ small.v-note{font-size:.8125rem}
 .fields{display:grid;gap:16px}
 .fields.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 .crumbs{margin-bottom:6px;font-size:.9375rem}
-.crumbs a{color:var(--muted)}
+.crumbs a{display:inline-block;padding:2px 0;color:var(--muted)}
 .share-line{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
 .share-line code{padding:5px 10px;border-radius:var(--radius-sm);background:var(--field-mist);font-size:.875rem;overflow-wrap:anywhere}
 .here-only{margin-top:6px;font-size:.875rem}

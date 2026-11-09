@@ -12,12 +12,17 @@ import { icon } from './icons.js';
 
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-const HELP_WORDS = { step_up: 'asks first, then hints, then shows an example', ask_first: 'asks what they think first', hint: 'gives hints only, never the answer', explain: 'explains when they are stuck', check_only: 'only checks their work' };
+const HELP_WORDS = { step_up: 'asks first, then hints, then shows an example', ask_first: 'asks what they think first', hint: 'gives hints only, never the answer', explain: 'explains the idea directly, then has them try one', check_only: 'only checks their work' };
 const KIND_WORDS = { chat: 'A conversation', page: 'A page to read', questions: 'Questions', writing: 'Writing', reading: 'Reading', embed: 'A web page', several: 'Several panels' };
 const SIGN_IN = { code: 'with a personal code on a card', ask: 'by typing their name or ID', browser: 'without signing in: each browser is one learner' };
 
 export const activitiesOf = (doc) => { const list = doc.course?.activities || []; const keys = activityKeys(list); return list.map((activity, index) => ({ ...activity, key: keys[index] })); };
 const isOpen = (activity) => activity.release !== 'hidden';
+// Open to learners now: for the whole class, or for one of its sections (which has a release of its own).
+async function openerOf(here, code) {
+  const releases = here.classes?.releases ? await here.classes.releases(code).catch(() => ({})) : {};
+  return (activity) => isOpen(activity) || Object.values(releases[activity.key] || {}).some((own) => own && own.release !== 'hidden');
+}
 
 const card = (title, body, { id = '', className = '' } = {}) => `<section class="ask-card v-card ${className}"${id ? ` id="${esc(id)}" data-say-box` : ''}><h3>${esc(title)}</h3>${body}</section>`;
 const copyRow = (label, link, state = '') => `<li><div><strong>${esc(label)}</strong>${state}<code>${esc(link)}</code></div><button class="v-btn is-small" type="button" data-copy="${esc(link)}">Copy</button></li>`;
@@ -37,23 +42,26 @@ const SHOWS = { page: 'to read', questions: 'to answer', writing: 'to write', re
 async function activityCard(here, spec, context = {}) {
   const { code, doc, meta } = await courseAt(here.library, spec.course);
   const activity = activitiesOf(doc).find((item) => item.key === spec.activity);
+  const opened = await openerOf(here, code);
   if (!activity) return card('This has moved on', '<p class="v-note">That activity isn’t in this course anymore.</p>');
   const steps = flowOf(doc, activity);
   const taught = activity.teaching || {};
   const notes = reviewOf(doc, activity);
   const row = (step, index) => `<li><span class="ask-flow-n">${index + 1}</span><div><strong>${esc(step.title)}</strong><small>${esc(step.panels.map((panel) => (panel.type === 'questions' ? `${panel.questions} question${panel.questions === 1 ? '' : 's'}` : SHOWS[panel.type] || PANEL_WORDS[panel.type])).join(', '))}${step.has_ai ? ', with the AI' : ''}</small>${step.says ? `<q>${esc(step.says)}</q>` : ''}</div></li>`;
-  return card(activity.title, `<div class="ask-activity-head"><span class="v-pill${isOpen(activity) ? ' is-open' : ''}">${isOpen(activity) ? 'Open' : 'Hidden'}</span>${activity.minutes ? `<span class="v-note">About ${esc(activity.minutes)} minutes</span>` : ''}${taught.design?.label ? `<span class="v-note">Built on ${esc(taught.design.label)}</span>` : ''}</div>
+  const reach = opened(activity) && !context.shared?.has(code) ? await reachPart(here, code, doc, meta, opened) : null;
+  return card(activity.title, `<div class="ask-activity-head"><span class="v-pill${opened(activity) ? ' is-open' : ''}">${opened(activity) ? 'Open' : 'Hidden'}</span>${activity.minutes ? `<span class="v-note">About ${esc(activity.minutes)} minutes</span>` : ''}${taught.design?.label ? `<span class="v-note">Built on ${esc(taught.design.label)}</span>` : ''}</div>
 ${taught.goal ? `<p class="ask-goal">${esc(taught.goal)}</p>` : ''}
 ${steps.length ? `<ol class="ask-flow">${steps.map(row).join('')}</ol>` : `<p class="v-note">A conversation with the AI${activity.opening?.says ? `, which starts: “${esc(activity.opening.says)}”` : ''}.</p>`}
 ${notes.length ? `<ul class="ask-notes">${notes.map((note) => `<li class="is-${esc(note.level)}">${esc(note.says)}</li>`).join('')}</ul>` : ''}${say()}
-<div class="actions"><a class="v-btn is-small is-primary" href="/console/api/courses/${esc(code)}/try/${esc(activity.key)}" target="_blank" rel="noopener">Try it as a learner</a><a class="v-btn is-small" href="/console/courses/${esc(code)}/activities/${esc(activity.key)}">See all of it</a>${isOpen(activity) ? '' : openButton(doc, code, activity, meta)}</div>
-${isOpen(activity) && !context.shared?.has(code) ? `<div class="ask-reach"><h4>Learners can open it now</h4>${reachPart(here, code, doc, meta).html}</div>` : ''}`, { id: `activity-${code}-${activity.key}` });
+<div class="actions"><a class="v-btn is-small is-primary" href="/console/api/courses/${esc(code)}/try/${esc(activity.key)}" target="_blank" rel="noopener">Try it as a learner</a><a class="v-btn is-small" href="/console/courses/${esc(code)}/activities/${esc(activity.key)}">See all of it</a>${opened(activity) ? '' : openButton(doc, code, activity, meta)}</div>
+${reach ? `<div class="ask-reach"><h4>${reach.ready ? 'Learners can open it now' : 'Before learners can open it'}</h4>${reach.html}</div>` : ''}`, { id: `activity-${code}-${activity.key}` });
 }
 
 async function courseCard(here, spec) {
   const { code, doc, meta } = await courseAt(here.library, spec.course);
   const list = activitiesOf(doc);
-  return card(doc.course.title, `${list.length ? `<ul class="ask-rows ask-activities">${list.map((activity) => `<li><div><a href="/console/courses/${esc(code)}/activities/${esc(activity.key)}"><strong>${esc(activity.title)}</strong></a><small>${esc(flowWords(doc, activity))}${activity.teaching?.help ? `. The AI ${esc(HELP_WORDS[activity.teaching.help])}` : ''}</small></div><span class="v-pill${isOpen(activity) ? ' is-open' : ''}">${isOpen(activity) ? 'Open' : 'Hidden'}</span><span class="ask-row-do">${isOpen(activity) ? '' : openButton(doc, code, activity, meta)}</span></li>`).join('')}</ul>` : '<p class="v-note">No activities yet.</p>'}${say()}
+  const opened = await openerOf(here, code);
+  return card(doc.course.title, `${list.length ? `<ul class="ask-rows ask-activities">${list.map((activity) => `<li><div><a href="/console/courses/${esc(code)}/activities/${esc(activity.key)}"><strong>${esc(activity.title)}</strong></a><small>${esc(flowWords(doc, activity))}${activity.teaching?.help ? `. The AI ${esc(HELP_WORDS[activity.teaching.help])}` : ''}</small></div><span class="v-pill${opened(activity) ? ' is-open' : ''}">${opened(activity) ? 'Open' : 'Hidden'}</span><span class="ask-row-do">${opened(activity) ? '' : openButton(doc, code, activity, meta)}</span></li>`).join('')}</ul>` : '<p class="v-note">No activities yet.</p>'}${say()}
 <div class="actions"><a class="v-btn is-small is-primary" href="/console/api/courses/${esc(code)}/try" target="_blank" rel="noopener">Try it as a learner</a><a class="v-btn is-small" href="/console/courses/${esc(code)}">Change it</a><a class="v-btn is-small" href="/console/courses/${esc(code)}/share">Share</a></div>`, { id: `course-${code}` });
 }
 
@@ -65,12 +73,14 @@ async function tryCard(here, spec) {
 }
 
 // How learners reach a course: its link to copy, the poster to show the class, and a QR code to scan, with what would stop it working said first.
-function reachPart(here, code, doc, meta) {
+async function reachPart(here, code, doc, meta, opened) {
   const { base, local } = reachOf(here.origin, here.addresses);
   const link = `${base}/course/${code}`;
+  const shut = here.classes?.saving && !here.signIn && doc.course.identify === 'code' && !(await here.classes.people(code)).some((person) => person.listed);
   const note = meta.status === 'closed' ? '<p class="notice">This course is closed, so its link doesn’t open it. Open it again in Settings.</p>'
-    : !activitiesOf(doc).some(isOpen) ? '<p class="notice">Nothing is open yet, so learners would find an empty course. Open an activity first.</p>' : '';
-  return { link, html: `${note}${local && !here.addresses?.length ? '<p class="notice">This address only opens on this computer. <a href="/console/courses/' + esc(code) + '/share">To reach it from elsewhere</a></p>' : ''}
+    : !activitiesOf(doc).some(opened) ? '<p class="notice">Nothing is open yet, so learners would find an empty course. Open an activity first.</p>'
+    : shut ? `<p class="notice">Only personal codes on the class list open this course, and nobody is on it yet. <a href="/console/courses/${esc(code)}/people">Add your class</a>.</p>` : '';
+  return { link, ready: !note, html: `${note}${local && !here.addresses?.length ? '<p class="notice">This address only opens on this computer. <a href="/console/courses/' + esc(code) + '/share">To reach it from elsewhere</a></p>' : ''}
 <div class="ask-share"><div>
 <p class="v-note">The course’s link stays the same all term. What they can open changes as activities open.</p>
 <p class="ask-link"><code>${esc(link)}</code></p>
@@ -81,12 +91,13 @@ ${here.joinAt ? `<p class="v-note">With no link to hand, they can go to <strong>
 
 async function shareCard(here, spec) {
   const { code, doc, meta } = await courseAt(here.library, spec.course);
-  const { link, html } = reachPart(here, code, doc, meta);
+  const opened = await openerOf(here, code);
+  const { link, html } = await reachPart(here, code, doc, meta, opened);
   const list = activitiesOf(doc);
-  const open = list.filter(isOpen);
+  const open = list.filter(opened);
   const sections = await here.classes.sections(code);
   return card(`Give your class “${doc.course.title}”`, `${html}
-${open.length ? `<details class="ask-more"${open.length <= 6 ? ' open' : ''}><summary>A link for each activity</summary><ul class="ask-rows">${list.map((activity) => copyRow(activity.title, `${link}/${activity.key}`, isOpen(activity) ? '' : ' <span class="v-note">hidden for now</span>')).join('')}</ul></details>` : ''}
+${open.length ? `<details class="ask-more"${open.length <= 6 ? ' open' : ''}><summary>A link for each activity</summary><ul class="ask-rows">${list.map((activity) => copyRow(activity.title, `${link}/${activity.key}`, opened(activity) ? '' : ' <span class="v-note">hidden for now</span>')).join('')}</ul></details>` : ''}
 ${sections.length ? `<details class="ask-more" open><summary>A link for each section</summary><ul class="ask-rows">${sections.map((section) => copyRow(section.name, `${link}?section=${encodeURIComponent(section.key)}`)).join('')}</ul></details>` : ''}`);
 }
 
@@ -106,8 +117,8 @@ async function classListCard(here, spec) {
 
 async function progressCard(here, spec) {
   const { code, doc } = await courseAt(here.library, spec.course);
-  const [people, cells] = await Promise.all([here.classes.people(code), here.records.cells(code)]);
-  const list = activitiesOf(doc).filter(isOpen);
+  const [people, cells, opened] = await Promise.all([here.classes.people(code), here.records.cells(code), openerOf(here, code)]);
+  const list = activitiesOf(doc).filter(opened);
   const count = (key, field) => Object.values(cells).filter((mine) => mine[key]?.[field]).length;
   return card(`Who has done what in “${doc.course.title}”`, `<p class="v-note">${people.length} learner${people.length === 1 ? '' : 's'}.</p>
 ${list.length ? `<ul class="ask-rows">${list.map((activity) => `<li><div><strong>${esc(activity.title)}</strong><small>${count(activity.key, 'opened_at')} started · ${count(activity.key, 'done_at')} done</small></div></li>`).join('')}</ul>` : ''}
@@ -179,7 +190,7 @@ async function checklistCard(here, spec) {
     const tried = (await Promise.all(list.map((activity) => here.records.tried(code, activity.key, 1).catch(() => [])))).some((turns) => turns.length);
     check(tried, tried ? 'You have tried it as a learner' : 'You haven’t tried it as a learner yet', `/console/api/courses/${code}/try`, 'Try it');
   }
-  const open = list.filter(isOpen);
+  const open = list.filter(await openerOf(here, code));
   const left = checks.filter((item) => !item.ok).length;
   const row = (item) => `<li class="${item.ok ? 'is-ok' : 'is-todo'}">${icon(item.ok ? 'check' : 'alert', 15)}<span>${esc(item.words)}</span>${!item.ok && item.href ? `<a class="v-btn is-small" href="${esc(item.href)}"${item.href.includes('/try') ? ' target="_blank" rel="noopener"' : ''}>${esc(item.label)}</a>` : ''}</li>`;
   return card(left ? `Before learners come: ${plural(left, 'thing')} to look at` : 'Ready for learners', `<ul class="ask-checks">${checks.map(row).join('')}</ul>
@@ -207,7 +218,8 @@ export const ASK_CARD_CSS = `.ask-choices{display:flex;flex-wrap:wrap;gap:8px}
 .ask-choices .chip{background:transparent;font:inherit;font-size:.875rem;cursor:pointer}
 .ask-choices .chip:hover{background:var(--field-mist);color:var(--public-ink)}
 .ask-checks{display:grid;gap:8px;margin:0;padding:0;list-style:none}
-.ask-checks li{display:flex;align-items:center;gap:10px;min-height:30px}
+.ask-checks li{display:flex;align-items:baseline;gap:10px;min-height:30px}
+.ask-checks li>.v-icon{flex:none;position:relative;top:.18em}
 .ask-checks li span{flex:1;min-width:0}
 .ask-checks .is-ok .v-icon{color:var(--pass-green)}
 .ask-checks .is-todo .v-icon{color:var(--query-ochre)}

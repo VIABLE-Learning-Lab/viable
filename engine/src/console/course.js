@@ -176,7 +176,7 @@ ${ARCHIVED_CSS}
 .example p{margin:4px 0 0;color:var(--public-text);font-size:.9375rem;line-height:1.5}
 .example small{display:block;margin-top:4px;color:var(--muted);font-size:.8125rem}
 .example .v-btn{flex:none}
-.example summary{width:fit-content;color:var(--ink-blue);font-size:.875rem;cursor:pointer}
+.example summary{width:fit-content;padding:2px 0;color:var(--ink-blue);font-size:.875rem;cursor:pointer}
 .example details ul{display:grid;gap:8px;margin:8px 0 2px;padding:0;list-style:none}
 .example details strong{display:block;color:var(--public-ink);font-size:.9375rem;font-weight:500}
 .example details li small{margin-top:0}

@@ -28,26 +28,36 @@ html{scrollbar-color:var(--public-rule-strong) transparent;scrollbar-width:thin}
 .side a[aria-current=page]{background:var(--field-mist);color:var(--public-ink);font-weight:600}
 .side-foot{display:grid;gap:2px;margin-top:auto;font-size:.875rem}
 .side-account{position:relative}
-.side-account-button{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:var(--radius-sm);color:var(--public-ink);cursor:pointer;list-style:none}
+.side-account-button{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:var(--radius-sm);color:var(--public-ink);cursor:pointer;list-style:none;transition:background-color .12s}
 .side-account-button::-webkit-details-marker{display:none}
 .side-account-button:hover,.side-account[open]>.side-account-button{background:var(--field-mist)}
-.side-account-button>.v-icon:last-child{margin-left:auto;color:var(--muted);transform:rotate(180deg);transition:transform .15s}
+.side-account-button:focus-visible{outline:2px solid var(--ink-blue);outline-offset:2px}
+.side-account-button>.v-icon:last-child{flex:none;margin-left:auto;color:var(--muted);transform:rotate(180deg);transition:transform .16s}
 .side-account[open]>.side-account-button>.v-icon:last-child{transform:none}
 .side-avatar{display:grid;flex:none;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--ink-blue);color:var(--on-ink-blue);font-size:.8125rem;font-weight:600}
-.side-account-name{overflow:hidden;font-weight:500;text-overflow:ellipsis;white-space:nowrap}
+.side-account-name{min-width:0;overflow:hidden;font-weight:500;text-overflow:ellipsis;white-space:nowrap}
 .side-account-low{flex:none;width:7px;height:7px;border-radius:50%;background:var(--pencil-red)}
-.side-account-panel{position:absolute;bottom:calc(100% + 6px);left:0;right:0;z-index:20;display:grid;gap:2px;padding:6px;border:1px solid var(--public-rule);border-radius:var(--radius);background:var(--surface);box-shadow:var(--public-shadow)}
-.side-account-who{display:grid;gap:1px;margin:0 0 4px;padding:6px 8px 8px;border-bottom:1px solid var(--public-rule);overflow-wrap:anywhere}
-.side-account-who strong{color:var(--public-ink);font-weight:600}
-.side-account-who small{color:var(--muted);font-size:.8125rem}
-.side .side-credit{display:grid;justify-content:stretch;gap:6px}
-.side-credit-top{display:flex;justify-content:space-between;gap:8px}
-.side-credit-top small{color:var(--muted);font-variant-numeric:tabular-nums}
-.side-meter{display:block;height:5px;overflow:hidden;border-radius:999px;background:var(--field-mist)}
-.side-meter i{display:block;width:0;height:100%;background:var(--ink-blue);transition:width .3s}
+.side-account-panel{position:absolute;bottom:calc(100% + 8px);left:0;z-index:20;display:grid;grid-template-columns:minmax(0,1fr);gap:1px;width:max(100%,256px);padding:6px;border:1px solid var(--public-rule);border-radius:var(--radius);background:var(--surface);box-shadow:var(--public-shadow);transform-origin:bottom left}
+.side-account[open]>.side-account-panel{animation:side-pop .16s var(--ease-out,cubic-bezier(.22,1,.36,1))}
+@keyframes side-pop{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+.side-account-who{display:grid;gap:2px;min-width:0;margin:0 0 4px;padding:6px 8px 9px;border-bottom:1px solid var(--public-rule)}
+.side-account-who strong{overflow:hidden;color:var(--public-ink);font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+.side-account-who small{overflow:hidden;color:var(--muted);font-size:.8125rem;text-overflow:ellipsis;white-space:nowrap}
+.side .side-account-panel>a,.side .side-account-panel button{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-width:0;padding:8px;border-radius:var(--radius-sm);color:var(--public-text);font:inherit;text-align:left;white-space:nowrap}
+.side .side-account-panel>a>span,.side .side-account-panel button>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.side .side-account-panel .v-icon{flex:none;color:var(--muted)}
+.side .side-account-panel>a>.v-icon:last-child:not(:first-child){margin-left:auto}
+.side .side-account-panel>a:hover,.side .side-account-panel button:hover{background:var(--field-mist);color:var(--public-ink)}
+.side .side-account-panel>a:hover .v-icon,.side .side-account-panel button:hover .v-icon{color:var(--public-text)}
+.side .side-account-panel form{margin:4px 0 0;padding-top:4px;border-top:1px solid var(--public-rule)}
+.side .side-account-panel>a.side-credit{align-items:flex-start}
+.side-credit-words{display:grid;flex:1;gap:7px;min-width:0}
+.side-credit-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.side-credit-top small{color:var(--muted);font-size:.8125rem;font-variant-numeric:tabular-nums}
+.side-meter{display:block;height:4px;overflow:hidden;border-radius:999px;background:var(--field-mist)}
+.side-meter i{display:block;width:0;height:100%;border-radius:inherit;background:var(--ink-blue);transition:width .4s var(--ease-out,ease-out)}
 .side-meter.is-low i{background:var(--pencil-red)}
-.side-account-panel>a{justify-content:flex-start}
-.side-account-panel>a>.v-icon:last-child:not(:first-child){margin-left:auto}
+@media (prefers-reduced-motion:reduce){.side-account[open]>.side-account-panel{animation:none}.side-account-button>.v-icon:last-child,.side-meter i{transition:none}}
 .side-foot a:not(.brand){white-space:nowrap}
 .side-foot a .v-icon{color:var(--muted)}
 .side-foot button{width:100%;padding:8px;border:0;border-radius:var(--radius-sm);background:none;color:var(--public-text);font:inherit;text-align:left;cursor:pointer}
@@ -100,7 +110,8 @@ dialog.v-dialog .actions{display:flex;flex-direction:row-reverse;flex-wrap:wrap;
 .v-drop u{color:var(--ink-blue);text-decoration:underline 1px var(--ink-blue-line);text-underline-offset:.22em}
 .v-drop small{color:var(--muted);font-size:.8125rem;line-height:1.45}
 @media (prefers-reduced-motion:reduce){dialog.v-dialog[open],.v-pop:popover-open{animation:none}.v-menu-button .v-icon{transition:none}}
-@media (max-width:760px){.console{display:block}.side{position:static;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 12px;height:auto;padding:10px 16px;border-right:0;border-bottom:1px solid var(--public-rule)}.brand{padding:0}.side nav{grid-column:1/-1;grid-row:2;margin:0 -16px;padding:0 16px;overflow-x:auto;scrollbar-width:none}.side ul{display:flex;gap:2px}.side li a{white-space:nowrap}.side-foot{display:flex;align-items:center;gap:2px;margin:0}.side-account-name,.side-account-button>.v-icon:last-child{display:none}.side-account-button{padding:4px}.side-account-panel{top:calc(100% + 6px);bottom:auto;left:auto;right:0;width:min(280px,calc(100vw - 32px))}.side-foot button{width:100%}}`;
+@media (max-width:760px){.console{display:block}.side{position:static;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 12px;height:auto;padding:10px 16px;border-right:0;border-bottom:1px solid var(--public-rule)}.brand{padding:0}.side nav{grid-column:1/-1;grid-row:2}.side ul{display:flex;flex-wrap:wrap;gap:2px}.side li a{white-space:nowrap}.side-foot{display:flex;align-items:center;gap:2px;margin:0}.side-account-name,.side-account-button>.v-icon:last-child{display:none}.side-account-button{padding:4px}.side-account-panel{top:calc(100% + 6px);bottom:auto;left:auto;right:0;width:min(280px,calc(100vw - 32px));transform-origin:top right}.side-foot button{width:100%}}
+@media (max-width:760px){.page input.v-input,.page textarea{font-size:max(16px,1em)}}`;
 
 // What every page shares is one file each, kept by the browser for good under a name that changes with what is in it, so a click fetches only what is new on the next page.
 const hashOf = (text) => { let hash = 0x811c9dc5; for (let at = 0; at < text.length; at += 1) { hash ^= text.charCodeAt(at); hash = Math.imul(hash, 0x01000193); } return (hash >>> 0).toString(36); };
@@ -137,15 +148,15 @@ export const consoleHeaders = (nonce) => ({
 function accountHtml({ who, name, credit, links, brand, signOut }) {
   const label = name || who || 'This server';
   const avatar = who ? escapeHtml((label.trim()[0] || '?').toUpperCase()) : icon('server', 15);
-  const external = (link) => `<a href="${escapeHtml(link.href)}" target="_blank" rel="noopener">${escapeHtml(link.title)}${icon('out', 15)}</a>`;
+  const external = (link) => `<a href="${escapeHtml(link.href)}" target="_blank" rel="noopener">${icon(/help/i.test(link.title) ? 'help' : 'platform', 16)}<span>${escapeHtml(link.title)}</span>${icon('out', 14)}</a>`;
   return `<details class="side-account" data-close-outside>
 <summary class="side-account-button"><span class="side-avatar" aria-hidden="true">${avatar}</span><span class="side-account-name">${escapeHtml(label)}</span>${credit ? `<span class="side-account-low" data-fill="${escapeHtml(credit.fill)}" data-fill-as="low" hidden></span>` : ''}${icon('chevron', 15)}</summary>
 <div class="side-account-panel">
 ${who ? `<p class="side-account-who"><strong>${escapeHtml(label)}</strong>${name ? `<small>${escapeHtml(who)}</small>` : ''}</p>` : `<p class="side-account-who"><strong>${escapeHtml(brand)}</strong><small>This server</small></p>`}
-${credit ? `<a class="side-credit" href="${escapeHtml(credit.href)}"><span class="side-credit-top"><span>AI credit</span><small data-fill="${escapeHtml(credit.fill)}">&nbsp;</small></span><span class="side-meter"><i data-fill="${escapeHtml(credit.fill)}" data-fill-as="meter"></i></span></a>` : ''}
-<a href="/console/memory">${icon('memory', 15)}<span>What Ask remembers</span></a>
+${credit ? `<a class="side-credit" href="${escapeHtml(credit.href)}">${icon('gauge', 16)}<span class="side-credit-words"><span class="side-credit-top"><span>AI credit</span><small data-fill="${escapeHtml(credit.fill)}">&nbsp;</small></span><span class="side-meter" hidden><i data-fill="${escapeHtml(credit.fill)}" data-fill-as="meter"></i></span></span></a>` : ''}
+<a href="/console/memory">${icon('memory', 16)}<span>What Ask remembers</span></a>
 ${links.map(external).join('')}
-<form method="post" action="${escapeHtml(signOut)}" data-confirm="Sign out of ${escapeHtml(brand)}?" data-yes="Sign out"><button type="submit">Sign out</button></form>
+<form method="post" action="${escapeHtml(signOut)}" data-confirm="Sign out of ${escapeHtml(brand)}?" data-yes="Sign out"><button type="submit">${icon('signout', 16)}<span>Sign out</span></button></form>
 </div>
 </details>`;
 }

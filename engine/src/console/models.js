@@ -140,7 +140,7 @@ function roleRow(name, role, view) {
 <h3>${esc(role.label)}</h3>
 <form data-role="${name}">
 ${field(`role-${name}-provider`, 'Provider', `<select class="v-input" id="role-${name}-provider" name="provider"${addressHeld || locked ? ' disabled' : ''}><option value="">Not set</option>${options}</select>`)}
-${field(`role-${name}-model`, 'Model', `<input class="v-input" id="role-${name}-model" name="model" value="${esc(role.model ?? role.saved?.model ?? '')}" list="${chosen ? `models-${esc(chosen)}` : ''}" autocomplete="off" spellcheck="false" placeholder="${role.provider && !role.model ? 'As each agent names it' : ''}"${modelHeld || locked ? ' disabled' : ''}>`)}
+${field(`role-${name}-model`, 'Model', `<input class="v-input" id="role-${name}-model" name="model" value="${esc(role.model ?? role.saved?.model ?? '')}" data-list="${chosen ? `models-${esc(chosen)}` : ''}" autocomplete="off" spellcheck="false" placeholder="${role.provider && !role.model ? 'As each agent names it' : ''}"${modelHeld || locked ? ' disabled' : ''}>`)}
 ${role.from_environment.length ? `<p class="v-note held">${esc(fromWhere(role.from_environment))}</p>${saved}` : ''}
 <p class="say" data-say role="status"></p>
 </form>
@@ -297,7 +297,7 @@ const MODELS_SCRIPT = String.raw`(() => {
     }
     const form = item.closest && item.closest('form[data-role]');
     if (!form) return;
-    if (item.name === 'provider') form.elements.model.setAttribute('list', item.value ? 'models-' + item.value : '');
+    if (item.name === 'provider') form.elements.model.dataset.list = item.value ? 'models-' + item.value : '';
     failing(form, () => saveRole(form));
   });
 

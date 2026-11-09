@@ -121,6 +121,7 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     for (const item of root.querySelectorAll('[data-iso]')) { item.value = localInput(item.dataset.iso); item.defaultValue = item.value; }
     for (const item of root.querySelectorAll('time[data-local]')) item.textContent = new Date(item.dateTime).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
     for (const select of root.querySelectorAll('select.v-input')) dressSelect(select);
+    for (const input of root.querySelectorAll('input[data-list]')) dressSuggest(input);
     showing(root);
   };
 
@@ -147,10 +148,11 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     pop.remove();
     if (refocus) anchor.focus({ preventScroll: true });
   };
-  const float = (pop, anchor, wide = null) => {
+  // manual: a list under a field being typed in, which a click in that field mustn't close.
+  const float = (pop, anchor, wide = null, mode = 'auto') => {
     closePop(false);
     pop.classList.add('v-pop');
-    pop.popover = 'auto';
+    pop.popover = mode;
     // The browser closes it for Escape or a click elsewhere: focus goes back unless it has already gone somewhere else.
     pop.addEventListener('toggle', (event) => { if (event.newState === 'closed' && shown && shown.pop === pop) closePop(document.activeElement === document.body || pop.contains(document.activeElement)); });
     document.body.append(pop);
@@ -246,6 +248,69 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     select.after(button);
     button.addEventListener('click', () => (shown && shown.anchor === button ? closePop() : openSelect(select, button)));
     button.addEventListener('keydown', (event) => { if (['ArrowDown', 'ArrowUp'].includes(event.key)) { event.preventDefault(); openSelect(select, button); } });
+  }
+
+  // A field with suggestions (data-list names a <datalist>, read when it opens): the console's own list under it, of those
+  // that hold what is typed, never the browser's. Anything else can still be typed.
+  function dressSuggest(input) {
+    if (input.dataset.dressed) return;
+    input.dataset.dressed = '1';
+    if (!canFloat) { input.setAttribute('list', input.dataset.list); return; }
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-expanded', 'false');
+    let rows = [];
+    let active = -1;
+    const isOpen = () => Boolean(shown && shown.anchor === input);
+    const close = () => { if (isOpen()) closePop(false); input.removeAttribute('aria-activedescendant'); };
+    const activate = (index) => {
+      rows[active]?.classList.remove('is-active');
+      active = (index + rows.length) % rows.length;
+      rows[active].classList.add('is-active');
+      input.setAttribute('aria-activedescendant', rows[active].id);
+      rows[active].scrollIntoView({ block: 'nearest' });
+    };
+    const pick = (value) => {
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      close();
+    };
+    // Opened, it lists them all with the one chosen marked; typing narrows it to those that hold what is typed.
+    const open = (narrow = false) => {
+      const typed = narrow ? input.value.trim().toLowerCase() : '';
+      const found = [...(document.getElementById(input.dataset.list)?.options || [])].map((option) => option.value).filter((value) => !typed || value.toLowerCase().includes(typed)).slice(0, 60);
+      if (!found.length) { close(); return; }
+      const pop = document.createElement('div');
+      pop.id = (input.id || 'suggest') + '-list';
+      pop.setAttribute('role', 'listbox');
+      rows = found.map((value, index) => {
+        const row = document.createElement('div');
+        row.className = 'v-option';
+        row.id = pop.id + '-' + index;
+        row.setAttribute('role', 'option');
+        row.setAttribute('aria-selected', String(value === input.value));
+        row.append(Object.assign(document.createElement('strong'), { textContent: value }));
+        if (value === input.value) row.insertAdjacentHTML('beforeend', ICON.check);
+        // Chosen on mousedown, before the field loses focus and closes the list.
+        row.addEventListener('mousedown', (event) => { event.preventDefault(); pick(value); });
+        row.addEventListener('mousemove', () => { if (active !== index) activate(index); });
+        pop.append(row);
+        return row;
+      });
+      active = -1;
+      float(pop, input, null, 'manual');
+      input.setAttribute('aria-controls', pop.id);
+    };
+    input.addEventListener('focus', () => open());
+    input.addEventListener('click', () => { if (!isOpen()) open(); });
+    input.addEventListener('input', (event) => { if (event.isTrusted) open(true); });
+    input.addEventListener('blur', close);
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); if (!isOpen()) open(); if (rows.length && isOpen()) activate(active + (event.key === 'ArrowDown' ? 1 : -1)); return; }
+      if (event.key === 'Enter' && isOpen() && active >= 0) { event.preventDefault(); pick(rows[active].querySelector('strong').textContent); return; }
+      if (event.key === 'Escape' && isOpen()) { event.preventDefault(); event.stopPropagation(); close(); }
+    });
   }
 
   const showing = (root) => {
