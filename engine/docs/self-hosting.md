@@ -613,8 +613,9 @@ model), unless the knowledge base is set to keywords only. It brings back a pass
 the same section, up to 4,000 characters. It converts PDFs, Office files and pictures to text, reads
 and refreshes websites, and can link a citation to an uploaded file, at a PDF's page.
 
-The Engine searches by keywords (BM25), as VIABLE does a keyword-only knowledge base, in 1,200-character
-passages, without neighbours. With a model for searching by meaning it also asks your provider's `/embeddings`, and
+The Engine searches by keywords (BM25), as VIABLE does a keyword-only knowledge base, without neighbours,
+in passages of the size the package gives the knowledge base (`chunk_size`, 300 to 4,000 characters; 1,200 when
+it gives none), so they match the passages VIABLE made. With a model for searching by meaning it also asks your provider's `/embeddings`, and
 combines the two lists. Each file's vectors are kept in the store under a hash of what it says, so they aren't paid for
 twice; a search spends about 15 seconds at most making them, finds by keywords until they are all there, and goes on from
 where it stopped. If embeddings fail, it searches by keywords and tries again a minute later: a search never fails a turn

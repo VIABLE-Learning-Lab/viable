@@ -262,7 +262,7 @@ function meaningSearch(meaning) {
   };
 }
 
-// A file's passages; knowledgeBase only names where it was found, in errors. A file a local run can't
+// A file's passages, at its knowledge base's passage size; knowledgeBase also names where it was found, in errors. A file a local run can't
 // read is read from its text copy (text_path), checked against text_sha256, and cited as itself.
 async function readPassages(file, knowledgeBase, options) {
   const copy = !readsAsText(file.name) && file.text_path != null;
@@ -275,7 +275,10 @@ async function readPassages(file, knowledgeBase, options) {
   if (!copy && file.bytes != null && bytes.byteLength !== file.bytes) throw failure(`Knowledge base "${knowledgeBase.ref}": "${file.name}" has ${bytes.byteLength} bytes, not the ${file.bytes} the package says.`);
   if (source.sha256 && await sha256(bytes) !== source.sha256.toLowerCase()) throw failure(`Knowledge base "${knowledgeBase.ref}": "${file.name}"${copy ? '\'s text' : ''} isn't the file the package names (its sha256 differs).`);
   const text = new TextDecoder().decode(bytes);
-  return chunkText(!copy && HTML_FORMATS.has(extensionOf(file.name)) ? htmlToMarkdown(text, { base: file.url }) : text).map((chunk, i) => ({
+  // The passage size the knowledge base was split at on VIABLE (chunk_size), so its passages match there and here.
+  const size = Number.isInteger(knowledgeBase.chunk_size) ? knowledgeBase.chunk_size : null;
+  const sized = size ? { size, overlap: Math.round(size / 8), maxChunks: Math.max(2000, Math.ceil(2000 * 1200 / size)) } : {};
+  return chunkText(!copy && HTML_FORMATS.has(extensionOf(file.name)) ? htmlToMarkdown(text, { base: file.url }) : text, sized).map((chunk, i) => ({
     ...chunk, document_id: file.ref, chunk_id: `${file.ref}:${i}`,
     title: file.title || file.name, url: file.url || null, filename: file.name, kind: 'file',
     // A file with no address of its own is linked where the knowledge base allows it: at the server's copy, and a PDF's page.

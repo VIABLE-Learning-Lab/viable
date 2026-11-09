@@ -435,6 +435,17 @@ test('search by meaning: found where keywords find nothing, its vectors paid for
   assert.deepEqual((await unset({ ...query, query: 'tides' })).map((item) => item.match), ['keyword']);
 });
 
+test('a knowledge base is split at the passage size it had on VIABLE', async () => {
+  const { searchPackage } = await import('../src/server/search.js');
+  const words = Array.from({ length: 120 }, (_, i) => `Paragraph ${i} about tide tables and harbor charts.`).join('\n\n');
+  const fetch = async () => new Response(`# Tides\n\n${words}`);
+  const doc = (kb) => ({ files: [{ ref: 'f', name: 'guide.md', url: 'https://files.example/guide.md' }], knowledge_bases: [{ ref: 'kb', name: 'Guide', file_refs: ['f'], ...kb }] });
+  const longest = async (kb) => Math.max(...(await searchPackage(doc(kb), { fetch })({ knowledgeBaseIds: ['kb'], query: 'tide tables harbor', topK: 50 })).map((item) => item.text.length));
+  const standard = await longest({});
+  const short = await longest({ chunk_size: 400 });
+  assert.ok(short <= 400 + 60 && standard > 1000, `${short} and ${standard}`);
+});
+
 test('search by meaning spends a limited time: someone else paying for a batch means keywords now, and the next search goes on', async () => {
   const { memoryStore } = await import('../../harness/src/store/store.js');
   const { searchPackage } = await import('../src/server/search.js');

@@ -247,6 +247,12 @@
             ],
             "description": "How VIABLE searches it: by keywords and meaning, or keywords only. Elsewhere a knowledge base may search only by keywords."
           },
+          "chunk_size": {
+            "type": "integer",
+            "minimum": 300,
+            "maximum": 4000,
+            "description": "About how many characters each passage holds when its files are split for search; passages overlap by about an eighth. 1200 when absent."
+          },
           "file_refs": {
             "type": "array",
             "items": {
