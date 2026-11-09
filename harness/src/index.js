@@ -6,6 +6,7 @@ export { checkReply } from './check.js';
 export { BRIEF_LIMITS, MOVES, readMoment, triesIn, turnBrief } from './brief.js';
 export { openAICompatible } from './models.js';
 export { memoryStore } from './store/store.js';
+export { MEMORY_LIMITS, memoryNote, memoryRefusal, memoryTerms, pickMemories, searchConversations } from './memory.js';
 export { fileStore } from './store/fileStore.js';
 export { listen, nodeListener, sendResponse, toRequest } from './net/node.js';
 export { htmlToMarkdown } from './markdown.js';

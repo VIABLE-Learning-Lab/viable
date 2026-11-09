@@ -61,7 +61,7 @@ message worked on only 4 of 19 turns ([what was measured](evidence.md)). That is
 
 ## Keywords, embeddings and RAG
 
-The Harness does no retrieval. A list of a dozen items needs no index, and everything above it was narrowed by a person.
+The Harness does no retrieval over documents. A list of a dozen items needs no index, and everything above it was narrowed by a person.
 
 Retrieval is for your own documents, such as a library's guides, and belongs to whatever holds them:
 
@@ -70,10 +70,15 @@ Retrieval is for your own documents, such as a library's guides, and belongs to 
 | The Engine's knowledge | BM25 | Once a model for it is set in the console | No | In its own store, made the first time a file is searched, and kept |
 | The VIABLE Developer Platform's knowledge | BM25 | Yes | Yes | In a vector index on the platform |
 | The Harness | No | No | No | None |
+| A person's memory (`memory.js`) | Words, in any language | No | No | None |
 
 Using both generally finds more than keywords alone: meaning catches a paraphrase, and keywords catch an exact name or a
 code. The space is rarely the issue: a vector of 1,024 numbers is 4 KB, so 10,000 passages are 40 MB, and a class's guides
 are hundreds of passages.
+
+What an assistant remembers of a person is matched by words as well: `pickMemories` gives a message what the person keeps
+always in mind and the few other memories its words meet, and `searchConversations` finds their earlier conversations when
+they mention one. A person's few hundred sentences need no index, and words keep it plain why something came up.
 
 Giving the misconceptions vectors too is possible, at about 32 MB and an embedding model on every turn. It isn't built, and
 whether it would beat a small picker model is for the evaluation to say.

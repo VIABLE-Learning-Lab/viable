@@ -6,6 +6,7 @@
 import { acceptedOf, addLines, addSection, changeLearner, changeSection, forgetActivity, keepAccepted, learnersNamed, makeLearner, newCodeFor, peopleOf, releasesOf, removeFromList, removeSection, sectionsOf, setRelease } from './classList.js';
 import { forgetChat, forgetCourse, forgetLearner, learnerRecords } from './learner.js';
 import { keptTurnEvents } from '../learner/watch.js';
+import { MEMORY_LIMITS, searchConversations } from '../../../harness/src/memory.js';
 
 const TURNS_SHOWN = 200;
 
@@ -96,6 +97,51 @@ export function storeThreads(store) {
     async list() {
       const held = await Promise.all((await store.list('ask/threads/')).slice(-40).map((name) => store.get(name)));
       return held.filter(Boolean).map(({ id, title, updated_at }) => ({ id, title, updated_at })).sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
+    },
+    /** Earlier conversations whose words meet the query, the best first (memory.js searchConversations), from the latest 200. */
+    async search(query, { limit } = {}) {
+      const held = (await Promise.all((await store.list('ask/threads/')).map((name) => store.get(name)))).filter(Boolean)
+        .sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at))).slice(0, 200);
+      return searchConversations(held.map((thread) => ({ id: thread.id, title: thread.title, updated_at: thread.updated_at, text: threadText(thread) })), query, { limit });
     }
+  };
+}
+
+/** What the person and Ask said in a conversation, as plain text to search: never what a tool sent back. */
+export const threadText = (thread) => (thread?.messages || []).filter((message) => ['user', 'assistant'].includes(message.role) && typeof message.content === 'string' && message.content.trim())
+  .map((message) => message.content.trim()).join('\n').slice(0, 40_000);
+
+/**
+ * A person's memory for Ask on this server (open/harness/src/memory.js): what they or Ask kept, and their two switches, keep (Ask keeps
+ * and uses what they tell it) and look_back (Ask may search their earlier conversations). One person signs in to a console: one memory.
+ */
+export function storeMemory(store, { now = () => Date.now() } = {}) {
+  if (!store) return null;
+  const KEY = 'ask/memory';
+  const read = async () => { const held = await store.get(KEY); return { items: held?.items || [], settings: { keep: true, look_back: true, ...held?.settings } }; };
+  const at = () => new Date(now()).toISOString();
+  const missing = () => Object.assign(new Error('That isn’t in what Ask remembers anymore.'), { status: 404, code: 'memory_not_found' });
+  const change = async (work) => { const doc = await read(); const out = await work(doc); await store.put(KEY, doc); return out; };
+  return {
+    settings: async () => (await read()).settings,
+    setSettings: (next) => change((doc) => { for (const name of ['keep', 'look_back']) if (typeof next?.[name] === 'boolean') doc.settings[name] = next[name]; return doc.settings; }),
+    list: async () => (await read()).items,
+    keep: ({ text, always = false, source = null }) => change((doc) => {
+      if (doc.items.length >= MEMORY_LIMITS.items) throw Object.assign(new Error(`Ask keeps up to ${MEMORY_LIMITS.items} things. Delete some first.`), { status: 409, code: 'memory_full' });
+      const item = { id: `mem_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`, text: String(text).trim(), always: Boolean(always), source, created_at: at(), updated_at: at(), used_at: null };
+      doc.items.push(item);
+      return item;
+    }),
+    change: (id, next) => change((doc) => {
+      const item = doc.items.find((entry) => entry.id === id);
+      if (!item) throw missing();
+      if (typeof next?.text === 'string') item.text = next.text.trim();
+      if (typeof next?.always === 'boolean') item.always = next.always;
+      item.updated_at = at();
+      return item;
+    }),
+    drop: (id) => change((doc) => { const before = doc.items.length; doc.items = doc.items.filter((entry) => entry.id !== id); if (doc.items.length === before) throw missing(); return { id, deleted: true }; }),
+    dropAll: () => change((doc) => { const count = doc.items.length; doc.items = []; return { deleted: count }; }),
+    used: (ids) => change((doc) => { const stamp = at(); for (const item of doc.items) if (ids.includes(item.id)) item.used_at = stamp; return null; })
   };
 }

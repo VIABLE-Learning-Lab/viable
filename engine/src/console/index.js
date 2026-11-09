@@ -6,7 +6,7 @@
  */
 import { signInHeaders, signInPage, teacherSession, withCookies } from '../server/session.js';
 import { hearRecording, onRole } from '../server/runtime.js';
-import { storeClasses, storeRecords, storeThreads } from '../server/teacherData.js';
+import { storeClasses, storeRecords, storeMemory, storeThreads } from '../server/teacherData.js';
 import { consoleHeaders, consolePage, missingBody, standalonePage, consoleAsset } from './layout.js';
 import { activityPages } from './activity.js';
 import { askPages } from './ask.js';
@@ -122,7 +122,7 @@ export function consoleRoutes({ settings = null, library = null, teacherToken = 
     if (!settings) return async () => null;
     const secret = () => ctx.options.token || teacherToken;
     const session = teacherSession({ secret, now });
-    const tools = { settings, library, classes: storeClasses(ctx.store), records: storeRecords(ctx.store), threads: storeThreads(ctx.store), askModel: settings ? serverAskModel(settings, fetch, ctx.store) : null, web: webOver(outward), now, tryLink: tryHere, fetch, outward, examples, addresses, signIn, store: ctx.store, tabs: TABS, served: ctx.served, runTurn: ctx.runTurn };
+    const tools = { settings, library, classes: storeClasses(ctx.store), records: storeRecords(ctx.store), threads: storeThreads(ctx.store), memory: storeMemory(ctx.store), askModel: settings ? serverAskModel(settings, fetch, ctx.store) : null, web: webOver(outward), now, tryLink: tryHere, fetch, outward, examples, addresses, signIn, store: ctx.store, tabs: TABS, served: ctx.served, runTurn: ctx.runTurn };
 
     const { api, renderPage } = consoleApp({ tools, readBody: ctx.readBody, readJson: ctx.readJson });
 
