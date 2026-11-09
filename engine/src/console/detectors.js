@@ -18,6 +18,13 @@ const keyOf = (code, slug) => `${held(code)}${slug}`;
 const marksKey = (code, slug) => `courses/${code}/marks/${slug}`;
 const WORDS = { learning_events: 'each learner’s events and their messages with the AI', conversation: 'each learner’s conversation', learner_message: 'each learner’s messages' };
 
+/** Who made it, and how to cite them, where its manifest says: research that reaches a teacher comes with its authors. */
+const creditOf = (manifest) => {
+  const authors = Array.isArray(manifest.authors) ? manifest.authors.map((name) => String(name).trim()).filter(Boolean).slice(0, 12) : [];
+  if (!authors.length && !manifest.cite) return '';
+  return `<p class="v-note detector-credit">${authors.length ? `Made by ${esc(authors.join(', '))}.` : ''}${manifest.cite ? ` <span class="detector-cite">Cite as: ${esc(String(manifest.cite).slice(0, 600))}</span>` : ''}</p>`;
+};
+
 /** What a person is told before anything goes. */
 const goesWhere = (manifest) => `This sends ${manifest.receives.map((name) => WORDS[name] || name).join(', ')}, with no names or codes, to ${manifest.sends_to.join(', ')}. Have an agreement with whoever runs it.`;
 
@@ -29,7 +36,7 @@ export async function detectorsPart({ store }, code, people) {
     const run = await store.get(marksKey(code, slug));
     const api = `courses/${esc(code)}/detectors/${esc(slug)}`;
     return `<li class="detector" id="d-${esc(slug)}" data-say-box>
-<div class="detector-head"><div><strong>${esc(manifest.label)}</strong><p class="v-note">${esc(manifest.summary)}</p><p class="v-note">${esc(goesWhere(manifest))}</p></div>
+<div class="detector-head"><div><strong>${esc(manifest.label)}</strong><p class="v-note">${esc(manifest.summary)}</p>${creditOf(manifest)}<p class="v-note">${esc(goesWhere(manifest))}</p></div>
 <div class="actions"><button class="v-btn is-small" type="button" data-api="POST ${api}/run" data-busy="Reading this class…" data-confirm="${esc(goesWhere(manifest))}" data-yes="Send and read">${run ? 'Read again' : 'Read this class'}</button><button class="v-btn is-small" type="button" data-api="DELETE ${api}">Remove</button></div></div>
 ${run ? `<p class="v-note">Read ${when(run.at)}: ${esc(plural(run.read, 'record'))}${run.failed ? `, ${run.failed} it couldn’t read` : ''}. It marks these, and it can be wrong.</p>${run.marks.length ? `<ul class="moments">${run.marks.map((mark) => {
       const { who, id } = nameOf(mark.learner);

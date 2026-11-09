@@ -780,6 +780,7 @@ test('a detector: nothing is sent until someone asks, no names go, its marks com
   const shown = await s.page(`courses/${code}/progress/look`);
   assert.match(shown, /From detectors/);
   assert.match(shown, /to lab\.example/);
+  assert.match(shown, /Made by A Lab\. <span class="detector-cite">Cite as: A Lab \(2026\)\.<\/span>/, 'what reaches a teacher comes with its authors');
   assert.equal(s.web.asked.length, 0, 'adding one sends nothing');
   // A learner, with a turn on record.
   const people = await store.list(`courses/${code}/learners/`);
