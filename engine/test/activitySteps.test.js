@@ -102,3 +102,18 @@ test('a learner holding the right answer on a question is told so, by a yes or n
   assert.match(reachedForReply(held, 1), /Tell them plainly that they are right/);
   assert.match(reachedForReviewer(held, 1), /Criterion 1 doesn’t apply to that answer|Criterion 1 doesn't apply to that answer/);
 });
+
+test('a learner with extra time from their teacher is never moved on by a timer: a step that opens on its own waits for them', () => {
+  const timed = workspaceSettings({
+    ai: 'right',
+    panels: [{ id: 'the-case', type: 'page', title: 'The case', text: 'Read it.' }, { id: 'verdict', type: 'writing', title: 'Your verdict', prompt: 'Make your case.' }],
+    steps: [{ id: 'one', title: 'Think alone', panels: ['the-case'], ai: 'off' }, { id: 'two', title: 'Your verdict', panels: ['verdict'], ai: 'on', move: 'auto', minutes: 5 }]
+  });
+  const now = { index: 0, at: '2026-11-09T10:00:00.000Z' };
+  const everyone = stepReply(timed, new Map(), now);
+  assert.equal(everyone.next.move, 'auto');
+  const extended = stepReply(timed, new Map(), now, { extended: true });
+  assert.equal(extended.next.move, 'ready', 'they go on when they say so');
+  assert.equal(extended.next.opens_at, everyone.next.opens_at, 'the minutes are still the earliest');
+  assert.equal(extended.steps[1].move, 'ready');
+});

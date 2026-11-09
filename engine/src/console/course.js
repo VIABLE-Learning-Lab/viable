@@ -6,10 +6,10 @@
 import { HELP_NAMES } from '../../../harness/src/ui/parts.js';
 import { THEMES } from '../learner/themes.js';
 import { flowWords } from './flow.js';
-import { activityKeys } from '../server/library.js';
+import { activityKeys, cutWords, slugOf } from '../server/library.js';
 import { readPackage } from '../server/runtime.js';
 import { icon } from './icons.js';
-import { courseHead, dropZone, esc, FORMS_CSS, oneOf, plural, say, text, toggle, withForms } from './forms.js';
+import { choose, courseHead, dropZone, esc, FORMS_CSS, oneOf, plural, say, text, toggle, withForms } from './forms.js';
 
 const refused = (message, status = 400, code = 'invalid_course') => Object.assign(new Error(message), { status, code });
 const ARCHIVE_BYTES = 50 * 1024 * 1024;
@@ -196,6 +196,18 @@ const kindWords = (activity, doc = null) => {
   const what = doc ? flowWords(doc, activity) : kind === 'several' ? `${(activity.workspace.steps || activity.workspace.panels).length} ${activity.workspace.steps ? 'steps' : 'panels'}` : KINDS[kind].label;
   return [what, ...(!doc && kind !== 'chat' ? [activity.agent_ref && activity.workspace?.ai !== 'off' ? 'AI beside it' : 'No AI'] : []), ...(activity.minutes ? [`${activity.minutes} min`] : []), ...(activity.teaching?.help ? [HELP_NAMES[activity.teaching.help]] : [])].join(' · ');
 };
+/** A unit's days in words: "Nov 9 – 13", "Nov 30 – Dec 4", "From Nov 9", "Until Nov 13". */
+export function daysWords(starts, ends) {
+  const day = (key, options) => new Date(`${key}T00:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC', ...options });
+  if (starts && ends) {
+    const [a, b] = [new Date(`${starts}T00:00:00Z`), new Date(`${ends}T00:00:00Z`)];
+    if (starts === ends) return day(starts, { month: 'short', day: 'numeric' });
+    if (a.getUTCFullYear() !== b.getUTCFullYear()) return `${day(starts, { month: 'short', day: 'numeric', year: 'numeric' })} – ${day(ends, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    return a.getUTCMonth() === b.getUTCMonth() ? `${day(starts, { month: 'short', day: 'numeric' })} – ${b.getUTCDate()}` : `${day(starts, { month: 'short', day: 'numeric' })} – ${day(ends, { month: 'short', day: 'numeric' })}`;
+  }
+  return starts ? `From ${day(starts, { month: 'short', day: 'numeric' })}` : `Until ${day(ends, { month: 'short', day: 'numeric' })}`;
+}
+
 const stateWords = (activity) => (activity.release === 'hidden' && activity.opens_at ? `Opens ${new Date(activity.opens_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' })} UTC` : activity.release === 'hidden' ? 'Hidden' : 'Open');
 
 // Open or hide it for one section at once, mid-class. Kept on this server, not as a course version.
@@ -218,13 +230,18 @@ function activityRow(activity, code, version, index, count, locked, sections, ow
   const key = esc(activity.key);
   const api = `courses/${esc(code)}/activities/${key}`;
   const open = activity.release !== 'hidden';
-  return `<li class="row" id="activity-${key}" data-say-box>
+  const units = doc.course.units || [];
+  // Into another unit from here, as its menu says it: the row moves under that unit's heading.
+  const unitMenu = units.length && !locked ? `<select class="v-input small row-unit" name="unit_ref" data-api="POST ${api}/unit" aria-label="Unit for ${esc(activity.title)}">${[{ ref: '', title: 'No unit' }, ...units].map((unit) => `<option value="${esc(unit.ref)}"${(activity.unit_ref || '') === unit.ref ? ' selected' : ''}>${esc(unit.title)}</option>`).join('')}</select>` : '';
+  return `<li class="row" id="activity-${key}" data-key="${key}" data-say-box>
+${locked ? '' : `<span class="drag-handle" data-drag="activity" aria-hidden="true">${icon('grip', 16)}</span>`}
 <div class="row-what"><a href="/console/courses/${esc(code)}/activities/${key}"><strong>${esc(activity.title)}</strong></a><span class="v-note">${esc(kindWords(activity, doc))}</span></div>
 <span class="v-pill${open ? ' is-open' : ''}">${esc(stateWords(activity))}</span>
 <div class="actions row-do">
-${locked ? '' : `<button class="v-btn is-small" type="button" data-api="POST ${api}/release" data-body='${esc(JSON.stringify({ version, release: open ? 'hidden' : 'open' }))}' data-said="${open ? 'Hidden from learners.' : 'Open to learners.'}">${open ? 'Hide' : 'Open'}</button>`}
+${locked ? '' : `<button class="v-btn is-small" type="button" data-api="POST ${api}/release" data-body='${esc(JSON.stringify({ version, release: open ? 'hidden' : 'open' }))}'${open ? '' : ` data-checks="courses/${esc(code)}/checks?activity=${key}"`} data-said="${open ? 'Hidden from learners.' : 'Open to learners.'}">${open ? 'Hide' : 'Open'}</button>`}
 <a class="v-btn is-small" href="/console/api/courses/${esc(code)}/try/${key}" target="_blank" rel="noopener">Try it</a>
-${locked ? '' : `<button class="v-btn is-small icon" type="button" aria-label="Move ${esc(activity.title)} up" data-api="POST ${api}/move" data-body='${esc(JSON.stringify({ version, by: -1 }))}'${index === 0 ? ' disabled' : ''}><span class="turned">${icon('chevron', 15)}</span></button><button class="v-btn is-small icon" type="button" aria-label="Move ${esc(activity.title)} down" data-api="POST ${api}/move" data-body='${esc(JSON.stringify({ version, by: 1 }))}'${index === count - 1 ? ' disabled' : ''}>${icon('chevron', 15)}</button>`}
+${unitMenu}
+${locked ? '' : `<span class="row-move"><button class="v-btn is-small icon" type="button" aria-label="Move ${esc(activity.title)} up" data-api="POST ${api}/move" data-body='${esc(JSON.stringify({ version, by: -1 }))}'${index === 0 ? ' disabled' : ''}><span class="turned">${icon('chevron', 15)}</span></button><button class="v-btn is-small icon" type="button" aria-label="Move ${esc(activity.title)} down" data-api="POST ${api}/move" data-body='${esc(JSON.stringify({ version, by: 1 }))}'${index === count - 1 ? ' disabled' : ''}>${icon('chevron', 15)}</button></span>`}
 </div>
 ${locked ? '' : forSections(activity, code, sections, own, open)}
 ${say()}
@@ -245,35 +262,60 @@ async function activitiesBody({ library, classes, origin, addresses, signIn, tab
   const needsList = classes.saving && !signIn && course.identify === 'code';
   const [sections, releases, people, archived] = await Promise.all([classes.sections(code), classes.releases(code), needsList ? classes.people(code) : [], library.archivedActivities ? library.archivedActivities(entry.id) : []]);
   const shut = needsList && !people.some((person) => person.listed);
-  const rows = (list) => list.map((activity) => activityRow(activity, code, meta.version, activities.indexOf(activity), activities.length, locked, sections, releases[activity.key] || {}, doc)).join('');
-  const groups = [...units.map((unit) => ({ title: unit.title, list: inUnit(unit.ref) })), { title: units.length ? 'Not in a unit' : null, list: activities.filter((activity) => !units.some((unit) => unit.ref === activity.unit_ref)) }].filter((group) => group.title && units.length ? group.list.length || group.title !== 'Not in a unit' : group.list.length);
+  // Up and down move a row within its own group, so the ends are the group's.
+  const rows = (list) => list.map((activity, index) => activityRow(activity, code, meta.version, index, list.length, locked, sections, releases[activity.key] || {}, doc)).join('');
+  const loose = activities.filter((activity) => !units.some((unit) => unit.ref === activity.unit_ref));
+  const api = `courses/${esc(code)}`;
+  // A unit is a section of the list itself: named, renamed and moved where it is, with its activities under it.
+  const unitHead = (unit, index) => `<div class="unit-head" id="unit-${esc(unit.ref)}" data-say-box>
+${locked ? '' : `<span class="drag-handle" data-drag="unit" aria-hidden="true">${icon('grip', 16)}</span>`}
+<h2 class="unit">${esc(unit.title)} <small>${esc(plural(inUnit(unit.ref).length, 'activity', 'activities'))}${unit.starts_on || unit.ends_on ? `<span class="unit-dates">${esc(daysWords(unit.starts_on, unit.ends_on))}</span>` : ''}</small></h2>
+${locked ? '' : `<div class="actions unit-do">
+<button class="v-btn is-small" type="button" data-prefill="add-activity" data-prefill-field="unit_ref" data-prefill-value="${esc(unit.ref)}">${icon('plus', 14)}<span>Add an activity here</span></button>
+<details class="unit-more" data-close-outside><summary class="v-btn is-small icon" aria-label="${esc(`More for ${unit.title}: name, dates, move or remove`)}" data-tip="Name, dates, move or remove">${icon('more', 16)}</summary>
+<div class="unit-menu">
+<form class="one-field" id="unit-edit-${esc(unit.ref)}" data-api="PUT ${api}/units/${esc(unit.ref)}">${text('title', 'Its name', unit.title, { required: true, maxlength: 160, autocomplete: 'off' })}
+<fieldset class="unit-days"><legend class="v-label">Its dates <small>if it has them</small></legend><div class="unit-days-row">${text('starts_on', 'From', unit.starts_on || '', { type: 'date', 'data-empty': 'No start' })}${text('ends_on', 'To', unit.ends_on || '', { type: 'date', 'data-empty': 'No end', min: unit.starts_on || null, 'data-min-from': 'starts_on' })}</div><small class="v-note">Learners see them on the course’s home, beside the unit’s name. They don’t open or close anything.</small></fieldset>
+<div class="actions"><button class="v-btn is-small is-primary" type="submit">Save</button></div>${say()}</form>
+<div class="unit-menu-row"><button class="v-btn is-small" type="button" data-api="POST ${api}/units/${esc(unit.ref)}/move" data-body='{"by":-1}'${index === 0 ? ' disabled' : ''}><span class="turned">${icon('chevron', 14)}</span><span>Move up</span></button><button class="v-btn is-small" type="button" data-api="POST ${api}/units/${esc(unit.ref)}/move" data-body='{"by":1}'${index === units.length - 1 ? ' disabled' : ''}>${icon('chevron', 14)}<span>Move down</span></button></div>
+<button class="v-btn is-small danger" type="button" data-api="DELETE ${api}/units/${esc(unit.ref)}" data-confirm="${esc(`Remove the unit “${unit.title}”? Its activities stay in the course, in no unit.`)}" data-yes="Remove the unit" data-danger data-said="Removed.">${icon('trash', 14)}<span>Remove the unit</span></button>
+</div>
+</details>
+</div>`}
+${say()}
+</div>`;
+  const rowsOf = (list, ref, empty) => `<ul class="rows" data-unit="${esc(ref)}">${rows(list)}${empty ? `<li class="unit-empty">${empty}</li>` : ''}</ul>`;
+  const startOpen = !activities.length || url?.searchParams.get('add') === '1';
   return {
     title: course.title,
     body: `${courseHead({ title: course.title, code, origin, addresses, tabs, current: 'Activities', closed: meta.status === 'closed' })}
 ${locked ? SAVING : ''}
 ${shut ? `<p class="notice">Only personal codes on the class list open this course, and nobody is on it yet. <a href="/console/courses/${esc(code)}/people">Add your class</a>.</p>` : ''}
-<section class="block" aria-label="Activities">
-${activities.length ? groups.map((group) => `${group.title ? `<h2 class="unit">${esc(group.title)}</h2>` : ''}<ul class="rows">${rows(group.list)}</ul>`).join('') : '<p class="v-empty">No activities yet. Add the first one below. It stays hidden from learners until you open it.</p>'}
-</section>
-${locked ? '' : `<section class="block" aria-labelledby="add-title">
-<h2 id="add-title">Add an activity</h2>
-<form class="v-card add" id="add-activity" data-api="POST courses/${esc(code)}/activities">
+<section class="block" aria-label="Activities"${locked ? '' : ` data-arrange="PUT ${api}/arrangement"`}>
+${locked ? '' : `<div class="list-tools">
+<details class="add-panel"${startOpen ? ' open' : ''}><summary class="v-btn is-primary">${icon('plus', 15)}<span>Add an activity</span></summary>
+<form class="v-card add" id="add-activity" data-api="POST ${api}/activities">
 <input type="hidden" name="version" value="${meta.version}">
 ${text('title', 'Its title', '', { required: true, maxlength: 160, autocomplete: 'off', placeholder: 'e.g. Practice: adding fractions' })}
+${units.length ? choose('unit_ref', 'In the unit', '', [{ value: '', label: 'No unit' }, ...units.map((unit) => ({ value: unit.ref, label: unit.title }))]) : ''}
 ${oneOf('kind', 'What learners do first', 'page', Object.entries(KINDS).map(([value, kind]) => ({ value, label: kind.label, hint: kind.hint })))}
 <div data-show-when="kind=embed">${text('url', 'Its address', '', { type: 'url', placeholder: 'https://' })}</div>
-<div class="actions"><button class="v-btn is-primary" type="submit">Add it</button></div>${say()}
+<div class="actions"><button class="v-btn is-primary" type="submit">Add it</button><span class="v-note">It stays hidden from learners until you open it.</span></div>${say()}
 </form>
+</details>
+<details class="add-unit"><summary class="v-btn">${icon('plus', 15)}<span>Add a unit</span></summary>
+<form class="v-card one-field" id="add-unit" data-api="POST ${api}/units">
+${text('title', 'Its name', '', { required: true, maxlength: 160, autocomplete: 'off', placeholder: 'e.g. Week 1: Fractions', hint: 'A heading on the course’s home that groups activities, such as a week or a topic.' })}
+<div class="actions"><button class="v-btn is-primary" type="submit">Add the unit</button></div>${say()}
+</form>
+</details>
+</div>`}
+${!activities.length ? '<p class="v-empty">No activities yet. Add the first one above: it stays hidden from learners until you open it.</p>' : units.length
+    ? `${units.map((unit, index) => `<div class="unit-block" data-unit="${esc(unit.ref)}">${unitHead(unit, index)}${rowsOf(inUnit(unit.ref), unit.ref, locked ? 'Nothing in this unit.' : 'Nothing here yet: add an activity here, or drag one in.')}</div>`).join('')}${loose.length
+      ? `<div class="loose-block"><div class="unit-head"><h2 class="unit">Not in a unit <small>${esc(plural(loose.length, 'activity', 'activities'))}</small></h2></div>${rowsOf(loose, '', '')}</div>`
+      : locked ? '' : `<div class="loose-block is-empty"><p class="unit loose-drop">Not in a unit</p>${rowsOf([], '', 'Drop it here to take it out of its unit.')}</div>`}`
+    : rowsOf(activities, '', '')}
 </section>
-<section class="block" aria-labelledby="units-title">
-<h2 id="units-title">Units</h2>
-<p class="v-note">Optional: headings on the course’s home, such as weeks or topics. One per line, in order. An activity says which it belongs to on its own page.</p>
-<form id="units" class="units" data-api="PUT courses/${esc(code)}/units">
-<input type="hidden" name="version" value="${meta.version}">
-${text('titles', 'Units', units.map((unit) => unit.title).join('\n'), { rows: Math.max(3, units.length + 1) })}
-<div class="actions"><button class="v-btn" type="submit">Save units</button></div>${say()}
-</form>
-</section>`}
 ${archived.length ? archivedActivitiesPart(archived, { code, forGood: !library.archives, just: url?.searchParams.get('archived-activity') }) : ''}`,
     css: ACTIVITIES_CSS
   };
@@ -288,16 +330,75 @@ const ACTIVITIES_CSS = `.unit{margin:26px 0 8px;font-size:1.0625rem;font-weight:
 .row-what strong{font-weight:600}
 .row .say{grid-column:1/-1}
 .by-section{grid-column:1/-1}
-.by-section summary{color:var(--ink-blue);font-size:.875rem;cursor:pointer}
+.by-section summary{padding:4px 0;color:var(--ink-blue);font-size:.875rem;cursor:pointer}
 .by-section ul{display:grid;gap:6px;margin:8px 0 0;padding:0;list-style:none}
 .by-section li{display:grid;grid-template-columns:minmax(0,180px) minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:6px 10px;border-radius:var(--radius-sm);background:var(--field-mist)}
 .by-section strong{color:var(--public-ink);font-size:.9375rem;font-weight:600}
 .by-section .v-note{font-size:.875rem}
 .row .icon{padding:0 11px}
 .v-pill.is-open{border-color:transparent;background:var(--field-sage);color:var(--public-ink)}
-.add,.units{display:grid;gap:14px}
-.units{max-width:520px}
-@media (max-width:720px){.row{grid-template-columns:minmax(0,1fr) auto}.row-do{grid-column:1/-1}.by-section li{grid-template-columns:minmax(0,1fr)}}
+.row>.v-pill{max-width:15em;white-space:normal}
+/* Adding: an activity or a unit, opened where the list starts */
+.list-tools{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px;margin-bottom:6px}
+.list-tools>details>summary{list-style:none;display:inline-flex;align-items:center;gap:6px}
+.list-tools>details>summary::-webkit-details-marker{display:none}
+.list-tools>details[open]{flex-basis:100%}
+.list-tools>details[open]>summary{margin-bottom:10px}
+.list-tools>details[open]>form{animation:v-rise .18s var(--ease-out,cubic-bezier(.22,1,.36,1))}
+.add{display:grid;gap:14px}
+.add .one-of-list{grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr))}
+.add .actions{align-items:center}
+.add-unit form{max-width:520px}
+/* A unit is a section of the list: its name, what is in it, and what can be done to it, where it is */
+.unit-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 14px;margin:26px 0 8px}
+.unit-head .unit{margin:0}
+.unit small{margin-left:6px;color:var(--muted);font-size:.8125rem;font-weight:400}
+.unit-dates{margin-left:8px;padding:1px 8px;border-radius:var(--radius-pill);background:var(--field-mist);color:var(--public-text);white-space:nowrap}
+.unit-days{display:grid;gap:8px;margin:0;padding:0;border:0;min-width:0}
+.unit-days legend small{margin-left:4px;color:var(--muted);font-weight:400}
+.unit-days-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.unit-days .v-form{gap:4px}
+.unit-days .v-label{font-size:.8125rem;font-weight:500;color:var(--muted)}
+.unit-days .vd-face{min-height:40px;padding:6px 10px;font-size:.9375rem}
+.unit-do{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.unit-do .v-btn span{margin-left:2px}
+.page .list-tools>details>summary::before,.page .unit-more>summary::before{display:none}
+.unit-more{position:relative}
+.unit-more>summary{list-style:none}.unit-more>summary::-webkit-details-marker{display:none}
+.unit-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:6;display:grid;gap:10px;width:min(340px,calc(100vw - 32px));padding:12px;border:1px solid var(--public-rule);border-radius:var(--radius);background:var(--surface);box-shadow:0 18px 40px -20px rgb(10 16 28/.4);transform-origin:top right;animation:v-rise .16s var(--ease-out,cubic-bezier(.22,1,.36,1))}
+.unit-menu-row{display:flex;gap:6px}
+.unit-menu .v-btn{justify-content:flex-start;gap:6px}
+.unit-menu>.v-btn{justify-self:start}
+.unit-head .say{flex-basis:100%}
+/* Dragging: a handle at a row's or a unit's start, the row left in place as where it will land, and a copy under the pointer */
+.unit-empty{padding:12px 0;color:var(--muted);font-size:.9375rem;list-style:none;border-bottom:1px solid var(--public-rule)}
+.rows>.unit-empty:not(:only-child){display:none}
+.loose-block.is-empty{display:none}
+.is-arranging .loose-block.is-empty{display:block}
+.loose-drop{margin:26px 0 8px;color:var(--muted)}
+.drag-handle{display:grid;place-items:center;width:24px;height:32px;border-radius:6px;color:var(--muted);cursor:grab;touch-action:none;opacity:.55;transition:opacity .12s ease,background-color .12s ease}
+.row:hover>.drag-handle,.unit-head:hover>.drag-handle,.drag-handle:active{opacity:1}
+.drag-handle:hover{background:var(--field-mist)}
+@media (hover:none){.drag-handle{opacity:.8}}
+.row{grid-template-columns:24px minmax(0,1fr) auto auto}
+.row>.drag-handle{grid-row:1;grid-column:1}
+.row>.row-what{grid-column:2}
+.row:not(:has(>.drag-handle)){grid-template-columns:minmax(0,1fr) auto auto}
+.row:not(:has(>.drag-handle))>.row-what{grid-column:1}
+.unit-head{justify-content:flex-start}
+.unit-head>.unit{flex:1}
+.row.is-dragging,.unit-block.is-dragging{opacity:.4}
+.row.is-dragging{border-bottom-style:dashed}
+.drag-ghost{position:fixed;z-index:70;margin:0;padding:10px 14px;border:1px solid var(--public-rule-strong);border-radius:var(--radius-sm);background:var(--surface);box-shadow:0 22px 48px -20px rgb(10 16 28/.45);list-style:none;pointer-events:none;transform:rotate(-.6deg)}
+.drag-ghost .actions,.drag-ghost .by-section,.drag-ghost .say,.drag-ghost .unit-do{display:none}
+html.is-dragging-now,html.is-dragging-now *{cursor:grabbing!important;user-select:none}
+.row-unit{width:auto;max-width:200px}
+.row-unit.v-menu-button{min-height:34px;padding:0 12px;font-size:.875rem}
+.row-move{display:inline-flex;gap:6px}
+@media (prefers-reduced-motion:reduce){.list-tools>details[open]>form,.unit-menu{animation:none}}
+/* On a phone the menu opens under the unit's heading, its width, not off the screen's edge */
+@media (max-width:720px){.unit-head{position:relative}.unit-more{position:static}.unit-menu{left:0;right:0;width:auto}}
+@media (max-width:720px){.row{grid-template-columns:24px minmax(0,1fr) auto}.row-do{grid-column:2/-1}.by-section li{grid-template-columns:minmax(0,1fr)}}
 ${ARCHIVED_CSS}`;
 
 // --- A course's settings ------------------------------------------------------------------------------
@@ -411,6 +512,13 @@ export const coursePages = [
     id: 'courses', title: 'Courses',
     render: async (tools) => ({ body: await listBody(tools), css: `${FORMS_CSS}\n${LIST_CSS}` }),
     api: [
+      // What opening an activity asks first: its checks that aren't met, and the course's, each with where to fix it.
+      ['GET', /^courses\/([\w-]+)\/checks$/, async (here, match) => {
+        const { code, doc } = await courseAt(here.library, match[1]);
+        const { courseChecks } = await import('./askCards.js');
+        const activity = here.url.searchParams.get('activity') || null;
+        return { unmet: (await courseChecks(here, code, doc, { activity })).filter((item) => !item.ok).map(({ words, href, label }) => ({ words, href, label })) };
+      }],
       ['POST', /^courses$/, async ({ library }, _match, body) => {
         const title = clean(body?.title, 160);
         if (!title) throw refused('Give it a title.');
@@ -491,6 +599,94 @@ export const coursePages = [
       ['POST', /^courses\/([\w-]+)\/status$/, async ({ library }, match, body) => {
         const entry = await courseAt(library, match[1]);
         await library.setStatus(entry.id, body?.status);
+        return {};
+      }],
+      // A unit at a time, by its ref: renaming one keeps what is in it (the list of titles, below, is Ask's way).
+      ['POST', /^courses\/([\w-]+)\/units$/, async ({ library }, match, body) => {
+        const title = clean(body?.title, 160);
+        if (!title) throw refused('Give the unit a name.');
+        await changeCourse(library, match[1], null, (doc) => {
+          const units = doc.course.units ||= [];
+          if (units.length >= 60) throw refused('A course has at most 60 units.');
+          if (units.some((unit) => unit.title.toLowerCase() === title.toLowerCase())) throw refused(`There is already a unit called “${title}”.`);
+          const taken = new Set(units.map((unit) => unit.ref));
+          const start = cutWords(slugOf(title, 'unit'), 40);
+          let ref = start;
+          for (let n = 2; taken.has(ref); n += 1) ref = `${start}-${n}`;
+          units.push({ ref, title });
+        }, `Added the unit ${title}`);
+        return { said: `Added “${title}”. Put activities in it from their row, or add one here.` };
+      }],
+      // The whole order at once, as dragging leaves it: units in the order sent, and activities in the order sent, each in
+      // the unit given (unit_ref null for none). Anything not named keeps its place after those that are.
+      ['PUT', /^courses\/([\w-]+)\/arrangement$/, async ({ library }, match, body) => {
+        await changeCourse(library, match[1], null, (doc) => {
+          const units = doc.course.units || [];
+          if (Array.isArray(body?.units)) {
+            const named = body.units.map((ref) => units.find((unit) => unit.ref === String(ref))).filter(Boolean);
+            doc.course.units = [...new Set([...named, ...units])];
+          }
+          if (Array.isArray(body?.activities)) {
+            const list = doc.course.activities || [];
+            // Each keeps its own address however the list is ordered: a key read from its place is written down.
+            activityKeys(list).forEach((key, i) => { list[i].key ||= key; });
+            const known = new Set((doc.course.units || []).map((unit) => unit.ref));
+            const placed = [];
+            for (const item of body.activities) {
+              const activity = list.find((entry) => entry.key === String(item?.key ?? ''));
+              if (!activity || placed.includes(activity)) continue;
+              if (item.unit_ref !== undefined) activity.unit_ref = item.unit_ref && known.has(item.unit_ref) ? item.unit_ref : null;
+              placed.push(activity);
+            }
+            doc.course.activities = [...placed, ...list.filter((activity) => !placed.includes(activity))];
+          }
+        }, 'Arranged the course');
+        return {};
+      }],
+      // A unit's name and its dates (YYYY-MM-DD, or empty for none), each changed only when it is sent.
+      ['PUT', /^courses\/([\w-]+)\/units\/([\w-]+)$/, async ({ library }, match, body) => {
+        const title = body?.title === undefined ? null : clean(body.title, 160);
+        if (title === '') throw refused('Give the unit a name.');
+        const dayIn = (value, words) => {
+          if (value === undefined) return undefined;
+          if (value == null || value === '') return null;
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value)) || Number.isNaN(Date.parse(`${value}T00:00:00Z`))) throw refused(`${words}: give a day, such as 2026-11-09.`);
+          return String(value);
+        };
+        const starts = dayIn(body?.starts_on, 'From');
+        const ends = dayIn(body?.ends_on, 'To');
+        let renamed = false;
+        await changeCourse(library, match[1], null, (doc) => {
+          const units = doc.course.units || [];
+          const unit = units.find((item) => item.ref === match[2]);
+          if (!unit) throw refused('That unit isn’t in this course anymore.', 404, 'unit_not_found');
+          if (title && units.some((item) => item !== unit && item.title.toLowerCase() === title.toLowerCase())) throw refused(`There is already a unit called “${title}”.`);
+          const from = starts === undefined ? unit.starts_on || null : starts;
+          const to = ends === undefined ? unit.ends_on || null : ends;
+          if (from && to && to < from) throw refused('It has to end on or after the day it starts.');
+          renamed = Boolean(title && title !== unit.title);
+          if (title) unit.title = title;
+          if (starts !== undefined) unit.starts_on = starts;
+          if (ends !== undefined) unit.ends_on = ends;
+        }, title ? `Renamed or dated a unit: ${title}` : 'Dated a unit');
+        return { said: renamed ? 'Saved. What is in it stays in it.' : 'Saved.' };
+      }],
+      ['DELETE', /^courses\/([\w-]+)\/units\/([\w-]+)$/, async ({ library }, match) => {
+        await changeCourse(library, match[1], null, (doc) => {
+          const units = doc.course.units || [];
+          if (!units.some((item) => item.ref === match[2])) throw refused('That unit isn’t in this course anymore.', 404, 'unit_not_found');
+          doc.course.units = units.filter((item) => item.ref !== match[2]);
+          for (const activity of doc.course.activities || []) if (activity.unit_ref === match[2]) activity.unit_ref = null;
+        }, 'Removed a unit');
+        return { said: 'Removed. Its activities stay in the course, in no unit.' };
+      }],
+      ['POST', /^courses\/([\w-]+)\/units\/([\w-]+)\/move$/, async ({ library }, match, body) => {
+        await changeCourse(library, match[1], null, (doc) => {
+          const units = doc.course.units || [];
+          const at = units.findIndex((item) => item.ref === match[2]);
+          const to = at + (body?.by < 0 ? -1 : 1);
+          if (at >= 0 && to >= 0 && to < units.length) units.splice(to, 0, units.splice(at, 1)[0]);
+        }, 'Moved a unit');
         return {};
       }],
       ['PUT', /^courses\/([\w-]+)\/units$/, async ({ library }, match, body) => {

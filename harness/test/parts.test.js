@@ -6,7 +6,7 @@ import { ATTRIBUTES, MARKS, OUTCOMES, PARTS_CSS, PARTS_SCRIPT, TAGS, VERDICTS, h
 const ATTACK = '<img src="https://evil.example/x.png" onerror="alert(1)"><script>alert(2)</script>"\'&';
 const parts = [
   vettingRounds([{ attempt: 1, verdict: 'fail', reply: ATTACK, feedback: `FAILED: ${ATTACK}` }, { attempt: 2, verdict: ATTACK, reply: ATTACK }, { attempt: 3, verdict: 'pass', reply: 'ok' }]),
-  testCase({ name: ATTACK, verdict: ATTACK, reason: ATTACK, reply: ['script', null, ATTACK] }, { message: ATTACK, rubric: ATTACK }),
+  testCase({ name: ATTACK, verdict: ATTACK, reason: ATTACK, reply: ['script', null, ATTACK] }, { message: ATTACK, rubric: ATTACK, source: { name: ATTACK, license: [ATTACK] } }),
   suggestion({ id: ATTACK, change: ATTACK, why: ATTACK, evidence: [ATTACK, { quote: ATTACK }], patch: { sections: { [ATTACK]: { help: 'hint' } } } })
 ];
 
@@ -18,6 +18,12 @@ test('a round: a failed draft is struck, the reason loses the verdict the mark g
   assert.match(treeHtml(vettingRound({ verdict: 'pass', reply: null })), /No reply: it couldn’t be written\./);
   assert.match(treeHtml(vettingRound({ verdict: 'hacked', reply: 'x' })), /class="round error"/);
   for (const key of [...Object.keys(OUTCOMES), ...Object.keys(VERDICTS)]) assert.ok(MARKS[key], key);
+});
+
+test('a case from a suite says where it comes from; one someone wrote doesn’t', () => {
+  const ran = { name: 'x', verdict: 'pass', reply: 'ok' };
+  assert.match(treeHtml(testCase(ran, { message: 'hi', rubric: 'r', source: { name: 'TutorMoments', license: ['CC-BY-4.0'] } })), /<dt>Where it comes from<\/dt><dd>TutorMoments, CC-BY-4.0<\/dd>/);
+  assert.doesNotMatch(treeHtml(testCase(ran, { message: 'hi', rubric: 'r' })), /Where it comes from/);
 });
 
 test('HTML and elements hold the same parts, and the data never becomes markup in either', () => {

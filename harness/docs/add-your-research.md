@@ -3,6 +3,9 @@
 You have studied what helps learners. This is how a teacher setting up an activity can use it, with your name on it, in whatever AI
 they use. There is nothing to host, no learner's data comes to you, and no code to write if you'd rather not.
 
+This page is for guidance: what research says a tutor should do. A method that checks replies, a way to rate them, a dataset or a
+benchmark comes in [another way](#other-kinds-of-research).
+
 ## What it looks like once it's in
 
 A teacher opens **How the AI helps** in an activity and sees your topic beside the others, each piece with its source. They tick the ones
@@ -89,7 +92,7 @@ With it, this is added, 2 of its 4 items:
   - With unlike denominators, ask what the two fractions need to have in common. (Your name 2024)
 ```
 
-No model is called and nothing is sent anywhere. [Components](components.md) has the details, including other kinds of work: a method that checks a reply, a way to rate replies, a dataset or a benchmark.
+No model is called and nothing is sent anywhere. [Components](components.md) has the details.
 
 ## If you don't write code
 
@@ -98,7 +101,18 @@ No model is called and nothing is sent anywhere. [Components](components.md) has
 ## How it lands
 
 1. It comes as a pull request, from you or from us, with you as its maintainer.
-2. We check [seven things](components.md): among them that the source says what the piece says, and that the license lets it travel.
+2. We check it against [the review checklist](components.md#the-review-checklist), and that each piece says what its source says.
 3. We add it to the guidance the Harness carries, and it appears in the library with the next release. Teachers can then choose it on the VIABLE Developer Platform and on any Engine.
 
 The license stays yours to choose, as long as it lets the words be used: CC BY 4.0 is the usual one. You can correct or withdraw it at any time. A new version goes out with the next release.
+
+## Other kinds of research
+
+Guidance is one kind. The others:
+
+- **A method that writes or checks a reply, a way to rate replies, a detector or a measure** is a component that runs where you
+  run it and receives only the learner data its manifest lists. [Components](components.md#what-you-have-and-what-you-do) says
+  when each works, what to write, how to try it and how its value is checked.
+- **A dataset or a benchmark** is used to test an AI, not while it teaches. A catalog entry says what it is, its license and how
+  to cite it, and a connector turns its records into test cases, each crediting it ([Resources](resources.md#add-a-dataset-or-a-benchmark)).
+- **A simulated learner** is planned: no agent test uses one yet. [Tell us about yours](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=component.yml).

@@ -216,6 +216,8 @@ const designOf = async (id) => {
   const design = designById(String(id));
   return design ? { id: design.id, label: design.label } : null;
 };
+// The questions panels of an activity, in their steps' order.
+const questionsIn = (activity) => (activity?.workspace?.panels || []).filter((panel) => panel.type === 'questions');
 const stepLines = (steps) => steps.map((step, index) => `${index + 1}. ${clean(step.title, 60)}${step.ai === false ? '' : ' (with the AI)'}`).join('\n');
 // What a person could trip on, for the model to fix or mention.
 const reviewFor = (doc, activity) => { const notes = reviewOf(doc, activity); return notes.length ? { review: notes.map(({ level, says }) => ({ level, says })), note: 'Fix what review marks fix before you finish, and say what you left of the rest.' } : {}; };
@@ -671,7 +673,7 @@ export const ASK_TOOLS = [
       }, `Set up ${title} by Ask`);
       const { doc: now } = await courseAt(here.library, code);
       const made = activityIn(now, key).activity;
-      return { done: `Added “${title}”, hidden for now`, link: { href: pageOf(code, key), label: 'Its page' }, course: code, cards: [{ kind: 'activity', course: code, activity: key }], forModel: { course: code, activity: key, open: false, ...reviewFor(now, made) }, detail: stepped ? stepLines(args.steps) : args.questions?.length ? `${args.questions.length} questions:\n${args.questions.map((question, index) => `${index + 1}. ${clean(question.prompt, 200)}`).join('\n')}` : (args.goal ? `Goal: ${clean(args.goal, 300)}` : null) };
+      return { done: `Added “${title}”, hidden for now`, link: { href: pageOf(code, key), label: 'Its page' }, course: code, cards: [{ kind: 'activity', course: code, activity: key }, ...(questionsIn(made).length ? [{ kind: 'questions', course: code, activity: key }] : [])], forModel: { course: code, activity: key, open: false, ...reviewFor(now, made) }, detail: stepped ? stepLines(args.steps) : args.questions?.length ? `${args.questions.length} questions:\n${args.questions.map((question, index) => `${index + 1}. ${clean(question.prompt, 200)}`).join('\n')}` : (args.goal ? `Goal: ${clean(args.goal, 300)}` : null) };
     }
   },
   {
@@ -804,7 +806,7 @@ export const ASK_TOOLS = [
       for (const question of [...(args.add || []), ...(args.replace || [])]) questionItem(question, question.id || 'q');
       if (reached) return { course: code, propose: { card: { kind: 'change', course: code, activity: args.activity, questions: args, words: questionLines(args, set.items), what: `change the questions of the activity ${args.activity}` }, title: reached.title, course: code, says: 'Asking you to change them' } };
       await changeCourse(here.library, code, null, (draft) => { const found = questionsOf(draft, args.activity, releases, args.step); changeQuestions(draft, found.set, found.activity, args); }, 'Changed questions by Ask');
-      return { done: `${words.join(', ')} in “${clean(activity.title, 80)}”`, link: { href: pageOf(code, args.activity), label: 'Its page' }, course: code, forModel: { changed: true } };
+      return { done: `${words.join(', ')} in “${clean(activity.title, 80)}”`, link: { href: pageOf(code, args.activity), label: 'Its page' }, course: code, cards: (args.add || []).length || (args.replace || []).length ? [{ kind: 'questions', course: code, activity: args.activity }] : [], forModel: { changed: true } };
     },
     async apply(here, card) {
       await changeCourse(here.library, card.course, null, (draft) => { const found = questionsOf(draft, card.activity, {}, card.questions.step); changeQuestions(draft, found.set, found.activity, card.questions); }, 'Changed questions by Ask, with the teacher’s click');
@@ -978,6 +980,26 @@ export const ASK_TOOLS = [
     async apply(_here, card, call) { await call('POST', `courses/${card.course}/activities/${card.activity}/release`, { release: 'hidden' }); }
   },
 
+  {
+    name: 'offer_versions', tier: 'look', says: () => 'Showing two versions',
+    description: 'When there are two good ways to write something learners will read (a question, what the AI says first, a goal, a step’s text), show both side by side, so the teacher picks one. Each is the real text, as learners would read it. One press answers, and then you use the one they chose. Stop after it and wait.',
+    parameters: { type: 'object', required: ['question', 'versions'], properties: { question: string('What they are choosing, short, such as Which first message?'), versions: { type: 'array', minItems: 2, maxItems: 2, items: { type: 'object', required: ['label', 'text'], properties: { label: string('A few words that name it, such as Shorter or With an example.'), text: string('The version itself, as learners would read it, in Markdown.') } } } } },
+    async run(_here, args) {
+      const question = clean(args.question, 160);
+      const versions = (Array.isArray(args.versions) ? args.versions : []).slice(0, 2).map((version) => ({ label: clean(version?.label, 60), text: String(version?.text || '').trim().slice(0, 4000) })).filter((version) => version.label && version.text);
+      if (!question || versions.length < 2 || versions[0].label.toLowerCase() === versions[1].label.toLowerCase()) throw refused('Give one question and two versions, each with a label of its own and its text.');
+      return { done: 'Showed two versions', cards: [{ kind: 'versions', question, versions }], forModel: { shown: true, note: 'Wait for their choice: say nothing more now. When they choose, put that version where it goes.' } };
+    }
+  },
+  {
+    name: 'show_schedule', tier: 'look', says: () => 'Showing when activities open',
+    description: 'A course’s activities with when each opens and closes, for the teacher to see and set on the card. Show it when they ask when things open or close, or want something to open at a time. You never set a time yourself: the card is where they do.',
+    parameters: { type: 'object', required: ['course'], properties: { course: COURSE } },
+    async run(here, args) {
+      const { code, doc } = await courseAt(here.library, args.course);
+      return { done: 'Showed when activities open', course: code, cards: [{ kind: 'schedule', course: code }], forModel: { shown: true, activities: activitiesOf(doc).map((activity) => ({ activity: activity.key, title: activity.title, open: activity.release !== 'hidden', opens_at: activity.opens_at ?? null, closes_at: activity.closes_at ?? null })), note: 'The card has the times and a way to set them. Say nothing more about them unless asked.' } };
+    }
+  },
   {
     name: 'offer_choices', tier: 'look', says: () => 'Asking you to choose',
     description: 'When you must ask before you can go on, ask one question with its 2 to 4 likely answers as buttons: one press answers. They can also type their own. Stop after it and wait.',

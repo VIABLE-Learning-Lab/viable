@@ -149,8 +149,8 @@ on localhost too. It takes `application/json` only: a web page can't send that t
 
 ### The teacher's page
 
-The gateway deletes nothing by itself: what it keeps in `--data-dir` stays until you delete it, or `viable-harness
-forget` takes one learner's.
+The gateway deletes nothing by itself: what it keeps in `--data-dir` stays until you delete it, or
+`viable-engine forget <id> --data-dir ./records` takes one learner's.
 
 Open `/teacher`. Your browser asks for a password: it's the token, or with no token the one the gateway printed
 when it started, and any user name will do. It always asks, because through a local proxy every visitor would
@@ -363,9 +363,9 @@ These routes, like everything on the gateway but `/health`, need the token when 
 
 ### Agent tests in CI
 
-`viable-harness test` exits non-zero when a case fails or can't run, so the step fails with it. Ran, with
+`viable-engine test` exits non-zero when a case fails or can't run, so the step fails with it. Ran, with
 a passing case, a failing one and an endpoint that's down. It runs a VIABLE agent file, so to test your
-prompt, put it in a one-step file (`tutor.agent.json`):
+prompt with a teacher's settings, put it in a one-step file (`tutor.agent.json`):
 
 ```json
 {
@@ -394,11 +394,17 @@ Cases (`cases.json`) say what a good reply does; [agent-tests.md](agent-tests.md
 ```
 
 ```bash
-viable-harness test tutor.agent.json cases.json --judge-model your-judge-model --teaching fractions-teaching.json
+viable-engine test tutor.agent.json cases.json --judge-model your-judge-model --teaching fractions-teaching.json
 ```
 
-`--teaching` takes a plain teaching settings file. Point this at your model endpoint, not at the gateway:
-the judge's own verdicts shouldn't be checked.
+`--teaching` takes a plain teaching settings file. Point this at your model endpoint (`OPENAI_BASE_URL`),
+not at the gateway: the judge's own verdicts shouldn't be checked. To test a prompt alone, with no agent
+file and no teaching settings:
+
+```bash
+viable-harness test cases.json --endpoint https://api.openai.com/v1 --endpoint-model your-model \
+  --system "$(cat prompt.txt)" --judge-model your-judge-model
+```
 
 The workflow below hasn't run on GitHub. Each case costs a reply and a judge's call on your key:
 
@@ -414,9 +420,9 @@ jobs:
         with:
           node-version: 22
       - run: |
-          git clone --depth 1 https://github.com/VIABLE-Learning-Lab/viable.git ../viable-harness
-          (cd ../viable-harness && npm install && npm link)
-      - run: viable-harness test tutor.agent.json cases.json --judge-model your-judge-model
+          git clone --depth 1 https://github.com/VIABLE-Learning-Lab/viable.git ../viable
+          (cd ../viable && npm install && npm link)
+      - run: viable-engine test tutor.agent.json cases.json --judge-model your-judge-model
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```

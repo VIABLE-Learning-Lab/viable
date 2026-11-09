@@ -3,7 +3,7 @@
  * its sections, a section's own opening) and records (who has done what, and their work). A host that keeps these
  * somewhere else passes its own two with the same shape, and the pages don't change. No Node built-ins.
  */
-import { acceptedOf, addLines, addSection, changeLearner, changeSection, forgetActivity, keepAccepted, learnersNamed, makeLearner, newCodeFor, peopleOf, releasesOf, removeFromList, removeSection, sectionsOf, setRelease } from './classList.js';
+import { acceptedOf, addLines, addSection, changeLearner, changeSection, classKeys, extendFor, forgetActivity, keepAccepted, learnersNamed, makeLearner, newCodeFor, peopleOf, releasesOf, removeFromList, removeSection, sectionsOf, setRelease } from './classList.js';
 import { forgetChat, forgetCourse, forgetLearner, learnerRecords } from './learner.js';
 import { keptTurnEvents } from '../learner/watch.js';
 import { MEMORY_LIMITS, foldText, searchConversations } from '../../../harness/src/memory.js';
@@ -18,8 +18,11 @@ export function storeClasses(store) {
     releases: (code) => releasesOf(store, code),
     named: (code, name) => learnersNamed(store, code, name),
     add: (code, fields) => makeLearner(store, code, fields),
-    addLines: (code, text) => addLines(store, code, text),
+    addLines: (code, text, options) => addLines(store, code, text, options),
     change: (code, id, change) => changeLearner(store, code, id, change),
+    /** { activity's key: instant } of more time one learner has. */
+    extensions: async (code, id) => (store ? (await store.get(classKeys.learner(code, id)))?.extensions || {} : {}),
+    extend: (code, id, key, closesAt) => extendFor(store, code, id, key, closesAt),
     newCode: (code, id) => newCodeFor(store, code, id),
     takeOff: (code, id) => removeFromList(store, code, id),
     forget: (_code, id) => forgetLearner(store, id),

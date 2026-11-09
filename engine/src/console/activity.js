@@ -449,8 +449,8 @@ ${onForm(oneOf('release', 'For learners', release, [
     { value: 'open', label: 'Open', hint: 'On the course’s home now.' },
     { value: 'scheduled', label: 'Opens at a time', hint: 'On the home with its time, until it opens.' }
   ]))}
-<div data-show-when="release=scheduled" data-form="${FORM}">${text('opens_at', 'Opens', '', { type: 'datetime-local', form: FORM, 'data-iso': activity.opens_at || '' })}</div>
-<div data-show-when="release=open|scheduled" data-form="${FORM}">${text('closes_at', 'Closes', '', { type: 'datetime-local', form: FORM, 'data-iso': activity.closes_at || '', hint: 'Empty to stay open.' })}</div>
+<div data-show-when="release=scheduled" data-form="${FORM}">${text('opens_at', 'Opens', '', { type: 'datetime-local', form: FORM, 'data-iso': activity.opens_at || '', 'data-default-time': '08:00', 'data-empty': 'Choose when it opens' })}</div>
+<div data-show-when="release=open|scheduled" data-form="${FORM}">${text('closes_at', 'Closes', '', { type: 'datetime-local', form: FORM, 'data-iso': activity.closes_at || '', 'data-default-time': '23:59', 'data-empty': 'Stays open', hint: 'Clear it to stay open.' })}</div>
 ${choose('done_when', 'It counts as done', activity.done_when || 'auto', [{ value: 'auto', label: 'When its work is finished, or they say so if nothing can tell' }, { value: 'self', label: 'When they say so' }, { value: 'opened', label: 'When they open it' }], { form: FORM })}
 </div>
 </section>
@@ -907,6 +907,7 @@ export const activityPages = [
             if (!/^https:\/\//i.test(String(body.url ?? ''))) throw refused('A web page needs its whole https address.');
             activity.workspace = { ai: 'right', title: null, layout: { ai_width: 36, resizable: true, collapsible: true }, panels: [{ id: 'page', type: 'embed', title: null, url: clean(body.url, 2000) }] };
           }
+          if (body.unit_ref && (draft.course.units || []).some((unit) => unit.ref === body.unit_ref)) activity.unit_ref = body.unit_ref;
           (draft.course.activities ||= []).push(activity);
         }, `Added ${title}`);
         const added = doc.course.activities.at(-1);
@@ -928,11 +929,40 @@ export const activityPages = [
         await changeCourse(library, match[1], body?.version, (doc) => { const { activity } = activityIn(doc, match[2]); activity.release = body.release === 'open' ? 'open' : 'hidden'; activity.opens_at = null; if (body.release === 'open' && activity.closes_at && Date.parse(activity.closes_at) <= Date.now()) activity.closes_at = null; }, body?.release === 'open' ? 'Opened an activity' : 'Hid an activity');
         return {};
       }],
+      // When it opens and closes, as its page's settings set them: a time to open makes a hidden one wait for it; Closes
+      // empty stays open. Ask's schedule card sets times here.
+      ['POST', /^courses\/([\w-]+)\/activities\/([\w-]+)\/schedule$/, async ({ library }, match, body) => {
+        const at = (value, words) => { if (value == null || value === '') return null; const ms = Date.parse(String(value)); if (!Number.isFinite(ms)) throw refused(`${words}: give a date and a time.`); return new Date(ms).toISOString(); };
+        const opens = at(body?.opens_at, 'Opens');
+        const closes = at(body?.closes_at, 'Closes');
+        await changeCourse(library, match[1], body?.version ?? null, (doc) => {
+          const { activity } = activityIn(doc, match[2]);
+          const open = activity.release !== 'hidden';
+          if (opens && closes && Date.parse(closes) <= Date.parse(opens)) throw refused('It has to close after it opens.');
+          if (!open && body?.opens_at !== undefined) activity.opens_at = opens;
+          activity.closes_at = closes;
+        }, 'Set when it opens');
+        return { said: opens ? 'Saved. It opens on its own at that time.' : 'Saved.' };
+      }],
+      // Into a unit, or out of every one, from its row on the course page.
+      ['POST', /^courses\/([\w-]+)\/activities\/([\w-]+)\/unit$/, async ({ library }, match, body) => {
+        await changeCourse(library, match[1], null, (doc) => {
+          const ref = body?.unit_ref || null;
+          if (ref && !(doc.course.units || []).some((unit) => unit.ref === ref)) throw refused('That unit isn’t in this course anymore.', 404, 'unit_not_found');
+          activityIn(doc, match[2]).activity.unit_ref = ref;
+        }, 'Moved an activity to a unit');
+        return { said: 'Moved.' };
+      }],
       ['POST', /^courses\/([\w-]+)\/activities\/([\w-]+)\/move$/, async ({ library }, match, body) => {
         await changeCourse(library, match[1], body?.version, (doc) => {
-          const { index, list } = activityIn(doc, match[2]);
-          const to = index + (body.by < 0 ? -1 : 1);
-          if (to >= 0 && to < list.length) list.splice(to, 0, list.splice(index, 1)[0]);
+          const { activity, index, list } = activityIn(doc, match[2]);
+          // Past the next activity in its own unit, as the course page lists them: the others keep their places.
+          const units = new Set((doc.course.units || []).map((unit) => unit.ref));
+          const group = (item) => (units.has(item.unit_ref) ? item.unit_ref : null);
+          const by = body?.by < 0 ? -1 : 1;
+          let to = index + by;
+          while (to >= 0 && to < list.length && group(list[to]) !== group(activity)) to += by;
+          if (to >= 0 && to < list.length) [list[index], list[to]] = [list[to], list[index]];
         }, 'Moved an activity');
         return {};
       }],

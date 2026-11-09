@@ -154,7 +154,7 @@ function learnerView({ code, courseTitle, person, section, activities, sets, wor
   const untouched = activities.filter((activity) => !touched.includes(activity));
   return `<nav class="crumbs" aria-label="Where you are"><a href="/console/courses">Courses</a> / <a href="/console/courses/${esc(code)}">${esc(courseTitle)}</a> / <a href="/console/courses/${esc(code)}/progress">Progress</a></nav>
 <h1>${esc(who)}</h1>
-<p class="v-note facts">${[person.name ? `Personal code ${esc(showCode(person.code))}` : '', section ? esc(section) : '', person.last_seen_at ? `Last seen ${when(person.last_seen_at)}` : 'Not signed in yet'].filter(Boolean).join(' · ')} · <a href="/console/courses/${esc(code)}/people/${esc(person.id)}">Change on People</a></p>
+<p class="v-note facts">${[person.name ? `Personal code ${esc(showCode(person.code))}` : '', section ? esc(section) : '', person.last_seen_at ? `Last seen ${when(person.last_seen_at)}` : 'Not signed in yet'].filter(Boolean).join(' · ')} · <a href="/console/courses/${esc(code)}/people/${esc(person.id)}#more-time">Section, extra time or more time</a></p>
 ${cut ? `<p class="notice">This shows their latest ${shown} messages with the AI.</p>` : ''}
 ${touched.length ? touched.map((activity) => {
     const row = work.progress[activity.key];

@@ -168,15 +168,20 @@ export function stepAllows(steps, index, { panelId = null, ai = false } = {}) {
   if (ai && steps[index].ai === 'off') throw pageError('The AI isn’t part of this step.', 409, 'step_no_ai');
 }
 
-/** A learner's step as the page gets it, with only the panels open so far whole. now: { index, at }. */
-export function stepReply(workspace, sets, now) {
+/**
+ * A learner's step as the page gets it, with only the panels open so far whole. now: { index, at }. extended: the learner has
+ * more time from their teacher (an accommodation), so no timer moves them on: a step that would open on its own waits until
+ * they say they're ready, its minutes still the earliest.
+ */
+export function stepReply(workspace, sets, now, { extended = false } = {}) {
   const { steps } = workspace;
   const next = steps[now.index + 1] || null;
   const shown = publicWorkspace(workspace, sets, { through: now.index });
+  const moveOf = (move) => (extended && move === 'auto' ? 'ready' : move);
   return {
     object: 'workspace.step', index: now.index, started_at: now.at,
-    steps: steps.map(({ id, title, panels, ai, chat, says = null, move = null, minutes = 0, back = false }) => ({ id, title, panels, ai, chat, says, move, minutes, back })),
-    next: next ? { move: next.move, minutes: next.minutes, opens_at: next.minutes && now.at ? new Date(Date.parse(now.at) + next.minutes * 60000).toISOString() : null } : null,
+    steps: steps.map(({ id, title, panels, ai, chat, says = null, move = null, minutes = 0, back = false }) => ({ id, title, panels, ai, chat, says, move: moveOf(move), minutes, back })),
+    next: next ? { move: moveOf(next.move), minutes: next.minutes, opens_at: next.minutes && now.at ? new Date(Date.parse(now.at) + next.minutes * 60000).toISOString() : null } : null,
     panels: shown.panels.filter((panel) => !panel.locked && panelOpenAt(steps, now.index, panel.id))
   };
 }

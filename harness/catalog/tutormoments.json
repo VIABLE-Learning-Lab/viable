@@ -1,0 +1,58 @@
+{
+  "id": "tutormoments",
+  "name": "TutorMoments",
+  "kind": "benchmark",
+  "summary": "520 moments from real one-to-one math tutoring sessions, U.S. grades 2 to 7, each cut where the tutor's next move matters and labelled by experienced teachers: the learner needs scaffolding, or a push for rigor.",
+  "subjects": [
+    "math"
+  ],
+  "grades": "2-7",
+  "url": "https://allenai.org/blog/tutormoments",
+  "repository": "https://huggingface.co/datasets/allenai/tutormoments-preview",
+  "license": {
+    "spdx": [
+      "CC-BY-4.0"
+    ],
+    "note": "CC BY 4.0, for research and educational use under Ai2's Responsible Use Guidelines. The learners are minors, de-identified (imperfectly, its card says): never try to re-identify them, or pass on a record with personal details left in. Its replays hold other models' words, under their providers' terms.",
+    "source": "https://huggingface.co/datasets/allenai/tutormoments-preview",
+    "terms": "research and educational use, under Ai2's Responsible Use Guidelines; never try to re-identify a learner"
+  },
+  "access": "open download",
+  "formats": [
+    "JSONL"
+  ],
+  "made_by": [
+    "Allen Institute for AI (Ai2)",
+    "Albert Zhang",
+    "Alexis Ross",
+    "Kajal Patel",
+    "Julian Bernado",
+    "Rebecca Bowie",
+    "Ana Trindade Ribeiro",
+    "Daniel Halper",
+    "Haripriya Valayaputtur",
+    "Jacob Andreas",
+    "Susanna Loeb",
+    "Li Lucy",
+    "Kyle Lo",
+    "Ryan Knight"
+  ],
+  "cite": "Zhang, A., Ross, A., Patel, K., Bernado, J., Bowie, R., Trindade Ribeiro, A., Halper, D., Valayaputtur, H., Andreas, J., Loeb, S., Lucy, L., Lo, K., & Knight, R. (2026). When Help is Unhelpful: Evaluating AI Tutors for Productive Struggle. Hugging Face. https://huggingface.co/datasets/allenai/tutormoments-preview",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "judge"
+    ],
+    "how": "Each moment that ends on the learner becomes a test case (485 of the 520): the conversation up to the cut, with what the teachers said the learner needs as the rubric. It tests what a teacher's How the AI helps controls: when to help and when to hold back."
+  },
+  "in_harness": null,
+  "connect": {
+    "level": 2,
+    "as": [
+      "test-suite"
+    ],
+    "command": "viable-engine test agent.json --suite tutormoments --limit 20 --judge-model <model>",
+    "note": "A real learner at a moment teachers marked: does the reply scaffold where they need it and push for rigor where they can go further? Half of each. Minors' de-identified words go to your model and your judge, so use a provider whose terms allow it. Asks you to accept its terms first."
+  },
+  "verified_at": "2026-11-09"
+}

@@ -317,7 +317,7 @@ export async function harnessMain(argv, host = {}) {
       for (const used of credits) console.log(`\n${creditLines(used).join('\n')}`);
     }
     if (run.failed || run.errors) process.exitCode = 1;
-    if (values.html) await showTestRun(testRunPage(run, Array.isArray(cases) ? cases : cases.cases ?? [], { title: `Tests of ${doc.title ?? doc.name ?? 'an agent'}`, credits: credits.flatMap(creditLines) }), { out: values.out ?? null, open: !values['no-open'] });
+    if (values.html) await showTestRun(testRunPage(run, Array.isArray(cases) ? cases : cases.cases ?? [], { title: `Tests of ${doc?.title ?? doc?.name ?? (values.endpoint ? values['endpoint-model'] || values.endpoint : 'an agent')}`, credits: credits.flatMap(creditLines) }), { out: values.out ?? null, open: !values['no-open'] });
     return;
   }
   if (command === 'xapi') {

@@ -6,7 +6,7 @@ formats and the measures. The [README](../README.md) is the overview; [component
 
 ## The command line
 
-`viable-harness --help` has every flag. `viable-engine try [package...]` opens the real pages on this
+`viable-harness --help` and `viable-engine --help` have every flag. `viable-engine try [package...]` opens the real pages on this
 computer with what the AI did beside them; `--demo --tour` plays the scene by itself and `--export <dir>`
 writes a static copy of demo mode ([try.md](../engine/docs/try.md)). `view` and `suggest` also take a folder, which stands for
 every JSON file in it.
@@ -16,20 +16,22 @@ viable-engine run <agent.json | package.json | course.viable.zip> --input "..." 
                    [--section id] [--context context.json] [--model id] [--agent ref] [--no-teaching] [--json]
                    [--speech-model id] [--image-model id] [--media-dir dir] [--no-speech]
                    [--memory-dir dir --learner id] [--knowledge kb-id=folder...]
-viable-engine serve <agent.json | package.json | course.viable.zip | folder>... [--port 8080] [--host 127.0.0.1]
+viable-engine serve [agent.json | package.json | course.viable.zip | folder]... [--port 8080] [--host 127.0.0.1]
                      [--token-env NAME] [--cors origin] [--max-body bytes] [--timeout seconds] [--max-runs n]
                      [--model id] [--speech-model id] [--image-model id] [--media-dir dir] [--no-speech]
                      [--memory-dir dir] [--knowledge kb-id=folder...]
 viable-harness check --reply "..." [--message "..."] (--guideline "..." | --question "..." --answer-key "...")
                      [--key-concepts "a, b"] [--teaching teaching.json] [--section id] [--rewrite n]
                      --model id [--reviewer id] [--json]
-viable-engine test <agent.json | package.json> <cases.json> --judge-model id [--model id] [--agent ref]
-                    [--teaching teaching.json] [--section id] [--json]
+viable-engine test <agent.json | package.json> (<cases.json> | --suite resource [--limit n]) --judge-model id
+                    [--judge resource/name] [--model id] [--agent ref] [--teaching teaching.json] [--section id]
+                    [--accept-license] [--html [--out report.html]] [--json]
+viable-harness test (<cases.json> | --suite resource) --endpoint url --endpoint-model id [--system "..."] --judge-model id [--json]
 viable-harness draft-tests <package.json | teaching.json> --model id [--count n] [--section id] [--out cases.json]
 viable-harness tests-from-records <record.json...> [--teaching teaching.json | package.json] [--count n] [--out cases.json]
-viable-harness calibrate <results.json> <labels.json> [--json]
+viable-harness calibrate (<results.json> <labels.json> | --set resource --judge-model id) [--json]
 viable-harness validate <file> [--kind agent|course-package|learning-events|teaching|component]
-viable-harness measure <events.json>
+viable-harness measure <events.json> [--component manifest.json]
 viable-harness misconceptions "<a few words, or a standard's text>" [--json]
 viable-harness catalog [words...] [--kind kind] [--slot slot] [--open] [--connected] [--json]
 viable-harness resources [list | get <id> | use <id>] [--accept-license] [--dir folder] [--json]
@@ -38,7 +40,7 @@ viable-engine deploy <node|docker|cloudflare|aws-lambda|cloud-run|firebase> <pac
 viable-engine verify <url> [--token-env NAME] [--turn] [--json]
 viable-harness gateway --upstream <url> [--teaching file] [--reviewer-model id] [--data-dir dir]
 viable-engine knowledge refresh <package> --out <folder>
-viable-engine records export --data-dir <dir>
+viable-engine records export --data-dir <dir> --out <folder>
 viable-engine forget <learner> --data-dir <dir>
 viable-harness components [--json]
 viable-harness component <manifest.json> --input payload.json [--json]
@@ -49,7 +51,7 @@ viable-harness conformance [suite]
 viable-harness mcp
 ```
 
-(Until the packages are on npm, use `npx github:VIABLE-Learning-Lab/viable` in place of `viable-harness`: it takes every command.
+(Until the packages are on npm, use `npx github:VIABLE-Learning-Lab/viable` in place of `viable-harness` or `viable-engine`: it takes every command.
 From a clone, `node engine/bin/viable-engine.mjs`.)
 
 - **run**: a `.viable.zip` (a course downloaded with its files) runs as it is: its files are read from
@@ -68,8 +70,9 @@ From a clone, `node engine/bin/viable-engine.mjs`.)
 - **check**: VETTING on one reply your own app wrote, against a guideline or a question's answer key
   and the activity's teaching settings; `--rewrite n` lets the reply model rewrite a failed reply up
   to n times. The exit code is 1 unless the reply passed.
-- **test**: each case in a file of agent tests (`viable.agent-tests`) through the agent, the reply
-  rated pass or fail with a reason by `--judge-model`.
+- **test**: each case in a file of agent tests (`viable.agent-tests`), or a suite's (`--suite`), through
+  the agent, the reply rated pass or fail with a reason by `--judge-model`. `viable-engine test` runs an
+  agent file or a package; `viable-harness test --endpoint` whatever is behind an OpenAI-compatible endpoint.
 - **validate**: the open formats' schemas, then the engine's own graph checks and that a package's
   refs resolve. Model names aren't checked: a local run sends them to your endpoint.
 - **measure**: the research export's learner measures from a list of learning events and turns.
@@ -113,7 +116,7 @@ A package carries each agent's look and chat page settings, and `serve` hosts th
 allowed sites are enforced. A learner is who the course says: a browser with a code they can re-enter, a personal code from its
 class list, or a name they type; or whoever has a class code (`--class-code-env`), or who a proxy says (`--learner-header`). The
 console sets up models, courses, class lists, chat pages and knowledge in the browser. `viable-engine records export` gives `view`
-and `suggest` what the server kept, and `viable-engine forget <code>` removes one learner. Studies and consent stay on VIABLE
+and `suggest` what the server kept, and `viable-engine forget <code> --data-dir <dir>` removes one learner. Studies and consent stay on VIABLE
 ([learner-pages.md](../engine/docs/learner-pages.md)).
 
 ## From code
@@ -146,10 +149,10 @@ minutes. The harness doesn't price calls: cost is always 0.
 
 For a host that keeps its own harness, assistant or agent SDK:
 
-- **An MCP server.** `viable-harness mcp` serves its tools over stdio: `check_reply`,
-  `teaching_instructions`, `find_misconceptions`, `compute_measures`, `validate_document`,
-  `run_agent`, `run_agent_tests`, `draft_tests`, `calibrate_judge`, `suggest_changes`,
-  `list_components` and `find_public_goods`. A client starts it as
+- **An MCP server.** `viable-harness mcp` serves its tools over stdio: `check_reply`, `prepare_task`,
+  `teaching_instructions`, `find_misconceptions`, `find_guidance`, `find_designs`, `compute_measures`,
+  `validate_document`, `draft_tests`, `calibrate_judge`, `suggest_changes`, `list_components` and
+  `find_public_goods`; `viable-engine mcp` adds `run_agent` and `run_agent_tests`. A client starts it as
   `node /path/to/viable/harness/bin/viable-harness.mjs mcp`, with `OPENAI_BASE_URL` and
   `OPENAI_API_KEY` for the tools that call models. The host decides whether a reply is checked and
   what is kept; only an agent the harness runs is guaranteed its VETTING steps
@@ -165,10 +168,11 @@ For a host that keeps its own harness, assistant or agent SDK:
   other. It adds How the AI helps, holds a reply until VETTING passes it, and keeps records `view` and `suggest`
   read. `/v1/check`, `/v1/teaching/instructions` and `/v1/misconceptions` answer over plain HTTP
   ([with-your-stack.md](../harness/docs/with-your-stack.md)).
-- **Agent Skills.** `skills/` holds five, a folder with a `SKILL.md` each, for assistants that load
-  skills: `writing-how-the-ai-helps`, `checking-replies-with-vetting`, `writing-agent-tests` and
-  `reading-learning-evidence`. Each uses the tools and commands above; copy a folder to where your
-  assistant reads skills from.
+- **Agent Skills.** `harness/skills/` holds six, a folder with a `SKILL.md` each, for assistants that load
+  skills: `teaching-with-viable`, `building-for-learners`, `writing-how-the-ai-helps`,
+  `checking-replies-with-vetting`, `writing-agent-tests` and `reading-learning-evidence`; `engine/skills/`
+  holds `deploying-a-viable-course`. Each uses the tools and commands above; copy a folder to where your
+  assistant reads skills from, or `npx skills add VIABLE-Learning-Lab/viable --skill <name>`.
 
 ## The open formats
 
@@ -257,7 +261,8 @@ component. A graph runs a step component as a Component step: its manifest held 
 mapping each field it receives to a template, its answer `{ output, flags }` read as `{{id.output}}`
 and `{{id.flags}}`, and `on_error: continue` to go on without it when it is refused, times out or
 answers out of shape ([components.md](../harness/docs/components.md#a-step-in-a-graph)). Start one from
-`integrations/_template/`.
+`integrations/_template/`. A dataset or a benchmark isn't a component, since nothing of it runs while the AI
+teaches: it is a catalog entry, and a connector that turns its records into test cases (below).
 
 ## The public goods catalog
 
@@ -267,13 +272,14 @@ models, tools, open content and learning data repositories for K-12 AI, one file
 mixed or conflicting terms, how to get it, whether it is released, the slot it would fill and the
 date it was checked. `searchCatalog(query, { kind, slot, open, connected })`, `viable-harness catalog` and the
 MCP tool `find_public_goods` search it with no network; `open` keeps what anyone may download and
-use, commercially too. Entries describe, not endorse; listing is not joining the harness (that is a
-component).
+use, commercially too. Listing an entry doesn't bring it into the harness: a connector or a component
+does. Check an entry's license before you use it.
 
 Each entry says how far it is connected: listed, fetchable, one command from an effect, or built in. `viable-harness
 resources` fetches a good from its makers, on their terms, and turns it into what the harness runs: `test --suite`,
 `test --judge`, `calibrate --set`, `--knowledge <id>=resource:<resource>`, a standards search or a measure
-([resources.md](../harness/docs/resources.md)).
+([resources.md](../harness/docs/resources.md)). Each case a suite makes carries `source`, its resource's name,
+licenses and citation, so a result credits it ([agent-tests.md](../harness/docs/agent-tests.md#suites-from-datasets-and-benchmarks)).
 
 ## Agent tests
 
@@ -284,7 +290,8 @@ listed misconception, a section's own level, distress, unsafe and off-topic requ
 like a saved case, with malformed drafts listed and the reason; a person reads every draft before it
 runs. `viable-harness tests-from-records <record.json...>` (`casesFromTurns`) takes cases from
 learners' past turns without a model, with the rubric from the teaching settings; reusing learners'
-words needs their consent. `viable-harness test` runs the cases and a judge model rates each reply;
+words needs their consent. `viable-engine test` (an agent file) or `viable-harness test --endpoint` runs
+the cases, from a file or a suite (`--suite`), and a judge model rates each reply;
 `viable-harness calibrate <results.json> <labels.json>` (`calibrateJudge`, `calibrate_judge`)
 compares its verdicts with a person's, with agreement and Cohen's kappa from 10 labelled cases. A
 verdict is one model's reading of one reply, never a learning result

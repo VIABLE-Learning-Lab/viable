@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { memoryStore } from '../../harness/src/store/store.js';
 import { createApp } from '../src/server/app.js';
-import { listLines, showCode, readCode, cleanEntry } from '../src/server/classList.js';
+import { readClassLines, showCode, readCode, cleanEntry } from '../src/server/classList.js';
 import { forgetLearner, learnerRecords } from '../src/server/learner.js';
 
 const TOKEN = 'a-token-of-some-length';
@@ -60,8 +60,26 @@ test('a course’s tabs come in the order of the work', async () => {
   assert.match(tabs, /aria-current="page">People</);
 });
 
-test('reading a pasted list and a code', () => {
-  assert.deepEqual(listLines('Ada Lovelace\tPeriod 2\n\n  Alan Turing , Period 3 \nBen\nLovelace, Ada\tPeriod 2').map(({ name, section }) => [name, section]), [['Ada Lovelace', 'Period 2'], ['Alan Turing', 'Period 3'], ['Ben', ''], ['Lovelace, Ada', 'Period 2']]);
+test('reading a pasted list however it comes, and a code', () => {
+  const read = (text, options) => readClassLines(text, [], options).lines.map(({ name, section }) => (section ? [name, section] : name));
+  assert.deepEqual(read('Ada Lovelace\tPeriod 2\n\n  Alan Turing , Period 3 \nBen\nLovelace, Ada\tPeriod 2'), [['Ada Lovelace', 'Period 2'], ['Alan Turing', 'Period 3'], 'Ben', ['Lovelace, Ada', 'Period 2']], 'a tab before a comma, line by line');
+  assert.deepEqual(read('Lovelace, Ada\nTuring, Alan\nHopper, Grace'), ['Ada Lovelace', 'Alan Turing', 'Grace Hopper'], '“Last, First” is one person, not a section of first names');
+  assert.deepEqual(read('Ada\tLovelace\nAlan\tTuring'), ['Ada Lovelace', 'Alan Turing'], 'first and last names in two columns');
+  assert.deepEqual(read('Last\tFirst\tPeriod\nLovelace\tAda\t2\n\tAlan\t3'), [['Ada Lovelace', 'Period 2'], ['Alan', 'Period 3']], 'an empty first cell keeps its place');
+  assert.deepEqual(read('Last Name\tFirst Name\tStudent ID\tPeriod\tEmail\nLovelace\tAda\t100234\t2\tada@school.org'), [['Ada Lovelace', 'Period 2']], 'a school’s columns, by their headings');
+  assert.deepEqual(read('Student Name,Period\n"Lovelace, Ada",Period 2\n"Turing, Alan",Period 3'), [['Ada Lovelace', 'Period 2'], ['Alan Turing', 'Period 3']], 'a CSV file, quotes and all');
+  assert.deepEqual(read('Ada Lovelace, Alan Turing, Grace Hopper'), ['Ada Lovelace', 'Alan Turing', 'Grace Hopper'], 'names on one line');
+  assert.deepEqual(read('Ada Lovelace, Alan Turing'), ['Ada Lovelace', 'Alan Turing']);
+  assert.deepEqual(read('Ada Lovelace, Period 2'), [['Ada Lovelace', 'Period 2']]);
+  assert.deepEqual(read('1. Ada Lovelace\n2) Alan Turing\n- Grace Hopper'), ['Ada Lovelace', 'Alan Turing', 'Grace Hopper'], 'a list’s own marks');
+  assert.deepEqual(read('Ada Lovelace\tada@school.org\nAlan Turing\talan@school.org'), ['Ada Lovelace', 'Alan Turing'], 'email addresses are left out');
+  assert.deepEqual(read('Ada Lovelace\nAlan Turing', { section: 'Period 4' }), [['Ada Lovelace', 'Period 4'], ['Alan Turing', 'Period 4']], 'a section for lines naming none');
+  assert.deepEqual(read('Lovelace, Ada', { columns: { 0: 'first', 1: 'last' } }), ['Lovelace Ada'], 'a person’s own choice of columns');
+  assert.deepEqual(read('Name\tStudent ID\nAda Lovelace\tS1042', { ids: true }), ['S1042'], 'a course of student IDs takes the ID');
+  const before = readClassLines('Lovelace, Ada\nTuring, Alan', []);
+  assert.deepEqual(readClassLines('Ada Lovelace, Period 2\nAlan Turing, Period 3', [], { columns: ['first', 'last'], shape: before.shape }).columns.map((column) => column.role), ['name', 'section'], 'a choice made for another shape of list isn’t used');
+  assert.throws(() => readClassLines('Name\tSection', []), /only a row of headings/);
+  assert.throws(() => readClassLines(' \n ', []), /at least one name/);
   assert.equal(showCode('K7Q2M9XC'), 'K7Q2-M9XC');
   assert.equal(readCode(' k7q2-m9xc '), 'K7Q2M9XC');
   assert.equal(cleanEntry(' Ｚoë​   Smith '), 'Zoë Smith', 'another form of a name is that name');
@@ -82,9 +100,12 @@ test('the class list: pasted, reported, kept in the store and never in the packa
   assert.match(headed.said, /Left out the first line/);
   assert.match(headed.said, /Added 1 person/);
   await s.ok('POST', `courses/${code}/people/${(await onList(s, code)).find((row) => row.name === 'Dana Scott').id}/remove`, {});
-  const last = await s.api('POST', `courses/${code}/people`, { list: 'Lovelace, Ada\nTuring, Alan\nHopper, Grace' });
-  assert.equal(last.status, 400);
-  assert.match(last.data.error.message, /“Last, First”/, 'nobody gets a section of their first name');
+  // Who each line becomes, before anything changes: nobody gets a section of their first name.
+  const last = await s.ok('POST', `courses/${code}/people/preview`, { list: 'Lovelace, Ada\nTuring, Alan\nHopper, Grace' });
+  assert.match(last.html, /Ada Lovelace[\s\S]*Already on the list[\s\S]*Grace Hopper[\s\S]*New/);
+  assert.match(last.html, /Names read first name, then last/);
+  assert.equal(last.button, 'Add 1 person');
+  assert.equal(last.ready, true);
   const list = await onList(s, code);
   assert.deepEqual(list.map((row) => row.name), ['Ada Lovelace', 'Alan Turing', 'Ben', 'Carla']);
   for (const row of list) assert.match(row.code, /^[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/);
@@ -641,4 +662,47 @@ test('an archived activity keeps its address and its section openings; a new one
   assert.deepEqual(await s.store.list(`courses/${code}/release/`), kept, 'and inherits nothing');
   await s.ok('DELETE', `courses/${code}/archived-activities/quiz`, {});
   assert.deepEqual(await s.store.list(`courses/${code}/release/`), [], 'deleting it takes its openings');
+});
+
+test('more time on one activity for one learner: open to them after it closes for everyone, until taken back', async () => {
+  const s = await server();
+  const code = await course(s);
+  const visitor = visitorId(3);
+  await s.post(`/course/${code}/home`, { visitor });
+  const [held] = await Promise.all((await s.store.list(`courses/${code}/learners/`)).map((key) => s.store.get(key)));
+  await s.post(`/course/${code}/home`, { visitor: visitorId(4) });
+  const person = `/console/courses/${code}/people/${held.id}`;
+  assert.match(await (await s.page(person)).text(), /None of this course’s activities closes/);
+  assert.match((await s.api('PUT', `courses/${code}/people/${held.id}/more-time`, { activity: 'practice', closes_at: new Date(Date.now() + 86400000).toISOString() })).data.error.message, /doesn’t close for them/);
+  await s.ok('POST', `courses/${code}/activities/practice/schedule`, { closes_at: new Date(Date.now() - 60000).toISOString() });
+  assert.equal((await s.post(`/course/${code}/practice/open`, { visitor })).data.error.code, 'activity_closed');
+  assert.match((await s.api('PUT', `courses/${code}/people/${held.id}/more-time`, { activity: 'practice', closes_at: new Date(Date.now() - 1000).toISOString() })).data.error.message, /hasn’t passed/);
+  assert.match((await s.ok('PUT', `courses/${code}/people/${held.id}/more-time`, { activity: 'practice', closes_at: new Date(Date.now() + 86400000).toISOString() })).said, /More time on “Practice”/);
+  assert.equal((await s.post(`/course/${code}/practice/open`, { visitor })).status, 200, 'open to them');
+  assert.equal((await s.post(`/course/${code}/practice/open`, { visitor: visitorId(4) })).data.error.code, 'activity_closed', 'and to nobody else');
+  assert.match(await (await s.page(person)).text(), /<strong>Practice<\/strong><span class="v-note">Open to them until <time data-local/);
+  await s.ok('PUT', `courses/${code}/people/${held.id}/more-time`, { activity: 'practice', closes_at: null });
+  assert.equal((await s.post(`/course/${code}/practice/open`, { visitor })).data.error.code, 'activity_closed', 'closed to them again');
+});
+
+test('extra time is set on a learner’s page, kept, and can be taken back', async () => {
+  const s = await server();
+  const code = await course(s);
+  await s.ok('POST', `courses/${code}/people`, { list: 'Ada Lovelace' });
+  const [ada] = await onList(s, code);
+  const before = await (await s.page(`/console/courses/${code}/people/${ada.id}`)).text();
+  assert.match(before, /<h2 id="time-title">Extra time<\/h2>/);
+  assert.doesNotMatch(before, /name="extra_time" checked/);
+  assert.match((await s.ok('PUT', `courses/${code}/people/${ada.id}`, { extra_time: true })).said, /waits for them/);
+  assert.match(await (await s.page(`/console/courses/${code}/people/${ada.id}`)).text(), /name="extra_time" checked/);
+  assert.match((await s.ok('PUT', `courses/${code}/people/${ada.id}`, { extra_time: false })).said, /as for everyone/);
+  assert.equal((await onList(s, code))[0].name, 'Ada Lovelace', 'nothing else about them changed');
+});
+
+test('opening an activity asks first what isn’t ready, from the checklist’s own checks', async () => {
+  const s = await server();
+  const code = await course(s);
+  const { unmet } = await s.ok('GET', `courses/${code}/checks?activity=practice`);
+  assert.ok(unmet.some((item) => /^No goal yet: “Practice”$/.test(item.words) && item.href.endsWith('/activities/practice')), JSON.stringify(unmet));
+  assert.ok(!unmet.some((item) => /activities? yet|^\d+ activit/.test(item.words)), 'one activity’s checks, not the course’s count');
 });

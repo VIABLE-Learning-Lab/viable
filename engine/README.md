@@ -103,7 +103,7 @@ yourself. With no package, the server starts empty and you set it up at `/consol
 
 Everything stays in your store. A learner's name lives only on the class list, and is never sent to a model. Learner records carry a
 pseudonymous code. `--keep-days <n>` deletes what learners wrote after that many days, and
-`viable-engine forget <code>` deletes one learner. [deploying.md](docs/deploying.md) lists what the code guarantees, and what is
+`viable-engine forget <code> --data-dir ~/.viable-engine` deletes one learner. [deploying.md](docs/deploying.md) lists what the code guarantees, and what is
 still yours to do, such as your agreement with each model provider.
 
 ## More than the console

@@ -21,9 +21,10 @@ help is right today, or what this learner's mistake suggests.
 | An AI agent or an education product | It to know how to teach, whatever it's built on | **[VIABLE Harness](harness/README.md)** | `npx skills add VIABLE-Learning-Lab/viable --skill teaching-with-viable` |
 | A coding agent, and an idea for something learners will use | It to know what a classroom needs while it builds | **[VIABLE Harness, for builders](harness/docs/for-builders.md)** | `npx skills add VIABLE-Learning-Lab/viable --skill building-for-learners` |
 | A school, a library or a lab, and your own server | AI tutors, courses and class lists you run yourself, on any model | **[VIABLE Engine](engine/README.md)** | `npx github:VIABLE-Learning-Lab/viable start` |
-| A course or an agent on the Developer Platform | To move it to your own server | **[VIABLE Engine](engine/README.md#from-the-developer-platform)** | Download it as a package, then add it |
+| A course or an agent on the Developer Platform | To move it to your own server | **[VIABLE Engine](engine/README.md#from-the-viable-developer-platform)** | Download it as a package, then add it |
 | A study to run, or a workflow to build by drawing it | A visual editor, consent, a research export, with nothing to host | **[VIABLE Developer Platform](https://developers.viablelab.org)** | Hosted |
-| A research method or a dataset | People to use it, with your citation | **[A component](harness/docs/components.md)** | The template |
+| A research method: guidance, a way to check or rate replies, a detector | Teachers' AIs to use it, with your citation | **[A component](harness/docs/components.md)** | [Add your research](harness/docs/add-your-research.md) |
+| A dataset or a benchmark | AI tutors tested on it, with your citation | **[A catalog entry](harness/docs/resources.md#add-a-dataset-or-a-benchmark)** | [A catalog issue](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=catalog.yml) |
 
 You take only what you need. A Skill is a few text files; the Harness is a package with no dependencies and nothing of the
 Engine in it. They live in one repository because one small team looks after both.

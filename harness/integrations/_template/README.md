@@ -13,12 +13,11 @@ answer, by a few phrases: it shows the shape of a component, not a method worth 
 
 ## Try it
 
-From the harness's folder:
+From this folder, or from the copy `viable-harness component new <owner/name> --slot detector` made, in two terminals:
 
 ```sh
-node integrations/_template/server.mjs     # http://127.0.0.1:8787/detect
-node harness/bin/viable-harness.mjs component harness/integrations/_template/manifest.json \
-  --input integrations/_template/fixtures/input.json
+node server.mjs     # http://127.0.0.1:8787/detect
+npx github:VIABLE-Learning-Lab/viable component manifest.json --input fixtures/input.json
 ```
 
 `test/componentCalls.test.js` runs the same through `callComponent` on 127.0.0.1.

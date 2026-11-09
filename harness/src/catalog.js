@@ -23,6 +23,7 @@ export function licenseLimits(license) {
     ...(has('-SA') ? ['what you share from it carries the same license'] : []),
     ...(has('-ND') ? ['no changed copies'] : []),
     ...(license.unclear ? ['its sources disagree or leave it unclear'] : []),
+    ...(license.terms ? [license.terms] : []),
     ...(license.spdx.length ? [] : ['no license is stated'])
   ];
 }

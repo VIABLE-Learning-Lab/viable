@@ -12,22 +12,35 @@
  *   select[data-api="PUT ..."]   a select sends { its name: its value } when it changes
  *   data-search="courses/x/find" a form's fields as a query, the answer's html put in data-into
  *   data-run="POST agents/x/test" a form's fields as JSON, the answer's html put in data-into, for what takes a while
+ *   data-preview="POST ..."      a form's fields sent as they change, the answer's html put in data-into, to show what it would do;
+ *                                the answer's button and ready set its submit button's words and whether it can be pressed
+ *   data-read-into="name"        a file input whose file's words go in that field of its form, read here and never sent as a file
  *   data-busy                     what a form or button says while its data-api is working
  *   data-copy, data-print        copies that text; prints the page
  *   data-guard                   a form that warns before leaving with what isn't saved
  *   data-together, data-save-bar forms that one Save saves, whichever of them changed; the bar it sits in shows there is something to save
  *   data-say-in="id"             where a form says how it went, when that is outside it
  *   data-iso                     a datetime-local input showing, and sending, an instant
+ *   input.v-input[type=date|datetime-local]  dressed as the date and time picker every screen shares (datePicker.js);
+ *                                data-empty says what it shows with nothing chosen, data-default-time the time a day takes
  *   data-local                   a time element shown in the reader's own time
+ *   data-min-from="name"         a date field whose earliest day is that field's, as a range's end is its start's
+ *   data-arrange="PUT …", data-drag  rows and units dragged into a new order by their handles; the whole order is sent
  *   data-show-when="name=value"  shown while that field of its form says so (a|b for either, != for anything else, ; between rules for any)
  *
  * An answer's go goes there; its said is said where the form or button's [data-say] is, kept by id across
  * the refresh. What someone has typed in any other form stays through a refresh.
  */
 import { icon } from './icons.js';
+import { DATE_PICKER_SCRIPT } from './datePicker.js';
+import { SHEETS_SCRIPT } from './sheets.js';
 
 export const CONSOLE_SCRIPT = String.raw`(() => {
   const ICON = ${JSON.stringify({ check: icon('check', 16), chevron: icon('chevron', 16) })};
+  // The date and time picker every VIABLE screen shares (datePicker.js): dressDate(input) and tidyDates().
+  ${DATE_PICKER_SCRIPT}
+  // An Excel file's first sheet, read here (sheets.js): sheetRows(bytes) and rowsText(rows).
+  ${SHEETS_SCRIPT}
   let line = Promise.resolve();
   const inLine = (work) => { line = line.then(work, work); return line; };
   // Tooltips are the console's own, never the browser's: data-tip on a control, shown after a beat on hover and at once on keyboard
@@ -62,7 +75,8 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
   });
   document.addEventListener('focusin', (event) => { const target = event.target.closest && event.target.closest('[data-tip]'); if (target && target.matches(':focus-visible')) showTip(target, true); });
   // A menu that is a details element closes when a click lands elsewhere, or on Escape, back on its button.
-  document.addEventListener('click', (event) => { for (const menu of document.querySelectorAll('details[data-close-outside][open]')) if (!menu.contains(event.target)) menu.open = false; });
+  // A click in a date picker opened from a menu (it floats above the page) belongs to that menu.
+  document.addEventListener('click', (event) => { for (const menu of document.querySelectorAll('details[data-close-outside][open]')) if (!menu.contains(event.target) && !(event.target.closest && event.target.closest('.vd-pop'))) menu.open = false; });
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
     const menu = event.target.closest && event.target.closest('details[data-close-outside][open]');
@@ -101,15 +115,16 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
       }).catch(() => {});
     }
   };
-  const call = async (spec, body, file) => {
+  const call = async (spec, body, file, quiet = false) => {
     const [method, path] = spec.split(' ');
     // A name from a package can't climb out of the address it is part of.
     if (path.split('?')[0].split('/').some((part) => ['.', '..', '%2e', '%2e%2e', '.%2e', '%2e.'].includes(part.toLowerCase()))) throw new Error('That address isn’t right.');
     const init = file
       ? { method, headers: { 'content-type': 'application/octet-stream', 'x-file-name': encodeURIComponent(file.name) }, body: file }
       : { method, headers: { 'content-type': 'application/json' }, ...(method === 'GET' ? {} : { body: JSON.stringify(body || {}) }) };
-    if (method !== 'GET') busy(1);
-    const response = await fetch('/console/api/' + path, init).finally(() => { if (method !== 'GET') busy(-1); });
+    const shows = method !== 'GET' && !quiet;
+    if (shows) busy(1);
+    const response = await fetch('/console/api/' + path, init).finally(() => { if (shows) busy(-1); });
     const data = await response.json().catch(() => ({}));
     if (response.status === 401) { location.reload(); throw new Error('Sign in again.'); }
     if (!response.ok) throw new Error((data.error && data.error.message) || 'That didn’t work. Try again.');
@@ -122,6 +137,7 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     for (const item of root.querySelectorAll('time[data-local]')) item.textContent = new Date(item.dateTime).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
     for (const select of root.querySelectorAll('select.v-input')) dressSelect(select);
     for (const input of root.querySelectorAll('input[data-list]')) dressSuggest(input);
+    for (const input of root.querySelectorAll('input.v-input[type=date],input.v-input[type=datetime-local]')) dressDate(input);
     showing(root);
   };
 
@@ -428,12 +444,24 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
   };
 
   // A dialog in place of the browser's own, on the page's look.
-  const ask = (text, { word = null, yes = 'Continue', danger = false } = {}) => new Promise((resolve) => {
+  const ask = (text, { word = null, yes = 'Continue', no: noWords = 'Cancel', danger = false, list = null } = {}) => new Promise((resolve) => {
     const dialog = document.createElement('dialog');
     dialog.className = 'v-dialog';
     const words = document.createElement('p');
     words.textContent = text;
     dialog.append(words);
+    // What is left to do, each with the way to it.
+    if (list?.length) {
+      const items = document.createElement('ul');
+      items.className = 'v-dialog-list';
+      for (const item of list) {
+        const row = document.createElement('li');
+        row.append(Object.assign(document.createElement('span'), { textContent: item.words }));
+        if (item.href) row.append(Object.assign(document.createElement('a'), { href: item.href, textContent: item.label || 'Fix it', ...(item.href.includes('/try') ? { target: '_blank', rel: 'noopener' } : {}) }));
+        items.append(row);
+      }
+      dialog.append(items);
+    }
     let typed = null;
     if (word) {
       const label = document.createElement('label');
@@ -447,7 +475,7 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     }
     const row = document.createElement('div');
     row.className = 'actions';
-    const no = Object.assign(document.createElement('button'), { type: 'button', className: 'v-btn', textContent: 'Cancel' });
+    const no = Object.assign(document.createElement('button'), { type: 'button', className: 'v-btn', textContent: noWords });
     const go = Object.assign(document.createElement('button'), { type: 'button', className: 'v-btn ' + (danger ? 'is-danger' : 'is-primary'), textContent: yes, disabled: Boolean(word) });
     row.append(go, no);
     dialog.append(row);
@@ -461,7 +489,16 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     dialog.showModal();
     (typed || (danger ? no : go)).focus();
   });
-  const agreed = (element) => (element.dataset.confirm ? ask(element.dataset.confirm, { word: element.dataset.type || null, yes: element.dataset.yes || 'Continue', danger: element.dataset.danger != null || element.classList.contains('danger') }) : Promise.resolve(true));
+  // Opening something asks first what would stop it working for learners (data-checks: where to read that), only when
+  // something would: each with the way to fix it, and Open anyway.
+  const checked = async (element) => {
+    if (!element.dataset.checks) return true;
+    let unmet = [];
+    try { unmet = (await call('GET ' + element.dataset.checks)).unmet || []; } catch { return true; }
+    if (!unmet.length) return true;
+    return ask(unmet.length === 1 ? 'Before learners come, one thing to look at:' : 'Before learners come, ' + unmet.length + ' things to look at:', { yes: element.dataset.anyway || 'Open anyway', no: 'Not yet', list: unmet });
+  };
+  const agreed = async (element) => (await checked(element)) && (element.dataset.confirm ? ask(element.dataset.confirm, { word: element.dataset.type || null, yes: element.dataset.yes || 'Continue', danger: element.dataset.danger != null || element.classList.contains('danger') }) : Promise.resolve(true));
 
   document.addEventListener('submit', (event) => {
     const form = event.target;
@@ -534,6 +571,168 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     event.preventDefault();
     const body = button.dataset.body ? JSON.parse(button.dataset.body) : {};
     agreed(button).then((yes) => { if (yes) return inLine(async () => { if (button.dataset.busy) say(button, button.dataset.busy); const data = await call(button.dataset.api, body); await after(button, data, button.dataset.said); }).catch((error) => say(button, error.message, 'bad')); });
+  });
+  // A button that opens a form with one field already chosen (data-prefill: the form; data-prefill-field and -value), such
+  // as Add an activity here under a unit: the form opens where it is, the choice made, the first field ready to type in.
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest && event.target.closest('[data-prefill]');
+    if (!button) return;
+    const form = document.getElementById(button.dataset.prefill);
+    if (!form) return;
+    const field = button.dataset.prefillField && form.elements[button.dataset.prefillField];
+    if (field) {
+      field.value = button.dataset.prefillValue || '';
+      const dressed = field.id && document.getElementById('menu-' + field.id);
+      if (dressed && field.selectedOptions && field.selectedOptions[0]) dressed.querySelector('.v-menu-value').textContent = field.selectedOptions[0].textContent;
+    }
+    const holder = form.closest('details');
+    if (holder) holder.open = true;
+    form.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    const first = form.querySelector('input:not([type=hidden]):not([type=radio]), textarea');
+    if (first) first.focus({ preventScroll: true });
+  });
+  // A form that shows what it would do as it is filled in (data-preview): a beat after typing stops, and only the latest answer is shown.
+  // By the form's id, so a choice made in the preview itself (a column's menu) is sent again after a refresh draws it empty.
+  const previews = new Map();
+  const preview = (form) => {
+    const key = form.id || form;
+    const held = previews.get(key) || { turn: 0, kept: null };
+    clearTimeout(held.wait);
+    const turn = held.turn + 1;
+    held.turn = turn;
+    held.wait = setTimeout(() => {
+      const into = document.getElementById(form.dataset.into);
+      const go = form.querySelector('[type=submit]');
+      const body = valuesOf(form);
+      const inside = [...new Set([...into.querySelectorAll('[name]')].map((item) => item.name.split('.')[0]))];
+      if (inside.length) held.kept = Object.fromEntries(inside.map((name) => [name, body[name]]));
+      else if (held.kept) Object.assign(body, held.kept);
+      call(form.dataset.preview, body, null, true).then((data) => {
+        if (held.turn !== turn || !form.isConnected) return;
+        into.innerHTML = data.html || '';
+        dress(into);
+        if (go) { if (data.button) go.textContent = data.button; go.disabled = !data.ready; }
+      }).catch((error) => { if (held.turn === turn) say(form, error.message, 'bad'); });
+    }, 260);
+    previews.set(key, held);
+  };
+  const previewed = (event) => {
+    const form = event.target && event.target.form;
+    if (!form || !form.dataset.preview || event.target.type === 'file') return;
+    // What the last add said is about the last list, not this one.
+    if (event.type === 'input') say(form, '');
+    preview(form);
+  };
+  document.addEventListener('input', previewed);
+  document.addEventListener('change', previewed);
+  document.addEventListener('viable:refreshed', () => { for (const form of document.querySelectorAll('form[data-preview]')) if (dirty(form)) preview(form); });
+  // Sent, the list is done with: its choices don't carry to the next one.
+  document.addEventListener('submit', (event) => { const held = event.target.dataset && event.target.dataset.preview && previews.get(event.target.id || event.target); if (held) held.kept = null; }, true);
+  // A file read into a field (data-read-into): a school's export may be UTF-16 or an older Windows encoding, not only UTF-8.
+  document.addEventListener('change', (event) => {
+    const input = event.target;
+    if (!input.dataset || !input.dataset.readInto || !input.files || !input.files[0]) return;
+    const field = input.form && input.form.elements[input.dataset.readInto];
+    const file = input.files[0];
+    input.value = '';
+    if (!field) return;
+    if (file.size > 2000000) { say(input.form, 'That file is too big for a class list.', 'bad'); return; }
+    file.arrayBuffer().then(async (bytes) => {
+      const view = new Uint8Array(bytes);
+      let words;
+      let note = '';
+      // An Excel file (a zip, PK at its start) or an older one (D0 CF): its first sheet's cells, as a spreadsheet copies them.
+      if (/\.xlsx?$/i.test(file.name) || (view[0] === 0x50 && view[1] === 0x4b) || (view[0] === 0xd0 && view[1] === 0xcf)) {
+        const sheet = await sheetRows(view);
+        words = rowsText(sheet.rows);
+        note = 'Read the sheet “' + sheet.sheet + '”' + (sheet.sheets.length > 1 ? ', the first of ' + sheet.sheets.length + '. To use another, move it first in the file, or copy its columns and paste them.' : '.');
+      } else {
+        const encoding = view[0] === 0xff && view[1] === 0xfe ? 'utf-16le' : view[0] === 0xfe && view[1] === 0xff ? 'utf-16be' : 'utf-8';
+        try { words = new TextDecoder(encoding, { fatal: true }).decode(view); } catch { words = new TextDecoder('windows-1252').decode(view); }
+      }
+      field.value = words;
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      if (note) say(input.form, note);
+      field.focus({ preventScroll: true });
+    }).catch((error) => say(input.form, error.message, 'bad'));
+  });
+  // Dragging a row or a unit to a new place in what holds them (data-arrange="PUT …"): a press on a handle (data-drag=
+  // "activity" on a row's, "unit" on a unit's), then a move. The row itself moves to where it would land, a copy follows
+  // the pointer, and letting go sends the whole order: { units: [ref], activities: [{ key, unit_ref }] }. Pointer events,
+  // so a finger drags as a mouse does; the arrows and menus stay for the keyboard.
+  let dragging = null;
+  const endDrag = (event) => {
+    if (!dragging || (event && event.pointerId !== dragging.pointer)) return;
+    const done = dragging;
+    dragging = null;
+    document.documentElement.classList.remove('is-dragging-now');
+    done.board.classList.remove('is-arranging');
+    if (!done.moved) return;
+    done.ghost.remove();
+    done.item.classList.remove('is-dragging');
+    if (event && event.type === 'pointercancel') { refresh(); return; }
+    const units = [...done.board.querySelectorAll('.unit-block[data-unit]')].map((block) => block.dataset.unit);
+    const activities = [...done.board.querySelectorAll('ul.rows[data-unit] > li.row[data-key]')].map((row) => ({ key: row.dataset.key, unit_ref: row.parentElement.dataset.unit || null }));
+    if (JSON.stringify({ units, activities }) === done.before) return;
+    inLine(async () => { await call(done.board.dataset.arrange, { units, activities }); await refresh(); }).catch((error) => refresh().then(() => say(document.querySelector('[data-arrange]'), error.message, 'bad')));
+  };
+  document.addEventListener('pointerdown', (event) => {
+    const handle = event.target.closest && event.target.closest('[data-drag]');
+    if (!handle || event.button !== 0) return;
+    const item = handle.closest(handle.dataset.drag === 'unit' ? '.unit-block' : 'li.row');
+    const board = item && item.closest('[data-arrange]');
+    if (!board) return;
+    event.preventDefault();
+    const order = () => JSON.stringify({ units: [...board.querySelectorAll('.unit-block[data-unit]')].map((block) => block.dataset.unit), activities: [...board.querySelectorAll('ul.rows[data-unit] > li.row[data-key]')].map((row) => ({ key: row.dataset.key, unit_ref: row.parentElement.dataset.unit || null })) });
+    dragging = { kind: handle.dataset.drag, item, board, pointer: event.pointerId, x: event.clientX, y: event.clientY, moved: false, before: order() };
+    try { handle.setPointerCapture(event.pointerId); } catch {}
+  });
+  document.addEventListener('pointermove', (event) => {
+    const drag = dragging;
+    if (!drag || event.pointerId !== drag.pointer) return;
+    if (!drag.moved) {
+      if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 5) return;
+      drag.moved = true;
+      const box = drag.item.getBoundingClientRect();
+      drag.offset = event.clientY - box.top;
+      drag.ghost = drag.item.cloneNode(true);
+      drag.ghost.removeAttribute('id');
+      for (const named of drag.ghost.querySelectorAll('[id]')) named.removeAttribute('id');
+      drag.ghost.classList.add('drag-ghost');
+      drag.ghost.style.width = box.width + 'px';
+      drag.ghost.style.left = box.left + 'px';
+      document.body.append(drag.ghost);
+      drag.item.classList.add('is-dragging');
+      drag.board.classList.add('is-arranging');
+      document.documentElement.classList.add('is-dragging-now');
+    }
+    drag.ghost.style.top = (event.clientY - drag.offset) + 'px';
+    const y = event.clientY;
+    const middle = (element) => { const box = element.getBoundingClientRect(); return box.top + box.height / 2; };
+    if (drag.kind === 'activity') {
+      const lists = [...drag.board.querySelectorAll('ul.rows[data-unit]')].filter((list) => list.getClientRects().length);
+      const list = lists.find((each) => { const box = each.getBoundingClientRect(); return y >= box.top - 14 && y <= box.bottom + 14; })
+        || lists.reduce((best, each) => (Math.abs(middle(each) - y) < Math.abs(middle(best) - y) ? each : best), lists[0]);
+      const after = [...list.querySelectorAll(':scope > li.row')].filter((row) => row !== drag.item).find((row) => y < middle(row));
+      if (after) { if (drag.item.nextElementSibling !== after) list.insertBefore(drag.item, after); }
+      else { const empty = list.querySelector(':scope > .unit-empty'); if (drag.item.parentElement !== list || (empty ? drag.item.nextElementSibling !== empty : drag.item.nextElementSibling)) list.insertBefore(drag.item, empty); }
+    } else {
+      const blocks = [...drag.board.querySelectorAll('.unit-block')].filter((block) => block !== drag.item);
+      const after = blocks.find((block) => y < middle(block)) || drag.board.querySelector('.loose-block');
+      if (drag.item.nextElementSibling !== after) after ? after.before(drag.item) : blocks.at(-1)?.after(drag.item);
+    }
+    if (y < 64) scrollBy(0, -14);
+    else if (y > innerHeight - 64) scrollBy(0, 14);
+  });
+  document.addEventListener('pointerup', endDrag);
+  document.addEventListener('pointercancel', endDrag);
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && dragging) { const done = dragging; dragging = null; document.documentElement.classList.remove('is-dragging-now'); done.board.classList.remove('is-arranging'); if (done.ghost) done.ghost.remove(); refresh(); } });
+
+  // An end that can't come before its start (data-min-from="starts_on"): the start's day is its earliest.
+  document.addEventListener('change', (event) => {
+    const form = event.target.form;
+    if (!form || !event.target.name) return;
+    for (const end of form.querySelectorAll('[data-min-from="' + event.target.name + '"]')) end.min = event.target.value || '';
   });
   document.addEventListener('input', saveBar);
   document.addEventListener('viable:refreshed', saveBar);

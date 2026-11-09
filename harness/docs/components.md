@@ -7,13 +7,29 @@ the AIs people are using, with your name on it, without each of them building it
 
 ## What you have, and what you do
 
-| You have | Its slot | What you write | What happens then |
-| --- | --- | --- | --- |
-| Guidance, a framework, moves, a list of what goes wrong | `context` | One JSON file. No server, and no learner's data reaches you | Someone adds pieces to an activity, on a screen or from a file, and each turn takes those that fit the moment, with your name beside them |
-| A method that writes or checks a reply | `step` | A manifest, and an address or an MCP tool that runs it | A builder puts it in a workflow as a Component step, on the VIABLE Developer Platform or the Engine |
-| A way to rate replies | `judge` | The same | Agent tests rate replies with it, and say so in the result |
-| A method that reads what happened | `detector` or `measure` | The same | `detect` and `measure` return its marks and numbers, from code or `viable-harness measure --component`. On the Engine, a teacher adds a detector on What to look at and runs it there, and its marks show beside the class |
-| A dataset or a benchmark | None: an entry in the [catalog](catalog.md), and a connector | An entry | `viable-engine test --suite` runs it against an agent |
+| You have | Its slot | When it works | What you write | What happens then |
+| --- | --- | --- | --- | --- |
+| Guidance, a framework, moves, a list of what goes wrong | `context` | While the AI teaches, before each reply | One JSON file ([Add your research](add-your-research.md)). No server, and no learner's data reaches you | Someone adds pieces to an activity, on a screen or from a file, and each turn takes those that fit the moment, with your name beside them |
+| A method that writes or checks a reply | `step` | While the AI teaches, as a step of an agent's workflow | A manifest, and an address or an MCP tool that runs it | A builder puts it in a workflow as a Component step, on the VIABLE Developer Platform or the Engine |
+| A way to rate replies | `judge` | While an AI is tested | The same | Agent tests rate replies with it, from code (`judgeComponent`), and say so in the result |
+| A method that reads what happened | `detector` or `measure` | After the turns, over learners' records | The same | `detect` and `measure` return its marks and numbers, from code or `viable-harness measure --component`. On the Engine, a teacher adds a detector on What to look at and runs it there, and its marks show beside the class |
+| A simulated learner | `simulated-learner` | While an AI is tested, playing the learner | Planned: no agent test uses one yet. Tell us about yours in a [component proposal](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=component.yml) | Nothing yet |
+| A dataset or a benchmark | None: it isn't used while the AI teaches | While an AI is tested | An entry in the [catalog](catalog.md): what it is, its license and how to cite it. Then a connector: a small file of code that downloads a pinned version from its makers and turns each record into a test case ([resources.md](resources.md)) | `viable-engine test agent.json --suite <id> --judge-model <model>` sends each case's messages to the agent, and a judge model checks each reply against the case's rubric. Each case says where it came from |
+
+Try each on your own machine first:
+
+- guidance: `viable-harness component try` ([below](#a-context-component-in-five-minutes));
+- a component that runs out of process: `viable-harness component <manifest.json> --input payload.json`;
+- a measure: `viable-harness measure record.json --component manifest.json`;
+- a connector: `viable-harness resources use <id> --out cases.json`, then read the cases.
+
+Each lands as a pull request, from you or from us: a component as [Contributing one](#contributing-one) says, a catalog entry
+or a connector as [resources.md](resources.md#add-a-dataset-or-a-benchmark) says. If you'd rather not write code, open a
+[component proposal](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=component.yml) or a
+[catalog issue](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=catalog.yml), and the lab writes it with you.
+[The six slots](#the-six-slots) say how each component's value is checked. A dataset's value is in what its cases test, which
+its entry's note says, and the judge that rates them is checked against people
+([agent tests](agent-tests.md#checking-the-judge-against-people)).
 
 ## A context component in five minutes
 
@@ -191,7 +207,7 @@ What it can't enforce:
 
 | Slot | Call | Sends | Expects back |
 | --- | --- | --- | --- |
-| judge | `runAgentTests(doc, cases, { judgeComponent: manifest })` | `case` (its name, rubric, must_not, context and pictures), `reply`, `conversation` (the case's messages) | `{ verdict: "pass" or "fail", reason }` |
+| judge | `runAgentTests(doc, cases, { judgeComponent: manifest })` | `case` (its name, rubric, must_not, context, pictures and, for a suite's case, source), `reply`, `conversation` (the case's messages) | `{ verdict: "pass" or "fail", reason }` |
 | detector | `detect(manifest, record)` | `learning_events`: the record's `events` and `turns` | `{ marks: [{ turn_index, label, evidence }] }`, `turn_index` being the turn's place in the record's `turns`, from 0 |
 | measure | `measure(manifest, record)` | `learning_events`, as above | `{ measures: [{ id, value }] }`, each value a number, text, true, false or null |
 | context | `lookup(manifest, query)`, then `guidanceFrom(manifest, { items, chosen })` for an activity's `teaching.guidance` | `teacher_text` for a string, or the payload you pass; nothing for `data` | `{ items: [{ text, when, about, source, attribution }] }`; an item without its own attribution gets the component's (`attribution`, else `cite`) |
@@ -281,15 +297,16 @@ Applied to every component, VIABLE's included:
 
 ## Leaving the catalog
 
-A component with no answer to a security report in 14 days, or failing its fixtures on two minor
-versions of the harness, is marked unmaintained, and leaves the catalog 60 days later. Agent
-versions that pinned it keep their record.
+Planned with the reviewed catalog of outside components: a component with no answer to a security report
+in 14 days, or failing its fixtures on two minor versions of the harness, is marked unmaintained, and
+leaves the catalog 60 days later. Agent versions that pinned it keep their record.
 
 ## Contributing one
 
-Open an issue first, naming the work, its slot and its license. An outside component goes in
-`integrations/<owner>-<name>/`: its manifest, the adapter, fixtures, a README and how to cite it.
-Start from `integrations/_template/`: a detector's manifest, a small HTTP component in plain Node,
-its fixtures, and a README with the steps.
+Open a [component proposal](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=component.yml)
+first, naming the work, its slot and its license. Guidance goes in as [Add your research](add-your-research.md#how-it-lands)
+says. An outside component goes in `integrations/<owner>-<name>/`: its manifest, the adapter, fixtures, a README and how to
+cite it. Start from `integrations/_template/` (`viable-harness component new <owner/name> --slot detector` copies it): a
+detector's manifest, a small HTTP component in plain Node, its fixtures, and a README with the steps.
 VIABLE writes the adapter with the authors where it can, the authors review it for fidelity to their
 work and its limits, and the comparison with and without it fills `evidence.integration`.

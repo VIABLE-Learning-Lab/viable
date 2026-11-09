@@ -79,6 +79,19 @@ export async function changeLearner(store, code, id, change) {
   return next;
 }
 
+/**
+ * More time for one learner on one activity: it stays open to them until closesAt, after it closes for everyone else
+ * (releaseState takes the later). null: none. Kept on their record as { activity's key: instant }.
+ */
+export async function extendFor(store, code, id, key, closesAt) {
+  const held = await store.get(classKeys.learner(code, id));
+  if (!held) throw refused('That learner isn’t in this course anymore.', 404, 'learner_not_found');
+  const extensions = { ...(held.extensions || {}) };
+  if (closesAt) extensions[key] = closesAt;
+  else delete extensions[key];
+  return changeLearner(store, code, id, { extensions });
+}
+
 /** Everyone in a course but those only trying it out: on its list, or come by its link. Those with names first, in order. */
 export async function peopleOf(store, code) {
   if (!store) return [];
@@ -117,51 +130,170 @@ export async function removeFromList(store, code, id) {
   return null;
 }
 
-/** Lines of a pasted list: a name, then optionally a tab or a comma and a section's name. A tab wins, so "Lovelace, Ada<tab>Period 2" reads as it looks. */
-export function listLines(text) {
-  return String(text ?? '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
-    const comma = !line.includes('\t') && line.includes(',');
-    const [name, section = ''] = line.split(comma ? ',' : '\t');
-    return { name: cleanEntry(name), section: cleanEntry(section).slice(0, PEOPLE_LIMITS.sectionName), comma };
-  });
-}
-
 /**
  * A pasted class list onto the course's: each new name gets a code, someone already on it moves to the section the
  * line gives, and a section the list names that the course hasn't got is made. Returns what happened, for the page to say.
+ * options: what readClassLines takes.
  */
-export const addLines = (store, code, text) => inLine(store, code, () => addLinesNow(store, code, text));
-/**
- * A pasted list, read and checked before anything changes: its lines, whether its first row was headings, and which sections it names
- * that the course hasn't got. sections: the course's.
- */
-export function readClassLines(text, sections) {
-  const lines = listLines(text);
-  if (!lines.length) throw refused('Paste or type at least one name.');
-  if (lines.length > PEOPLE_LIMITS.pasted) throw refused(`Add at most ${PEOPLE_LIMITS.pasted} people at a time.`);
-  // A spreadsheet's first row often says what its columns are.
-  const headed = /^(?:names?|full name|student(?: id)?|id|learners?)$/i.test(lines[0].name) && (!lines[0].section || /^(?:sections?|class|group|period)$/i.test(lines[0].section));
-  if (headed) lines.shift();
-  const named = [];
-  for (const { section } of lines) if (section && !named.some((name) => name.toLowerCase() === section.toLowerCase())) named.push(section);
-  const fresh = named.filter((name) => !sectionNamed(sections, name));
-  // "Lovelace, Ada" or two columns for first and last names would make a section of everyone's other name, and a section's name goes where a name mustn't.
-  const split = lines.filter((line) => line.section);
-  if (split.length >= 3 && split.length === lines.length && new Set(split.map((line) => line.section.toLowerCase())).size === split.length && split.every((line) => fresh.some((name) => name.toLowerCase() === line.section.toLowerCase()))) {
-    throw refused(lines[0].comma ? `These look like “Last, First” names, not sections: “${lines[0].name}, ${lines[0].section}”. Write names as First Last, or put a tab before a section.` : `These look like first and last names in two columns, not sections: “${lines[0].name}” and “${lines[0].section}”. Put each whole name in one column.`);
+export const addLines = (store, code, text, options) => inLine(store, code, () => addLinesNow(store, code, text, options));
+
+// --- Reading a class list ----------------------------------------------------------------------------
+
+/** What a column of a pasted list holds. Two columns can't hold one thing but leave out. */
+export const COLUMN_ROLES = ['name', 'first', 'last', 'section', 'skip'];
+// A row of headings names its columns. The first that fits wins, so "First name" is first, not name.
+const HEADINGS = [
+  ['first', /^(?:first|given|fore|preferred(?: first)?)[\s_-]*names?$|^first$/i],
+  ['last', /^(?:last|family|sur)[\s_-]*names?$|^(?:last|surname)$/i],
+  ['name', /^(?:(?:student|learner|pupil|full|display|preferred)[\s_-]*)?names?$|^(?:students?|learners?|pupils?)$/i],
+  ['section', /^(?:sections?|periods?|class(?:[\s_-]*(?:period|section|name))?|classes|groups?|blocks?|hours?|homerooms?|teams?|cohorts?|sets?)$/i],
+  ['id', /^(?:(?:student|learner|pupil|sis|local|state|school)[\s_-]*)?(?:ids?|numbers?|no\.?|#)$/i],
+  ['skip', /^(?:e-?mails?(?:[\s_-]*address(?:es)?)?|grades?|years?|gender|sex|dob|birth[\s_-]*date|date of birth|phone|parents?|guardians?|teachers?|courses?|schools?|notes?|status|user ?name|login)$/i]
+];
+const SECTION_WORDS = /^(?:period|pd|per|section|sec|class|block|hour|group|grp|team|homeroom|room|cohort|set)\b\.?\s*\S/i;
+const SHORT_CODE = /^(?:[A-Z]?\d{1,2}[A-Z]?|[A-Z])$/i;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NUMBER = /^[A-Z]{0,3}[-#]?\d{3,}[\w-]*$/i;
+// "1. Ada", "2) Alan", "- Grace", "• Katherine": a list's own marks, not part of a name.
+const LIST_MARK = /^(?:\d{1,4}[.)]|[-*•·▪◦])\s+/;
+const LAST_FIRST = /^([^,]+),\s*([^,]+)$/;
+
+/** One line's cells: split by a tab if it has one (a spreadsheet's copy), else by commas or semicolons as a CSV file has them, quotes and all. */
+function cellsOf(line) {
+  const mark = line.includes('\t') ? '\t' : line.includes(',') ? ',' : line.includes(';') ? ';' : null;
+  if (!mark) return [line];
+  const cells = [];
+  let cell = '';
+  let quoted = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const c = line[i];
+    if (quoted) {
+      if (c === '"' && line[i + 1] === '"') { cell += '"'; i += 1; } else if (c === '"') quoted = false; else cell += c;
+    } else if (c === '"' && !cell.trim()) { quoted = true; cell = ''; } else if (c === mark) { cells.push(cell); cell = ''; } else cell += c;
   }
-  if (sections.length + fresh.length > PEOPLE_LIMITS.sections) throw refused(`A course has at most ${PEOPLE_LIMITS.sections} sections.`);
-  return { lines, headed, fresh };
+  cells.push(cell);
+  return cells;
 }
 
-async function addLinesNow(store, code, text) {
+/** The roles a row of headings gives its columns, or null when the row isn't headings. ids: the course knows learners by a student ID. */
+function headingRoles(cells, ids) {
+  const said = cells.map((cell) => cleanEntry(cell));
+  const found = said.map((cell) => (cell && cell.length <= 40 ? HEADINGS.find(([, pattern]) => pattern.test(cell))?.[0] ?? null : null));
+  const filled = said.filter(Boolean).length;
+  if (!found.some((role) => ['name', 'first', 'last', 'id'].includes(role)) || found.filter(Boolean).length * 2 < filled) return null;
+  const roles = found.map((role) => (role === 'id' ? (ids ? 'name' : 'skip') : ids && ['name', 'first', 'last'].includes(role) ? 'skip' : role || 'skip'));
+  return roles.some((role) => ['name', 'first', 'last'].includes(role)) ? oneEach(roles) : null;
+}
+
+/** A column a role, guessed from what is in them. */
+function guessRoles(rows, width, ids, commas) {
+  if (width === 1) return ['name'];
+  const kinds = Array.from({ length: width }, (_, i) => {
+    const seen = rows.map((cells) => cleanEntry(cells[i])).filter(Boolean);
+    const distinct = new Set(seen.map((value) => value.toLowerCase())).size;
+    if (!seen.length || seen.every((value) => EMAIL.test(value)) || seen.every((value, at) => value.replace(/[.)]$/, '') === String(at + 1))) return 'skip';
+    if (seen.every((value) => NUMBER.test(value))) return ids ? 'id' : 'skip';
+    if (seen.every((value) => SECTION_WORDS.test(value)) || (seen.length >= 2 && seen.every((value) => SHORT_CODE.test(value)) && distinct * 2 <= seen.length) || (seen.length >= 4 && distinct * 3 <= seen.length && seen.every((value) => value.length <= 40))) return 'section';
+    return 'words';
+  });
+  const roles = kinds.map((kind) => (kind === 'section' ? 'section' : 'skip'));
+  const words = kinds.flatMap((kind, i) => (kind === 'words' ? [i] : []));
+  const id = kinds.indexOf('id');
+  if (ids && id >= 0) roles[id] = 'name';
+  else if (!words.length) roles[kinds.findIndex((kind) => kind !== 'skip') >= 0 ? kinds.findIndex((kind) => kind !== 'skip') : 0] = 'name';
+  else if (words.length >= 2 && [words[0], words[1]].every((i) => rows.every((cells) => !/\s/.test(cleanEntry(cells[i]))))) {
+    // Two columns of one word each: a name in two parts. Written with a comma it is "Lovelace, Ada"; in a spreadsheet, first then last.
+    roles[words[0]] = commas ? 'last' : 'first';
+    roles[words[1]] = commas ? 'first' : 'last';
+  } else roles[words[0]] = 'name';
+  return oneEach(roles);
+}
+
+// One column a role: a second name or section column is left out.
+function oneEach(roles) {
+  const taken = new Set();
+  return roles.map((role) => {
+    if (role === 'skip') return role;
+    if (taken.has(role) || (role === 'name' && (taken.has('first') || taken.has('last'))) || (['first', 'last'].includes(role) && taken.has('name'))) return 'skip';
+    taken.add(role);
+    return role;
+  });
+}
+
+/** Roles a person chose, one a column, as the page sends them ({ 0: 'name', 1: 'section' } or a list); null when they don't fit these columns. */
+function chosenRoles(columns, width) {
+  if (!columns || typeof columns !== 'object') return null;
+  const list = Array.isArray(columns) ? columns : Array.from({ length: width }, (_, i) => columns[i]);
+  if (list.length !== width || !list.every((role) => COLUMN_ROLES.includes(role))) return null;
+  return oneEach(list);
+}
+
+/**
+ * A pasted class list, read and checked before anything changes. What each column holds comes from a row of headings
+ * when there is one, else from what is in it: a name, a first or a last name, a section, or something to leave out
+ * (email addresses, row numbers, student numbers on a course of names). One line with three or more commas between
+ * names is a list of names. sections: the course's.
+ * options: columns, the roles a person chose instead of these (see chosenRoles), kept while the list's shape is the
+ * one they were chosen for (shape, as returned); section, where lines that name none go; ids, the course knows
+ * learners by a student ID, which is then what each line's name is.
+ * Returns its lines ({ name, section, row }), whether its first row was headings, whether names written "Last, First"
+ * were turned, its shape, which sections it names that the course hasn't got, and its columns ({ role, heading, samples }).
+ */
+export function readClassLines(text, sections, { columns = null, shape = null, section = '', ids = false } = {}) {
+  // Lines aren't trimmed: a tab at the start is an empty first cell, and each cell is trimmed on its own.
+  const typed = String(text ?? '').replace(/^\uFEFF/, '').split(/\r\n?|\n/).filter((line) => line.trim());
+  let rows = typed.map(cellsOf);
+  // One typed line of names between commas: "Ada Lovelace, Alan Turing" is two people; "Ada Lovelace, Period 2" is one in a section.
+  const between = rows.length === 1 && !typed[0].includes('\t') ? rows[0].map((cell) => cleanEntry(cell)).filter(Boolean) : [];
+  if (between.length >= 3 || (between.length === 2 && between.every((cell) => /\s/.test(cell) && !SECTION_WORDS.test(cell)))) rows = between.map((cell) => [cell]);
+  if (!rows.length) throw refused('Paste or type at least one name.');
+  const width = Math.max(...rows.map((cells) => cells.length));
+  const headings = rows.length > 1 || width > 1 ? headingRoles(rows[0], ids) : null;
+  const body = headings ? rows.slice(1) : rows;
+  if (!body.length) throw refused('That is only a row of headings. Paste the names under it too.');
+  if (body.length > PEOPLE_LIMITS.pasted) throw refused(`Add at most ${PEOPLE_LIMITS.pasted} people at a time.`);
+  const guessed = headings || guessRoles(body, width, ids, !typed.some((line) => line.includes('\t')));
+  // A choice made for one list holds while it is edited, not for another of a different shape pasted over it.
+  const roles = ((shape == null || shape === guessed.join(' ')) && chosenRoles(columns, width)) || guessed;
+  const at = (cells, role) => { const i = roles.indexOf(role); return i < 0 ? '' : cleanEntry(cells[i]); };
+  const everyone = cleanEntry(section).slice(0, PEOPLE_LIMITS.sectionName);
+  // A school's export often writes each name "Lovelace, Ada" in one column: when every one is, they read as Ada Lovelace.
+  const names = body.map((cells) => (roles.includes('name') ? at(cells, 'name') : [at(cells, 'first'), at(cells, 'last')].filter(Boolean).join(' ')).replace(LIST_MARK, ''));
+  const turned = roles.includes('name') && names.some(Boolean) && names.every((name) => !name || LAST_FIRST.test(name));
+  // Under a heading such as Period, a bare 2 is Period 2.
+  const sectionHeading = headings ? cleanEntry(rows[0][roles.indexOf('section')]).replace(/s$/i, '') : '';
+  const sectionOf = (given) => (given && sectionHeading && SHORT_CODE.test(given) ? `${sectionHeading} ${given}` : given);
+  const lines = body.map((cells, index) => ({
+    name: cleanEntry(turned ? names[index].replace(LAST_FIRST, '$2 $1') : names[index]),
+    section: (sectionOf(at(cells, 'section')) || everyone).slice(0, PEOPLE_LIMITS.sectionName),
+    row: index + 1 + (headings ? 1 : 0)
+  }));
+  const named = [];
+  for (const { section: given } of lines) if (given && !named.some((name) => name.toLowerCase() === given.toLowerCase())) named.push(given);
+  const fresh = named.filter((name) => !sectionNamed(sections, name));
+  if (sections.length + fresh.length > PEOPLE_LIMITS.sections) throw refused(`A course has at most ${PEOPLE_LIMITS.sections} sections.`);
+  return {
+    lines,
+    headed: Boolean(headings),
+    turned,
+    shape: guessed.join(' '),
+    fresh,
+    columns: roles.map((role, i) => ({ role, heading: headings ? cleanEntry(rows[0][i]) : '', samples: body.map((cells) => cleanEntry(cells[i])).filter(Boolean).slice(0, 3) }))
+  };
+}
+
+async function addLinesNow(store, code, text, options) {
   let sections = await sectionsOf(store, code);
-  const { lines, headed, fresh } = readClassLines(text, sections);
+  const { lines, headed, turned, fresh, columns } = readClassLines(text, sections, options);
   for (const name of fresh) sections = (await addSectionNow(store, code, { name })).sections;
-  const report = { added: [], moved: [], already: [], too_long: 0, no_name: 0, sections: fresh, headed };
+  const report = { added: [], moved: [], already: [], too_long: 0, no_name: 0, sections: fresh, headed, turned, columns };
+  const seen = new Set();
   for (const line of lines) {
     if (!line.name) { report.no_name += 1; continue; }
     if (line.name.length > PEOPLE_LIMITS.name) { report.too_long += 1; continue; }
+    // A name twice in one list is one person, where the first line puts them, as the preview said.
+    if (seen.has(line.name.toLowerCase())) { report.already.push(line.name); continue; }
+    seen.add(line.name.toLowerCase());
     const section = line.section ? sectionNamed(sections, line.section)?.id ?? null : null;
     const same = (await learnersNamed(store, code, line.name)).filter((learner) => learner.listed);
     if (!same.length) {

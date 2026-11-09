@@ -30,7 +30,24 @@ export function validAgentTest(body = {}) {
     if (typeof context !== 'object' || Array.isArray(context)) throw invalid('A case’s reference data is a JSON object.');
     if (JSON.stringify(context).length > L.context) throw invalid('Keep a case’s reference data under 32 KB.');
   }
-  return { name, messages, context, rubric, must_not: mustNot || null, pictures: validPictures(body.pictures) };
+  const source = validSource(body.source);
+  return { name, messages, context, rubric, must_not: mustNot || null, pictures: validPictures(body.pictures), ...(source ? { source } : {}) };
+}
+
+/**
+ * Where a case came from, so a result can credit it and say what its license allows: { name, resource?, license?, cite?,
+ * url? }. A suite's connector sets it on every case it makes (useResource); a case someone wrote has none.
+ */
+function validSource(raw) {
+  if (raw == null) return null;
+  if (typeof raw !== 'object' || Array.isArray(raw)) throw invalid('A case’s source is an object with its name.');
+  const text = (value, most) => (value == null ? null : String(value).trim().slice(0, most) || null);
+  const name = text(raw.name, 200);
+  if (!name) throw invalid('Name a case’s source.');
+  const license = raw.license == null ? null : (Array.isArray(raw.license) ? raw.license : [raw.license]).map((item) => String(item).trim()).filter((item) => /^(?:LicenseRef-)?[A-Za-z0-9.+-]{1,64}$/.test(item)).slice(0, 5);
+  const url = text(raw.url, 500);
+  if (url && !/^https:\/\//.test(url)) throw invalid('A source’s address starts with https://.');
+  return { name, ...(text(raw.resource, 80) ? { resource: text(raw.resource, 80) } : {}), ...(license?.length ? { license } : {}), ...(text(raw.cite, 600) ? { cite: text(raw.cite, 600) } : {}), ...(url ? { url } : {}) };
 }
 
 /**

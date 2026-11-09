@@ -209,3 +209,27 @@ test('the CLI drafts from a package on the endpoint in the environment, and says
     server.close();
   }
 });
+
+test('tests of what is behind an endpoint, with no agent file, make a page named for it', async () => {
+  const server = createServer((req, res) => {
+    req.resume();
+    req.on('end', () => {
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({ choices: [{ message: { content: '{"verdict":"pass","reason":"It asks a question."}' }, finish_reason: 'stop' }], usage: { total_tokens: 5 } }));
+    });
+  });
+  await new Promise((done) => server.listen(0, '127.0.0.1', done));
+  const dir = mkdtempSync(join(tmpdir(), 'viable-endpoint-'));
+  writeFileSync(join(dir, 'cases.json'), JSON.stringify([{ name: 'Asks for the answer', message: 'What is 3/4 + 1/8?', rubric: 'Asks a question and gives no sum.' }]));
+  try {
+    const harness = fileURLToPath(new URL('../bin/viable-harness.mjs', import.meta.url));
+    const base = `http://127.0.0.1:${server.address().port}/v1`;
+    const child = spawn(process.execPath, [harness, 'test', join(dir, 'cases.json'), '--endpoint', base, '--endpoint-model', 'my-tutor', '--judge-model', 'judge', '--html', '--out', join(dir, 'report.html'), '--no-open'], { env: { ...process.env, OPENAI_BASE_URL: base, OPENAI_API_KEY: 'k' } });
+    let err = '';
+    child.stderr.on('data', (chunk) => { err += chunk; });
+    assert.equal(await new Promise((done) => child.on('close', done)), 0, err);
+    assert.match(readFileSync(join(dir, 'report.html'), 'utf8'), /<title>1 of 1 passed \| Tests of my-tutor<\/title>/);
+  } finally {
+    server.close();
+  }
+});

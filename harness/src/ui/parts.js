@@ -84,6 +84,7 @@ export function testCase(result, item) {
       ...(str(message).trim() ? [h('dt', null, 'The learner’s message'), h('dd', null, quote(message))] : []),
       ...part('What a good reply does', item?.rubric),
       ...part('What it must not do', item?.must_not),
+      ...part('Where it comes from', item?.source?.name ? [item.source.name, ...(item.source.license || [])].join(', ') : ''),
       h('dt', null, 'The agent’s reply'),
       h('dd', null, quote(result?.reply, result?.reply == null ? 'No reply: the run failed.' : 'The agent gave no reply.')))));
 }

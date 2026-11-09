@@ -72,7 +72,7 @@ Skill is advice an assistant may ignore; the gateway, your own calls and the [En
 | Before the reply | **Context** | What should it have in mind at this moment, and nothing more? | what the teacher decided ([How the AI helps](skills/writing-how-the-ai-helps/SKILL.md)); standards and misconceptions from [open resources](docs/resources.md); teaching moves, each with its source; what this learner just did |
 | Before the reply | **Rules** | What may it see and do here? | how far it may help; which tools are off, removed rather than only told; no learner's identity; answer keys that reach only the reviewer |
 | While it works | **Loop** | What happens next? | counts tries, changes approach when a learner keeps failing, brings in the teacher and flags it |
-| After the reply | **Checks** | Did it meet the bar? | [VETTING](skills/checking-replies-with-vetting/SKILL.md), which reviews a reply against a policy the learner never sees; [agent tests](docs/agent-tests.md) on your own agent before learners meet it, with judges you can compare against people |
+| After the reply | **Checks** | Did it meet the bar? | [VETTING](skills/checking-replies-with-vetting/SKILL.md), which reviews a reply against a policy the learner never sees; [agent tests](docs/agent-tests.md) on your own agent before learners meet it, from your own cases or [open benchmarks](docs/resources.md), with judges you can compare against people |
 | After the reply | **Evidence** | What happened, did it help, what should change? | records tied to what went in; [measures](docs/xapi.md) with their definitions; suggested changes a teacher accepts or declines |
 
 A small model can read the moment instead of rules (`pickerModel`), and it reads more of them, in any language, for one more call
@@ -96,7 +96,7 @@ A model only ever hears a class's numbers: learners stay on your side, and the c
 
 ## How much does it help?
 
-Early and honest: on 50 learner messages and two models, a one-line tutor prompt got 8% of first drafts past review, and a teacher's
+Early results: on 50 learner messages and two models, a one-line tutor prompt got 8% of first drafts past review, and a teacher's
 settings given before the reply got 68 to 74%. Choosing what goes in for each turn added about 10 more points and a quarter fewer tokens,
 which isn't yet clear of chance on that set, and is clear on not giving the answer away (18 to 20 points on an open-weight model). Finding
 the right misconception for a message worked on only 4 of 19 turns. Rated by a model, on replies, not learning
@@ -112,7 +112,7 @@ take from them, credits them, and measures whether it helped. It carries their o
 ## Reference
 
 [How it works](docs/how-it-works.md) · [With your stack](docs/with-your-stack.md) · [MCP](docs/mcp.md) · [Skills](skills/) · [Agent tests](docs/agent-tests.md) ·
-[Ways to arrange an activity](docs/designs.md) · [Components](docs/components.md) · [Open resources](docs/resources.md) · [Catalog](docs/catalog.md) · [xAPI](docs/xapi.md) ·
+[Ways to arrange an activity](docs/designs.md) · [Add your research](docs/add-your-research.md) · [Components](docs/components.md) · [Open resources](docs/resources.md) · [Catalog](docs/catalog.md) · [xAPI](docs/xapi.md) ·
 [Conformance](conformance/README.md)
 
 ```sh

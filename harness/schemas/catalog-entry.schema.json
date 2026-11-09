@@ -27,6 +27,7 @@
         "spdx": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^(?:LicenseRef-)?[A-Za-z0-9.+-]+$" }, "description": "every license its parts carry, as SPDX identifiers; empty when none is stated" },
         "note": { "type": "string", "minLength": 1, "maxLength": 600, "description": "which license covers which part, and gated, non-commercial, mixed or conflicting terms" },
         "unclear": { "const": true, "description": "its sources disagree or leave out whether a use is allowed" },
+        "terms": { "type": "string", "minLength": 10, "maxLength": 300, "description": "terms of use beyond the license that a person accepts before fetching, such as research use only" },
         "source": { "type": "string", "pattern": "^https://", "description": "where the license is stated" }
       },
       "if": { "anyOf": [{ "properties": { "spdx": { "maxItems": 0 } } }, { "required": ["unclear"] }] },

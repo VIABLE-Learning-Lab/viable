@@ -18,7 +18,7 @@ ignore; the [gateway](with-your-stack.md) or your own calls make it run. There a
 | **`prepare_task`, `find_misconceptions`, `find_guidance`, `find_designs`, `teaching_instructions`, `find_public_goods`, `validate_document`, `list_components`** | Yes, with no key | Yes |
 | **`check_reply`** | With a VIABLE API key (`model:request`) | With your endpoint |
 | **Running agents** | `list_published_agents`, `run_published_agent`: your project's published agents, with a key (`agents:execute`) | with `viable-engine mcp`, `run_agent`: an agent file or course package you pass it |
-| **`draft_tests`, `run_agent_tests`, `calibrate_judge`** | No | Yes |
+| **`draft_tests`, `run_agent_tests`, `calibrate_judge`** | No | Yes (`run_agent_tests` with `viable-engine mcp`) |
 | **Learners' records: `compute_measures`, `suggest_changes`** | No | Yes |
 | **Without internet** | No | Yes, with a local model |
 
@@ -88,9 +88,9 @@ logs go to stderr.
 | `calibrate_judge` | Compares `run_agent_tests`' verdicts with a person's pass or fail per case: the confusion table, every disagreement and, from 10 labelled cases, agreement and Cohen's kappa. | no |
 | `suggest_changes` | Suggested changes to an activity's teaching settings from runs and learners' records, each with its evidence; with `accept`, the settings once the teacher accepts one. | no |
 | `list_components` | The component manifests (`docs/components.md`). | no |
-| `find_guidance` | A moment and a topic to what research says to do then: short instructions for a model, each naming its studies, and for each topic what isn't known |
-| `find_designs` | A few words to ways of arranging a whole activity that research supports: what each suits, what it shows, what isn't known, its sources and its steps, with the rules that hold for any of them |
-| `find_public_goods` | A few words, a kind, a slot, `open` or `connected` to entries of the public goods catalog ([catalog.md](catalog.md)): each with its license and a note on its terms, how to get it, how it would fit, how far it is connected and the command ([resources.md](resources.md)), and the date it was checked. Entries describe, not endorse. | no |
+| `find_guidance` | A moment and a topic to what research says to do then: short instructions for a model, each naming its studies, and for each topic what isn't known | no |
+| `find_designs` | A few words to ways of arranging a whole activity that research supports: what each suits, what it shows, what isn't known, its sources and its steps, with the rules that hold for any of them | no |
+| `find_public_goods` | A few words, a kind, a slot, `open` or `connected` to entries of the public goods catalog ([catalog.md](catalog.md)): each with its license and a note on its terms, how to get it, how it would fit, how far it is connected and the command ([resources.md](resources.md)), and the date it was checked. | no |
 
 Each tool has a JSON Schema for its arguments, and each result carries `structuredContent` and the
 same JSON as text after a one-line summary (clients before 2025-06-18 get the text only).
@@ -180,7 +180,7 @@ three tools' results also show as a small page in the conversation:
 | Tool | View | What it shows |
 | --- | --- | --- |
 | `check_reply` | `ui://viable-harness/check-reply` | The outcome and whether the reply is checked; the learner's message and the guideline, or the question (never its answer key), it was checked against; each review round with its verdict and the reviewer's reason; the rewritten reply. |
-| `run_agent_tests` | `ui://viable-harness/agent-tests` | How many cases passed, failed and couldn't be run or judged; each case, the failed ones open, with the judge's reason, the learner's message, what a good reply does and must not do, and the agent's reply. |
+| `run_agent_tests` | `ui://viable-harness/agent-tests` | How many cases passed, failed and couldn't be run or judged; each case, the failed ones open, with the judge's reason, the learner's message, what a good reply does and must not do, where it comes from (for a suite's case), and the agent's reply. |
 | `suggest_changes` | `ui://viable-harness/suggestions` | Each suggestion with why, its evidence, what to do next in words (with the help scale where the help level changes) and the id to accept it; after `accept`, the new settings. |
 
 **Which hosts.** The extension's [client matrix](https://modelcontextprotocol.io/extensions/client-matrix)

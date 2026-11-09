@@ -507,7 +507,7 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
     const asksSection = (page, learner, sections) => !page.trying && ['link', 'choose'].includes(page.doc.course.sections_from) && !learner.section && sections.length > 0;
 
     // Where an activity stands for a learner: their section's own opening over the course's.
-    const stateFor = async (activity, learner) => releaseState(activity, { override: !activity.trying && learner?.section ? await store.get(keys.release(activity.code, activity.key, learner.section)) : null, now: now() });
+    const stateFor = async (activity, learner) => releaseState(activity, { override: !activity.trying && learner?.section ? await store.get(keys.release(activity.code, activity.key, learner.section)) : null, extension: activity.trying ? null : learner?.extensions?.[activity.key] ?? null, now: now() });
     // An activity's place for a learner: where they may use it now.
     const gate = async (activity, learner) => {
       const { state } = await stateFor(activity, learner);
@@ -995,7 +995,9 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
             at = { index: Number(body.to), at: moved };
           }
         }
-        return stepReply(activity.workspace, activity.sets, at);
+        // A learner their teacher gave extra time: no timer in a step moves them on.
+        // Extra time, or more time on this activity: no step timer moves them on, as on the teacher's door.
+        return stepReply(activity.workspace, activity.sets, at, { extended: learner.extra_time === true || Boolean(learner.extensions?.[activity.key]) });
       }
       if (name === 'open' || name === 'done') {
         limited(name, visitor, address);

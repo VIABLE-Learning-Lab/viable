@@ -840,5 +840,48 @@ test('sources it read are under the reply, and a card that adds nothing isn’t 
   }, { pages });
   const events = await s.ask('An activity on bees');
   const kinds = events.filter((event) => event.name === 'card').map((event) => /class="ask-card[^"]*"[^>]*><h3>([^<]*)/.exec(event.data.html)?.[1]);
-  assert.deepEqual(kinds, ['Bees', 'Science'], 'the activity with its Try button, and the new course: no separate try card, and no links to share with nothing open');
+  assert.deepEqual(kinds, ['Bees', '1 question to look over', 'Science'], 'the activity with its Try button, its question to look over, and the new course: no separate try card, and no links to share with nothing open');
+});
+
+test('questions Ask wrote come back to look over, each with its answer, to change on its page or remove', async () => {
+  let code;
+  const s = await server(following([
+    () => [call('add_activity', { course: code, title: 'Practice', steps: [{ title: 'Warm up', shows: 'questions', ai: false, questions: [{ type: 'single', prompt: 'Which is equal to 1/2?', choices: ['2/4', '2/3'], right: ['2/4'] }, { type: 'fill', prompt: '1/3 = ?/6', accept: ['2'] }] }] })],
+    'Made it.'
+  ]));
+  ({ go: code } = await s.ok('POST', 'courses', { title: 'Fractions' }));
+  code = code.split('/').at(-1);
+  const events = await s.ask('Make a warm up.');
+  const card = events.find((event) => event.name === 'card' && /2 questions to look over/.test(event.data.html)).data.html;
+  assert.match(card, /class="is-right">[\s\S]*?2\/4/);
+  assert.match(card, /Accepted: 2/);
+  assert.match(card, /href="\/console\/courses\/fractions\/questions\/[\w-]+#q-q1">Change<\/a>/);
+  const remove = /data-api="DELETE (courses\/fractions\/questions\/[\w-]+\/items\/q2)"/.exec(card);
+  assert.ok(remove);
+  await s.ok('DELETE', remove[1], {});
+  const doc = await s.ok('GET', 'courses/fractions/download');
+  assert.deepEqual(doc.question_sets[0].items.map((item) => item.id), ['q1']);
+});
+
+test('two versions side by side: one press chooses, and the turn waits for it', async () => {
+  const s = await server([[call('offer_versions', { question: 'Which first message?', versions: [{ label: 'Shorter', text: 'What do you notice?' }, { label: 'With an example', text: 'Cut a pizza into 8. What do you notice?' }] })], 'Never said']);
+  const events = await s.ask('Write the first message.');
+  const card = events.find((event) => event.name === 'card').data.html;
+  assert.match(card, /<h4>Shorter<\/h4>[\s\S]*?data-say-this="Use “Shorter”\."/);
+  assert.match(card, /With an example/);
+  assert.doesNotMatch(JSON.stringify(events), /Never said/, 'nothing more is asked of the model');
+});
+
+test('a schedule card sets when an activity opens and closes, through its own route', async () => {
+  const s = await server(following([() => [call('show_schedule', { course: 'fractions' })], 'Here.']));
+  await s.ok('POST', 'courses', { title: 'Fractions' });
+  await s.ok('POST', 'courses/fractions/activities', { title: 'Practice', kind: 'questions' });
+  const card = (await s.ask('When do things open?')).find((event) => event.name === 'card').data.html;
+  assert.match(card, /<strong>Practice<\/strong><span class="v-note">Hidden<\/span>/);
+  assert.match(card, /data-api="POST courses\/fractions\/activities\/practice\/schedule"/);
+  await assert.rejects(s.ok('POST', 'courses/fractions/activities/practice/schedule', { opens_at: '2030-01-02T09:00:00.000Z', closes_at: '2030-01-01T09:00:00.000Z' }), /close after it opens/);
+  await s.ok('POST', 'courses/fractions/activities/practice/schedule', { opens_at: '2030-01-02T09:00:00.000Z', closes_at: '2030-01-09T09:00:00.000Z' });
+  const doc = await s.ok('GET', 'courses/fractions/download');
+  assert.equal(doc.course.activities[0].opens_at, '2030-01-02T09:00:00.000Z');
+  assert.equal(doc.course.activities[0].release, 'hidden', 'it waits for its time');
 });

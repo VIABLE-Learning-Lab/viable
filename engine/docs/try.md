@@ -93,3 +93,6 @@ viable-engine test agent.json cases.json --judge-model <id> --html
 ```
 
 This serves the results on this computer until you press Ctrl-C. Add `--out report.html` for one file instead.
+Each case shows the learner's message, what a good reply does and must not do, the agent's reply and the judge's
+reason. A case from a suite (`--suite`) also shows where it comes from, with its licenses, and the page ends with
+each suite's citation ([agent tests](../../harness/docs/agent-tests.md#suites-from-datasets-and-benchmarks)).

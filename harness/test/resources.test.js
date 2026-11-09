@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CATALOG, CONNECTORS, calibrateJudge, checkSchema, getResource, judgeReplies, licenseLimits, listResources, runAgent, runAgentTests, readAgentTests, resourceJudge, searchCatalog, teachingContext, teachingSettings, useResource } from '../../engine/src/index.js';
 import { measure } from '../src/components/call.js';
+import { validAgentTest } from '../src/agentTests.js';
 import { mcpServer } from '../../engine/src/mcp.js';
 import { parseCsv } from '../src/resources/csv.js';
 import { spread, wrongAnswer } from '../src/resources/cases.js';
@@ -661,4 +662,32 @@ test('the command line: a standard into teaching settings, keeping what they hol
   const measured = await harness(baseUrl, 'measure', join(dir, 'record.json'), '--component', manifest);
   assert.equal(measured.code, 0, measured.err);
   assert.equal(JSON.parse(measured.out).measures[1].id, 'bkt_attempts.fractions');
+});
+
+test('TutorMoments: its terms come first, then each moment is a case ending on the learner, half scaffolding and half rigor', async (t) => {
+  const dir = scratch(t);
+  // Its real record format (moments.schema.json), with invented words.
+  // A test file in its real record format (moments.schema.json), with invented words: the real one is fetched when it is used.
+  const moment = (n, dimension, hint, last = 'student') => JSON.stringify({ id: `balanced_520:0000000${n}-aaaa_bbbb__hum_${n}_${n + 2}`, context: [{ turn_number: 1, role: 'tutor', text: 'What is 3/4 of 8?' }, { turn_number: 2, role: 'student', text: 'I think 6' }, { turn_number: 3, role: 'student', text: 'because 8 divided by 4 is 2.' }, { turn_number: 4, role: 'tutor', text: 'Go on.' }, { turn_number: 5, role: last, text: 'Then times 3?' }], dimension, student: { mode: 'oracle', reference: 'yes', context: 'Platform: tutoring_provider_a', trait: {} }, rubric: { gold: dimension, hint }, provenance: { conv_id: `conv${n}`, cut_turn: 4 } });
+  const file = [moment(1, 'scaffolding', 'They had the steps but not why.'), moment(2, 'rigor', 'They had it right and could say why'), moment(3, 'scaffolding', ''), moment(4, 'rigor', ''), moment(5, 'rigor', 'Cut on the tutor', 'tutor')].join('\n');
+  const { fetch, asked } = source([has('tutormoments-preview/resolve/3bb0c104'), file]);
+  await assert.rejects(getResource('tutormoments', { dir, fetch }), (error) => error.code === 'license_not_accepted' && /Responsible Use/.test(error.message));
+  assert.deepEqual(asked, [], 'nothing is fetched before its terms are accepted');
+  const used = await useResource('tutormoments', { dir, fetch, acceptLicense: true, options: { limit: 2 } });
+  assert.deepEqual(used.cases.map((item) => item.kind), ['scaffolding', 'rigor']);
+  const [scaffold, rigor] = used.cases;
+  assert.equal(scaffold.messages.at(-1).role, 'user', 'it ends on the learner');
+  assert.equal(scaffold.messages.at(-1).content, 'Then times 3?');
+  assert.equal(scaffold.messages[0].content, 'I think 6\nbecause 8 divided by 4 is 2.', 'a speaker’s turns in a row are one message');
+  assert.match(scaffold.name, /^TutorMoments 00000001 \(turns 1–3\): scaffold$/);
+  assert.match(scaffold.rubric, /scaffolds[\s\S]*The teacher who marked this moment saw: They had the steps but not why\.$/);
+  assert.match(rigor.rubric, /pushes for rigor/);
+  assert.deepEqual(scaffold.context, { moment: 'balanced_520:00000001-aaaa_bbbb__hum_1_3', needs: 'scaffolding' }, 'its platform label isn’t context');
+  const all = await useResource('tutormoments', { dir, fetch, options: { limit: 25 } });
+  assert.equal(all.cases.length, 4, 'a moment cut on the tutor’s own words is left out');
+  // Each case says where it came from and its license, and keeps it through the case's own checks.
+  assert.deepEqual(scaffold.source, { name: 'TutorMoments', resource: 'tutormoments', license: ['CC-BY-4.0'], cite: scaffold.source.cite, url: 'https://huggingface.co/datasets/allenai/tutormoments-preview' });
+  assert.match(scaffold.source.cite, /When Help is Unhelpful/);
+  for (const item of used.cases) assert.deepEqual(validAgentTest(item).source, item.source);
+  assert.throws(() => validAgentTest({ ...scaffold, source: { name: 'X', url: 'http://plain.example' } }), /https/);
 });

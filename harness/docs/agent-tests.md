@@ -11,7 +11,8 @@ after every change to the agent or to How the AI helps, so a change that makes t
 before learners meet it.
 
 This page covers the case format, writing cases, drafting them from an activity's How the AI helps,
-taking them from past turns, the judge, and checking the judge against people.
+taking them from past turns, suites of cases from datasets and benchmarks, the judge, and checking the
+judge against people.
 
 ## The case format
 
@@ -40,6 +41,7 @@ A file of cases (format `viable.agent-tests`), or a bare list of cases:
 | `must_not` | what the reply must not do | 1,000 characters |
 | `context` | the run's reference data, such as the open question and its answer key; the judge sees it too | 32 KB |
 | `pictures` | pictures the conversation has already shown, `{"url": "https://...", "description": "..."}`, or `{"reason": "safety", "description": "..."}` for one that wasn't drawn | 12 |
+| `source` | where the case came from, `{"name", "resource", "license", "cite", "url"}`: a suite's cases carry it ([below](#suites-from-datasets-and-benchmarks)), and a case you write needs none. The judge model isn't shown it | name 200 characters, citation 600, 5 licenses, an `https` address |
 
 A file holds 1 to 25 cases. `validAgentTest` checks one case and `readAgentTests` a file, each saying
 which case is wrong and why; VIABLE's hosted platform checks saved cases with the same function.
@@ -67,7 +69,9 @@ agent is told). Then write a case for each thing a teacher worries about:
 
 Write rubrics about what can be seen in one reply, one behavior per sentence. Make `must_not` precise
 ("State 5/6 or any equivalent fraction", not "Be unhelpful"). Write synthetic learners: never a real
-learner's words, name or identifier, unless the case comes from past turns with consent (below).
+learner's words, name or identifier, unless the case comes from past turns with consent
+([below](#learners-words-and-consent)), or from a suite, under its dataset's terms
+([below](#suites-from-datasets-and-benchmarks)).
 
 ## Drafting cases from How the AI helps
 
@@ -147,7 +151,7 @@ own help level, so run them without `--section`.
 
 These cases hold what learners wrote. The harness reads records only from the files or arguments
 you give it, refuses a record whose `user` looks like an email address, and puts learner text only
-into the cases; but whether you may reuse learners' messages is yours to decide, not the harness's.
+into the cases; whether you may reuse learners' messages is your decision.
 A deployer needs consent to reuse learners' messages as test cases (from learners, and from parents
 for minors, as your school's or study's terms say), and should:
 
@@ -160,13 +164,67 @@ for minors, as your school's or study's terms say), and should:
 When consent doesn't cover reuse, write synthetic cases that resemble what the records show
 instead.
 
+## Suites from datasets and benchmarks
+
+A suite is a set of cases made from a public dataset or benchmark in the [catalog](catalog.md). Its
+connector downloads a version pinned to a commit or a revision from the dataset's makers into
+`~/.viable-harness/resources/<id>/`, and turns each record into a case. The same command gives the same
+cases each time, and `--limit` (1 to 25, default 20) spreads them across the data.
+
+```sh
+viable-engine test agent.json --suite tutormoments --limit 20 --judge-model <id> --accept-license
+viable-harness resources use tutormoments --limit 20 --accept-license --out cases.json   # the same cases, to read first
+```
+
+The suites today are GSM8K, MathCAMPS (`--standard <code>` picks a standard's problems), MathDial,
+FairytaleQA and TutorMoments. `viable-harness resources list --connected` gives each one's command, and
+its catalog entry says what its results can show and what they can't. [resources.md](resources.md) says
+how a dataset becomes a suite, and how to add one.
+
+**TutorMoments**, from the Allen Institute for AI (Ai2), holds 520 moments from real one-to-one math
+tutoring in U.S. grades 2 to 7, each cut where the tutor's next move matters and labelled by experienced
+teachers. It is under CC BY 4.0, for research and educational use under Ai2's Responsible Use Guidelines,
+and the connector pins one revision of it. Those terms limit use, so nothing is fetched until you add
+`--accept-license`. The 485 moments that end on the learner become cases: the conversation up to the cut
+(its last 12 messages, a speaker's turns in a row joined into one), with the teachers' label as the
+rubric (the learner needs scaffolding, or a push for rigor) and what the teacher who marked it saw. Half
+of a run's cases need scaffolding and half a push for rigor. The learners are minors, de-identified: a run
+sends their words to your agent's model and your judge's, so use providers whose terms allow that.
+
+**Where each case comes from.** Every case a connector makes carries `source`: the resource's name and
+catalog ID, its licenses as SPDX IDs, how to cite it, and where it is.
+
+```json
+"source": {
+  "name": "TutorMoments",
+  "resource": "tutormoments",
+  "license": ["CC-BY-4.0"],
+  "cite": "Zhang, A., Ross, A., … (2026). When Help is Unhelpful: Evaluating AI Tutors for Productive Struggle. …",
+  "url": "https://huggingface.co/datasets/allenai/tutormoments-preview"
+}
+```
+
+`validAgentTest` keeps it, so it stays with a case written to a file, edited and read back. A case you
+write yourself has none.
+
+**Credit.** `test` prints each resource's license and citation after the results, and `--json` lists
+them in `resources`. `--html` shows **Where it comes from** under each case, with its licenses, and the
+citations at the end. The VIABLE Developer Platform's agent tests keep a case's `source` when it is saved
+there, and show it under the case with a link to its entry in the library and how to cite it. Keep the
+citation with anything you publish from the results.
+
 ## The judge
 
 ```sh
-viable-engine test <agent.json | package.json> (<cases.json> | --suite <resource> [--limit <n>])
+viable-engine test <agent.json | package.json> (<cases.json> | --suite <resource> [--limit <n>] [--standard <code>])
                     --judge-model <id> [--judge <resource>/<name>] [--model <id>] [--agent <ref>]
-                    [--teaching teaching.json] [--section <id>] [--json]
+                    [--teaching teaching.json] [--section <id>] [--accept-license] [--html [--out report.html]] [--json]
+viable-harness test (<cases.json> | --suite <resource>) --endpoint <url> --endpoint-model <id> [--system "..."]
+                    --judge-model <id> [--judge <resource>/<name>] [--accept-license] [--json]
 ```
+
+The judge and the agent's models go to `OPENAI_BASE_URL` (default `https://api.openai.com/v1`) with
+`OPENAI_API_KEY`; `--endpoint` sends the agent's calls to that address instead, with the same key.
 
 `runAgentTests` (or the `run_agent_tests` MCP tool) runs each case through the agent, then sends the
 judge model the case's reference data, the pictures already shown, the conversation, the reply, what
@@ -177,11 +235,12 @@ judged. The exit code is 1 when a case fails or errors.
 
 Replies vary from run to run: run again before concluding that a change helped or hurt.
 
-`--suite` takes the cases from a connected resource instead of a file, such as GSM8K's word problems or a
-MathCAMPS standard's, the same ones each time ([resources.md](resources.md)). `--judge` keeps your judge
-model and has it rate each reply with an evaluator's prompts instead of the case's rubric, such as
-`learning-commons-evaluators/withholding-answers`; from code, `judgePrompt` in `runAgentTests`. Its result
-names it in `judge_prompt`. No outside code runs: the prompts are data the harness sends.
+`--suite` takes the cases from a suite instead of a file ([above](#suites-from-datasets-and-benchmarks)).
+`--judge` keeps your judge model and has it rate each reply with an evaluator's prompts instead of the
+case's rubric, such as `learning-commons-evaluators/withholding-answers`; from code, `judgePrompt` in
+`runAgentTests`. Its result names it in `judge_prompt`. No outside code runs: the prompts are data the
+harness sends. A judge of your own that runs as a service is a judge component, from code:
+`runAgentTests(doc, cases, { judgeComponent })` ([components.md](components.md#the-slots-that-call-one)).
 
 ## Checking the judge against people
 

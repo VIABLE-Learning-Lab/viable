@@ -5,10 +5,10 @@ researcher, or a developer building a learning app on them. It says what the cod
 guarantees, and what it leaves to you. To run agents and courses built on VIABLE on your own server,
 behind the same calls your apps make to VIABLE, see [self-hosting.md](self-hosting.md).
 
-**This is not legal advice.** It names questions a deployment has to answer, not the answers for
-your learners, your school or your country. Using this code does not make a deployment compliant
-with any law, contract or policy; how you run it, what you send to which model, and what you keep
-decide that. Ask your school's or institution's counsel and privacy officer before learners use it.
+It names the questions a deployment has to answer. The answers for your learners, your school and your
+country are for your school's or institution's counsel and privacy officer, before learners use it.
+Using this code doesn't make a deployment compliant with any law, contract or policy: how you run it,
+what you send to which model, and what you keep decide that.
 
 ## What the code guarantees
 
@@ -26,7 +26,7 @@ measures, the formats and the CLI), with its limits.
   model that reads aloud; a search sends the knowledge base's passages and its words to the model that searches by meaning.
   Each may be another provider: have an agreement with each one.
 - **Every model call goes through one of four services:** `callChatModel`, `generateImage`,
-  `generateSpeech` and `transcribeAudio` (README, "Services"). Replace them and every call the
+  `generateSpeech` and `transcribeAudio` ([guide.md](../../docs/guide.md#services)). Replace them and every call the
   engine, VETTING, `checkReply` and the agent test judge make goes through your code, to a gateway,
   a log or a filter of your own. In an agent run each call counts against the run's limit on model
   calls (the agent's `run_limits`, else 20 in a local run) and is offered to
@@ -39,9 +39,10 @@ measures, the formats and the CLI), with its limits.
   agent routes `unverified` and `attention` where you want them. A review is a
   model's judgment, not a guarantee that a reply is right or safe.
 - **Components declare what they receive.** Each component's manifest lists the learner data it
-  receives (`receives`), every other host it contacts (`sends_to`), and whether it calls models,
-  always through the host's model service ([components.md](../../harness/docs/components.md)). The six components the
-  Harness carries today run in its own process and contact no other host
+  receives (`receives`), every other host it contacts (`sends_to`), and whether it calls models (in
+  the Harness's process, through the host's model service; out of process, on its own, with that
+  model's host in `sends_to`) ([components.md](../../harness/docs/components.md)). The 14 components the
+  Harness carries today run in its own process, or are data that nothing runs, and contact no other host
   (`viable-harness components`). A component reaching data or hosts its manifest doesn't list is a
   security issue ([SECURITY.md](../../SECURITY.md)). One in a package you were sent starts no program
   unless you name it ([components.md](../../harness/docs/components.md#a-component-in-a-document)).

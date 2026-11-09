@@ -29,8 +29,7 @@ const copyRow = (label, link, state = '') => `<li><div><strong>${esc(label)}</st
 
 // Opening something a learner would trip on says so first.
 function openButton(doc, code, activity, meta) {
-  const trips = reviewOf(doc, activity).filter((note) => note.level === 'fix');
-  return `<button class="v-btn is-small" type="button" data-api="POST courses/${esc(code)}/activities/${esc(activity.key)}/release" data-body='${esc(JSON.stringify({ version: meta.version, release: 'open' }))}' data-said="Open to learners. Their link is below."${trips.length ? ` data-confirm="${esc(`Learners can reach “${activity.title}” once it’s open, and ${trips.map((note) => note.says.charAt(0).toLowerCase() + note.says.slice(1)).join(' ')} Open it to learners anyway?`)}" data-yes="Open to learners"` : ''}>Open to learners</button>`;
+  return `<button class="v-btn is-small" type="button" data-api="POST courses/${esc(code)}/activities/${esc(activity.key)}/release" data-body='${esc(JSON.stringify({ version: meta.version, release: 'open' }))}' data-checks="courses/${esc(code)}/checks?activity=${esc(activity.key)}" data-said="Open to learners. Their link is below.">Open to learners</button>`;
 }
 
 const SHOWS = { page: 'to read', questions: 'to answer', writing: 'to write', reading: 'to read', embed: 'to try' };
@@ -165,17 +164,21 @@ const toolsCard = (here) => card('Other tools for your teaching', `<ul class="as
 
 // Before learners come: what would stop the course working or trip them, each with where to fix it, and what is open. Drawn from what is
 // true now, so pressing a fix and coming back shows it ticked.
-async function checklistCard(here, spec) {
-  const { code, doc } = await courseAt(here.library, spec.course);
-  const list = activitiesOf(doc);
-  const named = (activities) => activities.map((activity) => `“${activity.title}”`).join(', ');
-  const place = (activity) => `/console/courses/${code}/activities/${activity.key}`;
+/**
+ * What would stop a course working for learners, each with where to fix it ({ ok, words, href, label }). With activity (a
+ * key), the checks of that one activity and of the course around it: what opening it asks first.
+ */
+export async function courseChecks(here, code, doc, { activity = null } = {}) {
+  const every = activitiesOf(doc);
+  const list = activity ? every.filter((item) => item.key === activity) : every;
+  const named = (activities) => activities.map((item) => `“${item.title}”`).join(', ');
+  const place = (item) => `/console/courses/${code}/activities/${item.key}`;
   const checks = [];
   const check = (ok, words, href = null, label = 'Fix it') => checks.push({ ok, words, href, label });
-  check(list.length > 0, list.length ? plural(list.length, 'activity', 'activities') : 'No activities yet', `/console/courses/${code}#add-title`, 'Add one');
-  const aimless = list.filter((activity) => !(activity.teaching?.goal || activity.teaching?.standard?.description));
-  if (list.length) check(!aimless.length, aimless.length ? `No goal yet: ${named(aimless)}` : 'Each activity has a goal', aimless[0] && place(aimless[0]), 'Set one');
-  const tripping = list.filter((activity) => reviewOf(doc, activity).some((note) => note.level === 'fix'));
+  if (!activity) check(list.length > 0, list.length ? plural(list.length, 'activity', 'activities') : 'No activities yet', `/console/courses/${code}#add-title`, 'Add one');
+  const aimless = list.filter((item) => !(item.teaching?.goal || item.teaching?.standard?.description));
+  if (list.length) check(!aimless.length, aimless.length ? `No goal yet: ${named(aimless)}` : activity ? 'It has a goal' : 'Each activity has a goal', aimless[0] && place(aimless[0]), 'Set one');
+  const tripping = list.filter((item) => reviewOf(doc, item).some((note) => note.level === 'fix'));
   if (list.length) check(!tripping.length, tripping.length ? `Learners would trip on something in ${named(tripping)}` : 'Nothing learners would trip on', tripping[0] && place(tripping[0]), 'See what');
   // How they get in: a course of codes with nobody on its list is shut to everyone, and its link gives no hint of it.
   if (here.classes?.saving && !here.signIn && doc.course.identify === 'code') {
@@ -187,9 +190,17 @@ async function checklistCard(here, spec) {
     check(Boolean(roles.reply), roles.reply ? 'A model writes the AI’s replies' : 'No model writes the AI’s replies yet', '/console/models', 'Choose one');
   }
   if (here.records?.tried && list.length) {
-    const tried = (await Promise.all(list.map((activity) => here.records.tried(code, activity.key, 1).catch(() => [])))).some((turns) => turns.length);
-    check(tried, tried ? 'You have tried it as a learner' : 'You haven’t tried it as a learner yet', `/console/api/courses/${code}/try`, 'Try it');
+    const tried = (await Promise.all(list.map((item) => here.records.tried(code, item.key, 1).catch(() => [])))).some((turns) => turns.length);
+    check(tried, tried ? 'You have tried it as a learner' : 'You haven’t tried it as a learner yet', `/console/api/courses/${code}/try${activity ? `/${activity}` : ''}`, 'Try it');
   }
+  return checks;
+}
+
+async function checklistCard(here, spec) {
+  const { code, doc } = await courseAt(here.library, spec.course);
+  const list = activitiesOf(doc);
+  const named = (activities) => activities.map((activity) => `“${activity.title}”`).join(', ');
+  const checks = await courseChecks(here, code, doc);
   const open = list.filter(await openerOf(here, code));
   const left = checks.filter((item) => !item.ok).length;
   const row = (item) => `<li class="${item.ok ? 'is-ok' : 'is-todo'}">${icon(item.ok ? 'check' : 'alert', 15)}<span>${esc(item.words)}</span>${!item.ok && item.href ? `<a class="v-btn is-small" href="${esc(item.href)}"${item.href.includes('/try') ? ' target="_blank" rel="noopener"' : ''}>${esc(item.label)}</a>` : ''}</li>`;
@@ -204,7 +215,64 @@ const choicesCard = (_here, spec, { past = false } = {}) => card(spec.question, 
   : `<div class="ask-choices">${spec.choices.map((choice) => `<button class="chip" type="button" data-say-this="${esc(choice)}">${esc(choice)}</button>`).join('')}</div>
 <p class="v-note">Or say it your own way below.</p>`);
 
-const DRAW = { choices: choicesCard, checklist: checklistCard, course: courseCard, activity: activityCard, try: tryCard, share: shareCard, 'class-list': classListCard, progress: progressCard, open: openCard, change: changeCard, 'not-a-list': notAListCard, tools: toolsCard };
+// Text a model wrote, as paragraphs and line breaks with **bold**: nothing in it can be markup.
+const prose = (text) => String(text).trim().split(/\n{2,}/).map((part) => `<p>${part.split('\n').map((line) => esc(line).replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')).join('<br>')}</p>`).join('');
+
+// Two ways to write something learners will read, side by side: one press chooses, and Ask puts it where it goes.
+const versionsCard = (_here, spec, { past = false } = {}) => card(spec.question, past
+  ? `<p class="v-note">${esc(spec.versions.map((version) => version.label).join(' · '))}</p>`
+  : `<div class="ask-pair">${spec.versions.map((version) => `<div class="ask-pair-item"><h4>${esc(version.label)}</h4><div class="ask-pair-text">${prose(version.text)}</div><button class="v-btn is-small" type="button" data-say-this="${esc(`Use “${version.label}”.`)}">Use this one</button></div>`).join('')}</div>
+<p class="v-note">Or say what to change below.</p>`);
+
+// What a question takes as its answer, as the teacher checks it: the right choice marked, the answers accepted, or read by them.
+const answerWords = (item) => {
+  if (item.choices?.length) {
+    const right = new Set([item.answer?.choice, ...(item.answer?.choices || [])].filter(Boolean));
+    return `<ul class="ask-q-choices">${item.choices.map((choice) => `<li${right.has(choice.id) ? ' class="is-right"' : ''}>${right.has(choice.id) ? icon('check', 13) : ''}<span>${esc(choice.text)}</span>${right.has(choice.id) ? '<span class="sr"> (right)</span>' : ''}</li>`).join('')}</ul>`;
+  }
+  if (item.answer?.accept?.length) return `<p class="ask-q-answer">Accepted: ${esc(item.answer.accept.join(', '))}</p>`;
+  return `<p class="ask-q-answer">${item.type === 'open' ? 'You read the answers.' : 'Any answer is kept for you to read.'}</p>`;
+};
+
+// The questions Ask wrote, to look over before learners meet them: each kept as it is, changed on its page, or removed.
+async function questionsCard(here, spec) {
+  const { code, doc } = await courseAt(here.library, spec.course);
+  const activity = activitiesOf(doc).find((item) => item.key === spec.activity);
+  if (!activity) return card('This has moved on', '<p class="v-note">That activity isn’t in this course anymore.</p>');
+  const steps = activity.workspace?.steps || [];
+  const parts = (activity.workspace?.panels || []).filter((panel) => panel.type === 'questions').map((panel) => ({
+    title: steps.find((step) => (step.panels || []).includes(panel.id))?.title || panel.title,
+    set: doc.question_sets?.find((set) => set.ref === panel.set_ref)
+  })).filter((part) => part.set?.items?.length);
+  const total = parts.reduce((sum, part) => sum + part.set.items.length, 0);
+  if (!total) return card('No questions here now', `<p class="v-note">“${esc(activity.title)}” has no questions left.</p>`);
+  const opened = (await openerOf(here, code))(activity);
+  const row = (part, item, index) => `<li id="look-${esc(part.set.ref)}-${esc(item.id)}"><div class="ask-q"><p class="ask-q-prompt"><span class="ask-q-n">${index + 1}</span>${esc(item.prompt)}</p>${answerWords(item)}</div>
+<div class="actions"><a class="v-btn is-small" href="/console/courses/${esc(code)}/questions/${esc(part.set.ref)}#q-${esc(item.id)}">Change</a><button class="v-btn is-small" type="button" data-api="DELETE courses/${esc(code)}/questions/${esc(part.set.ref)}/items/${esc(item.id)}" data-confirm="${esc(`Remove question ${index + 1}${parts.length > 1 ? ` of “${part.title}”` : ''}? ${opened ? 'Learners would no longer meet it.' : 'It goes from the activity.'}`)}" data-yes="Remove" data-danger data-said="Removed.">Remove</button></div></li>`;
+  return card(`${plural(total, 'question')} to look over`, `<p class="v-note">${opened ? `Learners can meet these now.` : `Learners meet them once “${esc(activity.title)}” opens.`} Check each answer: keep what is right, and change or remove the rest.</p>
+${parts.map((part) => `${parts.length > 1 ? `<h4 class="ask-q-step">${esc(part.title)}</h4>` : ''}<ol class="ask-qs">${part.set.items.map((item, index) => row(part, item, index)).join('')}</ol>`).join('')}`, { id: `questions-${code}-${activity.key}` });
+}
+
+// When each activity opens and closes, set here as on its page. Times show in the teacher's own time, by their browser.
+async function scheduleCard(here, spec) {
+  const { code, doc } = await courseAt(here.library, spec.course);
+  const list = activitiesOf(doc);
+  if (!list.length) return card(`When “${doc.course.title}” opens`, '<p class="v-note">No activities yet.</p>');
+  const time = (iso) => `<time datetime="${esc(iso)}" data-local>${esc(iso.slice(0, 16).replace('T', ' '))}</time>`;
+  const stateOf = (activity) => (activity.release !== 'hidden' ? (activity.closes_at ? `Open until ${time(activity.closes_at)}` : 'Open') : activity.opens_at ? `Opens ${time(activity.opens_at)}` : 'Hidden');
+  const row = (activity) => {
+    const open = activity.release !== 'hidden';
+    return `<li data-say-box id="when-${esc(activity.key)}"><div class="ask-when-what"><strong>${esc(activity.title)}</strong><span class="v-note">${stateOf(activity)}</span></div>
+<form class="ask-when-set" id="when-form-${esc(activity.key)}" data-api="POST courses/${esc(code)}/activities/${esc(activity.key)}/schedule" data-said="Saved."${open ? '' : ` data-checks="courses/${esc(code)}/checks?activity=${esc(activity.key)}" data-anyway="Set the time anyway"`}>
+${open ? '' : `<label class="ask-when-field"><span>Opens</span><input class="v-input" type="datetime-local" name="opens_at" data-iso="${esc(activity.opens_at || '')}" data-default-time="08:00" data-empty="Not set" aria-label="When “${esc(activity.title)}” opens"></label>`}
+<label class="ask-when-field"><span>Closes</span><input class="v-input" type="datetime-local" name="closes_at" data-iso="${esc(activity.closes_at || '')}" data-default-time="23:59" data-empty="Stays open" aria-label="When “${esc(activity.title)}” closes"></label>
+<button class="v-btn is-small" type="submit">Save</button>${say()}</form></li>`;
+  };
+  return card(`When “${doc.course.title}” opens`, `<ul class="ask-when">${list.map(row).join('')}</ul>
+<p class="v-note">An activity opens on its own at its time; empty, it waits for you to open it. Leave Closes empty to stay open.</p>`, { id: `schedule-${code}` });
+}
+
+const DRAW = { versions: versionsCard, questions: questionsCard, schedule: scheduleCard, choices: choicesCard, checklist: checklistCard, course: courseCard, activity: activityCard, try: tryCard, share: shareCard, 'class-list': classListCard, progress: progressCard, open: openCard, change: changeCard, 'not-a-list': notAListCard, tools: toolsCard };
 
 /** A card as HTML, from what is true now. One whose course has gone says so. */
 export async function drawCard(here, spec, context = {}) {
@@ -214,7 +282,27 @@ export async function drawCard(here, spec, context = {}) {
   }
 }
 
-export const ASK_CARD_CSS = `.ask-choices{display:flex;flex-wrap:wrap;gap:8px}
+export const ASK_CARD_CSS = `.ask-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px}
+.ask-pair-item{display:grid;grid-template-rows:auto 1fr auto;gap:8px;min-width:0;padding:14px;border:1px solid var(--public-rule);border-radius:var(--radius)}
+.ask-pair-item h4{margin:0;font-size:.875rem;font-weight:600}
+.ask-pair-text{min-width:0;color:var(--public-ink);font-size:.9375rem;line-height:1.55;overflow-wrap:anywhere}.ask-pair-text p{margin:0 0 8px}.ask-pair-text p:last-child{margin:0}
+.ask-pair-item .v-btn{justify-self:start}
+.ask-qs{display:grid;gap:0;margin:8px 0 0;padding:0;list-style:none}
+.ask-qs>li{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:8px 16px;padding:12px 0;border-top:1px solid var(--public-rule)}
+.ask-q{display:grid;gap:6px;flex:1 1 280px;min-width:0}
+.ask-q-prompt{display:flex;gap:8px;margin:0;color:var(--public-ink);font-weight:500;overflow-wrap:anywhere}
+.ask-q-n{flex:none;color:var(--muted);font-variant-numeric:tabular-nums}
+.ask-q-choices{display:grid;gap:3px;margin:0 0 0 22px;padding:0;list-style:none;font-size:.875rem;color:var(--public-text)}
+.ask-q-choices li{display:flex;align-items:baseline;gap:6px}.ask-q-choices li.is-right{color:var(--public-ink);font-weight:600}.ask-q-choices .v-icon{flex:none;color:var(--pass-green);position:relative;top:.15em}
+.ask-q-answer{margin:0 0 0 22px;color:var(--public-text);font-size:.875rem}
+.ask-q-step{margin:14px 0 0;font-size:.875rem;font-weight:600;color:var(--public-ink)}
+.ask-when{display:grid;gap:0;margin:0;padding:0;list-style:none}
+.ask-when>li{display:grid;gap:8px;padding:12px 0;border-top:1px solid var(--public-rule)}
+.ask-when-what{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px}
+.ask-when-set{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 12px}
+.ask-when-field{display:grid;gap:4px;flex:1 1 180px;max-width:240px;font-size:.8125rem;color:var(--muted)}
+.ask-when-set .v-btn{min-height:36px}
+.ask-choices{display:flex;flex-wrap:wrap;gap:8px}
 .ask-choices .chip{background:transparent;font:inherit;font-size:.875rem;cursor:pointer}
 .ask-choices .chip:hover{background:var(--field-mist);color:var(--public-ink)}
 .ask-checks{display:grid;gap:8px;margin:0;padding:0;list-style:none}

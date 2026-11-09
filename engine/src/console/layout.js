@@ -5,6 +5,7 @@
 import { markSvg, themeCss } from '../../../harness/src/ui/theme.js';
 import { escapeHtml } from '../learner/shell.js';
 import { CONSOLE_SCRIPT } from './client.js';
+import { DATE_PICKER_CSS } from './datePicker.js';
 import { icon } from './icons.js';
 
 const CONSOLE_CSS = `[hidden]{display:none!important}
@@ -71,12 +72,17 @@ html{scrollbar-color:var(--public-rule-strong) transparent;scrollbar-width:thin}
 .missing .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
 dialog.v-dialog{width:min(440px,calc(100vw - 32px));padding:22px;border:1px solid var(--public-rule);border-radius:var(--radius-lg);background:var(--surface);color:var(--public-ink);box-shadow:0 24px 64px -24px rgb(10 16 28/.5)}
 dialog.v-dialog::backdrop{background:rgb(10 16 28/.45)}
+.v-dialog-list{display:grid;gap:6px;margin:12px 0 16px;padding:0;list-style:none}
+.v-dialog-list li{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;padding:9px 12px;border-radius:var(--radius-sm);background:var(--field-mist);font-size:.9375rem}
+.v-dialog-list a{font-weight:600;white-space:nowrap}
 dialog.v-dialog[open]{animation:v-rise .18s var(--ease-out)}
 dialog.v-dialog p{margin:0 0 16px;line-height:1.5;overflow-wrap:anywhere}
 dialog.v-dialog label{display:grid;gap:6px;margin-bottom:16px}
 dialog.v-dialog .actions{display:flex;flex-direction:row-reverse;flex-wrap:wrap;justify-content:flex-start;gap:10px}
 .v-btn.is-danger{border-color:var(--pencil-red);background:var(--pencil-red);color:var(--surface)}
 .v-btn.is-danger:hover{border-color:var(--pencil-red);opacity:.9}
+.v-btn.danger{border-color:var(--pencil-red);color:var(--pencil-red)}
+.v-btn.danger:hover{border-color:var(--pencil-red);background:color-mix(in srgb,var(--pencil-red) 8%,transparent)}
 @keyframes v-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .v-form{grid-template-columns:minmax(0,1fr)}
 .v-menu-native{position:absolute;width:1px;height:1px;margin:0;padding:0;border:0;opacity:0;pointer-events:none}
@@ -122,7 +128,7 @@ const SPEED_CSS = `html.is-going::before,html.is-working::before{content:"";posi
 .side{view-transition-name:v-side}
 @media (prefers-reduced-motion:no-preference){@view-transition{navigation:auto}::view-transition-old(root),::view-transition-new(root){animation-duration:.14s}}
 @media (prefers-reduced-motion:reduce){html.is-going::before,html.is-working::before{animation:none;transform:scaleX(.9)}}`;
-const SHARED_CSS = `${themeCss()}\n${CONSOLE_CSS}\n${SPEED_CSS}`;
+const SHARED_CSS = `${themeCss()}\n${CONSOLE_CSS}\n${SPEED_CSS}\n${DATE_PICKER_CSS}`;
 const ASSETS = Object.fromEntries([[`base-${hashOf(SHARED_CSS)}.css`, { type: 'text/css; charset=utf-8', body: SHARED_CSS }], [`base-${hashOf(CONSOLE_SCRIPT)}.js`, { type: 'text/javascript; charset=utf-8', body: CONSOLE_SCRIPT }]]);
 const [SHARED_CSS_FILE, SHARED_JS_FILE] = Object.keys(ASSETS);
 /** A page's own large stylesheet or script as a shared file too, named when the module loads so every copy of the server knows it. */

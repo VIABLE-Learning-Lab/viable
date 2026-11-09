@@ -45,10 +45,10 @@ export function turnRecord(brief, step = null) {
   return {
     ...(step ? { step: { title: step.title, brief: step.brief || null } } : {}),
     ...(brief ? { brief: { moment: brief.moment, move: brief.move || null, move_source: brief.move_source || null, by: brief.by || 'rules', flag: brief.flag || null, went_in: [
-      ...(brief.misconceptions || []).map((item) => ({ what: 'A misconception that may be behind it', text: item.description, source: sourceName(item.source) })),
-      ...(brief.components || []).map((item) => ({ what: 'The part of the skill in play', text: item.description, source: sourceName(item.source) })),
-      ...(brief.prior || []).map((item) => ({ what: 'What to go back to', text: item.description, source: sourceName(item.source) })),
-      ...(brief.guidance || []).map((item) => ({ what: 'From research', text: item.text, source: item.source || null }))
+      ...(brief.misconceptions || []).map((item) => ({ kind: 'misconception', what: 'A misconception that may be behind it', text: item.description, source: sourceName(item.source) })),
+      ...(brief.components || []).map((item) => ({ kind: 'skill', what: 'The part of the skill in play', text: item.description, source: sourceName(item.source) })),
+      ...(brief.prior || []).map((item) => ({ kind: 'prior', what: 'What to go back to', text: item.description, source: sourceName(item.source) })),
+      ...(brief.guidance || []).map((item) => ({ kind: 'guidance', what: 'From research', text: item.text, source: item.source || null }))
     ] } } : {})
   };
 }

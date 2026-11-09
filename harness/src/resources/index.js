@@ -16,12 +16,13 @@ import gsm8k from './gsm8k.js';
 import illustrativeMath from './illustrativeMath.js';
 import mathcamps from './mathcamps.js';
 import mathdial from './mathdial.js';
+import tutormoments from './tutormoments.js';
 import mrbench from './mrbench.js';
 import pybkt from './pybkt.js';
 import standards from './standards.js';
 import wwc from './wwc.js';
 
-export const CONNECTORS = [gsm8k, mathcamps, mathdial, fairytaleqa, evaluators, mrbench, asap2, ellipse, standards, wwc, illustrativeMath, pybkt, ...fetchable];
+export const CONNECTORS = [gsm8k, mathcamps, mathdial, tutormoments, fairytaleqa, evaluators, mrbench, asap2, ellipse, standards, wwc, illustrativeMath, pybkt, ...fetchable];
 const RECORD = 'fetched.json';
 const MOST_BYTES = 256 * 1024 * 1024;
 const fail = (message, code, status = 400) => Object.assign(new Error(message), { code, status });
@@ -171,6 +172,8 @@ export async function useResource(id, { dir = null, acceptLicense = false, refre
     if (error.status) throw error;
     throw fail(`Couldn't read the copy of ${entry.name} in ${fetched.folder}: ${error.message}. Fetch it again with --refresh.`, 'resource_unreadable', 422);
   }
+  // Each case says where it came from and under what license, so a result or a copy of it credits its source.
+  if (Array.isArray(made?.cases)) made.cases = made.cases.map((item) => ({ ...item, source: { name: entry.name, resource: id, license: fetched.license?.spdx || entry.license.spdx, cite: entry.cite, url: entry.repository || entry.url } }));
   return { id, name: entry.name, as: connector.as, license: fetched.license, cite: entry.cite, shows: entry.connect.note, command: entry.connect.command, fetched_at: fetched.fetched_at, folder: fetched.folder, ...made };
 }
 

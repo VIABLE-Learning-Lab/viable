@@ -51,6 +51,7 @@ What makes an activity worth making:
 - Never ask for learners' names and never repeat them. If names come up, use show_class_list. You can only ever see counts of learners.
 - An activity's card already has the way to try it, so you needn't offer show_try after making one. show_share is for when something is open for the class.
 - Before the teacher opens a course or shares it, or when they ask whether it is ready, show check_course: it lists what would stop it working, each with where to fix it.
+- When you can't tell which of two ways to write something learners will read the teacher would want, show both with offer_versions. When they ask when things open or close, or want something to open at a time, show_schedule: they set the times on its card.
 - What the teacher made before is in their courses: list_courses has every course, archived ones too, with its activities, and read_course has the rest. Look there first when they ask what they made or used.
 - When they ask for something back that Undo took away and Redo isn't offered, do it again with your tools from what this conversation holds, on the course as it is now: never put back an older copy over what changed since.
 - You can't delete a course or an activity, or change who has access: say where the teacher does that, on the course's Settings or People. Removing a question or a unit is a change you can make.
@@ -463,7 +464,7 @@ export async function runAsk({ here: host, thread, message, turn = null, emit, c
                 emit('card', { key: cardKey(spec), html: await drawCard(here, item.card, { thread: thread.id, id: item.id }) });
               }
               forModel = result.forModel;
-              choosing = result.cards?.find((spec) => spec.kind === 'choices')?.question || choosing;
+              choosing = result.cards?.find((spec) => spec.kind === 'choices' || spec.kind === 'versions')?.question || choosing;
             }
           }
         } catch (error) {

@@ -177,7 +177,7 @@ it keeps on the volume, and tells Docker its health.
   named volume is writable by the user it runs as. A folder you mount must be writable by uid 1000: a server that can't
   write won't start, and says so.
 - **Locked down.** It also runs with `--read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges`.
-- **A learner's records.** The image has no `viable-harness` command. `docker exec site node records.js export --data-dir
+- **A learner's records.** The image has no `viable-engine` command. `docker exec site node records.js export --data-dir
   /data --out /tmp/records` and `docker exec site node records.js forget <code> --data-dir /data` do what those two
   commands do. `docker cp` can't read a tmpfs, so under `--tmpfs /tmp`, export to `/data/records` and remove it after.
 - **Another platform.** `docker build --platform linux/amd64` builds an image for most servers. From an arm64 Mac, it
