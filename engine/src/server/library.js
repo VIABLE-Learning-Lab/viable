@@ -291,13 +291,20 @@ export function courseLibrary({ store = null, given = [], readPath = null, fetch
     revision: async () => (store ? (await store.get(REVISION))?.value ?? null : null),
     onChange: (listener) => { listeners.push(listener); },
     entries,
-    /** What to serve: every entry that isn't closed. */
-    documents: async () => (await entries()).filter((entry) => entry.meta.status !== 'closed'),
-    /** Every course here, each at its address: [{ id, doc, meta, file, code }]. */
+    /** What to serve: every entry that isn't closed or archived. */
+    documents: async () => (await entries()).filter((entry) => entry.meta.status !== 'closed' && !entry.meta.archived_at),
+    /** Every course here, each at its address: [{ id, doc, meta, file, code }]. One under Archived keeps its address, and isn't here. */
     async courses() {
       const held = await entries();
       const codes = courseCodes(held.map((entry) => entry.doc));
-      return held.filter((entry) => entry.doc.course).map((entry) => ({ ...entry, code: codes.get(entry.doc) }));
+      return held.filter((entry) => entry.doc.course && !entry.meta.archived_at).map((entry) => ({ ...entry, code: codes.get(entry.doc) }));
+    },
+    /** The courses under Archived, the latest first: [{ id, code, title, archived_at, doc }]. */
+    async archived() {
+      const held = await entries();
+      const codes = courseCodes(held.map((entry) => entry.doc));
+      return held.filter((entry) => entry.doc.course && entry.meta.archived_at).sort((a, b) => b.meta.archived_at.localeCompare(a.meta.archived_at))
+        .map((entry) => ({ id: entry.id, code: codes.get(entry.doc), title: entry.doc.course.title || entry.meta.title, archived_at: entry.meta.archived_at, doc: entry.doc }));
     },
     /** What a package names by path, wherever it is held. */
     readPath: async (name, dir) => {
@@ -365,6 +372,22 @@ export function courseLibrary({ store = null, given = [], readPath = null, fetch
       const found = await open(id);
       if (found.meta.version === 0) throw refused('This one comes from a file the server was given. Edit it first, or stop serving the file.', 409, 'given_file');
       await store.put(keyOf.meta(id), { ...found.meta, status: status === 'closed' ? 'closed' : 'open' });
+      await changed();
+    }),
+    /** Under Archived: off learners' pages and the list of courses, kept here as it is until it is restored or deleted. */
+    archive: (id) => inLine(async () => {
+      needStore();
+      const found = await open(id);
+      if (found.meta.version === 0) throw refused('This one comes from a file the server was given. Edit it first, or stop serving the file.', 409, 'given_file');
+      await store.put(keyOf.meta(id), { ...found.meta, archived_at: new Date(now()).toISOString() });
+      await changed();
+    }),
+    /** Back from Archived, as it was. */
+    unarchive: (id) => inLine(async () => {
+      needStore();
+      const meta = { ...(await open(id)).meta };
+      delete meta.archived_at;
+      await store.put(keyOf.meta(id), meta);
       await changed();
     }),
     /** Off this server, with its versions and files. Learners' work goes separately. */

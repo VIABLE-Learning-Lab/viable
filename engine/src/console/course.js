@@ -42,6 +42,12 @@ export async function courseAt(library, code) {
   if (!found) throw refused('That course isn’t here.', 404, 'course_not_found');
   return found;
 }
+// What waits under Archived, by its address.
+async function archivedAt(library, code) {
+  const found = (library.archived ? await library.archived() : []).find((entry) => entry.code === code);
+  if (!found) throw refused('That course isn’t under Archived.', 404, 'course_not_found');
+  return found;
+}
 // A file can say its chat page is on, and that means anyone can spend this server's keys: here it starts paused, for someone to turn on.
 const paused = (doc) => { for (const agent of [doc, ...(doc?.agents || [])]) if (agent?.chat_page) agent.chat_page = { ...agent.chat_page, status: 'paused' }; return doc; };
 const SAVING = '<p class="notice">This server has no store, so courses can’t be changed here. Start it with a data folder (<code>viable-engine start</code>), or deploy it with a store.</p>';
@@ -50,7 +56,7 @@ const SAVING = '<p class="notice">This server has no store, so courses can’t b
 
 async function listBody(tools) {
   const { library, classes, settings, simple } = tools;
-  const courses = await library.courses();
+  const [courses, archived] = await Promise.all([library.courses(), library.archived ? library.archived() : []]);
   const cards = await Promise.all(courses.map(async (entry) => {
     const { code } = entry;
     const facts = [plural((entry.doc.course.activities || []).length, 'activity', 'activities'), plural((await classes.people(code)).length, 'learner'), ...(entry.meta.version === 0 ? [`From ${entry.file}`] : [])];
@@ -65,7 +71,20 @@ ${saving ? '' : SAVING}
 ${saving && using && !using.roles.reply ? '<p class="notice">No model writes replies yet. <a href="/console/models">Set one up</a> and the AI in your activities starts working. You can build a course first.</p>' : ''}
 ${cards.length || simple ? '' : '<p class="v-note first-door">Only want a chat button for a website? <a href="/console/chat-pages">Start with a chat page</a>.</p>'}
 ${cards.length ? `<ul class="course-list">${cards.join('')}</ul>` : ''}
-${saving && !cards.length ? await startParts(tools) : ''}`;
+${saving && !cards.length ? await startParts(tools) : ''}
+${archived.length ? archivedPart(archived, { forGood: !library.archives, just: tools.url?.searchParams.get('archived') }) : ''}`;
+}
+
+// What waits under Archived: learners can't open it, and it can come back as it was or be deleted. Where a host keeps what learners did
+// (library.archives), deleting takes it out of the teacher's courses; here it takes it, and their work, off the server.
+function archivedPart(list, { forGood, just }) {
+  const sure = (entry) => (forGood ? `This deletes “${entry.title}”, its versions and everything its learners did from this server. It can’t be undone.` : `Delete “${entry.title}”? It leaves your courses, and you can’t bring it back.`);
+  const row = (entry) => `<li id="archived-${esc(entry.code)}"${entry.code === just ? ' class="is-just"' : ''} data-say-box><div><strong>${esc(entry.title)}</strong><small>${entry.code === just ? 'Archived just now' : `Archived <time data-local datetime="${esc(entry.archived_at)}">${esc(entry.archived_at.slice(0, 10))}</time>`}</small></div>
+<div class="actions"><button class="v-btn is-small" type="button" data-api="POST archived/${esc(entry.code)}/restore" data-busy="Restoring…">Restore</button><button class="v-btn is-small danger" type="button" data-api="DELETE archived/${esc(entry.code)}" data-confirm="${esc(sure(entry))}"${forGood ? ' data-type="DELETE"' : ''} data-yes="Delete">Delete</button></div>${say()}</li>`;
+  return `<details class="archived" id="archived"${just != null ? ' open' : ''}><summary>Archived <small>${list.length}</small></summary>
+<p class="v-note">Learners can’t open these. Restore one to have it back as it was, with its learners and their work, or delete it.</p>
+<ul class="archived-list">${list.map(row).join('')}</ul>
+</details>`;
 }
 
 const AUDIENCE_WORDS = { children: 'For children', teens: 'For teens', adults: 'For adults' };
@@ -119,6 +138,18 @@ const LIST_CSS = `.page-head{display:flex;flex-wrap:wrap;align-items:flex-start;
 .course-card strong{font-size:1.0625rem;font-weight:600;overflow-wrap:anywhere}
 .course-card small{color:var(--muted);font-size:.875rem}
 .first-door{margin-top:14px}
+.archived{margin-top:36px;border-top:1px solid var(--public-rule);padding-top:14px}
+.archived summary{width:fit-content;color:var(--public-text);font-size:.9375rem;font-weight:600;cursor:pointer}
+.archived summary small{margin-left:4px;color:var(--muted);font-weight:400}
+.archived>.v-note{margin:10px 0 0}
+.archived-list{display:grid;gap:0;margin:8px 0 0;padding:0;list-style:none}
+.archived-list li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding:12px 0;border-bottom:1px solid var(--public-rule)}
+.archived-list li>div:first-child{display:grid;gap:2px;min-width:0}
+.archived-list strong{color:var(--public-text);font-weight:600;overflow-wrap:anywhere}
+.archived-list small{color:var(--muted);font-size:.8125rem}
+.archived-list .actions{display:flex;flex-wrap:wrap;gap:8px}
+.archived-list li.is-just strong{color:var(--public-ink)}
+.archived-list .danger{border-color:var(--pencil-red);color:var(--pencil-red)}
 .start-part{display:grid;gap:12px;max-width:720px}
 .start-part>h2+*{margin-top:0}
 .new-blank{display:flex;flex-wrap:wrap;gap:10px}
@@ -329,10 +360,10 @@ ${versions ? `<section class="block" aria-labelledby="versions-title" data-say-b
 <ul class="versions">${versions}</ul>${say()}
 </section>` : ''}
 ${locked || given ? '' : `<section class="block" aria-labelledby="end-title" data-say-box>
-<h2 id="end-title">Close or ${library.archives ? 'archive' : 'delete'}</h2>
+<h2 id="end-title">Close or ${library.archive ? 'archive' : 'delete'}</h2>
 <div class="end">
 <div><p class="v-note">Closed, learners can’t open it. Their work stays, and you can open it again.</p><button class="v-btn" type="button" data-api="POST courses/${esc(code)}/status" data-body='${esc(JSON.stringify({ status: meta.status === 'closed' ? 'open' : 'closed' }))}' data-said="${meta.status === 'closed' ? 'Open again.' : 'Closed.'}">${meta.status === 'closed' ? 'Open it again' : 'Close this course'}</button></div>
-${library.archives ? `<div><p class="v-note">Archived, learners can’t open it and it leaves your list. What they did stays, on the VIABLE Developer Platform under Learners.</p><button class="v-btn danger" type="button" data-api="DELETE courses/${esc(code)}" data-confirm="This archives “${esc(course.title)}”: learners can’t open it any more." data-yes="Archive">Archive this course</button></div>` : `<div><p class="v-note">Deleted, the course and its versions are gone from this server, with every learner’s work in it. This can’t be undone. Download it first if you may want it.</p><button class="v-btn danger" type="button" data-api="DELETE courses/${esc(code)}" data-confirm="This deletes “${esc(course.title)}”, its versions and everything its learners did. It can’t be undone." data-type="DELETE" data-yes="Delete">Delete this course</button></div>`}
+${library.archive ? `<div><p class="v-note">Archived, learners can’t open it, and it moves to Archived at the foot of your courses. From there you can restore it as it was, or delete it.</p><button class="v-btn" type="button" data-api="POST courses/${esc(code)}/archive" data-confirm="Archive “${esc(course.title)}”? Learners can’t open it until you restore it." data-yes="Archive">Archive this course</button></div>` : `<div><p class="v-note">Deleted, the course and its versions are gone from this server, with every learner’s work in it. This can’t be undone. Download it first if you may want it.</p><button class="v-btn danger" type="button" data-api="DELETE courses/${esc(code)}" data-confirm="This deletes “${esc(course.title)}”, its versions and everything its learners did. It can’t be undone." data-type="DELETE" data-yes="Delete">Delete this course</button></div>`}
 </div>${say()}
 </section>`}`,
     css: `${LOOKS_CSS}\n.settings{display:grid;gap:18px;max-width:640px}.versions{margin:12px 0 0;padding:0;list-style:none;border-top:1px solid var(--public-rule)}.versions li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;padding:10px 0;border-bottom:1px solid var(--public-rule)}.file-actions{margin-top:12px}.end{display:grid;gap:18px;margin-top:12px}.end>div{display:grid;gap:10px;justify-items:start}.danger{border-color:var(--pencil-red);color:var(--pencil-red)}.danger:hover{border-color:var(--pencil-red);background:color-mix(in srgb,var(--pencil-red) 8%,transparent)}`
@@ -398,6 +429,23 @@ export const coursePages = [
         await library.remove(entry.id);
         await classes.forgetCourse(entry);
         return go('/console/courses');
+      }],
+      // Archived: off learners' pages and the list, kept as it is; the list opens where it went.
+      ['POST', /^courses\/([\w-]+)\/archive$/, async ({ library }, match) => {
+        const entry = await courseAt(library, match[1]);
+        await library.archive(entry.id);
+        return go(`/console/courses?archived=${encodeURIComponent(entry.code)}#archived`);
+      }],
+      ['POST', /^archived\/([\w-]+)\/restore$/, async ({ library }, match) => {
+        await library.unarchive((await archivedAt(library, match[1])).id);
+        return go('/console/courses');
+      }],
+      ['DELETE', /^archived\/([\w-]+)$/, async ({ library, classes }, match) => {
+        const entry = await archivedAt(library, match[1]);
+        await library.remove(entry.id);
+        // Where the host keeps what learners did, it has nothing here to forget.
+        if (entry.doc) await classes.forgetCourse(entry);
+        return go('/console/courses?archived=#archived');
       }],
       // Trying it as a learner: where that is differs by host, so a page links here and is sent on.
       ['GET', /^courses\/([\w-]+)\/try(?:\/([\w-]+))?$/, async ({ library, tryLink, url }, match) => {

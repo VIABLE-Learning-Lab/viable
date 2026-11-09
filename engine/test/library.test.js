@@ -226,6 +226,48 @@ test('a reading’s PDF, added to a course that came from a file, is kept and co
   assert.equal(kept.course.code, 'given-course', 'at the address it had');
 });
 
+test('archived, a course waits under Archived with what learners did, and comes back as it was or is deleted from there', async () => {
+  const store = memoryStore();
+  const handler = await app(store);
+  const consolePage = async (path) => (await handler(new Request(`${URL_BASE}${path}`, { headers: { authorization: `Bearer ${TOKEN}`, accept: 'text/html' } }))).text();
+  await json(await call(handler, 'POST', 'courses', { title: 'Kept' }));
+  await json(await visit(handler, '/course/kept/home', { visitor: 'e'.repeat(32) }));
+  const work = await store.list('courses/kept/');
+  assert.ok(work.length > 0);
+  assert.match(await consolePage('/console/courses/kept/settings'), /data-api="POST courses\/kept\/archive"/, 'settings archive it, and delete nothing');
+  assert.doesNotMatch(await consolePage('/console/courses/kept/settings'), /Delete this course/);
+
+  // Archived: off the list and learners' pages, its learners' work kept, and what the browser fetched ahead dropped.
+  const archived = await call(handler, 'POST', 'courses/kept/archive', {});
+  assert.equal(archived.headers.get('clear-site-data'), '"prefetchCache"');
+  assert.equal((await json(archived)).go, '/console/courses?archived=kept#archived');
+  const listed = await consolePage('/console/courses?archived=kept');
+  assert.doesNotMatch(listed, /class="course-card"/);
+  assert.match(listed, /<details class="archived" id="archived" open>/);
+  assert.match(listed, /<li id="archived-kept" class="is-just"[^>]*><div><strong>Kept<\/strong><small>Archived just now<\/small>/);
+  assert.match(await (await page(handler, '/course/kept')).text(), /isn’t open right now/);
+  assert.deepEqual(await store.list('courses/kept/'), work);
+  assert.equal((await call(handler, 'GET', 'courses/kept')).status, 404);
+
+  // Restored, it is back as it was.
+  assert.equal((await json(await call(handler, 'POST', 'archived/kept/restore', {}))).go, '/console/courses');
+  assert.match(await consolePage('/console/courses'), /href="\/console\/courses\/kept"/);
+  assert.doesNotMatch(await consolePage('/console/courses'), /id="archived"/, 'nothing left under Archived');
+  assert.doesNotMatch(await (await page(handler, '/course/kept')).text(), /isn’t open right now/);
+
+  // Deleted from Archived, it and its learners' work leave the server; the page says so first, and asks for the word.
+  await json(await call(handler, 'POST', 'courses/kept/archive', {}));
+  assert.match(await consolePage('/console/courses'), /data-api="DELETE archived\/kept" data-confirm="This deletes “Kept”, its versions and everything its learners did from this server\. It can’t be undone\." data-type="DELETE"/);
+  assert.equal((await json(await call(handler, 'DELETE', 'archived/kept', {}))).go, '/console/courses?archived=#archived');
+  assert.deepEqual(await store.list('courses/kept/'), []);
+  assert.deepEqual(await store.list('library/items/'), []);
+  assert.equal((await call(handler, 'POST', 'archived/kept/restore', {})).status, 404);
+  // A read changes nothing, so it leaves what the browser fetched ahead.
+  const read = await call(handler, 'GET', 'ask/choices');
+  assert.equal(read.status, 200);
+  assert.equal(read.headers.get('clear-site-data'), null);
+});
+
 test('deleting a course deletes what learners did in it', async () => {
   const store = memoryStore();
   const handler = await app(store);

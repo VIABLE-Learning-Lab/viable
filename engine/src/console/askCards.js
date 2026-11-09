@@ -22,13 +22,16 @@ const copyRow = (label, link, state = '') => `<li><div><strong>${esc(label)}</st
 // Opening something a learner would trip on says so first.
 function openButton(doc, code, activity, meta) {
   const trips = reviewOf(doc, activity).filter((note) => note.level === 'fix');
-  return `<button class="v-btn is-small" type="button" data-api="POST courses/${esc(code)}/activities/${esc(activity.key)}/release" data-body='${esc(JSON.stringify({ version: meta.version, release: 'open' }))}' data-said="Open to learners."${trips.length ? ` data-confirm="${esc(`Learners can reach “${activity.title}” once it’s open, and ${trips.map((note) => note.says.charAt(0).toLowerCase() + note.says.slice(1)).join(' ')} Open it anyway?`)}" data-yes="Open it"` : ''}>Open it</button>`;
+  return `<button class="v-btn is-small" type="button" data-api="POST courses/${esc(code)}/activities/${esc(activity.key)}/release" data-body='${esc(JSON.stringify({ version: meta.version, release: 'open' }))}' data-said="Open to learners. Their link is below."${trips.length ? ` data-confirm="${esc(`Learners can reach “${activity.title}” once it’s open, and ${trips.map((note) => note.says.charAt(0).toLowerCase() + note.says.slice(1)).join(' ')} Open it to learners anyway?`)}" data-yes="Open to learners"` : ''}>Open to learners</button>`;
 }
 
 const SHOWS = { page: 'to read', questions: 'to answer', writing: 'to write', reading: 'to read', embed: 'to try' };
 
-/** One activity as what learners do, so a teacher can see at a glance whether it is any good, and the way to try it. */
-async function activityCard(here, spec) {
+/**
+ * One activity as what learners do, so a teacher can see at a glance whether it is any good, and the way to try it. Once it is open,
+ * how learners get to it, unless the conversation already has the course's links (context.shared: the courses it has them for).
+ */
+async function activityCard(here, spec, context = {}) {
   const { code, doc, meta } = await courseAt(here.library, spec.course);
   const activity = activitiesOf(doc).find((item) => item.key === spec.activity);
   if (!activity) return card('This has moved on', '<p class="v-note">That activity isn’t in this course anymore.</p>');
@@ -40,7 +43,8 @@ async function activityCard(here, spec) {
 ${taught.goal ? `<p class="ask-goal">${esc(taught.goal)}</p>` : ''}
 ${steps.length ? `<ol class="ask-flow">${steps.map(row).join('')}</ol>` : `<p class="v-note">A conversation with the AI${activity.opening?.says ? `, which starts: “${esc(activity.opening.says)}”` : ''}.</p>`}
 ${notes.length ? `<ul class="ask-notes">${notes.map((note) => `<li class="is-${esc(note.level)}">${esc(note.says)}</li>`).join('')}</ul>` : ''}${say()}
-<div class="actions"><a class="v-btn is-small is-primary" href="/console/api/courses/${esc(code)}/try/${esc(activity.key)}" target="_blank" rel="noopener">Try it as a learner</a><a class="v-btn is-small" href="/console/courses/${esc(code)}/activities/${esc(activity.key)}">See all of it</a>${isOpen(activity) ? '' : openButton(doc, code, activity, meta)}</div>`, { id: `activity-${code}-${activity.key}` });
+<div class="actions"><a class="v-btn is-small is-primary" href="/console/api/courses/${esc(code)}/try/${esc(activity.key)}" target="_blank" rel="noopener">Try it as a learner</a><a class="v-btn is-small" href="/console/courses/${esc(code)}/activities/${esc(activity.key)}">See all of it</a>${isOpen(activity) ? '' : openButton(doc, code, activity, meta)}</div>
+${isOpen(activity) && !context.shared?.has(code) ? `<div class="ask-reach"><h4>Learners can open it now</h4>${reachPart(here, code, doc, meta).html}</div>` : ''}`, { id: `activity-${code}-${activity.key}` });
 }
 
 async function courseCard(here, spec) {
@@ -57,22 +61,28 @@ async function tryCard(here, spec) {
 <div class="actions"><a class="v-btn is-small is-primary" href="/console/api/courses/${esc(code)}/try${activity ? `/${esc(activity.key)}` : ''}" target="_blank" rel="noopener">Try it</a></div>`);
 }
 
-async function shareCard(here, spec) {
-  const { code, doc, meta } = await courseAt(here.library, spec.course);
+// How learners reach a course: its link to copy, the poster to show the class, and a QR code to scan, with what would stop it working said first.
+function reachPart(here, code, doc, meta) {
   const { base, local } = reachOf(here.origin, here.addresses);
   const link = `${base}/course/${code}`;
-  const list = activitiesOf(doc);
-  const open = list.filter(isOpen);
-  const sections = await here.classes.sections(code);
   const note = meta.status === 'closed' ? '<p class="notice">This course is closed, so its link doesn’t open it. Open it again in Settings.</p>'
-    : !open.length ? '<p class="notice">Nothing is open yet, so learners would find an empty course. Open an activity first.</p>' : '';
-  return card(`Give your class “${doc.course.title}”`, `${note}${local && !here.addresses?.length ? '<p class="notice">This address only opens on this computer. <a href="/console/courses/' + esc(code) + '/share">To reach it from elsewhere</a></p>' : ''}
+    : !activitiesOf(doc).some(isOpen) ? '<p class="notice">Nothing is open yet, so learners would find an empty course. Open an activity first.</p>' : '';
+  return { link, html: `${note}${local && !here.addresses?.length ? '<p class="notice">This address only opens on this computer. <a href="/console/courses/' + esc(code) + '/share">To reach it from elsewhere</a></p>' : ''}
 <div class="ask-share"><div>
 <p class="v-note">The course’s link stays the same all term. What they can open changes as activities open.</p>
 <p class="ask-link"><code>${esc(link)}</code></p>
 ${here.joinAt ? `<p class="v-note">With no link to hand, they can go to <strong>${esc(here.joinAt)}</strong> and type <strong>${esc(showCode(code))}</strong>.</p>` : ''}
 <div class="actions"><button class="v-btn is-small is-primary" type="button" data-copy="${esc(link)}">Copy link</button><a class="v-btn is-small" href="/console/courses/${esc(code)}/share/poster">Show to the class</a></div>
-</div>${qrSvg(link, { label: `QR code for ${link}` })}</div>
+</div>${qrSvg(link, { label: `QR code for ${link}` })}</div>` };
+}
+
+async function shareCard(here, spec) {
+  const { code, doc, meta } = await courseAt(here.library, spec.course);
+  const { link, html } = reachPart(here, code, doc, meta);
+  const list = activitiesOf(doc);
+  const open = list.filter(isOpen);
+  const sections = await here.classes.sections(code);
+  return card(`Give your class “${doc.course.title}”`, `${html}
 ${open.length ? `<details class="ask-more"${open.length <= 6 ? ' open' : ''}><summary>A link for each activity</summary><ul class="ask-rows">${list.map((activity) => copyRow(activity.title, `${link}/${activity.key}`, isOpen(activity) ? '' : ' <span class="v-note">hidden for now</span>')).join('')}</ul></details>` : ''}
 ${sections.length ? `<details class="ask-more" open><summary>A link for each section</summary><ul class="ask-rows">${sections.map((section) => copyRow(section.name, `${link}?section=${encodeURIComponent(section.key)}`)).join('')}</ul></details>` : ''}`);
 }
@@ -108,14 +118,14 @@ async function openCard(here, spec, { thread, id, state }) {
   const sectionName = spec.section ? (await here.classes.sections(spec.course)).find((item) => item.id === spec.section)?.name : null;
   const who = sectionName || 'everyone in the course';
   const title = activity?.title || 'This activity';
-  if (state === 'done') return card(`“${title}” is ${spec.open ? `open for ${who}` : 'hidden'}`, `<p class="v-mark pass">You pressed ${spec.open ? 'Open' : 'Hide'}.</p>${say()}`, { id: `pending-${id}`, className: 'is-settled' });
+  if (state === 'done') return card(`“${title}” is ${spec.open ? `open for ${who}` : 'hidden'}`, `<p class="v-mark pass">You pressed ${spec.open ? 'Open to learners' : 'Hide from learners'}.</p>${say()}`, { id: `pending-${id}`, className: 'is-settled' });
   if (state === 'declined') return card(`“${title}” wasn’t changed`, `<p class="v-note">You said not yet. It stays as it was.</p>${say()}`, { id: `pending-${id}`, className: 'is-settled' });
   const api = `ask/${esc(thread)}/pending/${esc(id)}`;
   const [own, sections] = spec.open ? [{}, []] : await Promise.all([here.classes.releases(spec.course), here.classes.sections(spec.course)]);
   const stays = Object.entries(own[spec.activity] || {}).filter(([, item]) => item?.release !== 'hidden').map(([section]) => sections.find((item) => item.id === section)?.name).filter(Boolean);
   const help = activity?.teaching?.help ? `<li>The AI ${esc(HELP_WORDS[activity.teaching.help])}.</li>` : activity?.agent_ref ? '<li>You haven’t said how far the AI may go.</li>' : '<li>No AI in this activity.</li>';
   return card(spec.open ? `Open “${title}”?` : `Hide “${title}”?`, `${spec.open ? `<ul class="ask-facts"><li>For ${esc(who)}, from now.</li>${help}<li>You can hide it again at any time.</li></ul>` : `<p class="v-note">Learners can’t open it after this${stays.length ? `, except ${esc(stays.join(', '))}, where it is open on its own: change that on the course’s page` : ''}. What they did stays.</p>`}
-<div class="actions"><button class="v-btn is-small is-primary" type="button" data-api="POST ${api}" data-body='{"yes":true}'>${spec.open ? 'Open it' : 'Hide it'}</button><button class="v-btn is-small" type="button" data-api="POST ${api}" data-body='{"yes":false}'>Not yet</button></div>${say()}`, { id: `pending-${id}`, className: 'is-waiting' });
+<div class="actions"><button class="v-btn is-small is-primary" type="button" data-api="POST ${api}" data-body='{"yes":true}'>${spec.open ? 'Open to learners' : 'Hide from learners'}</button><button class="v-btn is-small" type="button" data-api="POST ${api}" data-body='{"yes":false}'>Not yet</button></div>${say()}`, { id: `pending-${id}`, className: 'is-waiting' });
 }
 
 // A change learners would meet, as a person's click: what it would be, in words.
@@ -161,7 +171,7 @@ export const ASK_CARD_CSS = `.ask-card.v-card{display:grid;gap:12px;padding:16px
 .ask-rows strong{font-weight:600}
 .ask-rows small{color:var(--muted);font-size:.8125rem}
 .ask-rows code{font-size:.8125rem;overflow-wrap:anywhere}
-.ask-rows.ask-activities li{display:grid;grid-template-columns:minmax(0,1fr) 74px 92px;justify-content:initial}
+.ask-rows.ask-activities li{display:grid;grid-template-columns:minmax(0,1fr) 74px 140px;justify-content:initial}
 .ask-activities .v-pill{justify-self:start}
 .ask-row-do{display:flex;justify-content:flex-end}
 .ask-activity-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:-4px}
@@ -179,6 +189,9 @@ export const ASK_CARD_CSS = `.ask-card.v-card{display:grid;gap:12px;padding:16px
 .ask-notes li{position:relative;padding-left:14px;color:var(--public-text)}
 .ask-notes li::before{content:"";position:absolute;left:0;top:.55em;width:6px;height:6px;border-radius:50%;background:var(--public-rule-strong)}
 .ask-notes li.is-fix::before{background:var(--pencil-red)}
+.ask-reach{display:grid;gap:10px;margin-top:4px;padding:14px 16px;border-radius:var(--radius-sm);background:var(--field-sage)}
+.ask-reach h4{margin:0;color:var(--public-ink);font-size:.9375rem;font-weight:600;letter-spacing:0}
+.ask-reach .ask-link code{background:var(--surface)}
 .ask-share{display:grid;grid-template-columns:minmax(0,1fr) 132px;gap:16px;align-items:start}
 .ask-share>div{display:grid;gap:10px}
 .ask-share .qr{width:132px;height:auto;border-radius:var(--radius-sm)}

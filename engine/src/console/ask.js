@@ -184,13 +184,15 @@ async function threadHtml(here, thread, running) {
   }
   const way = whichChange(thread);
   const parts = [];
+  // The courses whose links a card here already gives, so an open activity's card doesn't give them again.
+  const shared = new Set(turns.flatMap((turn) => turn.cards).filter((item) => item.card.kind === 'share').map((item) => item.card.course));
   for (const [index, { you, run, said: words, cards, changed, worked }] of turns.entries()) {
     const now = running && index === turns.length - 1;
     if (you) parts.push(youHtml(you));
     if (run.length || now) parts.push(runHtml(run, { worked, running: now, since: now ? thread.running_at : null }));
     for (const item of words) parts.push(`<div class="ask-said">${said(item.text)}</div>`);
     if (!now) parts.push(sourcesHtml(run));
-    for (const item of cards.filter((item, at) => !cardKey(item.card) || cards.findLastIndex((other) => cardKey(other.card) === cardKey(item.card)) === at)) parts.push(await drawCard(here, item.card, { thread: thread.id, id: item.id, state: item.state }));
+    for (const item of cards.filter((item, at) => !cardKey(item.card) || cards.findLastIndex((other) => cardKey(other.card) === cardKey(item.card)) === at)) parts.push(await drawCard(here, item.card, { thread: thread.id, id: item.id, state: item.state, shared }));
     for (const item of changed) parts.push(changedHtml(item, thread, now ? null : way(item)));
   }
   return parts.join('');
@@ -492,7 +494,8 @@ async function travel(here, thread, id, to) {
   if (!body) throw refused('That change wasn’t kept, so it can’t be undone. Say what to change instead.', 404, 'change_not_kept');
   for (const course of body.courses) {
     if (course.created) {
-      if (to === 'before') { const entry = await courseAt(here.library, course.code).catch(() => null); if (entry) await (here.library.archives ? here.library.remove(entry.id) : here.library.setStatus(entry.id, 'closed')); }
+      // Undone, a new course leaves the list: where the host keeps what learners did, out of sight; on a server of one's own, under Archived, since deleting there can't be redone.
+      if (to === 'before') { const entry = await courseAt(here.library, course.code).catch(() => null); if (entry) await (here.library.archives ? here.library.remove(entry.id) : here.library.archive ? here.library.archive(entry.id) : here.library.setStatus(entry.id, 'closed')); }
       else if (here.library.unarchive) await here.library.unarchive(course.id);
       else await here.library.setStatus(course.id, 'open');
       continue;

@@ -131,7 +131,7 @@ test('what reaches learners waits for a person: the model can only propose it, a
   assert.equal(course.activities[0].release, 'hidden', 'proposing changes nothing, whatever the model then says');
   assert.equal(s.sent.length, 3, 'a proposal ends the turn, so the model can’t go on to say it happened');
   assert.doesNotMatch(allText(events), /It’s open now|made\.up/);
-  assert.ok(events.some((event) => event.name === 'card' && /Open it/.test(event.data.html)), 'the button is on its card');
+  assert.ok(events.some((event) => event.name === 'card' && />Open to learners<\/button>/.test(event.data.html)), 'the button is on its card, saying who it opens to');
   assert.ok(!events.some((event) => event.name === 'said' && /is open/.test(event.data.html)));
 
   const thread = threadOf(events);
@@ -161,6 +161,7 @@ test('a person’s click opens it, and the next turn’s model knows', async () 
   assert.match(after, /You pressed Open/);
   assert.match(after, /Give your class/, 'pressing Open hands over the links');
   assert.doesNotMatch(after, /Nothing is open yet/);
+  assert.doesNotMatch(after, /Learners can open it now/, 'once, not again on the activity’s card');
   await s.ask('Thanks. What next?', thread);
   assert.match(JSON.stringify(s.sent.at(-1).messages), /The teacher pressed the button: open/);
 });
@@ -459,6 +460,24 @@ test('what Ask looks up and sets says whose work it is, in the page’s words', 
   assert.match(done, /How much the AI does: Gives hints/);
   assert.match(done, new RegExp(`Skill: ${skill} at Integrating, from Carnegie Skills Progressions, CC BY 4\\.0`));
   assert.match(done, /Listening for 1 misconception, from Eedi Misconceptions Graph v1\.0, CC BY 4\.0/);
+});
+
+test('an activity card says it opens to learners, and once open, shows how they get to it', async () => {
+  const s = await server(following(SETUP));
+  const events = await s.ask('Fractions for my grade 5 class, period 2.');
+  const thread = threadOf(events);
+  const card = events.find((event) => event.name === 'card' && /Practice: adding fractions/.test(event.data.html)).data.html;
+  assert.match(card, />Open to learners<\/button>/);
+  assert.doesNotMatch(card, />Open it<\/button>/);
+  assert.doesNotMatch(card, /Learners can open it now/, 'nothing to share while it is hidden');
+  const button = /data-api="POST (courses\/[\w-]+\/activities\/[\w-]+\/release)" data-body='([^']+)'/.exec(card);
+  const opened = await s.api('POST', button[1], JSON.parse(button[2].replaceAll('&quot;', '"')));
+  assert.equal(opened.status, 200);
+  assert.equal(opened.headers.get('clear-site-data'), '"prefetchCache"');
+  // Drawn again from what is true now, the card has the class link, the poster and a QR code to scan.
+  const page = await s.page(`ask/${thread}`);
+  const shown = page.slice(page.indexOf('Practice: adding fractions'));
+  assert.match(shown, /<div class="ask-reach"><h4>Learners can open it now<\/h4>[\s\S]*?<p class="ask-link"><code>[^<]*\/course\/fractions-period-2<\/code><\/p>[\s\S]*?Copy link[\s\S]*?Show to the class[\s\S]*?<svg class="qr"/);
 });
 
 test('a host’s standards search names its source when the host gives one', async () => {

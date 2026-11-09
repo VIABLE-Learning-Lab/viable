@@ -81,7 +81,12 @@ export function consoleApp({ tools, pages = PAGES, readBody, readJson, brand, si
       const body = request.method === 'GET' ? null : size ? await readBody(request, size).catch((error) => { throw error.code === 'agent_input_too_large' ? Object.assign(new Error(`A file here can be at most ${Math.round(size / 1048576)} MB.`), { status: 413, code: 'file_too_large' }) : error; }) : await readJson(request);
       if (!size && body !== null && (typeof body !== 'object' || Array.isArray(body))) return refusal(400, 'invalid_json', 'Send a JSON object.');
       const made = await route[2](here, route[1].exec(path), body);
-      return made instanceof Response ? made : answer(200, made);
+      if (made instanceof Response) return made;
+      const answered = answer(200, made);
+      // A change makes the pages a browser fetched ahead out of date (the console's links are fetched as a pointer rests on them):
+      // it drops them, so the next page shows the change.
+      if (request.method !== 'GET') answered.headers.set('clear-site-data', '"prefetchCache"');
+      return answered;
     } catch (error) {
       const known = error?.status >= 400 && error.status < 500 && error.code;
       if (!known) console.error(error);
