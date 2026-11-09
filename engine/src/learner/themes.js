@@ -231,7 +231,7 @@ export function themeVars(look, accent) {
   const lightText = l > 0.4 ? 'color-mix(in oklab,var(--accent) 52%,#000)' : l > 0.22 ? 'color-mix(in oklab,var(--accent) 78%,#000)' : 'var(--accent)';
   const darkText = l < 0.08 ? 'color-mix(in oklab,var(--accent) 50%,#fff)' : l < 0.2 ? 'color-mix(in oklab,var(--accent) 72%,#fff)' : 'var(--accent)';
   const { font, head, size, ...type } = theme.type;
-  const base = `--accent:${color};--on-accent:${l > 0.42 ? '#15171a' : '#fff'};--font:${font};--font-head:${head};--size:${size};${vars(type)}`;
+  const base = `--accent:${color};--on-accent:${(l + 0.05) / 0.0585 > 1.05 / (l + 0.05) ? '#15171a' : '#fff'};--font:${font};--font-head:${head};--size:${size};${vars(type)}`;
   const light = `${vars(theme.light)};--accent-text:${lightText};--accent-soft:color-mix(in srgb,var(--accent) 12%,transparent);--accent-line:color-mix(in srgb,var(--accent) 34%,transparent);--ok:#16794a;--warn:#a35a00;--danger:#c42b1c;--shadow:0 1px 2px rgba(15,23,42,.05),0 10px 30px -14px rgba(15,23,42,.18);color-scheme:light`;
   const dark = `${vars(theme.dark)};--accent-text:${darkText};--accent-soft:color-mix(in srgb,var(--accent) 22%,transparent);--accent-line:color-mix(in srgb,var(--accent) 48%,transparent);--ok:#3fbf7a;--warn:#f0a531;--danger:#f2776b;--shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px -14px rgba(0,0,0,.6);color-scheme:dark`;
   return `:root{${base};${light}}

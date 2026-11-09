@@ -131,6 +131,8 @@ export function writing(panel, api) {
   count.append(countText);
   if (panel.min_words || panel.max_words) count.append(meter);
   const status = el('span', 'ws-save');
+  const heard = el('span', 'sr');
+  heard.setAttribute('role', 'alert');
   const submit = button('ws-btn primary', 'Hand in', () => {
     const n = words(fields.draft.text.value);
     if (panel.min_words && n < panel.min_words && !confirm('Your writing has ' + n + ' words, fewer than the ' + panel.min_words + ' asked for. Hand it in anyway?')) return;
@@ -138,7 +140,7 @@ export function writing(panel, api) {
     if (panel.lock_on_submit && !confirm('Once you hand this in, you can’t change it. Hand it in now?')) return;
     save(true);
   });
-  foot.append(count, status, el('span', 'ws-grow'));
+  foot.append(count, status, el('span', 'ws-grow'), heard);
   if (rubricButton) foot.append(rubricButton);
   if (panel.submit !== false) foot.append(submit);
   wrap.append(foot);
@@ -146,7 +148,11 @@ export function writing(panel, api) {
   note.append(icon((panel.sees || []).length ? 'eye' : 'eyeOff', 13), el('span', null, api.seesSentence(panel)));
   if (api.aiAvailable) wrap.append(note);
 
-  function setStatus(kind, text) { status.className = 'ws-save ' + kind; status.replaceChildren(icon(kind === 'error' ? 'alert' : kind === 'saved' ? 'check' : 'cloud', 13), el('span', null, text)); }
+  function setStatus(kind, text) {
+    status.className = 'ws-save ' + kind;
+    status.replaceChildren(icon(kind === 'error' ? 'alert' : kind === 'saved' ? 'check' : 'cloud', 13), el('span', null, text));
+    if (kind === 'error' || /^Handed in/.test(text)) { heard.textContent = ''; setTimeout(() => { heard.textContent = text; }, 60); }
+  }
   function blank() { return { keys: 0, deleted: 0, pasted: 0, pastes: 0, pasted_from_ai: 0, pauses: 0, pause_ms: 0, longest_pause_ms: 0, p_bursts: 0, r_bursts: 0, burst_chars: 0, inside_edits: 0, leading_edits: 0, active_ms: 0 }; }
   function grow(text) { text.style.height = 'auto'; text.style.height = Math.max(text.scrollHeight, 0) + 'px'; }
   function updateCount() {

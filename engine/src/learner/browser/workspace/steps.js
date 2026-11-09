@@ -29,7 +29,10 @@ export function stepBar(data) {
   const step = steps[data.index];
   const next = steps[data.index + 1] || null;
   const bar = el('div', 'ws-steps');
-  bar.setAttribute('role', 'status');
+  // Not a live region: its countdown would be read every second. One quiet line says when they can go on.
+  const heard = el('span', 'sr');
+  heard.setAttribute('aria-live', 'polite');
+  bar.append(heard);
   const where = el('div', 'ws-steps-where');
   const dots = el('ol', 'ws-steps-dots');
   steps.forEach((entry, i) => { const dot = el('li', i < data.index ? 'done' : i === data.index ? 'on' : '', entry.title); if (i === data.index) dot.setAttribute('aria-current', 'step'); dots.append(dot); });
@@ -82,8 +85,8 @@ export function stepBar(data) {
       return;
     }
     go.disabled = false;
-    if (next.move === 'auto') { note.textContent = 'Opening ' + next.title + '…'; move('auto'); }
-    else note.textContent = next.back ? '' : 'You won’t come back to ' + step.title + '.';
+    if (next.move === 'auto') { note.textContent = 'Opening ' + next.title + '…'; heard.textContent = 'Opening ' + next.title + '.'; move('auto'); }
+    else { note.textContent = next.back ? '' : 'You won’t come back to ' + step.title + '.'; if (!heard.textContent) heard.textContent = 'You can go on now.'; }
   };
   tick();
   return bar;

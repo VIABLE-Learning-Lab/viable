@@ -104,10 +104,14 @@ export function questions(panel, api) {
     const earlier = done[item.id];
     response = earlier && earlier.response != null ? parse(earlier.response) : (item.type === 'code' ? item.starter || '' : item.type === 'order' ? item.choices.map((c) => c.id) : item.type === 'multiple' || item.type === 'cloze' ? [] : null);
     const prompt = el('div', 'ws-q-prompt' + (item.type === 'cloze' ? ' cloze' : ''));
+    prompt.id = 'q-' + panel.id + '-' + item.id + '-prompt';
     renderPrompt(item, prompt);
     card.append(prompt);
     const answer = el('div', 'ws-q-answer');
     if (item.type === 'single' || item.type === 'multiple') {
+      // Its choices read with their question, not as a list on their own.
+      answer.setAttribute('role', item.type === 'single' ? 'radiogroup' : 'group');
+      answer.setAttribute('aria-labelledby', prompt.id);
       if (item.type === 'multiple') answer.append(el('p', 'ws-muted', 'Choose all that apply.'));
       item.choices.forEach((choice, ci) => {
         const label = el('label', 'ws-option');
@@ -157,9 +161,11 @@ export function questions(panel, api) {
       box.placeholder = item.type === 'fill' ? 'Your answer' : item.type === 'code' ? '' : 'Write your answer…';
       box.value = response || '';
       box.addEventListener('input', () => { response = box.value; changed(); });
-      if (item.type === 'code') box.addEventListener('keydown', (e) => { if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); const s = box.selectionStart; box.setRangeText('    ', s, box.selectionEnd, 'end'); response = box.value; changed(); } });
+      // In code, Tab indents; Escape first lets the next Tab move on, to Check and Next.
+      let leaving = false;
+      if (item.type === 'code') box.addEventListener('keydown', (e) => { if (e.key === 'Escape') { leaving = true; return; } if (e.key !== 'Tab') leaving = false; if (e.key === 'Tab' && !e.shiftKey && !leaving) { e.preventDefault(); const s = box.selectionStart; box.setRangeText('    ', s, box.selectionEnd, 'end'); response = box.value; changed(); } });
       answer.append(box);
-      if (item.type === 'code') answer.append(el('p', 'ws-muted', 'Your program is kept for your teacher to read (' + (item.language || 'code') + ').'));
+      if (item.type === 'code') answer.append(el('p', 'ws-muted', 'Your program is kept for your teacher to read (' + (item.language || 'code') + '). Tab indents: press Escape, then Tab, to move on.'));
     }
     card.append(answer);
     const hints = el('div', 'ws-hints');

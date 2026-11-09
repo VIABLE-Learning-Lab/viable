@@ -384,7 +384,8 @@ ${workspace ? '<div class="ws-shell">\n<section id="ws" class="ws" aria-label="A
     <button id="close" class="icon-btn" type="button" data-tip="Close" data-tip-at="below" aria-label="Close chat" hidden>${ICON.close}</button>
   </header>
   ${before.html || ''}
-  <main id="log" class="log" aria-label="Conversation"><div id="inner" class="inner" aria-live="polite"></div></main>
+  <main id="log" class="log" aria-label="Conversation"><div id="inner" class="inner"></div></main>
+  <p id="said-aloud" class="sr" aria-live="polite"></p>
   <form id="form" class="composer">
     <button id="jump" class="jump" type="button" data-tip="Latest message" aria-label="Jump to the latest message" hidden>${ICON.down}</button>
     <p id="voice-note" class="voice-note" role="status" hidden></p>
@@ -609,7 +610,8 @@ body.gated .app{display:flex!important;position:static!important;width:auto!impo
 .ws-criterion-text{display:block;margin-top:4px;color:var(--ink-2);font-size:.86rem;line-height:1.55}
 .ws-option:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
 .ws-option:has(input:checked) .ws-key{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
-.ws-option:has(input:focus-visible){box-shadow:0 0 0 3px var(--accent-soft)}
+.ws-option:has(input:focus-visible){outline:2px solid var(--accent-text);outline-offset:2px}
+@media (forced-colors:active){.ws-option input{position:static;opacity:1;pointer-events:auto}.ws-option{grid-template-columns:auto 28px minmax(0,1fr)}}
 .ws-option:has(input:disabled){cursor:default}
 .ws-option.is-right:has(input:checked){border-color:#16a34a;background:color-mix(in srgb,#16a34a 9%,var(--panel))}.ws-option.is-right:has(input:checked) .ws-key{border-color:#16a34a;background:#16a34a;color:#fff}
 .ws-option.is-wrong:has(input:checked){border-color:#ef4444;background:color-mix(in srgb,#ef4444 8%,var(--panel))}.ws-option.is-wrong:has(input:checked) .ws-key{border-color:#ef4444;background:#ef4444;color:#fff}
@@ -905,6 +907,7 @@ const CHAT_SCRIPT = String.raw`(() => {
   const REMOVE = svg('<path d="M18 6 6 18M6 6l12 12"/>', 12);
   function userTurn(m) {
     const el = document.createElement('div'); el.className = 'turn user';
+    el.append(Object.assign(document.createElement('span'), { className: 'sr', textContent: 'You said:' }));
     const b = document.createElement('div'); b.className = 'bubble';
     if (m.files && m.files.length) {
       const row = document.createElement('div'); row.className = 'files';
@@ -933,6 +936,7 @@ const CHAT_SCRIPT = String.raw`(() => {
   const shownHere = (url) => /^https:\/\//i.test(String(url)) || String(url).startsWith(location.origin + '/');
   function botTurn(m, withActions, live) {
     const el = document.createElement('div'); el.className = 'turn bot';
+    el.append(Object.assign(document.createElement('span'), { className: 'sr', textContent: (CONFIG.title || 'The assistant') + ' said:' }));
     const body = document.createElement('div'); body.className = 'body';
     // A message the AI wrote without being asked says so, and why.
     if (m.first && FIRST_WORDS[m.first]) { const why = document.createElement('p'); why.className = 'first-why'; why.textContent = FIRST_WORDS[m.first]; body.appendChild(why); }
@@ -1351,6 +1355,7 @@ const CHAT_SCRIPT = String.raw`(() => {
       return setFace(SEND, 'Send now', state !== 'listening' || !(recording && recording.heard));
     }
     if (mine) return setFace(STOP, 'Stop', false);
+    if (reading && !reading.stopped) return setFace(STOP, 'Stop reading', false);
     if (recording) return setFace(SEND, 'Send voice message', false);
     if (send.classList.contains('talk')) return setFace(TALK_ICON, 'Voice conversation', false);
     setFace(SEND, 'Send', Boolean(pending) || dictating || (!input.value.trim() && !files.length));
@@ -1385,10 +1390,10 @@ const CHAT_SCRIPT = String.raw`(() => {
       if (!chat.named && chat.messages[0] === mine && mine.text) chat.title = draftTitle(mine.text);
       save(); heard(bubble, mine); renderChats();
     };
-    const wait = document.createElement('div'); wait.className = 'turn bot'; wait.setAttribute('role', 'status');
+    const wait = document.createElement('div'); wait.className = 'turn bot';
     const label = document.createElement('div'); label.className = 'thinking';
     const done = document.createElement('ul'); done.className = 'steps';
-    const now = document.createElement('span'); now.className = 'now'; now.innerHTML = '<span class="shimmer">' + STAGES.thinking + '</span><span class="secs"></span>';
+    const now = document.createElement('span'); now.className = 'now'; now.innerHTML = '<span class="shimmer">' + STAGES.thinking + '</span><span class="secs" aria-hidden="true"></span>';
     label.append(done, now);
     wait.append(avatar(), label); inner.appendChild(wait);
     const controller = new AbortController();
@@ -1406,6 +1411,7 @@ const CHAT_SCRIPT = String.raw`(() => {
     const tick = setInterval(() => { const s = Math.round((Date.now() - started) / 1000); now.lastChild.textContent = s >= 4 ? ' ' + s + 's' : ''; }, 1000);
     const step = (next) => {
       if (!STAGES[next] || next === stage) return;
+      if (chat === active) aloud(STAGES[next]);
       if (CONFIG.showProgress && DONE[stage]) {
         counts[stage] = (counts[stage] || 0) + 1;
         let item = done.querySelector('[data-stage="' + stage + '"]');
@@ -1435,6 +1441,7 @@ const CHAT_SCRIPT = String.raw`(() => {
       if (voice && !mine.voice.heard) heard(bubble, mine);
       reply.at = Date.now(); chat.messages.push(reply); chat.updated = Date.now();
       pending = null; save();
+      if (chat === active && reply.text) aloud((CONFIG.title || 'The assistant') + ' said: ' + reply.text);
       let el = null;
       if (chat === active && wait.isConnected) { el = botTurn(reply, true, true); wait.replaceWith(el); scrollDown(); }
       else if (chat === active) render();
@@ -1460,7 +1467,7 @@ const CHAT_SCRIPT = String.raw`(() => {
       // hands-free conversation, through it, and then it listens again).
       const clip = el && el.querySelector('.clip');
       if (talk) { if (talk.live === out && (talk.state === 'thinking' || talk.state === 'speaking')) talkReply(data.reply.audio || [], out); }
-      else if (out && out.received) { /* Already playing as it was written. */ }
+      else if (out && out.received) { reading = out; updateSend(); out.done().then(() => { if (reading === out) { reading = null; updateSend(); } }); }
       else if (clip && (CONFIG.autoplay === 'always' || (CONFIG.autoplay === 'spoken' && voice))) clip.start();
     } catch (error) {
       if (out) out.stop();
@@ -1499,7 +1506,8 @@ const CHAT_SCRIPT = String.raw`(() => {
       el.append(msg, retry); inner.appendChild(el); scrollDown();
       if (talk) pauseTalk('The assistant couldn’t answer. Tap the microphone to keep talking.');
     } finally {
-      if (chat === active) input.focus();
+      const at = document.activeElement;
+      if (chat === active && (!at || at === document.body || (at.closest && at.closest('.app')))) input.focus({ preventScroll: true });
     }
   }
   // Speaking instead of typing, when the agent can hear visitors. The microphone sends a voice
@@ -1935,6 +1943,10 @@ const CHAT_SCRIPT = String.raw`(() => {
   // One audio context for answers read aloud as they are written (outside a conversation, which has
   // its own), readied by the visitor's first tap or key so browsers let it play later.
   let speaker = null, speaking = null;
+  // What is still being read aloud after its words are all there, for Stop reading and Escape.
+  let reading = null;
+  // A quiet line a screen reader hears: each stage once, and the finished reply once.
+  const aloud = (words) => { const box = document.getElementById('said-aloud'); if (box) { box.textContent = ''; setTimeout(() => { box.textContent = words; }, 60); } };
   const ready = () => { if (!speaker) speaker = newContext(); if (speaker && speaker.state === 'suspended') speaker.resume().catch(() => {}); };
   if (CONFIG.speaks || CONFIG.handsFree) { document.addEventListener('pointerdown', ready, true); document.addEventListener('keydown', ready, true); }
   // A conversation goes on in a background tab. Coming back wakes audio a browser suspended meanwhile.
@@ -2038,6 +2050,7 @@ const CHAT_SCRIPT = String.raw`(() => {
       else pending.controller.abort();
     }
     else if (talk) { if (talk.state === 'listening' && recording) stopRecording(false); else if (talk.state === 'speaking') { stopSpeaking(); listen(); } else if (talk.state === 'paused') resumeTalk(); }
+    else if (reading && !reading.stopped) { reading.stop(); reading = null; updateSend(); }
     else if (recording) stopRecording(false);
     else if (CONFIG.handsFree && !input.value.trim() && !files.length) startTalk();
     else ask(input.value);
@@ -2046,6 +2059,7 @@ const CHAT_SCRIPT = String.raw`(() => {
     if (e.key !== 'Escape') return;
     if (talk) { e.preventDefault(); endTalk(); return; }
     if (recording) { e.preventDefault(); stopRecording(true); return; }
+    if (reading && !reading.stopped) { e.preventDefault(); reading.stop(); reading = null; updateSend(); return; }
     if (chats.classList.contains('open') && !wide()) { openChats(false); menu.focus(); return; }
     if (CONFIG.mode === 'widget') closeWidget();
   });
@@ -2273,7 +2287,8 @@ const CHAT_SCRIPT = String.raw`(() => {
   openChats(wide() && (remembered === null ? saved.chats.length > 0 : remembered === true));
   window.matchMedia('(min-width: 960px)').addEventListener('change', () => openChats(wide() && read('viable-chat:sidebar') !== false && saved.chats.length > 0));
   render();
-  if (CONFIG.mode !== 'inline') input.focus();
+  // With an activity on the page, it starts in the activity, not in the conversation beside it.
+  if (CONFIG.mode !== 'inline' && !document.getElementById('ws')) input.focus();
 })();`;
 
 // The widget: a chat button (with an optional greeting bubble) that opens the page in a panel, or
