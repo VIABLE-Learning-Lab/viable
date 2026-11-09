@@ -202,11 +202,6 @@ a.card:hover{background:none}a.card:hover strong{text-decoration:underline;text-
 `,
     page: `
 .ws-bar,.crs-strip{box-shadow:inset 0 4px 0 var(--accent)}
-.ws-steps-dots{gap:0}
-.ws-steps-dots li{position:relative;padding:3px 12px 3px 22px;border-radius:0;background:none}
-.ws-steps-dots li::after{content:"";position:absolute;left:0;top:50%;width:12px;height:12px;margin-top:-6px;border:3px solid var(--line);border-radius:50%;background:var(--panel);box-sizing:border-box}
-.ws-steps-dots li.on::after{border-color:var(--accent)}.ws-steps-dots li.done::after{border-color:var(--accent);background:var(--accent)}
-.ws-steps-dots li.done::before{content:none}
 ` }
 });
 

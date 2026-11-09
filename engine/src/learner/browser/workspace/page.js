@@ -1,6 +1,6 @@
 // A page the teacher wrote: the case, the task, what to read before talking to the AI. Markdown, drawn by the same renderer as the AI's
 // replies, so what it may show is what a reply may show.
-import { el, icon } from './core.js';
+import { el, icon, onwardFoot } from './core.js';
 
 export function page(panel, api) {
   const wrap = el('div', 'ws-page sheet');
@@ -18,5 +18,8 @@ export function page(panel, api) {
   // The renderer can arrive after the panel: what was drawn as plain words is drawn again.
   if (!window.ViableRender) addEventListener('load', draw, { once: true });
   wrap.append(body);
+  // Read to its end, the way on is there.
+  const foot = onwardFoot(api);
+  if (foot) wrap.append(foot);
   return { el: wrap, state: () => ({ panel: panel.id }) };
 }

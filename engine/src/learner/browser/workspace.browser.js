@@ -13,7 +13,7 @@ import { questions } from './workspace/questions.js';
 import { embed } from './workspace/embed.js';
 import { reading } from './workspace/reading.js';
 import { page } from './workspace/page.js';
-import { loadStep, stepBar } from './workspace/steps.js';
+import { loadStep, stepper } from './workspace/steps.js';
 
 const panels = CONFIG.panels || [];
 // What the host makes of the page for this learner, where it varies: its AI's place, or none, and what
@@ -31,8 +31,8 @@ if (document.getElementById('ws') && panels.length) {
   let reached = null;
   // The step they are on, when there are steps: whether the AI is part of it.
   let onStep = null;
-  const make = (shown = panels.filter((panel) => !panel.locked), first = shown[0]) => {
-    shell = createShell({ panels: shown, factories: { writing, questions, embed, reading, page } });
+  const make = (shown = panels.filter((panel) => !panel.locked), first = shown[0], steps = null) => {
+    shell = createShell({ panels: shown, factories: { writing, questions, embed, reading, page }, steps });
     shell.open(first);
   };
   // With steps, the panels wait for the learner's step (once they are let in).
@@ -42,21 +42,9 @@ if (document.getElementById('ws') && panels.length) {
       const step = data.steps[data.index];
       onStep = step;
       reached = step.says ? { says: step.says, since: data.started_at ? Date.parse(data.started_at) : 0, starters: [] } : { says: null };
-      // Earlier steps stay as tabs where they can go back; what opens is this step's.
-      make(shown, shown.find((panel) => step.panels.includes(panel.id)) || shown[0]);
-      const bar = stepBar(data);
-      document.querySelector('#ws .ws-bar')?.after(bar);
-      // A long page ends where they will be when they finish it, so the way on is there too.
-      const onward = bar.querySelector('.ws-steps-go');
-      const sheet = onward && !document.querySelector('.ws-steps-next[hidden]') ? document.querySelector('#ws .ws-page.sheet:not([hidden])') : null;
-      if (sheet) {
-        const end = document.createElement('div');
-        end.className = 'ws-sheet-end';
-        const go = onward.cloneNode(true);
-        go.addEventListener('click', () => { onward.click(); bar.scrollIntoView({ block: 'nearest' }); });
-        end.append(go);
-        sheet.append(end);
-      }
+      // One step on screen: the one they are on. Earlier ones they may look at again are in the bar's list of steps.
+      make(shown, shown.find((panel) => step.panels.includes(panel.id)) || shown[0], stepper(data, shown, () => shell));
+      shell.showStep(step.panels);
       window.VIABLE_CHAT?.redraw?.();
     } catch (error) { make(); }
     shell.start();

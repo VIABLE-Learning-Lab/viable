@@ -7,7 +7,7 @@
 // (P-bursts) and those ended by a revision (R-bursts), edits inside the text against those at its
 // end, active time with idle gaps capped at 2 minutes, when each field was first changed, and
 // snapshots of the text when the writer pauses (the versions the AI may be shown).
-import { IDLE, button, el, emit, flush, icon, plural, post, ready, replies, rich, visitor, words } from './core.js';
+import { askIn, IDLE, button, el, emit, flush, icon, plural, post, ready, replies, rich, visitor, words } from './core.js';
 
 // Earlier writing, from this or another device, once the visitor may use the page. A failed load is
 // tried again three times; after that it resolves to undefined (the writing stays closed, with a way
@@ -133,13 +133,14 @@ export function writing(panel, api) {
   const status = el('span', 'ws-save');
   const heard = el('span', 'sr');
   heard.setAttribute('role', 'alert');
-  const submit = button('ws-btn primary', 'Hand in', () => {
+  const submit = button('ws-btn primary', 'Hand in', async () => {
     const n = words(fields.draft.text.value);
-    if (panel.min_words && n < panel.min_words && !confirm('Your writing has ' + n + ' words, fewer than the ' + panel.min_words + ' asked for. Hand it in anyway?')) return;
+    if (panel.min_words && n < panel.min_words && !(await askIn(foot, 'Your writing has ' + n + ' words, fewer than the ' + panel.min_words + ' asked for. Hand it in anyway?', 'Hand it in'))) return;
     // Handed in once, it can't be changed: say so before.
-    if (panel.lock_on_submit && !confirm('Once you hand this in, you can’t change it. Hand it in now?')) return;
+    if (panel.lock_on_submit && !(await askIn(foot, 'Once you hand this in, you can’t change it. Hand it in now?', 'Hand it in'))) return;
     save(true);
   });
+
   foot.append(count, status, el('span', 'ws-grow'), heard);
   if (rubricButton) foot.append(rubricButton);
   if (panel.submit !== false) foot.append(submit);
@@ -236,9 +237,13 @@ export function writing(panel, api) {
   let dirty = false;
   let refused = null;
   let handed = null;
+  // The way on, in steps: beside Hand in, quieter until it is handed in.
+  const onward = api.onward ? api.onward({ quiet: () => !handed && panel.submit !== false }) : null;
+  if (onward) foot.append(onward);
   function scheduleSave() { setStatus('pending', 'Unsaved changes'); clearTimeout(saveTimer); saveTimer = setTimeout(() => save(false), 4000); }
   function showHanded(at) {
     handed = at;
+    onward?.refresh?.();
     handedChip.hidden = false;
     handedChip.replaceChildren(icon('check', 13), el('span', null, 'Handed in ' + new Date(at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })));
     api.setBadge(panel.id, 'Handed in', true);
@@ -250,7 +255,9 @@ export function writing(panel, api) {
       status.querySelector('.ws-i').replaceWith(icon('lock', 13));
       return;
     }
+    // Handed in, the way on leads: handing in again is there, quieter.
     submit.textContent = 'Hand in again';
+    submit.classList.remove('primary');
   }
   async function save(handIn) {
     if (!loaded || refused || saving || !visitor() || (!dirty && !handIn)) return;
@@ -324,6 +331,8 @@ export function writing(panel, api) {
     el: wrap,
     state: () => ({ panel: panel.id, plan: fields.plan ? fields.plan.text.value.slice(0, 3000) : undefined, draft: fields.draft.text.value.slice(0, 20000) }),
     resume: () => Object.values(fields).forEach((f) => grow(f.text)),
+    // Before a step they can't come back to: writing that isn't handed in.
+    unsent: () => (!handed && panel.submit !== false && words(fields.draft.text.value) > 0 ? [{ text: 'Your writing isn’t handed in yet.', fix: () => submit.focus(), fixLabel: 'Hand it in first', leaving: true }] : []),
     hide: () => { Object.entries(fields).forEach(([name, f]) => { endBurst(f); report(name, f); snapshot(name, f); }); if (rubricOpen) { emit(panel.id, 'rubric', { visible_ms: Date.now() - rubricOpen }); rubricOpen = Date.now(); } save(false); }
   };
 }

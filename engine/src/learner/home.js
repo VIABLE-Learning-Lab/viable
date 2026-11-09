@@ -20,6 +20,7 @@ body{min-height:100vh}
 .brand{display:flex;align-items:center;gap:10px;flex:1;min-width:0;font-weight:650}
 .brand i{width:10px;height:10px;border-radius:2px;background:var(--accent);flex:none}
 .brand span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:560px){.top{flex-wrap:wrap;row-gap:6px}.brand{flex-basis:100%}}
 .me{display:flex;align-items:center;gap:8px;color:var(--ink-2);font-size:.86rem}
 .me b{font-weight:620}.me small{color:var(--muted)}
 .preview{padding:3px 10px;border-radius:999px;background:color-mix(in srgb,#f59e0b 18%,transparent);font-size:.74rem;font-weight:600;white-space:nowrap}

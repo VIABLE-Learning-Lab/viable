@@ -5,7 +5,7 @@
 // Time on each page is kept (reading.page: visible, and active with gaps over 2 minutes not counted),
 // and so are highlights, notes and searches. What the AI is shown (the page in view, what is selected,
 // the highlights there, or the whole document) comes from the page's own text, as the panel allows.
-import { BASE, CONFIG, IDLE, QUERY, button, el, emit, icon, post, ready, visitor } from './core.js';
+import { onwardFoot, BASE, CONFIG, IDLE, QUERY, button, el, emit, icon, post, ready, visitor } from './core.js';
 
 const COLORS = ['yellow', 'green', 'blue', 'pink'];
 const SWATCH = { yellow: '#facc15', green: '#4ade80', blue: '#60a5fa', pink: '#f472b6' };
@@ -39,6 +39,8 @@ export function reading(panel, api) {
   const list = el('aside', 'rd-list'); list.hidden = true; list.setAttribute('aria-label', 'Highlights and notes');
   const tools = el('div', 'rd-tools'); tools.hidden = true; tools.setAttribute('role', 'toolbar'); tools.setAttribute('aria-label', 'Highlight the selection');
   wrap.append(bar, scroller, list, tools);
+  const foot = onwardFoot(api, 'ws-foot ws-edge');
+  if (foot) wrap.append(foot);
   if (api.aiAvailable) {
     const note = el('p', 'ws-note-line rd-sees');
     note.append(icon(sees ? 'eye' : 'eyeOff', 13), el('span', null, api.seesSentence(panel)));

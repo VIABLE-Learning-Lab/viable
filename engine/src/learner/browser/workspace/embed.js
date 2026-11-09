@@ -4,7 +4,7 @@
 //   { viable: 1, type: 'event', verb, object?, score?, max_score?, success?, completion?, response?, duration_ms?, data? }
 //   { viable: 1, type: 'state', data }    (what the AI may be told it shows, at most every 5 s)
 //   { viable: 1, type: 'ask', text }      (a question put in the chat box for the learner to send).
-import { el, emit, icon, session } from './core.js';
+import { onwardFoot, el, emit, icon, session } from './core.js';
 
 export function embed(panel, api) {
   const wrap = el('div', 'ws-page embed');
@@ -20,6 +20,8 @@ export function embed(panel, api) {
   frame.setAttribute('allow', 'fullscreen; autoplay; clipboard-write');
   frame.referrerPolicy = 'no-referrer';
   wrap.append(frame);
+  const foot = onwardFoot(api, 'ws-foot ws-edge');
+  if (foot) wrap.append(foot);
   const origin = new URL(panel.url).origin;
   const recent = [];
   let stateAt = 0, pending = null, timer = 0;

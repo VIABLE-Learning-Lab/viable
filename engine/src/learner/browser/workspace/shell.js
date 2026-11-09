@@ -5,6 +5,7 @@
 // header. Time on each panel is kept here: visible while it is the open tab and the page is in view,
 // active while the learner does something in it (gaps over 2 minutes not counted).
 import { CONFIG, IDLE, button, el, emit, flush, icon, recorded, store } from './core.js';
+import { FOR_AI } from './questions.js';
 
 const TYPE_ICON = { writing: 'pen', questions: 'list', embed: 'puzzle', reading: 'book', page: 'book' };
 const LAYOUT = { ai_width: 36, resizable: true, collapsible: true, ...(CONFIG.layout || {}) };
@@ -17,7 +18,8 @@ const saved = store.get('viable-chat::ws:' + location.pathname) || {};
 const state = { width: clampWidth(saved.width ?? LAYOUT.ai_width), collapsed: LAYOUT.collapsible && Boolean(saved.collapsed), current: null };
 function clampWidth(value) { const n = Number(value); return Number.isFinite(n) ? Math.min(60, Math.max(24, Math.round(n))) : 36; }
 
-export function createShell({ panels, factories }) {
+/** steps: the learner's steps (steps.js), where the activity has them: then the bar says which step, and only its panels show. */
+export function createShell({ panels, factories, steps = null }) {
   AI = CONFIG.ai || 'right';
   docked = AI === 'right' || AI === 'left';
   name = CONFIG.title || 'the assistant';
@@ -33,7 +35,8 @@ export function createShell({ panels, factories }) {
   if (CONFIG.course && CONFIG.course.url) {
     const back = el('a', 'ws-back');
     back.href = CONFIG.course.url;
-    back.title = CONFIG.course.title || 'Course';
+    back.dataset.tip = CONFIG.course.title || 'Course';
+    back.setAttribute('data-tip-at', 'below');
     back.append(icon('left', 15), el('span', null, CONFIG.course.title || 'Course'));
     lead.append(back);
   }
@@ -54,6 +57,8 @@ export function createShell({ panels, factories }) {
     badges.set(panel.id, badge);
     tabs.append(tab);
   });
+  // With steps, the bar says which step, and tabs are only for a step that shows more than one thing.
+  if (steps) bar.append(steps.part);
   if (panels.length > 1) bar.append(tabs);
   // A course activity: a preview's reminder, "I'm done" where the learner says so (the chat script posts
   // it), and without an AI (whose header says who this is) a way to hand the computer on.
@@ -70,6 +75,10 @@ export function createShell({ panels, factories }) {
     if (CONFIG.course.done === 'button') { const done = button('ws-done', 'I’m done'); done.setAttribute('data-done', ''); end.append(done); }
     bar.append(end);
   }
+  // Said to an AI assistant a learner may have open beside the page, which reads its words; never shown or read aloud.
+  const forAi = el('p', 'ws-for-ai', FOR_AI);
+  forAi.setAttribute('aria-hidden', 'true');
+  bar.append(forAi);
   const body = el('div', 'ws-body');
   body.id = 'ws-body';
   body.setAttribute('role', panels.length > 1 ? 'tabpanel' : 'region');
@@ -104,15 +113,25 @@ export function createShell({ panels, factories }) {
     sees();
     if (window.VIABLE_CHAT && window.VIABLE_CHAT.refresh) window.VIABLE_CHAT.refresh();
   }
-  // Arrow keys move between tabs (the tablist pattern).
+  // Arrow keys move between the tabs that show (the tablist pattern).
   tabs.addEventListener('keydown', (e) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
-    const i = panels.findIndex((panel) => panel.id === state.current?.id);
-    const next = e.key === 'Home' ? 0 : e.key === 'End' ? panels.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + panels.length) % panels.length;
+    const showing = panels.filter((panel) => !document.getElementById('ws-tab-' + panel.id)?.hidden);
+    const i = showing.findIndex((panel) => panel.id === state.current?.id);
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? showing.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + showing.length) % showing.length;
     e.preventDefault();
-    open(panels[next]);
-    document.getElementById('ws-tab-' + panels[next].id)?.focus();
+    open(showing[next]);
+    document.getElementById('ws-tab-' + showing[next].id)?.focus();
   });
+  // A step's panels, and only those: tabs where it has several, its one panel where it has one.
+  function showStep(ids) {
+    const here = panels.filter((panel) => ids.includes(panel.id));
+    tabs.querySelectorAll('.ws-tab').forEach((tab) => { tab.hidden = !ids.includes(tab.id.slice('ws-tab-'.length)); });
+    tabs.hidden = here.length < 2;
+    if (here.length && !here.some((panel) => panel.id === state.current?.id)) open(here[0]);
+  }
+  // What a step's panels hold that isn't sent, said before going on (each panel's unsent(): [{ text, fix, fixLabel }]).
+  const unsent = (ids) => panels.filter((panel) => ids.includes(panel.id)).flatMap((panel) => (views.get(panel.id)?.unsent?.() || []).map((item) => ({ ...item, panel: panel.id })));
 
   // --- The AI: docked beside the panels, hidden to a rail, a corner panel, or a sheet ---
   const app = shell.querySelector('.app');
@@ -256,7 +275,11 @@ export function createShell({ panels, factories }) {
       if (AI === 'corner' || narrow.matches) setOpen(true);
       if (window.VIABLE_CHAT) window.VIABLE_CHAT.prefill(text);
     },
-    current: () => state.current
+    current: () => state.current,
+    // The way on, for a panel's footer: the next step, or back to the step they are on (null without steps, or on the last).
+    onward: (options) => (steps ? steps.onward(options) : null),
+    // Shows a panel of this activity, as its step or its tab would.
+    show: (id) => { const panel = panels.find((item) => item.id === id); if (panel) open(panel); }
   };
 
   // The chat's empty state, for the open panel: what the AI can help with here.
@@ -268,6 +291,8 @@ export function createShell({ panels, factories }) {
   };
   return {
     open,
+    showStep,
+    unsent,
     views,
     intro() {
       const panel = state.current;

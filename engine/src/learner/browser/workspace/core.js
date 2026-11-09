@@ -31,6 +31,29 @@ export function button(cls, label, onClick) {
   if (onClick) b.addEventListener('click', onClick);
   return b;
 }
+/** The foot of a panel that has none of its own, holding the way on in steps (api.onward()); nothing without steps. */
+export function onwardFoot(api, cls = 'ws-foot') {
+  const onward = api.onward ? api.onward() : null;
+  if (!onward) return null;
+  const foot = el('footer', cls);
+  foot.append(el('span', 'ws-grow'), onward);
+  return foot;
+}
+/** Asks in place of a footer's own controls, with the page's buttons: resolves true for yes, and puts the footer back. */
+export function askIn(foot, text, yes, no = 'Not yet') {
+  return new Promise((resolve) => {
+    const kept = [...foot.childNodes];
+    const sure = el('div', 'ws-sure');
+    sure.setAttribute('role', 'group');
+    sure.setAttribute('aria-label', text);
+    const answer = (value) => { foot.replaceChildren(...kept); resolve(value); };
+    const go = button('ws-btn primary', yes, () => answer(true));
+    sure.append(el('p', 'ws-sure-text', text), button('ws-btn ghost', no, () => answer(false)), go);
+    sure.addEventListener('keydown', (event) => { if (event.key === 'Escape') { event.preventDefault(); answer(false); } });
+    foot.replaceChildren(sure);
+    go.focus();
+  });
+}
 // Paragraphs and line breaks of an author's text, without markup.
 // What an author wrote (a question and its choices, a hint, an explanation, a writing task) as the chat
 // shows a reply: Markdown with code, math, tables and diagrams. A single line stays inline (a choice
@@ -56,6 +79,7 @@ export const plural = (n, one, many) => `${n} ${n === 1 ? one : many || one + 's
 
 // Icons (24-unit strokes, as the chat's), by name.
 const PATHS = {
+  down: '<path d="m6 9 6 6 6-6"/>',
   pen: '<path d="M12 20h9"/><path d="M16.4 3.6a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   list: '<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
   puzzle: '<path d="M15.4 6.5V5a2 2 0 1 0-4 0v1.5H8a1 1 0 0 0-1 1V11h1.5a2 2 0 1 1 0 4H7v3.5a1 1 0 0 0 1 1h3.5V18a2 2 0 1 1 4 0v1.5H19a1 1 0 0 0 1-1V15h-1.5a2 2 0 1 1 0-4H20V7.5a1 1 0 0 0-1-1z"/>',

@@ -6,6 +6,12 @@ existing files.
 
 ## Unreleased
 
+- **A learner page, one step at a time.** In an activity with steps, the header says which step it is, and a press on it lists them all (`stepper` in `steps.js`): an earlier one can be looked at again where the step allows it, and then the way on leads back to the step they are on, never past it. The way on is at the foot of each panel (`api.onward()`), where its work ends: the last question's place, beside Hand in (quieter until it is handed in), under a page, a reading or a web page. It says first what isn't answered or handed in, and when there is no coming back. The bar of steps under the header, the tabs of every step's panel and the button cloned under a page are gone; tabs that are left wrap instead of scrolling sideways.
+- **Nothing unsent is lost.** A question's answer chosen or written and not yet sent is kept as they move between questions, and through a reload in that tab (`sessionStorage`, not recordings). Each question's mark says, in words too, whether it is right, answered, not sent yet or not answered; Finish with questions left goes to the first and says why.
+- **More time.** A step that opens on its own says so a minute before, with More time (five minutes, as often as they ask), kept in that browser.
+- **The page's own words, not the browser's.** Handing in short or for good asks in the footer, not in a browser dialog; the course's name shows whole through the page's tip, not a `title`.
+- **A note for AI assistants.** A learner page says to an AI assistant reading it (`FOR_AI`, hidden from sight and from screen readers) that it is a learner's own practice: help them think, don't give the answers.
+
 - **Plain names in Ask.** Ask names a course, an activity, a unit or a step as a teacher labels a gradebook, in their words and language, and a question asks without saying how to answer it (that goes in its hints). A conversation keeps the teacher's words for its name, or a host's few words for it (`askModel.nameFor`), never the name of what it made. A copied example says what it brought open.
 - **Keys end on a word.** `cutWords(slug, max)` cuts at a whole word, and `slugOf` sets accents aside (`práctica` is `practica`, not `pra-ctica`); an activity's key on the Learning Platform does the same.
 - **Questions by their step.** Where several steps have questions, `change_questions` and `add_questions` take `step` (its title), refuse to guess, and `read_activity` gives each panel its id.
