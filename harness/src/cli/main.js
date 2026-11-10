@@ -237,7 +237,7 @@ export async function harnessMain(argv, host = {}) {
   if (command === 'scorecard') {
     const scored = await runScorecard();
     if (values.json) console.log(JSON.stringify(scored, null, 2));
-    else console.log(`${scorecardTables(scored)}\n\nNo model was called. What each number means, and what none of them shows: docs/scorecard.md.`);
+    else console.log(`${scorecardTables(scored)}\n\nNo model was called. What each number means: docs/scorecard.md.`);
     if (scored.guarantees.some((entry) => entry.failed)) process.exitCode = 1;
     return;
   }

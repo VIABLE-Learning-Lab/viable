@@ -1,0 +1,2240 @@
+{
+ "name": "wrong-answers",
+ "version": 1,
+ "written": "2026-11-10",
+ "author": "Written by an AI model from the task's description alone, without sight of the program it tests.",
+ "read_by": "Each label was matched to the procedures in src/diagnose.js by a second AI model that saw the labels and the list of procedures, and never what the code names. No person has checked either.",
+ "cases": [
+  {
+   "id": "w001",
+   "topic": "adding fractions",
+   "grade": 5,
+   "problem": "Find 2/3 + 1/4.",
+   "answer": "11/12",
+   "said": "2/12",
+   "learner_answer": "2/12",
+   "procedure": "Multiplied the numerators and multiplied the denominators instead of adding.",
+   "expect": [
+    "multiplied-instead-of-added"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w002",
+   "topic": "adding decimals",
+   "grade": 5,
+   "problem": "5.2 + 1.34",
+   "answer": "6.54",
+   "said": "i got 1.86",
+   "learner_answer": "1.86",
+   "procedure": "Lined the digits up on the right instead of on the decimal point.",
+   "expect": [
+    "lined-up-on-the-right"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w003",
+   "topic": "whole-number subtraction",
+   "grade": 5,
+   "problem": "845 - 367",
+   "answer": "478",
+   "said": "idk maybe 488",
+   "learner_answer": "488",
+   "procedure": "A slip, not a procedure: the learner borrowed correctly but wrote 13 - 6 as 8 in the tens.",
+   "expect": "slip",
+   "split": "held_out"
+  },
+  {
+   "id": "w004",
+   "topic": "subtracting fractions",
+   "grade": 6,
+   "problem": "Find 3/4 - 1/3.",
+   "answer": "5/12",
+   "said": "2/12",
+   "learner_answer": "2/12",
+   "procedure": "Subtracted the numerators and multiplied the denominators.",
+   "expect": [
+    "tops-subtracted-bottoms-multiplied"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w005",
+   "topic": "subtracting mixed numbers",
+   "grade": 6,
+   "problem": "Calculate 5 1/3 - 2 2/3.",
+   "answer": "2 2/3",
+   "said": "idk maybe 3 1/3",
+   "learner_answer": "3 1/3",
+   "procedure": "Subtracted the smaller fraction from the larger one, whichever way round, when the first fraction was the smaller.",
+   "expect": [
+    "smaller-fraction-from-larger"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w006",
+   "topic": "subtracting integers",
+   "grade": 7,
+   "problem": "What is -15 - 8?",
+   "answer": "-23",
+   "said": "-22",
+   "learner_answer": "-22",
+   "procedure": "A slip, not a procedure: the learner got the sign right but wrote 15 + 8 as 22.",
+   "expect": "slip",
+   "split": "dev"
+  },
+  {
+   "id": "w007",
+   "topic": "a decimal with a whole number",
+   "grade": 5,
+   "problem": "2.4 + 5",
+   "answer": "7.4",
+   "said": "is it 2.9?",
+   "learner_answer": "2.9",
+   "procedure": "Added the whole number to the digit in the tenths place and kept the whole part.",
+   "expect": [
+    "lined-up-on-the-right"
+   ],
+   "note": "Same steps as the task's own example; after-the-point-as-wholes is a near alternative.",
+   "split": "held_out"
+  },
+  {
+   "id": "w008",
+   "topic": "dividing fractions",
+   "grade": 6,
+   "problem": "3/4 ÷ 2/5",
+   "answer": "1 7/8",
+   "said": "um 8/15",
+   "learner_answer": "8/15",
+   "procedure": "Inverted the first fraction instead of the second, then multiplied.",
+   "expect": [
+    "turned-the-first-over"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w009",
+   "topic": "a whole number and a fraction",
+   "grade": 6,
+   "problem": "4 ÷ 2/3",
+   "answer": "6",
+   "said": "i gt 4/3",
+   "learner_answer": "4/3",
+   "procedure": "Divided the whole number by the denominator and ignored the numerator.",
+   "expect": "unlisted",
+   "note": "Divides whole by the denominator only; no listed procedure does this.",
+   "split": "held_out"
+  },
+  {
+   "id": "w010",
+   "topic": "adding fractions",
+   "grade": 4,
+   "problem": "3/5 + 1/5",
+   "answer": "4/5",
+   "said": "i got 5/5",
+   "learner_answer": "5/5",
+   "procedure": "A slip, not a procedure: the learner added the numerators 3 + 1 as 5.",
+   "expect": "slip",
+   "split": "dev"
+  },
+  {
+   "id": "w011",
+   "topic": "adding decimals",
+   "grade": 5,
+   "problem": "3.6 + 2.8",
+   "answer": "6.4",
+   "said": "um 6.2",
+   "learner_answer": "6.2",
+   "procedure": "A slip, not a procedure: the learner lined up the points correctly but added 6 + 8 as 12 in the tenths.",
+   "expect": "slip",
+   "split": "held_out"
+  },
+  {
+   "id": "w012",
+   "topic": "adding decimals",
+   "grade": 6,
+   "problem": "7.25 + 1.6",
+   "answer": "8.85",
+   "said": "is it 8.95?",
+   "learner_answer": "8.95",
+   "procedure": "A slip, not a procedure: the learner lined up the points correctly but added 2 + 6 as 9 in the tenths.",
+   "expect": "slip",
+   "split": "dev"
+  },
+  {
+   "id": "w013",
+   "topic": "adding fractions",
+   "grade": 5,
+   "problem": "Work out 3/4 + 5/6.",
+   "answer": "1 7/12",
+   "said": "8/6",
+   "learner_answer": "8/6",
+   "procedure": "Added the numerators and kept the larger denominator.",
+   "expect": [
+    "tops-combined-one-bottom-kept"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w014",
+   "topic": "adding fractions",
+   "grade": 5,
+   "problem": "1/3 + 1/6",
+   "answer": "1/2",
+   "said": "its 2/6 right?",
+   "learner_answer": "2/6",
+   "procedure": "Found a common denominator but added the original numerators without changing them.",
+   "also": "Added the numerators and kept the larger denominator.",
+   "expect": [
+    "common-bottom-tops-unchanged",
+    "tops-combined-one-bottom-kept"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w015",
+   "topic": "whole-number division",
+   "grade": 5,
+   "problem": "Work out 17 ÷ 5.",
+   "answer": "3 2/5",
+   "said": "17 ÷ 5 = 3.2",
+   "learner_answer": "3.2",
+   "procedure": "Wrote the remainder after a decimal point as if it were the decimal part.",
+   "expect": [
+    "remainder-as-decimal"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w016",
+   "topic": "adding integers",
+   "grade": 7,
+   "problem": "Work out -4 + 9.",
+   "answer": "5",
+   "said": "i did it and got -5 but not sure",
+   "learner_answer": "-5",
+   "procedure": "Subtracted the smaller number from the larger and gave the answer the sign of the first number.",
+   "expect": [
+    "sign-of-the-first-number"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w017",
+   "topic": "dividing decimals",
+   "grade": 6,
+   "problem": "What is 6 ÷ 0.3?",
+   "answer": "20",
+   "said": "idk maybe 2",
+   "learner_answer": "2",
+   "procedure": "Ignored the decimal points and divided the digits as whole numbers.",
+   "also": "Moved the point in the divisor to make it whole but did not move it in the dividend.",
+   "expect": [
+    "both-points-ignored",
+    "divisor-point-ignored"
+   ],
+   "note": "Both give the same quotient here.",
+   "split": "held_out"
+  },
+  {
+   "id": "w018",
+   "topic": "multiplying integers",
+   "grade": 7,
+   "problem": "(-6) × 7",
+   "answer": "-42",
+   "said": "so the answer is -48",
+   "learner_answer": "-48",
+   "procedure": "A slip, not a procedure: the learner got the sign right but recalled 6 × 7 as 48.",
+   "expect": "slip",
+   "split": "dev"
+  },
+  {
+   "id": "w019",
+   "topic": "multiplying decimals",
+   "grade": 6,
+   "problem": "Work out 0.6 × 0.07.",
+   "answer": "0.042",
+   "said": "i did it and got 0.42 but not sure",
+   "learner_answer": "0.42",
+   "procedure": "Put the point as many places from the right as the factor with the most places, instead of adding the places.",
+   "expect": [
+    "places-not-added"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w020",
+   "topic": "adding fractions",
+   "grade": 5,
+   "problem": "1/4 + 3/8",
+   "answer": "5/8",
+   "said": "i got 4/8",
+   "learner_answer": "4/8",
+   "procedure": "Found a common denominator but added the original numerators without changing them.",
+   "also": "Added the numerators and kept the larger denominator.",
+   "expect": [
+    "common-bottom-tops-unchanged",
+    "tops-combined-one-bottom-kept"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w021",
+   "topic": "adding integers",
+   "grade": 7,
+   "problem": "-7 + 12",
+   "answer": "5",
+   "said": "i did it and got 6 but not sure",
+   "learner_answer": "6",
+   "procedure": "A slip, not a procedure: the learner counted up from -7 and stopped one step too far.",
+   "expect": "slip",
+   "split": "held_out"
+  },
+  {
+   "id": "w022",
+   "topic": "adding integers",
+   "grade": 7,
+   "problem": "Work out 5 + (-9).",
+   "answer": "-4",
+   "said": "idk maybe 14",
+   "learner_answer": "14",
+   "procedure": "Ignored the negative signs and added the numbers.",
+   "expect": [
+    "minus-sign-left-off"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w023",
+   "topic": "a whole number and a fraction",
+   "grade": 5,
+   "problem": "5 × 2/3",
+   "answer": "3 1/3",
+   "said": "i got 2/15",
+   "learner_answer": "2/15",
+   "procedure": "Multiplied the whole number into the denominator only.",
+   "expect": [
+    "whole-times-bottom"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w024",
+   "topic": "whole-number division",
+   "grade": 5,
+   "problem": "23 ÷ 5",
+   "answer": "4 3/5",
+   "said": "3",
+   "learner_answer": "3",
+   "procedure": "Gave only the remainder as the answer.",
+   "expect": [
+    "remainder-only"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w025",
+   "topic": "subtracting decimals",
+   "grade": 5,
+   "problem": "9.35 - 4.8",
+   "answer": "4.55",
+   "said": "idk maybe 8.87",
+   "learner_answer": "8.87",
+   "procedure": "Lined the digits up on the right instead of on the decimal point.",
+   "expect": [
+    "lined-up-on-the-right"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w026",
+   "topic": "multiplying fractions",
+   "grade": 5,
+   "problem": "2/3 × 1/4",
+   "answer": "1/6",
+   "said": "teh answer is 24/12??",
+   "learner_answer": "24/12",
+   "procedure": "Rewrote both fractions over a common denominator, multiplied the numerators and kept the common denominator.",
+   "expect": [
+    "common-bottom-when-multiplying"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w027",
+   "topic": "whole-number division",
+   "grade": 5,
+   "problem": "29 ÷ 4",
+   "answer": "7 1/4",
+   "said": "7.1",
+   "learner_answer": "7.1",
+   "procedure": "Wrote the remainder after a decimal point as if it were the decimal part.",
+   "expect": [
+    "remainder-as-decimal"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w028",
+   "topic": "adding integers",
+   "grade": 7,
+   "problem": "-2 + 9",
+   "answer": "7",
+   "said": "its -7 right?",
+   "learner_answer": "-7",
+   "procedure": "Subtracted the smaller number from the larger and gave the answer the sign of the first number.",
+   "expect": [
+    "sign-of-the-first-number"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w029",
+   "topic": "adding fractions",
+   "grade": 5,
+   "problem": "Find 1/2 + 1/3.",
+   "answer": "5/6",
+   "said": "so the answer is 2/6",
+   "learner_answer": "2/6",
+   "procedure": "Added the numerators and multiplied the denominators.",
+   "also": "Found a common denominator but added the original numerators without changing them.",
+   "expect": [
+    "tops-added-bottoms-multiplied",
+    "common-bottom-tops-unchanged"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w030",
+   "topic": "multiplying decimals",
+   "grade": 6,
+   "problem": "0.9 × 8",
+   "answer": "7.2",
+   "said": "is it 7.3?",
+   "learner_answer": "7.3",
+   "procedure": "A slip, not a procedure: the learner placed the point correctly but recalled 9 × 8 as 73.",
+   "expect": "slip",
+   "split": "dev"
+  },
+  {
+   "id": "w031",
+   "topic": "adding fractions",
+   "grade": 5,
+   "problem": "2/3 + 1/6",
+   "answer": "5/6",
+   "said": "i did it and got 6/6 but not sure",
+   "learner_answer": "6/6",
+   "procedure": "A slip, not a procedure: the learner converted to 4/6 + 1/6 correctly but added 4 + 1 as 6.",
+   "expect": "slip",
+   "split": "held_out"
+  },
+  {
+   "id": "w032",
+   "topic": "subtracting integers",
+   "grade": 7,
+   "problem": "Work out 4 - (-6).",
+   "answer": "10",
+   "said": "i gt -10",
+   "learner_answer": "-10",
+   "procedure": "Added the numbers and made the answer negative, because two minus signs together looked negative.",
+   "expect": "unlisted",
+   "note": "Adds the sizes and makes it negative for 'two minuses'; two-minuses-make-a-plus would give +, two-negatives-stay-negative is for products/quotients.",
+   "split": "dev"
+  },
+  {
+   "id": "w033",
+   "topic": "adding integers",
+   "grade": 7,
+   "problem": "Find -2 + 7.",
+   "answer": "5",
+   "said": "9 i think",
+   "learner_answer": "9",
+   "procedure": "Added the numbers as if the signs were the same and gave the sign of the larger one.",
+   "expect": [
+    "sizes-added-across-signs"
+   ],
+   "note": "Close: the listed procedure does not state the sign rule the label gives; the core step (add the sizes) is the same.",
+   "split": "held_out"
+  },
+  {
+   "id": "w034",
+   "topic": "adding integers",
+   "grade": 7,
+   "problem": "(-2) + (-5)",
+   "answer": "-7",
+   "said": "i did it and got -3 but not sure",
+   "learner_answer": "-3",
+   "procedure": "Subtracted the numbers as if the signs were different and gave the sign of the larger one.",
+   "expect": [
+    "sizes-subtracted-when-they-add"
+   ],
+   "note": "Close: the sign rule in the label is not stated in the listed procedure.",
+   "split": "dev"
+  },
+  {
+   "id": "w035",
+   "topic": "subtracting integers",
+   "grade": 7,
+   "problem": "-5 - 8",
+   "answer": "-13",
+   "said": "i did it and got 3 but not sure",
+   "learner_answer": "3",
+   "procedure": "Read the minus sign before the second number as a plus, so -a - b became -a + b.",
+   "expect": "unlisted",
+   "note": "Reads -a-b as -a+b; sizes-subtracted-when-they-add gives the same number by a different step (a reading change, not subtracting sizes).",
+   "split": "held_out"
+  },
+  {
+   "id": "w036",
+   "topic": "dividing decimals",
+   "grade": 7,
+   "problem": "0.8 ÷ 0.02",
+   "answer": "40",
+   "said": "its 4 right?",
+   "learner_answer": "4",
+   "procedure": "Ignored the decimal points and divided the digits as whole numbers.",
+   "expect": [
+    "both-points-ignored"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w037",
+   "topic": "dividing integers",
+   "grade": 7,
+   "problem": "(-20) ÷ (-4)",
+   "answer": "5",
+   "said": "idk maybe -5",
+   "learner_answer": "-5",
+   "procedure": "Gave a negative answer when both numbers were negative, because a minus sign was present.",
+   "expect": [
+    "two-negatives-stay-negative"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w038",
+   "topic": "adding mixed numbers",
+   "grade": 6,
+   "problem": "1 1/2 + 2 1/3",
+   "answer": "3 5/6",
+   "said": "idk maybe 3 2/5",
+   "learner_answer": "3 2/5",
+   "procedure": "Added the whole numbers, then added the numerators and added the denominators of the fraction parts.",
+   "expect": [
+    "wholes-then-tops-and-bottoms"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w039",
+   "topic": "subtracting fractions",
+   "grade": 6,
+   "problem": "Find 5/6 - 1/4.",
+   "answer": "7/12",
+   "said": "so the answer is 4/12",
+   "learner_answer": "4/12",
+   "procedure": "Found a common denominator but subtracted the original numerators without changing them.",
+   "expect": [
+    "common-bottom-tops-unchanged"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w040",
+   "topic": "a decimal with a whole number",
+   "grade": 6,
+   "problem": "45 × 0.1",
+   "answer": "4.5",
+   "said": "i got 450",
+   "learner_answer": "450",
+   "procedure": "Moved the point right when multiplying by 0.1 or 0.01, because multiplying should make the number bigger.",
+   "expect": [
+    "point-moved-the-wrong-way"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w041",
+   "topic": "adding fractions",
+   "grade": 5,
+   "problem": "3/4 + 1/8",
+   "answer": "7/8",
+   "said": "i gt 4/12",
+   "learner_answer": "4/12",
+   "procedure": "Added the numerators and added the denominators.",
+   "expect": [
+    "tops-and-bottoms"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w042",
+   "topic": "dividing integers",
+   "grade": 7,
+   "problem": "Work out 24 ÷ (-8).",
+   "answer": "-3",
+   "said": "24 ÷ (-8) = 3",
+   "learner_answer": "3",
+   "procedure": "Dropped the negative sign and gave a positive answer.",
+   "expect": [
+    "minus-sign-left-off"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w043",
+   "topic": "dividing integers",
+   "grade": 7,
+   "problem": "-18 ÷ 6",
+   "answer": "-3",
+   "said": "i got 3",
+   "learner_answer": "3",
+   "procedure": "Dropped the negative sign and gave a positive answer.",
+   "expect": [
+    "minus-sign-left-off"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w044",
+   "topic": "a whole number and a fraction",
+   "grade": 5,
+   "problem": "3 - 1/4",
+   "answer": "2 3/4",
+   "said": "so the answer is 2 1/4",
+   "learner_answer": "2 1/4",
+   "procedure": "Took 1 off the whole number and wrote the fraction unchanged beside it.",
+   "expect": [
+    "one-off-the-whole-fraction-kept"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w045",
+   "topic": "subtracting integers",
+   "grade": 7,
+   "problem": "9 - (-4)",
+   "answer": "13",
+   "said": "its -13 right?",
+   "learner_answer": "-13",
+   "procedure": "Added the numbers and made the answer negative, because two minus signs together looked negative.",
+   "expect": "unlisted",
+   "note": "Adds the sizes and makes it negative for 'two minuses'; two-minuses-make-a-plus would give +, two-negatives-stay-negative is for products/quotients.",
+   "split": "held_out"
+  },
+  {
+   "id": "w046",
+   "topic": "dividing fractions",
+   "grade": 6,
+   "problem": "2/3 ÷ 3/2",
+   "answer": "4/9",
+   "said": "6/6",
+   "learner_answer": "6/6",
+   "procedure": "Multiplied straight across without inverting the second fraction.",
+   "also": "Inverted both fractions, then multiplied.",
+   "expect": [
+    "divided-without-turning-over"
+   ],
+   "note": "label_also (invert both) is not in the list.",
+   "split": "dev"
+  },
+  {
+   "id": "w047",
+   "topic": "dividing decimals",
+   "grade": 6,
+   "problem": "3 ÷ 0.25",
+   "answer": "12",
+   "said": "idk maybe 0.75",
+   "learner_answer": "0.75",
+   "procedure": "Read dividing by 0.5, 0.25 or 0.2 as dividing by 2, 4 or 5.",
+   "expect": "unlisted",
+   "note": "Reads dividing by 0.25/0.5 as dividing by 4/2; no listed procedure.",
+   "split": "held_out"
+  },
+  {
+   "id": "w048",
+   "topic": "whole-number multiplication",
+   "grade": 4,
+   "problem": "36 × 4",
+   "answer": "144",
+   "said": "204 i think",
+   "learner_answer": "204",
+   "procedure": "Added the carried digit to the next digit before multiplying it, not after.",
+   "expect": [
+    "carry-added-before-multiplying"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w049",
+   "topic": "adding decimals",
+   "grade": 5,
+   "problem": "0.5 + 0.25",
+   "answer": "0.75",
+   "said": "teh answer is 0.30??",
+   "learner_answer": "0.30",
+   "procedure": "Lined the digits up on the right instead of on the decimal point.",
+   "also": "Treated the digits after the point as a whole number and added them separately from the whole parts.",
+   "expect": [
+    "lined-up-on-the-right",
+    "after-the-point-as-wholes"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w050",
+   "topic": "subtracting fractions",
+   "grade": 6,
+   "problem": "3/4 - 1/6",
+   "answer": "7/12",
+   "said": "i gt 6/12",
+   "learner_answer": "6/12",
+   "procedure": "A slip, not a procedure: the learner converted to 9/12 - 2/12 correctly but wrote 9 - 2 as 6.",
+   "expect": "slip",
+   "split": "dev"
+  },
+  {
+   "id": "w051",
+   "topic": "whole-number multiplication",
+   "grade": 4,
+   "problem": "Find 48 × 6.",
+   "answer": "288",
+   "said": "i got 248",
+   "learner_answer": "248",
+   "procedure": "Forgot to add the carried digit to the next column.",
+   "expect": [
+    "carry-not-added-when-multiplying"
+   ],
+   "note": "Matched when this procedure was added, by a reader given the label and the two new procedures.",
+   "split": "held_out"
+  },
+  {
+   "id": "w052",
+   "topic": "subtracting integers",
+   "grade": 7,
+   "problem": "-6 - 5",
+   "answer": "-11",
+   "said": "i did it and got 11 but not sure",
+   "learner_answer": "11",
+   "procedure": "Read a negative number minus a positive as two negatives making a positive and added them.",
+   "expect": [
+    "two-minuses-make-a-plus"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w053",
+   "topic": "adding fractions",
+   "grade": 4,
+   "problem": "2/7 + 3/7",
+   "answer": "5/7",
+   "said": "2+3=5, 7+7=14 so 5/14",
+   "learner_answer": "5/14",
+   "procedure": "Added the numerators and added the denominators.",
+   "expect": [
+    "tops-and-bottoms",
+    "tops-added-like-bottoms-too"
+   ],
+   "note": "The two ids read identically; same bottoms here.",
+   "split": "held_out"
+  },
+  {
+   "id": "w054",
+   "topic": "multiplying fractions",
+   "grade": 5,
+   "problem": "2/3 × 3/4",
+   "answer": "1/2",
+   "said": "i did it and got 8/9 but not sure",
+   "learner_answer": "8/9",
+   "procedure": "Cross-multiplied: the top of each fraction times the bottom of the other.",
+   "expect": [
+    "cross-multiplied"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w055",
+   "topic": "multiplying fractions",
+   "grade": 6,
+   "problem": "2/5 × 3/5",
+   "answer": "6/25",
+   "said": "is it 6/5?",
+   "learner_answer": "6/5",
+   "procedure": "Multiplied the numerators and kept the denominator because the denominators were the same.",
+   "also": "Rewrote both fractions over a common denominator, multiplied the numerators and kept the common denominator.",
+   "expect": [
+    "multiplied-tops-kept-bottom",
+    "common-bottom-when-multiplying"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w056",
+   "topic": "multiplying decimals",
+   "grade": 6,
+   "problem": "0.8 × 0.12",
+   "answer": "0.096",
+   "said": "9.6 i think",
+   "learner_answer": "9.6",
+   "procedure": "Put the point as many places from the right as the first factor has, instead of counting both.",
+   "expect": [
+    "places-not-added"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w057",
+   "topic": "whole-number subtraction",
+   "grade": 5,
+   "problem": "703 - 458",
+   "answer": "245",
+   "said": "um 355",
+   "learner_answer": "355",
+   "procedure": "In each column subtracted the smaller digit from the larger, whichever was on top.",
+   "expect": [
+    "smaller-digit-from-larger"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w058",
+   "topic": "adding fractions",
+   "grade": 5,
+   "problem": "3/4 + 2/3",
+   "answer": "1 5/12",
+   "said": "is it 6/12?",
+   "learner_answer": "6/12",
+   "procedure": "Multiplied the numerators and multiplied the denominators instead of adding.",
+   "expect": [
+    "multiplied-instead-of-added"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w059",
+   "topic": "multiplying decimals",
+   "grade": 6,
+   "problem": "Work out 0.5 × 0.2.",
+   "answer": "0.1",
+   "said": "is it 1.0?",
+   "learner_answer": "1.0",
+   "procedure": "Put the point as many places from the right as the factor with the most places, instead of adding the places.",
+   "also": "Put the point as many places from the right as the first factor has, instead of counting both.",
+   "expect": [
+    "places-not-added"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w060",
+   "topic": "adding mixed numbers",
+   "grade": 6,
+   "problem": "1 1/2 + 2 3/4",
+   "answer": "4 1/4",
+   "said": "1 1/2 + 2 3/4\n= 5 1/4",
+   "learner_answer": "5 1/4",
+   "procedure": "A slip, not a procedure: the learner added the fractions correctly to get 1 1/4 but wrote 1 + 2 + 1 as 5.",
+   "expect": "slip",
+   "split": "dev"
+  },
+  {
+   "id": "w061",
+   "topic": "adding fractions",
+   "grade": 5,
+   "problem": "2/5 + 1/4",
+   "answer": "13/20",
+   "said": "2+1=3, 5+4=9 so 3/9",
+   "learner_answer": "3/9",
+   "procedure": "Added the numerators and added the denominators.",
+   "expect": [
+    "tops-and-bottoms"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w062",
+   "topic": "multiplying integers",
+   "grade": 7,
+   "problem": "Calculate (-3) × 4.",
+   "answer": "-12",
+   "said": "(-3) × 4 = 12",
+   "learner_answer": "12",
+   "procedure": "Dropped the negative sign and gave a positive answer.",
+   "expect": [
+    "minus-sign-left-off"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w063",
+   "topic": "a decimal with a whole number",
+   "grade": 5,
+   "problem": "0.45 × 100",
+   "answer": "45",
+   "said": "0.0045",
+   "learner_answer": "0.0045",
+   "procedure": "Moved the point left, the wrong way, when multiplying by a power of ten.",
+   "expect": [
+    "point-moved-the-wrong-way"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w064",
+   "topic": "whole-number multiplication",
+   "grade": 5,
+   "problem": "4 × 305",
+   "answer": "1220",
+   "said": "i did it and got 140 but not sure",
+   "learner_answer": "140",
+   "procedure": "Skipped the zero digit and multiplied as if the number had no zero.",
+   "expect": [
+    "zero-digit-skipped"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w065",
+   "topic": "subtracting fractions",
+   "grade": 6,
+   "problem": "2/3 - 1/6",
+   "answer": "1/2",
+   "said": "1/3 i think",
+   "learner_answer": "1/3",
+   "procedure": "Took the smaller number from the larger in the tops and again in the bottoms, whichever way round they came.",
+   "expect": "unlisted",
+   "note": "Smaller-from-larger in tops and bottoms; tops-and-bottoms-subtracted would give -1/3, smaller-from-larger is for whole results.",
+   "split": "held_out"
+  },
+  {
+   "id": "w066",
+   "topic": "whole-number subtraction",
+   "grade": 4,
+   "problem": "72 - 38",
+   "answer": "34",
+   "said": "72 - 38\n= 40",
+   "learner_answer": "40",
+   "procedure": "Wrote 0 in any column where the top digit was smaller than the bottom digit, without borrowing.",
+   "expect": [
+    "zero-where-top-is-smaller"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w067",
+   "topic": "dividing integers",
+   "grade": 7,
+   "problem": "Find (-12) ÷ (-3).",
+   "answer": "4",
+   "said": "teh answer is -4??",
+   "learner_answer": "-4",
+   "procedure": "Gave a negative answer when both numbers were negative, because a minus sign was present.",
+   "expect": [
+    "two-negatives-stay-negative"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w068",
+   "topic": "subtracting fractions",
+   "grade": 6,
+   "problem": "3/4 - 1/6",
+   "answer": "7/12",
+   "said": "3/4 - 1/6\n= 2/12",
+   "learner_answer": "2/12",
+   "procedure": "Found a common denominator but subtracted the original numerators without changing them.",
+   "expect": [
+    "common-bottom-tops-unchanged"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w069",
+   "topic": "adding fractions",
+   "grade": 6,
+   "problem": "What is 3/8 + 1/6?",
+   "answer": "13/24",
+   "said": "4/48",
+   "learner_answer": "4/48",
+   "procedure": "Added the numerators and multiplied the denominators.",
+   "expect": [
+    "tops-added-bottoms-multiplied"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w070",
+   "topic": "adding integers",
+   "grade": 7,
+   "problem": "(-8) + (-3)",
+   "answer": "-11",
+   "said": "is it -5?",
+   "learner_answer": "-5",
+   "procedure": "Subtracted the numbers as if the signs were different and gave the sign of the larger one.",
+   "expect": [
+    "sizes-subtracted-when-they-add"
+   ],
+   "note": "Close: the sign rule in the label is not stated in the listed procedure.",
+   "split": "dev"
+  },
+  {
+   "id": "w071",
+   "topic": "subtracting integers",
+   "grade": 6,
+   "problem": "2 - 9",
+   "answer": "-7",
+   "said": "its 7 right?",
+   "learner_answer": "7",
+   "procedure": "Took the smaller number from the larger whichever way round, so a negative answer came out positive.",
+   "expect": [
+    "smaller-from-larger"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w072",
+   "topic": "dividing fractions",
+   "grade": 6,
+   "problem": "1/2 ÷ 1/4",
+   "answer": "2",
+   "said": "teh answer is 1/8??",
+   "learner_answer": "1/8",
+   "procedure": "Multiplied straight across without inverting the second fraction.",
+   "expect": [
+    "divided-without-turning-over"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w073",
+   "topic": "whole-number division",
+   "grade": 5,
+   "problem": "4208 ÷ 4",
+   "answer": "1052",
+   "said": "152",
+   "learner_answer": "152",
+   "procedure": "Left out the zero in the quotient where a digit could not be divided.",
+   "expect": [
+    "zero-left-out-of-quotient"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w074",
+   "topic": "whole-number division",
+   "grade": 5,
+   "problem": "Work out 612 ÷ 6.",
+   "answer": "102",
+   "said": "12",
+   "learner_answer": "12",
+   "procedure": "Left out the zero in the quotient where a digit could not be divided.",
+   "expect": [
+    "zero-left-out-of-quotient"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w075",
+   "topic": "a whole number and a fraction",
+   "grade": 4,
+   "problem": "2 + 1/3",
+   "answer": "2 1/3",
+   "said": "its 3/3 right?",
+   "learner_answer": "3/3",
+   "procedure": "Added the whole number to the numerator and kept the denominator.",
+   "expect": [
+    "whole-added-to-top"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w076",
+   "topic": "adding mixed numbers",
+   "grade": 5,
+   "problem": "1 2/5 + 2/5",
+   "answer": "1 4/5",
+   "said": "1 2/5 + 2/5 = 5/5",
+   "learner_answer": "5/5",
+   "procedure": "Added each whole number to its numerator, kept the denominator, then added across.",
+   "expect": [
+    "whole-added-to-top"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w077",
+   "topic": "adding decimals",
+   "grade": 5,
+   "problem": "2.5 + 2.75",
+   "answer": "5.25",
+   "said": "2.5 + 2.75\n= 4.80",
+   "learner_answer": "4.80",
+   "procedure": "Treated the digits after the point as a whole number and added them separately from the whole parts.",
+   "expect": [
+    "after-the-point-as-wholes"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w078",
+   "topic": "whole-number subtraction",
+   "grade": 5,
+   "problem": "305 - 127",
+   "answer": "178",
+   "said": "305 - 127 = 228",
+   "learner_answer": "228",
+   "procedure": "Wrote the bottom digit instead of borrowing whenever the top digit was 0.",
+   "expect": [
+    "bottom-digit-under-a-zero"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w079",
+   "topic": "dividing fractions",
+   "grade": 6,
+   "problem": "Calculate 3/5 ÷ 1/2.",
+   "answer": "1 1/5",
+   "said": "um 10/3",
+   "learner_answer": "10/3",
+   "procedure": "Inverted both fractions, then multiplied.",
+   "expect": "unlisted",
+   "note": "Inverts both fractions; the list has no such procedure.",
+   "split": "held_out"
+  },
+  {
+   "id": "w080",
+   "topic": "dividing decimals",
+   "grade": 6,
+   "problem": "0.84 ÷ 4",
+   "answer": "0.21",
+   "said": "0.84 ÷ 4 = 21",
+   "learner_answer": "21",
+   "procedure": "Divided the digits correctly but dropped the decimal point from the answer.",
+   "expect": [
+    "dividend-point-ignored"
+   ],
+   "note": "both-points-ignored gives the same quotient but the label names only the dropped point.",
+   "split": "dev"
+  },
+  {
+   "id": "w081",
+   "topic": "whole-number multiplication",
+   "grade": 5,
+   "problem": "32 × 41",
+   "answer": "1312",
+   "said": "its 122 right?",
+   "learner_answer": "122",
+   "procedure": "Multiplied digit by digit in matching columns and wrote the products side by side.",
+   "expect": [
+    "digits-multiplied-in-place"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w082",
+   "topic": "subtracting mixed numbers",
+   "grade": 6,
+   "problem": "3 1/4 - 1 3/4",
+   "answer": "1 1/2",
+   "said": "3 1/4 - 1 3/4 = 2 1/2",
+   "learner_answer": "2 1/2",
+   "procedure": "Subtracted the smaller fraction from the larger one, whichever way round, when the first fraction was the smaller.",
+   "expect": [
+    "smaller-fraction-from-larger"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w083",
+   "topic": "a decimal with a whole number",
+   "grade": 5,
+   "problem": "What is 4 - 0.25?",
+   "answer": "3.75",
+   "said": "so the answer is 3.25",
+   "learner_answer": "3.25",
+   "procedure": "Took 1 off the whole number and copied the digits after the point beside it.",
+   "expect": "unlisted",
+   "note": "Decimal version of one-off-the-whole-fraction-kept; that procedure is stated for fractions.",
+   "split": "held_out"
+  },
+  {
+   "id": "w084",
+   "topic": "whole-number multiplication",
+   "grade": 4,
+   "problem": "23 × 14",
+   "answer": "322",
+   "said": "i got 115",
+   "learner_answer": "115",
+   "procedure": "Forgot the placeholder zero for the tens digit, so added the partial products without shifting.",
+   "expect": [
+    "tens-digit-as-ones"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w085",
+   "topic": "multiplying mixed numbers",
+   "grade": 6,
+   "problem": "3 1/2 × 2 1/3",
+   "answer": "8 1/6",
+   "said": "6 1/6 i think",
+   "learner_answer": "6 1/6",
+   "procedure": "Multiplied the whole numbers and multiplied the fractions separately, then joined the two results.",
+   "expect": [
+    "wholes-multiplied-fractions-multiplied"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w086",
+   "topic": "adding integers",
+   "grade": 7,
+   "problem": "4 + (-9)",
+   "answer": "-5",
+   "said": "its 5 right?",
+   "learner_answer": "5",
+   "procedure": "Subtracted the smaller number from the larger and gave the answer the sign of the first number.",
+   "expect": [
+    "sign-of-the-first-number"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w087",
+   "topic": "subtracting integers",
+   "grade": 7,
+   "problem": "-7 - 2",
+   "answer": "-9",
+   "said": "-5",
+   "learner_answer": "-5",
+   "procedure": "Read the minus sign before the second number as a plus, so -a - b became -a + b.",
+   "expect": "unlisted",
+   "note": "Reads -a-b as -a+b; sizes-subtracted-when-they-add gives the same number by a different step (a reading change, not subtracting sizes).",
+   "split": "held_out"
+  },
+  {
+   "id": "w088",
+   "topic": "subtracting integers",
+   "grade": 7,
+   "problem": "-4 - (-6)",
+   "answer": "2",
+   "said": "is it -10?",
+   "learner_answer": "-10",
+   "procedure": "Ignored the second minus sign and subtracted the positive number.",
+   "also": "Added the numbers and made the answer negative, because two minus signs together looked negative.",
+   "expect": [
+    "second-minus-ignored"
+   ],
+   "note": "label_also (add and negate) is not in the list.",
+   "split": "dev"
+  },
+  {
+   "id": "w089",
+   "topic": "dividing fractions",
+   "grade": 6,
+   "problem": "Find 2/3 ÷ 3/4.",
+   "answer": "8/9",
+   "said": "so the answer is 9/8",
+   "learner_answer": "9/8",
+   "procedure": "Inverted the first fraction instead of the second, then multiplied.",
+   "expect": [
+    "turned-the-first-over"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w090",
+   "topic": "adding decimals",
+   "grade": 5,
+   "problem": "1.4 + 3.35",
+   "answer": "4.75",
+   "said": "4.39",
+   "learner_answer": "4.39",
+   "procedure": "Treated the digits after the point as a whole number and added them separately from the whole parts.",
+   "expect": [
+    "after-the-point-as-wholes"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w091",
+   "topic": "adding integers",
+   "grade": 7,
+   "problem": "3 + (-5)",
+   "answer": "-2",
+   "said": "is it -8?",
+   "learner_answer": "-8",
+   "procedure": "Added the two numbers and kept a minus sign because one of them was negative.",
+   "also": "Added the numbers as if the signs were the same and gave the sign of the larger one.",
+   "expect": [
+    "sizes-added-across-signs"
+   ],
+   "note": "Close: the listed procedure does not state the sign rule the label gives; the core step (add the sizes) is the same.",
+   "split": "held_out"
+  },
+  {
+   "id": "w092",
+   "topic": "a whole number and a fraction",
+   "grade": 6,
+   "problem": "1/2 ÷ 3",
+   "answer": "1/6",
+   "said": "um 6",
+   "learner_answer": "6",
+   "procedure": "Divided the larger number by the smaller whichever way round the problem was written.",
+   "expect": [
+    "divided-the-other-way"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w093",
+   "topic": "a whole number and a fraction",
+   "grade": 6,
+   "problem": "Work out 3/4 ÷ 3.",
+   "answer": "1/4",
+   "said": "idk maybe 9/4",
+   "learner_answer": "9/4",
+   "procedure": "Multiplied the fraction by the whole number instead of dividing by it.",
+   "expect": "unlisted",
+   "note": "Multiplies the fraction by the whole instead of dividing; not in the list.",
+   "split": "held_out"
+  },
+  {
+   "id": "w094",
+   "topic": "adding integers",
+   "grade": 6,
+   "problem": "-3 + 5",
+   "answer": "2",
+   "said": "idk maybe -8",
+   "learner_answer": "-8",
+   "procedure": "Added the two numbers and kept a minus sign because one of them was negative.",
+   "expect": [
+    "sizes-added-across-signs"
+   ],
+   "note": "Close: the listed procedure does not state the sign rule the label gives; the core step (add the sizes) is the same.",
+   "split": "dev"
+  },
+  {
+   "id": "w095",
+   "topic": "adding integers",
+   "grade": 7,
+   "problem": "Work out -8 + 3.",
+   "answer": "-5",
+   "said": "i gt 11",
+   "learner_answer": "11",
+   "procedure": "Ignored the negative signs and added the numbers.",
+   "expect": [
+    "minus-sign-left-off"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w096",
+   "topic": "subtracting decimals",
+   "grade": 5,
+   "problem": "Find 6.43 - 2.7.",
+   "answer": "3.73",
+   "said": "its 6.16 right?",
+   "learner_answer": "6.16",
+   "procedure": "Lined the digits up on the right instead of on the decimal point.",
+   "expect": [
+    "lined-up-on-the-right"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w097",
+   "topic": "multiplying integers",
+   "grade": 7,
+   "problem": "What is (-3) × (-4)?",
+   "answer": "12",
+   "said": "i gt -12",
+   "learner_answer": "-12",
+   "procedure": "Gave a negative answer when both numbers were negative, because a minus sign was present.",
+   "expect": [
+    "two-negatives-stay-negative"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w098",
+   "topic": "whole-number multiplication",
+   "grade": 5,
+   "problem": "Find 63 × 7.",
+   "answer": "441",
+   "said": "431",
+   "learner_answer": "431",
+   "procedure": "A slip, not a procedure: the learner multiplied and carried correctly but wrote the tens digit as 3 instead of 4.",
+   "expect": "slip",
+   "split": "dev"
+  },
+  {
+   "id": "w099",
+   "topic": "subtracting integers",
+   "grade": 6,
+   "problem": "What is 0 - 6?",
+   "answer": "-6",
+   "said": "6-0=6",
+   "learner_answer": "6",
+   "procedure": "Took the smaller number from the larger whichever way round, so a negative answer came out positive.",
+   "expect": [
+    "smaller-from-larger"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w100",
+   "topic": "adding fractions",
+   "grade": 6,
+   "problem": "2/9 + 1/6",
+   "answer": "7/18",
+   "said": "so the answer is 3/9",
+   "learner_answer": "3/9",
+   "procedure": "Added the numerators and kept the larger denominator.",
+   "expect": [
+    "tops-combined-one-bottom-kept"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w101",
+   "topic": "a whole number and a fraction",
+   "grade": 6,
+   "problem": "5/6 ÷ 3",
+   "answer": "5/18",
+   "said": "um 5/2",
+   "learner_answer": "5/2",
+   "procedure": "Divided the denominator by the whole number.",
+   "expect": "unlisted",
+   "note": "Divides the denominator by the whole number; not in the list.",
+   "split": "held_out"
+  },
+  {
+   "id": "w102",
+   "topic": "a decimal with a whole number",
+   "grade": 5,
+   "problem": "0.72 × 10",
+   "answer": "7.2",
+   "said": "i got 0.720",
+   "learner_answer": "0.720",
+   "procedure": "Added zeros to the end of the number when multiplying by a power of ten.",
+   "expect": [
+    "zeros-added-for-times-ten"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w103",
+   "topic": "dividing decimals",
+   "grade": 6,
+   "problem": "Find 12.5 ÷ 5.",
+   "answer": "2.5",
+   "said": "so the answer is 2.4",
+   "learner_answer": "2.4",
+   "procedure": "A slip, not a procedure: the learner set out the division correctly but wrote 25 ÷ 5 as 4.",
+   "expect": "slip",
+   "split": "held_out"
+  },
+  {
+   "id": "w104",
+   "topic": "multiplying decimals",
+   "grade": 6,
+   "problem": "0.24 × 0.3",
+   "answer": "0.072",
+   "said": "um 0.72",
+   "learner_answer": "0.72",
+   "procedure": "Put the point as many places from the right as the first factor has, instead of counting both.",
+   "also": "Put the point as many places from the right as the factor with the most places, instead of adding the places.",
+   "expect": [
+    "places-not-added"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w105",
+   "topic": "a decimal with a whole number",
+   "grade": 5,
+   "problem": "What is 2.5 × 100?",
+   "answer": "250",
+   "said": "2.500 i think",
+   "learner_answer": "2.500",
+   "procedure": "Added zeros to the end of the number when multiplying by a power of ten.",
+   "expect": [
+    "zeros-added-for-times-ten"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w106",
+   "topic": "subtracting fractions",
+   "grade": 5,
+   "problem": "Work out 7/8 - 3/8.",
+   "answer": "1/2",
+   "said": "idk maybe 1/4",
+   "learner_answer": "1/4",
+   "procedure": "A slip, not a procedure: the learner subtracted correctly to get 4/8 but simplified it to 1/4 instead of 1/2.",
+   "expect": "slip",
+   "split": "dev"
+  },
+  {
+   "id": "w107",
+   "topic": "adding fractions",
+   "grade": 5,
+   "problem": "Calculate 1/2 + 1/4.",
+   "answer": "3/4",
+   "said": "teh answer is 2/4??",
+   "learner_answer": "2/4",
+   "procedure": "Found a common denominator but added the original numerators without changing them.",
+   "also": "Added the numerators and kept the larger denominator.",
+   "expect": [
+    "common-bottom-tops-unchanged",
+    "tops-combined-one-bottom-kept"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w108",
+   "topic": "adding mixed numbers",
+   "grade": 5,
+   "problem": "3 1/2 + 1/2",
+   "answer": "4",
+   "said": "3 1/2 + 1/2 = 7/2",
+   "learner_answer": "7/2",
+   "procedure": "Changed the mixed number to an improper fraction by multiplying the whole number by the denominator and forgetting to add the numerator.",
+   "expect": [
+    "top-left-out-of-improper"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w109",
+   "topic": "adding integers",
+   "grade": 7,
+   "problem": "(-5) + (-2)",
+   "answer": "-7",
+   "said": "(-5) + (-2) = 7",
+   "learner_answer": "7",
+   "procedure": "Treated two negatives as making a positive, even in addition.",
+   "also": "Ignored the negative signs and added the numbers.",
+   "expect": [
+    "two-negatives-make-a-positive-in-adding",
+    "minus-sign-left-off"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w110",
+   "topic": "subtracting integers",
+   "grade": 6,
+   "problem": "3 - 8",
+   "answer": "-5",
+   "said": "8-3=5",
+   "learner_answer": "5",
+   "procedure": "Took the smaller number from the larger whichever way round, so a negative answer came out positive.",
+   "expect": [
+    "smaller-from-larger"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w111",
+   "topic": "multiplying fractions",
+   "grade": 5,
+   "problem": "1/2 × 2/3",
+   "answer": "1/3",
+   "said": "12/6 i think",
+   "learner_answer": "12/6",
+   "procedure": "Rewrote both fractions over a common denominator, multiplied the numerators and kept the common denominator.",
+   "expect": [
+    "common-bottom-when-multiplying"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w112",
+   "topic": "dividing decimals",
+   "grade": 6,
+   "problem": "0.24 ÷ 4",
+   "answer": "0.06",
+   "said": "i got 0.6",
+   "learner_answer": "0.6",
+   "procedure": "Left out the placeholder zero after the point in the quotient.",
+   "expect": [
+    "zero-after-the-point-left-out"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w113",
+   "topic": "subtracting integers",
+   "grade": 7,
+   "problem": "Find 8 - (-2).",
+   "answer": "10",
+   "said": "is it 6?",
+   "learner_answer": "6",
+   "procedure": "Ignored the second minus sign and subtracted the positive number.",
+   "expect": [
+    "second-minus-ignored"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w114",
+   "topic": "subtracting integers",
+   "grade": 7,
+   "problem": "-9 - 4",
+   "answer": "-13",
+   "said": "i gt -5",
+   "learner_answer": "-5",
+   "procedure": "Read the minus sign before the second number as a plus, so -a - b became -a + b.",
+   "expect": "unlisted",
+   "note": "Reads -a-b as -a+b; sizes-subtracted-when-they-add gives the same number by a different step (a reading change, not subtracting sizes).",
+   "split": "dev"
+  },
+  {
+   "id": "w115",
+   "topic": "whole-number subtraction",
+   "grade": 4,
+   "problem": "Work out 83 - 47.",
+   "answer": "36",
+   "said": "i gt 46",
+   "learner_answer": "46",
+   "procedure": "Borrowed ten for the ones column but did not take one off the next digit.",
+   "expect": [
+    "borrowed-without-paying-back"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w116",
+   "topic": "adding integers",
+   "grade": 7,
+   "problem": "-1 + 6",
+   "answer": "5",
+   "said": "7 i think",
+   "learner_answer": "7",
+   "procedure": "Added the numbers as if the signs were the same and gave the sign of the larger one.",
+   "expect": [
+    "sizes-added-across-signs"
+   ],
+   "note": "Close: the listed procedure does not state the sign rule the label gives; the core step (add the sizes) is the same.",
+   "split": "dev"
+  },
+  {
+   "id": "w117",
+   "topic": "whole-number division",
+   "grade": 5,
+   "problem": "38 ÷ 7",
+   "answer": "5 3/7",
+   "said": "so the answer is 5",
+   "learner_answer": "5",
+   "procedure": "Ignored the remainder and gave only the whole-number quotient.",
+   "expect": "unlisted",
+   "note": "Ignores the remainder (quotient only); not in the list.",
+   "split": "held_out"
+  },
+  {
+   "id": "w118",
+   "topic": "a decimal with a whole number",
+   "grade": 5,
+   "problem": "2.5 × 3",
+   "answer": "7.5",
+   "said": "is it 6.5?",
+   "learner_answer": "6.5",
+   "procedure": "Multiplied only the whole-number part and copied the decimal part unchanged.",
+   "expect": [
+    "whole-part-only-multiplied"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w119",
+   "topic": "adding fractions",
+   "grade": 5,
+   "problem": "3/4 + 1/6",
+   "answer": "11/12",
+   "said": "i did it and got 4/12 but not sure",
+   "learner_answer": "4/12",
+   "procedure": "Found a common denominator but added the original numerators without changing them.",
+   "expect": [
+    "common-bottom-tops-unchanged"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w120",
+   "topic": "subtracting integers",
+   "grade": 7,
+   "problem": "9 - (-6)",
+   "answer": "15",
+   "said": "14",
+   "learner_answer": "14",
+   "procedure": "A slip, not a procedure: the learner changed it correctly to 9 + 6 but wrote the sum as 14.",
+   "expect": "slip",
+   "split": "dev"
+  },
+  {
+   "id": "w121",
+   "topic": "adding decimals",
+   "grade": 5,
+   "problem": "What is 3.4 + 2.15?",
+   "answer": "5.55",
+   "said": "teh answer is 2.49??",
+   "learner_answer": "2.49",
+   "procedure": "Lined the digits up on the right instead of on the decimal point.",
+   "expect": [
+    "lined-up-on-the-right"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w122",
+   "topic": "a whole number and a fraction",
+   "grade": 5,
+   "problem": "Find 3 × 2/5.",
+   "answer": "1 1/5",
+   "said": "6/15",
+   "learner_answer": "6/15",
+   "procedure": "Multiplied the whole number into both the numerator and the denominator.",
+   "expect": [
+    "whole-times-top-and-bottom"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w123",
+   "topic": "multiplying fractions",
+   "grade": 5,
+   "problem": "2/5 × 3/4",
+   "answer": "3/10",
+   "said": "um 6/24",
+   "learner_answer": "6/24",
+   "procedure": "A slip, not a procedure: the learner multiplied the numerators correctly but wrote 5 × 4 as 24.",
+   "expect": "slip",
+   "split": "held_out"
+  },
+  {
+   "id": "w124",
+   "topic": "dividing fractions",
+   "grade": 6,
+   "problem": "Find 5/6 ÷ 5/12.",
+   "answer": "2",
+   "said": "i gt 3",
+   "learner_answer": "3",
+   "procedure": "A slip, not a procedure: the learner inverted and multiplied correctly to get 60/30, then read 60 ÷ 30 as 3.",
+   "expect": "slip",
+   "split": "dev"
+  },
+  {
+   "id": "w125",
+   "topic": "whole-number subtraction",
+   "grade": 5,
+   "problem": "302 - 148",
+   "answer": "154",
+   "said": "254 i think",
+   "learner_answer": "254",
+   "procedure": "Borrowing across a zero, made the zero a 9 but did not take 1 off the digit to its left.",
+   "expect": [
+    "borrowed-without-paying-back"
+   ],
+   "note": "Close: borrow across a zero without reducing the hundreds is a form of borrowing without paying back.",
+   "split": "held_out"
+  },
+  {
+   "id": "w126",
+   "topic": "adding fractions",
+   "grade": 5,
+   "problem": "3/8 + 1/4",
+   "answer": "5/8",
+   "said": "3/8 + 1/4\n= 5/6",
+   "learner_answer": "5/6",
+   "procedure": "A slip, not a procedure: the learner converted to 3/8 + 2/8 = 5/8 correctly but copied the denominator as 6.",
+   "expect": "slip",
+   "split": "dev"
+  },
+  {
+   "id": "w127",
+   "topic": "adding integers",
+   "grade": 6,
+   "problem": "-7 + 4",
+   "answer": "-3",
+   "said": "its -11 right?",
+   "learner_answer": "-11",
+   "procedure": "Added the two numbers and kept a minus sign because one of them was negative.",
+   "expect": [
+    "sizes-added-across-signs"
+   ],
+   "note": "Close: the listed procedure does not state the sign rule the label gives; the core step (add the sizes) is the same.",
+   "split": "held_out"
+  },
+  {
+   "id": "w128",
+   "topic": "subtracting decimals",
+   "grade": 5,
+   "problem": "5.2 - 2.7",
+   "answer": "2.5",
+   "said": "5.2 - 2.7\n= 3.5",
+   "learner_answer": "3.5",
+   "procedure": "In each column subtracted the smaller digit from the larger, whichever was on top, keeping the points lined up.",
+   "expect": [
+    "smaller-digit-from-larger-decimal"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w129",
+   "topic": "multiplying integers",
+   "grade": 7,
+   "problem": "Calculate 5 × (-6).",
+   "answer": "-30",
+   "said": "um 30",
+   "learner_answer": "30",
+   "procedure": "Dropped the negative sign and gave a positive answer.",
+   "expect": [
+    "minus-sign-left-off"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w130",
+   "topic": "dividing decimals",
+   "grade": 6,
+   "problem": "0.35 ÷ 7",
+   "answer": "0.05",
+   "said": "0.35 ÷ 7\n= 0.5",
+   "learner_answer": "0.5",
+   "procedure": "Left out the placeholder zero after the point in the quotient.",
+   "expect": [
+    "zero-after-the-point-left-out"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w131",
+   "topic": "adding integers",
+   "grade": 6,
+   "problem": "6 + (-2)",
+   "answer": "4",
+   "said": "teh answer is -8??",
+   "learner_answer": "-8",
+   "procedure": "Added the two numbers and kept a minus sign because one of them was negative.",
+   "expect": [
+    "sizes-added-across-signs"
+   ],
+   "note": "Close: the listed procedure does not state the sign rule the label gives; the core step (add the sizes) is the same.",
+   "split": "held_out"
+  },
+  {
+   "id": "w132",
+   "topic": "multiplying decimals",
+   "grade": 6,
+   "problem": "Calculate 0.7 × 0.6.",
+   "answer": "0.42",
+   "said": "0.7 x 0.6\n= 0.48",
+   "learner_answer": "0.48",
+   "procedure": "A slip, not a procedure: the learner placed the point correctly but recalled 7 × 6 as 48.",
+   "expect": "slip",
+   "split": "dev"
+  },
+  {
+   "id": "w133",
+   "topic": "dividing fractions",
+   "grade": 6,
+   "problem": "2/3 ÷ 4/5",
+   "answer": "5/6",
+   "said": "i got 8/15",
+   "learner_answer": "8/15",
+   "procedure": "Multiplied straight across without inverting the second fraction.",
+   "expect": [
+    "divided-without-turning-over"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w134",
+   "topic": "subtracting decimals",
+   "grade": 5,
+   "problem": "4.5 - 1.8",
+   "answer": "2.7",
+   "said": "um 2.6",
+   "learner_answer": "2.6",
+   "procedure": "A slip, not a procedure: the learner borrowed correctly but wrote 15 - 8 as 6.",
+   "expect": "slip",
+   "split": "dev"
+  },
+  {
+   "id": "w135",
+   "topic": "subtracting fractions",
+   "grade": 5,
+   "problem": "7/8 - 1/4",
+   "answer": "5/8",
+   "said": "i got 6/4",
+   "learner_answer": "6/4",
+   "procedure": "Subtracted the numerators and subtracted the denominators.",
+   "expect": [
+    "tops-and-bottoms-subtracted"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w136",
+   "topic": "adding fractions",
+   "grade": 5,
+   "problem": "Work out 1/4 + 1/6.",
+   "answer": "5/12",
+   "said": "is it 2/24?",
+   "learner_answer": "2/24",
+   "procedure": "Added the numerators and multiplied the denominators.",
+   "expect": [
+    "tops-added-bottoms-multiplied"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w137",
+   "topic": "adding mixed numbers",
+   "grade": 5,
+   "problem": "2 1/3 + 1/3",
+   "answer": "2 2/3",
+   "said": "2 1/3 + 1/3 = 4/3",
+   "learner_answer": "4/3",
+   "procedure": "Added each whole number to its numerator, kept the denominator, then added across.",
+   "expect": [
+    "whole-added-to-top"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w138",
+   "topic": "a decimal with a whole number",
+   "grade": 5,
+   "problem": "3.2 × 10",
+   "answer": "32",
+   "said": "i got 0.32",
+   "learner_answer": "0.32",
+   "procedure": "Moved the point left, the wrong way, when multiplying by a power of ten.",
+   "expect": [
+    "point-moved-the-wrong-way"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w139",
+   "topic": "adding fractions",
+   "grade": 4,
+   "problem": "What is 1/3 + 1/3?",
+   "answer": "2/3",
+   "said": "i did it and got 2/6 but not sure",
+   "learner_answer": "2/6",
+   "procedure": "Added the numerators and added the denominators.",
+   "expect": [
+    "tops-and-bottoms",
+    "tops-added-like-bottoms-too"
+   ],
+   "note": "The two ids read identically; same bottoms here.",
+   "split": "held_out"
+  },
+  {
+   "id": "w140",
+   "topic": "subtracting integers",
+   "grade": 7,
+   "problem": "Calculate -3 - 4.",
+   "answer": "-7",
+   "said": "-3 - 4\n= 7",
+   "learner_answer": "7",
+   "procedure": "Read a negative number minus a positive as two negatives making a positive and added them.",
+   "expect": [
+    "two-minuses-make-a-plus"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w141",
+   "topic": "dividing decimals",
+   "grade": 6,
+   "problem": "6 ÷ 0.5",
+   "answer": "12",
+   "said": "6 ÷ 0.5\n= 3",
+   "learner_answer": "3",
+   "procedure": "Read dividing by 0.5, 0.25 or 0.2 as dividing by 2, 4 or 5.",
+   "expect": "unlisted",
+   "note": "Reads dividing by 0.25/0.5 as dividing by 4/2; no listed procedure.",
+   "split": "held_out"
+  },
+  {
+   "id": "w142",
+   "topic": "dividing decimals",
+   "grade": 6,
+   "problem": "4.5 ÷ 0.5",
+   "answer": "9",
+   "said": "i did it and got 0.9 but not sure",
+   "learner_answer": "0.9",
+   "procedure": "Moved the point in the divisor to make it whole but did not move it in the dividend.",
+   "expect": [
+    "divisor-point-ignored"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w143",
+   "topic": "multiplying fractions",
+   "grade": 5,
+   "problem": "1/2 × 2/5",
+   "answer": "1/5",
+   "said": "i did it and got 5/4 but not sure",
+   "learner_answer": "5/4",
+   "procedure": "Cross-multiplied: the top of each fraction times the bottom of the other.",
+   "expect": [
+    "cross-multiplied"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w144",
+   "topic": "multiplying fractions",
+   "grade": 5,
+   "problem": "What is 3/7 × 2/7?",
+   "answer": "6/49",
+   "said": "3/7 × 2/7 = 6/7",
+   "learner_answer": "6/7",
+   "procedure": "Multiplied the numerators and kept the denominator because the denominators were the same.",
+   "expect": [
+    "multiplied-tops-kept-bottom"
+   ],
+   "note": "common-bottom-when-multiplying is the same result here but the label does not mention a common bottom.",
+   "split": "dev"
+  },
+  {
+   "id": "w145",
+   "topic": "multiplying decimals",
+   "grade": 6,
+   "problem": "0.4 × 0.3",
+   "answer": "0.12",
+   "said": "4 x 3 = 12",
+   "learner_answer": "12",
+   "procedure": "Multiplied the digits and left out the decimal point.",
+   "expect": [
+    "point-left-out"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w146",
+   "topic": "multiplying integers",
+   "grade": 7,
+   "problem": "(-6) × (-5)",
+   "answer": "30",
+   "said": "so the answer is -30",
+   "learner_answer": "-30",
+   "procedure": "Gave a negative answer when both numbers were negative, because a minus sign was present.",
+   "expect": [
+    "two-negatives-stay-negative"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w147",
+   "topic": "subtracting integers",
+   "grade": 7,
+   "problem": "Work out 5 - (-3).",
+   "answer": "8",
+   "said": "its 2 right?",
+   "learner_answer": "2",
+   "procedure": "Ignored the second minus sign and subtracted the positive number.",
+   "expect": [
+    "second-minus-ignored"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w148",
+   "topic": "multiplying decimals",
+   "grade": 6,
+   "problem": "Work out 0.2 × 0.35.",
+   "answer": "0.07",
+   "said": "0.70",
+   "learner_answer": "0.70",
+   "procedure": "Put the point as many places from the right as the factor with the most places, instead of adding the places.",
+   "expect": [
+    "places-not-added"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w149",
+   "topic": "adding integers",
+   "grade": 7,
+   "problem": "-6 + 2",
+   "answer": "-4",
+   "said": "i got 8",
+   "learner_answer": "8",
+   "procedure": "Ignored the negative signs and added the numbers.",
+   "expect": [
+    "minus-sign-left-off"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w150",
+   "topic": "subtracting mixed numbers",
+   "grade": 6,
+   "problem": "4 1/5 - 2 3/5",
+   "answer": "1 3/5",
+   "said": "1 8/5 i think",
+   "learner_answer": "1 8/5",
+   "procedure": "Borrowed 1 from the whole number and added 10 to the numerator, as in whole-number borrowing.",
+   "expect": [
+    "borrowed-ten-into-top"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w151",
+   "topic": "multiplying decimals",
+   "grade": 6,
+   "problem": "1.5 × 0.2",
+   "answer": "0.3",
+   "said": "15 x 2 = 30",
+   "learner_answer": "30",
+   "procedure": "Multiplied the digits and left out the decimal point.",
+   "expect": [
+    "point-left-out"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w152",
+   "topic": "whole-number subtraction",
+   "grade": 4,
+   "problem": "40 - 17",
+   "answer": "23",
+   "said": "37",
+   "learner_answer": "37",
+   "procedure": "In each column subtracted the smaller digit from the larger, whichever was on top.",
+   "also": "Wrote the bottom digit instead of borrowing whenever the top digit was 0.",
+   "expect": [
+    "smaller-digit-from-larger",
+    "bottom-digit-under-a-zero"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w153",
+   "topic": "adding fractions",
+   "grade": 5,
+   "problem": "5/6 + 1/4",
+   "answer": "1 1/12",
+   "said": "um 6/12",
+   "learner_answer": "6/12",
+   "procedure": "Found a common denominator but added the original numerators without changing them.",
+   "expect": [
+    "common-bottom-tops-unchanged"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w154",
+   "topic": "multiplying mixed numbers",
+   "grade": 6,
+   "problem": "2 1/2 × 1 1/3",
+   "answer": "3 1/3",
+   "said": "i did it and got 2 1/6 but not sure",
+   "learner_answer": "2 1/6",
+   "procedure": "Multiplied the whole numbers and multiplied the fractions separately, then joined the two results.",
+   "expect": [
+    "wholes-multiplied-fractions-multiplied"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w155",
+   "topic": "subtracting fractions",
+   "grade": 5,
+   "problem": "5/6 - 1/2",
+   "answer": "1/3",
+   "said": "5/6 - 1/2\n= 4/4",
+   "learner_answer": "4/4",
+   "procedure": "Subtracted the numerators and subtracted the denominators.",
+   "expect": [
+    "tops-and-bottoms-subtracted"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w156",
+   "topic": "adding decimals",
+   "grade": 6,
+   "problem": "12.5 + 3.75",
+   "answer": "16.25",
+   "said": "so the answer is 5.00",
+   "learner_answer": "5.00",
+   "procedure": "Lined the digits up on the right instead of on the decimal point.",
+   "expect": [
+    "lined-up-on-the-right"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w157",
+   "topic": "adding fractions",
+   "grade": 5,
+   "problem": "2/5 + 1/3",
+   "answer": "11/15",
+   "said": "its 3/15 right?",
+   "learner_answer": "3/15",
+   "procedure": "Added the numerators and multiplied the denominators.",
+   "also": "Found a common denominator but added the original numerators without changing them.",
+   "expect": [
+    "tops-added-bottoms-multiplied",
+    "common-bottom-tops-unchanged"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w158",
+   "topic": "whole-number subtraction",
+   "grade": 4,
+   "problem": "52 - 28",
+   "answer": "24",
+   "said": "i did it and got 36 but not sure",
+   "learner_answer": "36",
+   "procedure": "In each column subtracted the smaller digit from the larger, whichever was on top.",
+   "expect": [
+    "smaller-digit-from-larger"
+   ],
+   "split": "dev"
+  },
+  {
+   "id": "w159",
+   "topic": "dividing decimals",
+   "grade": 6,
+   "problem": "0.4 ÷ 8",
+   "answer": "0.05",
+   "said": "so the answer is 20",
+   "learner_answer": "20",
+   "procedure": "Divided the larger number by the smaller whichever way round the problem was written.",
+   "expect": [
+    "divided-the-other-way"
+   ],
+   "split": "held_out"
+  },
+  {
+   "id": "w160",
+   "topic": "subtracting decimals",
+   "grade": 5,
+   "problem": "6.31 - 2.8",
+   "answer": "3.51",
+   "said": "idk maybe 4.51",
+   "learner_answer": "4.51",
+   "procedure": "In each column subtracted the smaller digit from the larger, whichever was on top, keeping the points lined up.",
+   "expect": [
+    "smaller-digit-from-larger-decimal"
+   ],
+   "split": "dev"
+  }
+ ]
+}

@@ -311,7 +311,7 @@ export function gatewayHandler({ upstream, apiKey = null, token = null, teacherT
     try {
       checked = await checkReply({
         reply: text, message: turn.message, history: turn.history, instructions: turn.instructions, ...who.activity?.check,
-        teaching: who.activity?.teaching ?? null, section: who.section, rewrite: rewrites, model: body.model, reviewer: reviewerModel,
+        teaching: who.activity?.teaching ?? null, section: who.section, act: who.act, note: who.note, rewrite: rewrites, model: body.model, reviewer: reviewerModel,
         baseUrl: base, apiKey: keyOf(request), fetch: (url, init) => fetch(url, { ...init, signal })
       });
     } catch (error) {
@@ -411,12 +411,15 @@ export function gatewayHandler({ upstream, apiKey = null, token = null, teacherT
     const settings = withDefaults(who.activity?.teaching ?? null);
     // What this moment needs, or with wholeSettings everything the teacher set.
     const taught = !settings ? null : wholeSettings ? teachingContext(settings, who.section) : await turnBrief(settings, {
-      message: turn.message, history: turn.history, section: who.section,
+      message: turn.message, history: turn.history, section: who.section, question: who.activity?.check.question, answer: who.activity?.check.answerKey,
       picker: pickerModel ? { call: openAICompatible({ baseUrl: base, apiKey: keyOf(request), fetch: (url, init) => fetch(url, init) }), model: pickerModel } : null
     });
     who.taught = Boolean(taught);
     who.moment = taught?.moment ?? null;
-    if (taught?.moment) turn.brief = { moment: taught.moment, by: taught.by, ...(taught.flag ? { flag: taught.flag } : {}), chosen: { misconceptions: taught.misconceptions.map((item) => item.id), components: taught.components.map((item) => item.id), prior: taught.prior.map((item) => item.id), guidance: taught.guidance.map((item) => item.component || item.source || item.text.slice(0, 80)) } };
+    // What code decided for this turn, for the check and the record.
+    who.act = taught?.act?.act ?? null;
+    who.note = taught?.text ? `From the teacher of this activity:\n${taught.text}` : null;
+    if (taught?.moment) turn.brief = { moment: taught.moment, by: taught.by, ...(taught.flag ? { flag: taught.flag } : {}), ...(taught.act ? { act: taught.act.act } : {}), ...(taught.diagnosis ? { diagnosis: taught.diagnosis.id } : {}), chosen: { misconceptions: taught.misconceptions.map((item) => item.id), components: taught.components.map((item) => item.id), prior: taught.prior.map((item) => item.id), guidance: taught.guidance.map((item) => item.component || item.source || item.text.slice(0, 80)) } };
     const toolsOff = teachingSettings(settings)?.tools_off ?? [];
     const structured = ['json_object', 'json_schema'].includes(body.response_format?.type);
     if (reviewerModel && !structured && Number(body.n ?? 1) > 1) throw failure(400, 'unsupported_n', 'With checks on, ask for one reply at a time (n = 1): each reply is held until it passes.');

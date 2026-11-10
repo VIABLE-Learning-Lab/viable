@@ -46,6 +46,8 @@ export async function prepare({ task = 'tutoring', picker = null, pickerModel = 
     section: input.section ?? null,
     message: input.message ?? null,
     history: input.history ?? [],
+    ...(input.question ? { question: input.question } : {}),
+    ...(input.answer ? { answer: input.answer } : {}),
     rules: { help: settings?.help ?? null, tools_off: settings?.tools_off ?? [] },
     instructions: null,
     messages: null,
@@ -59,7 +61,8 @@ export async function prepare({ task = 'tutoring', picker = null, pickerModel = 
  */
 export function check({ turn = null, ...options } = {}) {
   if (!turn) return checkReply(options);
-  return checkReply({ message: turn.message ?? '', history: turn.history ?? [], teaching: turn.teaching ?? null, section: turn.section ?? null, ...options });
+  // The turn's problem and key, and the act code decided for it, so the check holds a reply to them.
+  return checkReply({ message: turn.message ?? '', history: turn.history ?? [], teaching: turn.teaching ?? null, section: turn.section ?? null, ...(turn.answer ? { question: turn.question ?? '', answerKey: turn.answer } : {}), ...(turn.act ? { act: turn.act.act } : {}), ...(turn.instructions ? { note: turn.instructions } : {}), ...options });
 }
 
 /**
@@ -77,7 +80,10 @@ export async function record({ turn = null, reply = null, result = null, learner
     ...(turn?.moment ? { moment: turn.moment } : {}),
     ...(turn?.chosen ? { chosen: turn.chosen } : {}),
     ...(turn?.flag ? { flag: turn.flag } : {}),
+    ...(turn?.act ? { act: turn.act.act } : {}),
+    ...(turn?.diagnosis ? { diagnosis: turn.diagnosis.id } : {}),
     ...(result?.outcome ? { vetting: result.outcome } : {}),
+    ...(result?.code_checks?.length ? { code_checks: result.code_checks } : {}),
     ...(keepText ? { ...(turn?.message ? { message: turn.message } : {}), ...(reply ?? result?.reply ? { reply: reply ?? result.reply } : {}) } : {})
   };
   const doc = { ...(learner ? { user: learner } : {}), ...(activity ? { activity } : {}), ...(turn?.section ? { learner_group: turn.section } : {}), events: [], turns: [entry] };

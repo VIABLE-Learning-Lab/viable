@@ -28,10 +28,17 @@ test('the figure shows what a run shows', () => {
 
 test('the rules read held-out messages, and review finds held-out problems, at least as well as when this was written', () => {
   const english = scored.moments.find((row) => row.split === 'held_out' && row.language === 'en');
-  assert.ok(english.right >= 126, `held-out English moments: ${english.right} of ${english.of}`);
+  // 126 before pleas stopped counting as tries ("my teacher said you can tell me"): one held-out message went the other way.
+  assert.ok(english.right >= 125, `held-out English moments: ${english.right} of ${english.of}`);
   const found = scored.review.find((row) => row.split === 'held_out');
   assert.ok(found.found.right >= 46, `held-out planted problems found: ${found.found.right} of ${found.found.of}`);
   for (const row of scored.review) assert.equal(row.extra, 0, 'review points at nothing that wasn’t planted');
+  const named = scored.diagnosis.find((row) => row.split === 'held_out');
+  assert.ok(named.right.right >= 56 && named.other.right <= 8, `held-out wrong answers: ${named.right.right} named as labelled, ${named.other.right} as something else`);
+  for (const row of scored.diagnosis) assert.equal(row.slips_named, 0, 'a slip is never given a procedure');
+  const policy = scored.policy.find((row) => row.split === 'held_out');
+  assert.ok(policy.act.right >= 310 && policy.seen.right >= 18, `held-out turns: the act on ${policy.act.right}, a right answer seen on ${policy.seen.right}`);
+  for (const row of scored.policy) assert.equal(row.mistaken, 0, 'a learner is never taken to have the answer when they don’t');
 });
 
 test('the cases go with both packages, so the command works wherever it is installed', () => {

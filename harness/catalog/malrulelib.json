@@ -1,0 +1,46 @@
+{
+  "id": "malrulelib",
+  "name": "MalruleLib",
+  "kind": "dataset",
+  "summary": "101 faulty procedures in school mathematics (\"malrules\"), each as code that works a problem wrongly step by step, with 4,991 generated problems and the wrong answer each gives: can a system tell which procedure a wrong answer came from?",
+  "subjects": [
+    "math"
+  ],
+  "grades": "not stated (arithmetic to algebra)",
+  "url": "https://arxiv.org/abs/2601.03217",
+  "repository": "https://github.com/sonkar-lab/malrulelib",
+  "license": {
+    "spdx": [
+      "LicenseRef-MalruleLib-Non-Commercial"
+    ],
+    "note": "MalruleLib Non-Commercial License: academic research, education, open-source projects and evaluating open-weight models are allowed, with attribution; commercial use and evaluating commercial or closed models are not; anything made from it carries the same terms.",
+    "terms": "non-commercial; attribution; share-alike; no evaluating commercial or closed models",
+    "source": "https://github.com/sonkar-lab/malrulelib/blob/8ddedfb637405ae1dc7483b068e3df39b9b7b575/LICENSE"
+  },
+  "access": "open download",
+  "formats": [
+    "CSV",
+    "Python"
+  ],
+  "made_by": [
+    "Xinghe Chen",
+    "Naiming Liu",
+    "Shashank Sonkar"
+  ],
+  "cite": "Chen, X., Liu, N., & Sonkar, S. (2026). MalruleLib: Large-scale executable misconception reasoning with step traces for modeling student thinking in mathematics. arXiv:2601.03217. https://arxiv.org/abs/2601.03217",
+  "status": "released",
+  "fits": {
+    "slots": [
+      "detector"
+    ],
+    "how": "Its wrong answers are an outside test of anything that names the procedure behind one. The harness's own computed diagnosis (src/diagnose.js) is scored on it by evals/diagnosis/malrulelib.mjs, from a clone on your own computer."
+  },
+  "in_harness": null,
+  "connect": {
+    "level": 0,
+    "as": [],
+    "command": null,
+    "note": "None of it is in this repository, which its license wouldn't allow under MIT. Clone it and run node evals/diagnosis/malrulelib.mjs malrulelib/data/raw_data.csv: no model is called."
+  },
+  "verified_at": "2026-11-10"
+}

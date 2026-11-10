@@ -5,6 +5,8 @@
 You have research: a framework, a list of misconceptions, a classifier, a way to rate replies. A component is how it reaches
 the AIs people are using, with your name on it, without each of them building it in.
 
+To use one that another team published, start at [Using another team's component](#using-another-teams-component).
+
 ## What you have, and what you do
 
 | You have | Its slot | When it works | What you write | What happens then |
@@ -64,6 +66,48 @@ viable-harness component add your-framework/manifest.json --teaching activity.js
 They go in that activity's settings as they are then, up to 20, with your citation. From there it works wherever those
 settings go, since they travel with the activity: `prepare`, the gateway, the Engine and the VIABLE Developer Platform.
 [How the Harness works](how-it-works.md) says how a turn chooses.
+
+## Using another team's component
+
+Another lab published guidance you want in your own study or class. They don't host anything for you, and nothing of
+yours goes to them: a component that is data (`"runs": { "kind": "data" }`) is one file of sentences with their sources.
+
+1. Read what it claims. Its manifest's `evidence` has three parts: what their study found, what this use of it has been
+   shown to do, and what nobody has shown. `license` says what you may do with it and `cite` how to credit it. A
+   component the Harness carries has a page in the [catalog](catalog.md). Any other is the file in their repository.
+
+2. See what it would change on your own messages. No model is called:
+
+   ```sh
+   viable-harness component try https://raw.githubusercontent.com/their-lab/their-repo/main/manifest.json \
+     --teaching activity.json --message "i got 2/5"
+   ```
+
+   It prints who wrote it, its license and citation, then what a model is told with it and without it. Give the address
+   of the `manifest.json` itself. Only a data component is read from an address. One that runs out of process (`mcp`,
+   `http`) calls their code or their server, so download it, read it, and see
+   [Calling one out of process](#calling-one-out-of-process).
+
+3. Take the pieces you want. `component add` with the same address, and `--items 1,3` to choose, writes them into your
+   activity's settings as they are now, each with its component, version and citation. Your copy stays as it is when
+   theirs changes. To take a newer version, add it again; the version in each piece says which you have.
+
+4. Check that it changes replies where you teach, before learners meet it. Run your own cases against your tutor twice,
+   with the settings that have it and the settings that don't:
+
+   ```sh
+   viable-harness test cases.json --teaching activity.json      --endpoint <url> --endpoint-model <id> --judge-model <id> --json > without.json
+   viable-harness test cases.json --teaching activity-with.json --endpoint <url> --endpoint-model <id> --judge-model <id> --json > with.json
+   ```
+
+   [Agent tests](agent-tests.md) says how to write the cases and how to check the judge against people. Report both
+   numbers and how many cases there were: twenty cases can suggest a difference and can't establish one.
+
+5. Say what you used. A turn's record keeps which component's pieces went into each reply, so a paper can state the
+   component, its version and how often it was used. Cite it as its `cite` says.
+
+Three things are still to build: a registry to search beyond the catalog, a signature on a manifest (today you trust
+the address you read it from), and one command that runs both arms and gives the difference with an interval.
 
 ## What you get for it
 

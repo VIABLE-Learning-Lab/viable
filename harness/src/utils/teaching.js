@@ -5,6 +5,7 @@
 // as an instruction with what the learner has open; steps and an activity without the AI are what
 // the server enforces. Not per learner: a note about a person would go to a model.
 import { MISCONCEPTIONS_SOURCE } from './misconceptionsSource.js';
+import { ladderOf } from '../policy.js';
 
 export const TEACHING_LIMITS = { tools_off: 12, tool: 64, goal: 1000, watch: 500, description: 1200, components: 40, prior: 12, attribution: 8, misconceptions: 8, guidance: 20, guidanceText: 600, sections: 60, note: 500, role: 600 };
 
@@ -204,9 +205,11 @@ export function teachingSettings(value) {
   const reviewer = value.reviewer_reads === 'message' ? 'message' : null;
   // Whether what is chosen for a teacher where they chose none goes in (defaults.js): kept only when said, as turn_brief is.
   const own = typeof value.defaults === 'boolean' ? value.defaults : null;
+  // When each kind of help comes, decided by code from the tries so far (policy.js): it applies where the level in force steps up, and only when asked for.
+  const ladder = ladderOf(value.ladder);
   if (!goal && !help && !watch && !standard && !misconceptions.length && !guidance.length && !sections && !toolsOff.length && !role && !design && !speaksUp && !reviewer && own === null) return null;
   // Only when set, so settings saved before them read (and version) the same.
-  return { goal: goal || null, help, watch_for: watch || null, standard, ...(role ? { role } : {}), ...(design ? { design } : {}), ...(brief === null ? {} : { turn_brief: brief }), ...(misconceptions.length ? { misconceptions } : {}), ...(guidance.length ? { guidance } : {}), ...(sections ? { sections } : {}), ...(toolsOff.length ? { tools_off: toolsOff } : {}), ...(speaksUp ? { speaks_up: speaksUp } : {}), ...(reviewer ? { reviewer_reads: reviewer } : {}), ...(own === null ? {} : { defaults: own }) };
+  return { goal: goal || null, help, watch_for: watch || null, standard, ...(role ? { role } : {}), ...(design ? { design } : {}), ...(brief === null ? {} : { turn_brief: brief }), ...(misconceptions.length ? { misconceptions } : {}), ...(guidance.length ? { guidance } : {}), ...(sections ? { sections } : {}), ...(toolsOff.length ? { tools_off: toolsOff } : {}), ...(speaksUp ? { speaks_up: speaksUp } : {}), ...(reviewer ? { reviewer_reads: reviewer } : {}), ...(own === null ? {} : { defaults: own }), ...(ladder ? { ladder } : {}) };
 }
 
 /**
@@ -218,7 +221,7 @@ export function teachingSettings(value) {
 export function teachingContext(teaching, section = null) {
   const saved = teachingSettings(teaching);
   if (!saved) return null;
-  const { watch_for: _watch, sections, turn_brief: _brief, design: _design, speaks_up: _speaksUp, ...own } = saved;
+  const { watch_for: _watch, sections, turn_brief: _brief, design: _design, speaks_up: _speaksUp, ladder: _ladder, ...own } = saved;
   const theirs = section ? sections?.[section] : null;
   const settings = theirs ? { ...own, help: theirs.help || own.help, ...(theirs.note ? { note: theirs.note } : {}) } : own;
   if (!settings.goal && !settings.help && !settings.standard && !settings.misconceptions && !settings.guidance && !settings.note && !settings.tools_off && !settings.role && !settings.reviewer_reads) return null;

@@ -75,8 +75,8 @@ test('check_reply: a passed reply is checked, and any other outcome says it is n
   assert.equal(pass.calls[0].model, 'judge');
   assert.match(pass.calls[0].messages[0].content, /Never give the answer\./);
 
-  const fail = scripted('FAILED: Directly states the answer 5/6.');
-  const failed = await call(mcpServer({ fetch: fail.fetch }), 'check_reply', { reply: 'It is 5/6.', question: 'What is 1/2 + 1/3?', answer_key: '5/6', key_concepts: ['common denominator'], model: 'm' });
+  const fail = scripted('FAILED: Does the work for them.');
+  const failed = await call(mcpServer({ fetch: fail.fetch }), 'check_reply', { reply: 'Make them 3/6 and 2/6, then add the tops.', question: 'What is 1/2 + 1/3?', answer_key: '5/6', key_concepts: ['common denominator'], model: 'm' });
   assert.equal(failed.structuredContent.outcome, 'unverified');
   assert.equal(failed.structuredContent.passed, false);
   assert.match(failed.content[0].text, /^Outcome: unverified \(MAX_ATTEMPTS_REACHED\)\. The reply is not checked: don't show it/);

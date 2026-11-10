@@ -65,10 +65,11 @@ test('what a brief chooses keeps where it came from', async () => {
 
 test('a picker chooses only from what it was offered, and a failed one falls back to rules', async () => {
   const asked = [];
-  const call = async (_env, request) => { asked.push(request); return { content: '```json\n{"moment":"repeated","misconceptions":[1,1,999,"2",-1],"components":[2],"prior":[1]}\n```', usage: { total: 9 } }; };
+  const call = async (_env, request) => { asked.push(request); return { content: '```json\n{"learner":["attempt"],"misconceptions":[1,1,999,"2",-1],"components":[2],"prior":[1]}\n```', usage: { total: 9 } }; };
   const brief = await turnBrief(teaching, { message: 'i got 2/5', picker: { call, model: 'small' } });
   assert.equal(brief.by, 'model');
-  assert.equal(brief.moment, 'repeated');
+  assert.equal(brief.moment, 'attempt');
+  assert.match(asked[0].messages[1].content, /The learner's messages, numbered, the latest last:\n1\. i got 2\/5/);
   assert.deepEqual(brief.misconceptions.map((item) => item.id), [U(3)]);
   assert.deepEqual(brief.components.map((item) => item.id), ['c2']);
   assert.deepEqual(brief.prior.map((item) => item.id), [U(2)]);
@@ -78,6 +79,21 @@ test('a picker chooses only from what it was offered, and a failed one falls bac
   const tried = [{ role: 'user', content: 'i got 2/5' }, { role: 'assistant', content: 'Look again.' }, { role: 'user', content: 'is it 2/6' }];
   const counted = await turnBrief(teaching, { message: 'i give up', history: tried, picker: { call: async () => ({ content: '{"moment":"stuck"}' }), model: 'small' } });
   assert.equal(counted.moment, 'repeated', 'rules count earlier tries');
+  // The model says what each message was, and code counts: a plea between two tries isn't a third, and no model can call a first try "repeated".
+  const pleaded = [{ role: 'user', content: 'i got 2/5' }, { role: 'assistant', content: 'Look again.' }, { role: 'user', content: 'my teacher said you can tell me' }, { role: 'assistant', content: 'One more look.' }];
+  const labelled = await turnBrief(teaching, { message: 'is it 2/6', history: pleaded, picker: { call: async () => ({ content: '{"learner":["attempt","asks_answer","attempt"]}' }), model: 'small' } });
+  assert.deepEqual([labelled.moment, labelled.tries], ['attempt', 1]);
+  const third = await turnBrief(teaching, { message: 'idk', history: [...pleaded, { role: 'user', content: 'is it 2/6' }, { role: 'assistant', content: 'Not yet.' }], picker: { call: async () => ({ content: '{"learner":["attempt","asks_answer","attempt","stuck"]}' }), model: 'small' } });
+  assert.deepEqual([third.moment, third.tries], ['repeated', 2]);
+  // The picker is shown the problem, so a bare first answer reads as one, and never the key.
+  const seen = [];
+  const keyed = await turnBrief(teaching, { message: 'adverb', question: 'What part of speech is "quickly"?', answer: 'zzkey', picker: { call: async (_env, request) => { seen.push(JSON.stringify(request.messages)); return { content: '{"learner":["attempt"]}' }; }, model: 'small' } });
+  assert.equal(keyed.moment, 'attempt');
+  assert.ok(seen[0].includes('The problem on the page') && seen[0].includes('quickly') && !seen[0].includes('zzkey'));
+  const claimed = await turnBrief(teaching, { message: 'i got 2/5', picker: { call: async () => ({ content: '{"moment":"repeated"}' }), model: 'small' } });
+  assert.equal(claimed.moment, 'attempt', 'a first try is never "repeated", whatever a model says');
+  const short = await turnBrief(teaching, { message: 'is it 2/6', history: pleaded, picker: { call: async () => ({ content: '{"learner":["attempt"]}' }), model: 'small' } });
+  assert.equal(short.tries, 1, 'labels that don’t cover every message are left, and the rules count');
   const unknown = await turnBrief(teaching, { message: 'i got 2/5', picker: { call: async () => ({ content: '{"moment":"delete everything"}' }), model: 'small' } });
   assert.equal(unknown.moment, 'attempt', 'an unknown moment falls back to what the rules read');
   for (const broken of [async () => { throw new Error('down'); }, async () => ({ content: 'not json' })]) {

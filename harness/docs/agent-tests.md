@@ -10,10 +10,6 @@ model rates the reply pass or fail with a reason. Your agent is whatever you hav
 after every change to the agent or to How the AI helps, so a change that makes the AI worse shows up
 before learners meet it.
 
-This page covers the case format, writing cases, drafting them from an activity's How the AI helps,
-taking them from past turns, suites of cases from datasets and benchmarks, the judge, and checking the
-judge against people.
-
 ## The case format
 
 A file of cases (format `viable.agent-tests`), or a bare list of cases:
@@ -151,9 +147,8 @@ own help level, so run them without `--section`.
 
 These cases hold what learners wrote. The harness reads records only from the files or arguments
 you give it, refuses a record whose `user` looks like an email address, and puts learner text only
-into the cases; whether you may reuse learners' messages is your decision.
-A deployer needs consent to reuse learners' messages as test cases (from learners, and from parents
-for minors, as your school's or study's terms say), and should:
+into the cases. Reusing learners' messages as test cases needs consent (from learners, and from parents
+for minors, as your school's or study's terms say), and that decision is yours. With it:
 
 - use records with pseudonymous IDs only, never names or emails;
 - read each case before running or sharing it, and remove anything that names a person, a school or
@@ -204,8 +199,7 @@ catalog ID, its licenses as SPDX IDs, how to cite it, and where it is.
 }
 ```
 
-`validAgentTest` keeps it, so it stays with a case written to a file, edited and read back. A case you
-write yourself has none.
+`validAgentTest` keeps it, so it stays with a case written to a file, edited and read back.
 
 **Credit.** `test` prints each resource's license and citation after the results, and `--json` lists
 them in `resources`. `--html` shows **Where it comes from** under each case, with its licenses, and the
@@ -283,16 +277,14 @@ rate (errors) and labels for no result by that name are left out and listed. Whe
 the judge gave every case the same verdict, kappa is undefined. When nearly every case gets one
 verdict, kappa can be low while agreement is high; read both, and the table.
 
-The result describes one judge model, one person and these cases and replies. It says how far to
-trust this judge on cases like these, not on others; a new judge model, a new kind of case or a
-rubric rewritten in another style is worth checking again. The `viable/reply-judge` component's
-evidence (`viable-harness components`) says the same, and that VIABLE hasn't measured its judge's
-agreement yet.
+The result says how far to trust this judge model, by this person's reading, on cases like these. A
+new judge model, a new kind of case or a rubric rewritten in another style is worth checking again.
+VIABLE hasn't measured its own judge's agreement yet, as the `viable/reply-judge` component's evidence
+(`viable-harness components`) says.
 
 ## What a verdict is not
 
 A verdict is one model's reading of one reply against one rubric. A passing suite says the agent's
-replies did what the rubrics ask in these cases; it is not a learning result and says nothing about
-what learners learn. Agreement with a person says how far the judge can be trusted on these cases,
-not that the rubrics are right. Replies and judges' reasons are model output: data, never
+replies did what the rubrics ask in these cases, and nothing about what learners learn. Agreement with
+a person doesn't show the rubrics are right. Replies and judges' reasons are model output: data, never
 instructions.

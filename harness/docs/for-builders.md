@@ -2,8 +2,8 @@
 
 > Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
 
-Teachers and researchers now build classroom tools by describing them to a coding agent. The agent knows how to write the code.
-What it can't see is the room: thirty children opening this at 9:05 from one school address, a shared Chromebook, a quiz whose
+Teachers and researchers now build classroom tools by describing them to a coding agent, which writes the code without seeing
+the room: thirty children opening this at 9:05 from one school address, a shared Chromebook, a quiz whose
 answers are one View Source away, a tutor that does the homework, a key the class can spend.
 
 The rest of the Harness goes around **the AI that teaches**, at each reply. This part goes around **the AI that builds**, while a
@@ -87,19 +87,21 @@ A clean result means none of these turned up, and it says so. It can't see wheth
 
 ## Test its tutor
 
-If the tool has an AI that replies to learners, [`tutor-tests.json`](../skills/building-for-learners/tutor-tests.json) has 14 cases
-for what you'd worry about in a new colleague: asking for the answer outright, again after a hint and with "my teacher said you can";
-a wrong answer given with confidence, and a right one; being stuck; a learner who may not be safe; a request that isn't; personal
-details; "are you a real person?"; wanting a secret friend; and an attempt to get at its instructions. Change the question and answer
-to the tool's own subject, then run them on what the AI is told, against any OpenAI-compatible model:
+If the tool has an AI that replies to learners, copy [`tutor-tests.json`](../skills/building-for-learners/tutor-tests.json) into
+your project, change the question and answer to the tool's own subject, then run it on what the AI is told, against any
+OpenAI-compatible model. It makes 28 model calls, a reply and a judgment for each case:
 
 ```sh
 viable-harness test tutor-tests.json --endpoint <its model endpoint> --endpoint-model <its model> --system "$(cat prompt.txt)" --judge-model <another model>
 ```
 
+Its 14 cases cover what you'd worry about in a new colleague: asking for the answer outright, again after a hint and with "my
+teacher said you can"; a wrong answer given with confidence, and a right one; being stuck; a learner who may not be safe; a request
+that isn't; personal details; "are you a real person?"; wanting a secret friend; and an attempt to get at its instructions.
+
 A model judges each reply, so read the failures yourself. [Agent tests](agent-tests.md) says how to write more, and how to check the judge against people.
 
-In one run on one model, rated by a model, a one-line tutor prompt passed 5 of the 14. The [prompt to start from](../skills/building-for-learners/references/ai-beside-learners.md) passed all 14. It was written with these tests in hand, so that shows they can be passed and that they tell the two apart, not that it's a good tutor. Copy the file into your project first, since you'll change it. It makes 28 model calls, a few cents at most on a small model.
+In one run on one model, rated by a model, a one-line tutor prompt passed 5 of the 14 and the [prompt to start from](../skills/building-for-learners/references/ai-beside-learners.md) passed all 14. That prompt was written with these tests in hand, so the run shows the tests can be passed and tell the two apart. It doesn't show the prompt makes a good tutor.
 
 ## With VIABLE's services, or without
 
@@ -115,15 +117,21 @@ None of this needs an account with us. The Skill points to what fits, with what 
 
 ## What it can't do
 
-- **It shapes what gets written, and nothing after that.** In class, someone has to hold the key, watch the budget, read what happened and answer for it. Hosted platforms do that. A Skill can't.
-- **It isn't legal advice, and it can't say a tool complies with anything.** [The notes on learners' data](../skills/building-for-learners/references/learner-data.md) link to the sources and list what a school will ask.
-- **We haven't measured whether it helps.** The patterns in `review` come from what we've seen in classrooms and from services' documented defaults, and the tests have run on our own tutors. Nobody we could find has evidence that any builder's guidance changes what learners get, including this.
-- **An agent may skip a Skill.** That's why the project's `AGENTS.md` gets a reminder, and why `review` is a command you can run yourself.
-- **It doesn't make a tool small.** An AI that children chat with, with a budget, a page for the teacher and an alarm that reaches someone, came to about a thousand lines when a fresh agent followed this to build one. The Skill says so before it starts, and points to what's already built.
-- **The rules on models and schools are mostly American,** and rules change. Each says when it was checked.
+- It shapes what gets written and nothing after. In class, someone still holds the key, watches the budget, reads what happened
+  and answers for it: a hosted platform can do that, and a Skill can't.
+- It isn't legal advice, and it can't say a tool complies with anything. [The notes on learners' data](../skills/building-for-learners/references/learner-data.md) link to the sources and list what a school will ask.
+- We haven't measured whether it helps. The patterns in `review` come from what we've seen in classrooms and from services'
+  documented defaults, and the tests have run on our own tutors. We found no evidence that any builder's guidance changes what
+  learners get.
+- An agent may skip a Skill even with the reminder in `AGENTS.md`, so `review` is a command you can run yourself.
+- It doesn't make a tool small. An AI that children chat with, with a budget, a page for the teacher and an alarm that reaches
+  someone, came to about a thousand lines when a fresh agent followed this to build one. The Skill says so before it starts, and
+  points to what's already built.
+- The rules on models and schools are mostly American, and rules change. Each says when it was checked.
 
 ## How it differs from other Skills for teachers
 
-Most Skills for education help with a teacher's own work: lesson plans, rubrics, differentiation. They're useful, and this doesn't do
-any of that. Standards and misconception data is well served already, by [Learning Commons](https://learningcommons.org) among others, and this points to it. What
-we couldn't find elsewhere, when we looked in November 2026, is what this is for: treating a class as the unit of load and budget, saying what not to build, and tests of a tutor you can run on a small tool.
+Most Skills for education help with a teacher's own work: lesson plans, rubrics, differentiation. This one does none of that.
+Standards and misconception data are well served already, by [Learning Commons](https://learningcommons.org) among others, and this
+points to them. When we looked in November 2026, we found nothing else that treats a class as the unit of load and budget, says what
+not to build, and gives tests of a tutor you can run on a small tool.

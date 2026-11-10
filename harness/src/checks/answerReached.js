@@ -16,7 +16,7 @@ const parts = Object.keys(PARTS).join('|');
 const WORD_FRACTION = new RegExp(`\\b(?:(${ones})\\s+and\\s+)?(${ones})[\\s-]+(${parts})\\b`, 'gi');
 const NUMBER = /(?<![\d./])(?:(\d+)\s+(\d+)\s*\/\s*(\d+)|(\d+)\s*\/\s*(\d+)|\d*\.\d+|\d+)(?![\d/])/g;
 // Working that ends in the answer, rather than a list of options to choose from.
-const WORKING = /[=+×*÷]|\b(?:so|then|get|got|gives?|equals?)\b/i;
+const WORKING = /[=+×*÷]|\b(?:so|then|get|got|gives?|equals?|times|divided|minus|plus|makes?|leaves?)\b/i;
 const OPTIONS = /\d\s*\??\s*\b(?:or|maybe)\b\s*(?:is\s+it\s+)?\d/i;
 const DENIED = /\b(?:not|isn['’]?t|aren['’]?t|never)\s+(?:the\s+answer\s+|equal\s+to\s+|equals?\s+)?$/i;
 // "question 4" names a place, not an answer.
@@ -41,6 +41,8 @@ function numbersIn(text) {
 }
 
 const plain = (text) => String(text ?? '').toLowerCase().normalize('NFKC').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+// A minus sign, or the word, just before a number: -5, − 5, (-5), negative 5. After another number or a bracket it is taking away: 8-3, (2)-3.
+const minusBefore = (text, at) => /(?:^|[^\d)\s])\s*[-−]\s*$|^\s*[-−]\s*$|\b(?:negative|minus)\s+$/i.test(text.slice(Math.max(0, at - 12), at)) && !/[\d)]\s*[-−]\s*$/.test(text.slice(Math.max(0, at - 12), at));
 const isClose = (a, b) => Math.abs(a - b) < 1e-9;
 
 // One answer the key accepts, as a number or as a few words. A long answer can't be matched by code.
@@ -48,7 +50,7 @@ function formOf(answer) {
   const text = clean(answer).trim();
   const numbers = numbersIn(text);
   const words = plain(text.replace(NUMBER, ' ')).split(' ').filter(Boolean);
-  if (numbers.length === 1 && words.length <= 2) return { kind: 'number', ...numbers[0] };
+  if (numbers.length === 1 && words.filter((word) => !['negative', 'minus'].includes(word)).length <= 2) return { kind: 'number', ...numbers[0], negative: minusBefore(text, numbers[0].at) };
   const said = plain(text);
   return said && said.length <= SHORT_KEY.chars && said.split(' ').length <= SHORT_KEY.words ? { kind: 'words', text: said } : null;
 }
@@ -92,7 +94,8 @@ function hasNumber(form, message, stem) {
   // The question's own numbers after it make this an aside before asking ("5/6 of us hate this. what's 1/2 + 1/3").
   if (all.at(-1) !== last) return false;
   const before = text.slice(0, last.at);
-  return (last.text === form.text || isClose(last.value, form.value)) && !DENIED.test(before) && !LABEL.test(before);
+  // -5 is not 5: a learner with the size right and the sign wrong doesn't have it yet.
+  return (last.text === form.text || isClose(last.value, form.value)) && minusBefore(text, last.at) === form.negative && !DENIED.test(before) && !LABEL.test(before);
 }
 
 function hasWords(form, message, stem) {
@@ -107,6 +110,40 @@ function hasWords(form, message, stem) {
     if (edge(before.at(-1)) && edge(after[0]) && !/\bor $/.test(before) && !/^ or\b/.test(after) && !DENIED.test(before)) return true;
   }
   return false;
+}
+
+// A small whole number turns up in a reply for other reasons ("take 2 steps"), so it counts as the answer only where the
+// reply says it is one: after "=", "is", "you get" and the like. A fraction, a decimal or a larger number is the answer wherever it stands.
+const SAID_AS_ANSWER = /(?:=|\b(?:is|equals?|gets?|got|gives?|makes?|becomes?|answer|result|total|leaves?))\s*(?:exactly\s+|just\s+|about\s+|:\s*)?[-−]?\s*$/i;
+const isPlainSmall = (form) => /^\d{1,2}$/.test(form.text);
+
+function replyHasNumber(form, reply, stem) {
+  const negative = form.negative;
+  const text = clean(reply);
+  const asked = numbersIn(stem);
+  const keyIsAsked = asked.some((item) => item.text === form.text);
+  return numbersIn(text).some((item) => {
+    if (!(item.text === form.text || isClose(item.value, form.value))) return false;
+    // The question's own numbers are there to talk about, unless the key is written as it is and the question doesn't hold it.
+    if (keyIsAsked || (item.text !== form.text && asked.some((other) => other.text === item.text))) return false;
+    if (minusBefore(text, item.at) !== negative) return false;
+    return !isPlainSmall(form) || SAID_AS_ANSWER.test(text.slice(0, negative ? text.slice(0, item.at).search(/(?:[-−]|\b(?:negative|minus)\s)\s*$/i) : item.at));
+  });
+}
+
+/**
+ * Whether a reply states a key's answer, worked out by code: its number, in any form of the same value, where the question
+ * doesn't already hold it, or its few words. { stated, checkable }: checkable is false for a key code can't match (a sentence,
+ * several answers that only count together, words the question itself uses), and then stated says nothing.
+ */
+export function statesAnswer({ answer, question = '', reply = '' }) {
+  const forms = acceptedIn(answer);
+  const { stem } = askedOf(question);
+  // A number the question itself holds can be said without giving anything away, so code can't tell: that key is the reviewer's.
+  const asked = numbersIn(stem);
+  const usable = forms.filter((form) => (form.kind === 'number' ? !asked.some((item) => item.text === form.text) : !(form.text.length < 3 || TOO_COMMON.has(form.text) || plain(stem).includes(form.text))));
+  if (!usable.length) return { stated: false, checkable: false };
+  return { stated: usable.some((form) => (form.kind === 'number' ? replyHasNumber(form, reply, stem) : hasWords(form, reply, stem))), checkable: true };
 }
 
 /** A conversation's learner turns as text, oldest first. messages: [{ role, content }]. */

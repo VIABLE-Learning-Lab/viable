@@ -8,6 +8,9 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { readMoment, turnBrief } from './brief.js';
 import { checkReply } from './check.js';
+import { answerReached, statesAnswer } from './checks/answerReached.js';
+import { diagnose, readArithmetic } from './diagnose.js';
+import { similarProblem } from './examples.js';
 import { withDefaults } from './defaults.js';
 import { gatewayHandler } from './gateway.js';
 import { allowedTools, record } from './harness.js';
@@ -86,7 +89,26 @@ async function guarantees(moments) {
     const writer = calls.filter((call) => call.model === 'writer');
     check(key, writer.length > 0 && writer.every((call) => !call.text.includes(secret)) && calls.some((call) => call.model === 'reviewer' && call.text.includes(secret)), item.id);
   }
-  return [words, limit, kept, nameless, removed, key];
+  // A reply that states the key, where the key is a number or a few words: code fails it, and no reviewer is asked.
+  const stated = guarantee('stated-answer-stopped', 'A reply that states the answer key’s number is failed by code before any reviewer is asked, and what the reply model is then told never holds the answer. (Where the question itself holds that number, the reviewer decides.)');
+  for (const item of data('wrong-answers').cases) {
+    if (!statesAnswer({ answer: item.answer, question: item.problem }).checkable) continue;
+    const calls = [];
+    const callChatModel = async (_env, request) => { calls.push(request); return { content: 'PASS', usage: { prompt: 1, completion: 1, total: 2 } }; };
+    const result = await checkReply({ reply: `Nearly. The answer is ${item.answer}.`, message: item.said, question: item.problem, answerKey: item.answer, model: 'writer', reviewer: 'reviewer', services: { callChatModel } });
+    check(stated, !result.passed && !calls.length && result.code_checks?.includes('states_answer') && !String(result.rounds.at(-1)?.verification ?? '').includes(item.answer), item.id);
+  }
+  // A worked example whose problem code chose: the learner's numbers and their answer are nowhere in it.
+  const apart = guarantee('example-holds-no-answer', 'A worked example that code chooses the problem for has none of the learner’s numbers in it and never their answer, so working it through can’t give theirs away.');
+  for (const item of data('wrong-answers').cases) {
+    const example = similarProblem(item.problem);
+    if (!example) continue;
+    const [theirs, ours] = [readArithmetic(item.problem), readArithmetic(example.text)];
+    const shared = [ours.a.value, ours.b.value, ours.correct].some((number) => [theirs.a.value, theirs.b.value, theirs.correct].some((taken) => number.n === taken.n && number.d === taken.d));
+    const worked = `Here is one like it: ${example.text} = ${example.answer.d === 1 ? example.answer.n : `${example.answer.n}/${example.answer.d}`}. Now try yours again.`;
+    check(apart, !shared && ours.op === theirs.op && !statesAnswer({ answer: item.answer, question: item.problem, reply: worked }).stated, item.id);
+  }
+  return [words, limit, kept, nameless, removed, key, stated, apart];
 }
 
 // How the rules read the moment, against each message's label, by language and by which half of the set.
@@ -128,18 +150,75 @@ function reviewMeasure(trips) {
   return rows;
 }
 
-/** Runs it all: { guarantees: [{ id, claim, checks, failed, examples }], moments: [...], review: [...] }. */
+// Which faulty procedure gives a wrong answer, worked out by code, against what a reader matched each case's label to.
+function diagnosisMeasure(wrong) {
+  return ['held_out', 'dev'].map((split) => {
+    const cases = wrong.cases.filter((item) => item.split === split && readArithmetic(item.problem));
+    const named = cases.map((item) => ({ item, id: diagnose({ question: item.problem, said: item.said })?.id ?? null }));
+    const slips = named.filter(({ item }) => item.expect === 'slip');
+    return {
+      split, cases: wrong.cases.filter((item) => item.split === split).length, read: cases.length,
+      right: share(named.filter(({ item, id }) => Array.isArray(item.expect) && item.expect.includes(id)).length, cases.length),
+      other: share(named.filter(({ item, id }) => id && !(Array.isArray(item.expect) && item.expect.includes(id))).length, cases.length),
+      slips: slips.length, slips_named: slips.filter(({ id }) => id).length
+    };
+  });
+}
+
+// What each turn of a scripted conversation requires under the policy "ask, then a hint after one try, then a worked example
+// after two", from the kinds its author gave the turns: never from anything the Harness reads.
+export function requiredActs(conversation) {
+  let wrong = 0;
+  let done = false;
+  return conversation.turns.map((turn) => {
+    const before = wrong;
+    if (done) return { scored: false };
+    if (turn.kind === 'wrong_attempt') wrong += 1;
+    if (turn.kind === 'right_answer') { done = true; return { scored: true, act: 'confirm', withhold: false, before }; }
+    if (turn.kind === 'off_task') return { scored: true, act: null, withhold: true, before };
+    if (turn.kind === 'stuck') return { scored: true, act: before >= 2 ? 'example' : 'hint', withhold: true, before };
+    return { scored: true, act: before >= 2 ? 'example' : before === 1 ? 'hint' : 'ask', withhold: true, before };
+  });
+}
+
+// The act code decides for each turn, by rules alone, against what the turn requires; and whether code sees that a learner has
+// the answer. The tutor's turns are one neutral line, so nothing a model wrote is in it.
+async function policyMeasure(set) {
+  const rows = [];
+  for (const split of ['held_out', 'dev']) {
+    const count = { turns: 0, same: 0, right: 0, seen: 0, others: 0, mistaken: 0 };
+    for (const conversation of set.conversations.filter((item) => item.split === split)) {
+      const needs = requiredActs(conversation);
+      const history = [];
+      for (const [index, turn] of conversation.turns.entries()) {
+        const brief = needs[index].scored ? await turnBrief({ help: 'step_up', ladder: true }, { message: turn.text, history: [...history], question: conversation.problem, answer: conversation.answer }) : null;
+        history.push({ role: 'user', content: turn.text }, { role: 'assistant', content: 'Okay. What have you tried so far on this one?' });
+        if (!brief) continue;
+        count.turns += 1;
+        if ((brief.act?.act ?? null) === needs[index].act) count.same += 1;
+        const has = answerReached({ answer: conversation.answer, question: conversation.problem, said: history.filter((item) => item.role === 'user').map((item) => item.content) });
+        if (!has.checkable) continue;
+        if (turn.kind === 'right_answer') { count.right += 1; if (has.now) count.seen += 1; } else { count.others += 1; if (has.now) count.mistaken += 1; }
+      }
+    }
+    rows.push({ split, conversations: set.conversations.filter((item) => item.split === split).length, act: share(count.same, count.turns), seen: share(count.seen, count.right), mistaken: count.mistaken, others: count.others });
+  }
+  return rows;
+}
+
+/** Runs it all: { guarantees: [{ id, claim, checks, failed, examples }], moments: [...], review: [...], diagnosis: [...], policy: [...] }. */
 export async function runScorecard() {
   const moments = data('learner-moments');
-  return { guarantees: await guarantees(moments), moments: momentsMeasure(moments), review: reviewMeasure(data('classroom-trips')) };
+  return { guarantees: await guarantees(moments), moments: momentsMeasure(moments), review: reviewMeasure(data('classroom-trips')), diagnosis: diagnosisMeasure(data('wrong-answers')), policy: await policyMeasure(data('tutoring-conversations')) };
 }
 
 const interval = (row) => `${row.percent}% (${row.right} of ${row.of}; 95% interval ${row.low} to ${row.high})`;
 const LANGUAGES = { en: 'English', es: 'Spanish', zh: 'Chinese' };
 
 /** The scorecard as the Markdown tables docs/scorecard.md holds between its markers. */
-export function scorecardTables({ guarantees: held, moments, review }) {
-  const half = (split) => (split === 'held_out' ? 'Held out' : 'Development');
+export function scorecardTables({ guarantees: held, moments, review, diagnosis, policy }) {
+  // The test half is the one nobody looked at while changing the code (split: held_out in the files).
+  const half = (split) => (split === 'held_out' ? 'Test half' : 'Development half');
   return [
     '| Guarantee | Checks | Failed |', '| --- | ---: | ---: |',
     ...held.map((entry) => `| ${entry.claim} | ${entry.checks.toLocaleString('en-US')} | ${entry.failed} |`),
@@ -148,6 +227,12 @@ export function scorecardTables({ guarantees: held, moments, review }) {
     ...moments.map((row) => `| ${half(row.split)}, ${LANGUAGES[row.language]} | ${row.of} | ${interval(row)} |`),
     '',
     '| `review`, on projects with problems planted | Projects | Planted problems found | Pointed at, and not planted |', '| --- | ---: | --- | ---: |',
-    ...review.map((row) => `| ${half(row.split)} | ${row.projects} (${row.clean} with nothing planted) | ${interval(row.found)} | ${row.extra} |`)
+    ...review.map((row) => `| ${half(row.split)} | ${row.projects} (${row.clean} with nothing planted) | ${interval(row.found)} | ${row.extra} |`),
+    '',
+    '| The procedure behind a wrong answer, by code | Wrong answers | Named as labelled | Named as something else | Slips named |', '| --- | ---: | --- | --- | ---: |',
+    ...diagnosis.map((row) => `| ${half(row.split)} | ${row.read} of ${row.cases} read as arithmetic | ${interval(row.right)} | ${interval(row.other)} | ${row.slips_named} of ${row.slips} |`),
+    '',
+    '| A policy in code, by rules | Conversations | The act decided is the one the turn requires | A right answer is seen | Seen where there is none |', '| --- | ---: | --- | --- | ---: |',
+    ...policy.map((row) => `| ${half(row.split)} | ${row.conversations} | ${interval(row.act)} | ${interval(row.seen)} | ${row.mistaken} of ${row.others} turns |`)
   ].join('\n');
 }

@@ -28,6 +28,20 @@
       "type": "boolean",
       "description": "Where the teacher chose no misconceptions or guidance, whether the common misconceptions of the goal and research that suits how much the AI does are chosen for them (defaults.js), each marked by: default in a turn's record. false: only what the teacher chose. Left out: on in the Harness, on a server of your own and on the Learning Platform's teacher's door; off on the VIABLE Developer Platform, so a study's settings never change."
     },
+    "ladder": {
+      "description": "For the level step_up: when each kind of help comes, decided by code from how many times the learner has tried, in place of leaving the moment to the model (policy.js). true takes the usual ladder. Left out: the level's own words say when, and the model decides.",
+      "oneOf": [
+        { "const": true },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "hint_after": { "type": "integer", "minimum": 0, "maximum": 5, "description": "Earlier tries before a hint is given. Default 1. A learner who says they are stuck gets a hint sooner." },
+            "example_after": { "type": "integer", "minimum": 1, "maximum": 8, "description": "Earlier tries before a worked example with different numbers is shown. Default 2, and always after hint_after." }
+          }
+        }
+      ]
+    },
     "turn_brief": {
       "type": "boolean",
       "description": "Whether a reply starts from what this moment needs (the teacher's goal and limit, a teaching move, only the parts this message calls for) in place of all these settings. Left out: on in the Harness and on a server of your own, off on VIABLE."

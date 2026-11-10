@@ -13,7 +13,9 @@ const SHORT = {
   'records-hold-no-words': 'A record holds no one’s words unless asked',
   'no-identity-upstream': 'Nothing naming a learner goes to the model’s endpoint',
   'tools-off-removed': 'A tool switched off is removed, not only forbidden',
-  'key-only-to-reviewer': 'An answer key reaches only the reviewer'
+  'key-only-to-reviewer': 'An answer key reaches only the reviewer',
+  'stated-answer-stopped': 'A reply that states the key is stopped by code',
+  'example-holds-no-answer': 'A worked example code chooses never holds the answer'
 };
 
 const scored = await runScorecard();
@@ -31,17 +33,17 @@ const bars = (y, title, was, now, of, note) => {
   return [text(664, y, 16, 600, title, 'ink'), text(664, y + 30, 12, 600, 'Before', 'muted'), bar(y + 38, was, 'var(--muted)', 'muted'), text(664, y + 78, 12, 600, 'Now', 'ink'), bar(y + 86, now, 'var(--blue)', 'ink'), text(664, y + 122, 13, 400, note)].join('\n');
 };
 
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" role="img" aria-label="The VIABLE Harness scorecard. Six guarantees hold on ${checks.toLocaleString('en-US')} checks. On held-out cases the rules read ${percent(moments.right, moments.of)} percent of ${moments.of} English messages as labelled, up from ${percent(BEFORE.moments, moments.of)} percent, and review finds ${percent(review.found.right, review.found.of)} percent of ${review.found.of} planted problems, up from ${percent(BEFORE.review, review.found.of)} percent, with ${review.extra} false alarms.">
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" role="img" aria-label="The VIABLE Harness scorecard. ${['', '', '', '', '', '', 'Six', 'Seven', 'Eight', 'Nine'][scored.guarantees.length] ?? scored.guarantees.length} guarantees hold on ${checks.toLocaleString('en-US')} checks. On held-out cases the rules read ${percent(moments.right, moments.of)} percent of ${moments.of} English messages as labelled, up from ${percent(BEFORE.moments, moments.of)} percent, and review finds ${percent(review.found.right, review.found.of)} percent of ${review.found.of} planted problems, up from ${percent(BEFORE.review, review.found.of)} percent, with ${review.extra} false alarms.">
 ${style}
 <rect width="1200" height="500" rx="22" fill="var(--mist)"/>
 <rect x="40" y="36" width="580" height="428" rx="16" fill="var(--paper)"/>
 ${text(64, 76, 20, 600, 'Guarantees', 'pass')}
 ${text(596, 76, 14, 600, `${checks.toLocaleString('en-US')} checks, ${failed} failed`, 'ink', 'end')}
 ${text(64, 100, 13, 400, 'Each has to hold on every case, with a line added that tries to pass for an instruction.')}
-${scored.guarantees.map((entry, index) => `${tick(76, 140 + index * 50)}${text(98, 145 + index * 50, 15, 400, SHORT[entry.id], 'ink')}${text(596, 145 + index * 50, 13, 600, entry.checks.toLocaleString('en-US'), 'muted', 'end')}${index ? `<line x1="64" y1="${115 + index * 50}" x2="596" y2="${115 + index * 50}" class="rule"/>` : ''}`).join('\n')}
+${scored.guarantees.map((entry, index) => `${tick(76, 136 + index * 38)}${text(98, 141 + index * 38, 15, 400, SHORT[entry.id], 'ink')}${text(596, 141 + index * 38, 13, 600, entry.checks.toLocaleString('en-US'), 'muted', 'end')}${index ? `<line x1="64" y1="${117 + index * 38}" x2="596" y2="${117 + index * 38}" class="rule"/>` : ''}`).join('\n')}
 ${text(64, 444, 12, 400, 'What the code does. What a model then does with its instructions is for VETTING and agent tests.', 'muted')}
 <rect x="640" y="36" width="520" height="428" rx="16" fill="var(--paper)"/>
-${text(664, 76, 20, 600, 'Measured, on cases held out', 'ink')}
+${text(664, 76, 20, 600, 'Measured, on the test half', 'ink')}
 ${text(664, 100, 13, 400, 'Written apart from the code, and split before any result was read.')}
 ${bars(134, 'Reading the moment, by rules', BEFORE.moments, moments.right, moments.of, `${moments.right} of ${moments.of} English messages read as labelled`)}
 <line x1="664" y1="272" x2="1136" y2="272" class="rule"/>

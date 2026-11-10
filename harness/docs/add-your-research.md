@@ -2,8 +2,8 @@
 
 Guidance from research, a dataset, a tool that reads conversations, open material or a resource to list: each has its own way into the [library](catalog.md).
 
-Find what you have. Each part starts from one already in the library: look at it, then make yours the same way. You don't have
-to write code: open an issue with the papers or a link, and the lab writes it with you.
+Find what you have below, look at the example already in the library, and make yours the same way. Or open an issue with the
+papers or a link, and the lab writes it with you.
 
 | You have | It becomes | Look at |
 | --- | --- | --- |
@@ -33,11 +33,9 @@ From research, where it fits:
 - Before correcting a wrong answer, ask the learner to say how they got it. (Your name 2024)
 ```
 
-Three things follow from that:
-
-- **Your citation travels with your words.** Anyone who reads what the AI was given sees it.
-- **Your work gets a page** in the [library](catalog.md), with what you showed, what comparing replies showed, and what nobody has shown yet.
-- **You can see that it's used.** The VIABLE Developer Platform counts replies that drew on a component, per day. Nothing about a class or a learner comes with the count.
+Anyone who reads what the AI was given sees your citation with your words. Your work gets a page in the [library](catalog.md),
+with what you showed, what comparing replies showed, and what nobody has shown yet. To show you that it's used, the VIABLE
+Developer Platform counts replies that drew on a component, per day, with nothing about a class or a learner.
 
 ### What you write
 
@@ -85,7 +83,7 @@ One file, in plain sentences. Each piece says which moments it is for: `attempt`
 }
 ```
 
-`evidence` is the part that matters most. It keeps three things apart that are easy to blur: what your study found, what this particular use of it has been shown to do, and what is still unknown. Nobody is asked to claim more than they have.
+`evidence` matters most. It keeps apart three things that are easy to blur: what your study found, what this particular use of it has been shown to do, and what is still unknown.
 
 ### See what it changes
 
@@ -130,12 +128,12 @@ test an AI, not while it teaches.
 [its connector](../src/resources/tutormoments.js). Replies people rated come in as a calibration set, as the
 [conversational uptake annotations](catalog.md#conversational-uptake) do.
 
-1. **List it.** One file, `catalog/<id>.json`, says what it is, who made it, its license, how to cite it and how far it is
+1. List it in one file, `catalog/<id>.json`, that says what it is, who made it, its license, how to cite it and how far it is
    connected. Open a [catalog issue](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=catalog.yml) and the lab
    writes it with you, or send it as a pull request with what `npm run catalog:build` writes from it.
-2. **Connect it**, if its records would make cases worth running. A connector downloads a pinned version from its makers and
+2. Connect it, if its records would make cases worth running. A connector downloads a pinned version from its makers and
    turns each record into a case. [Write a connector](resources.md#write-a-connector) has the steps.
-3. **Try it**: `viable-harness resources use <id> --out cases.json`, and read the cases. Then
+3. Try it: `viable-harness resources use <id> --out cases.json`, and read the cases. Then
    `viable-engine test agent.json --suite <id> --judge-model <model>` runs a test suite, and
    `viable-harness calibrate --set <id> --judge-model <model>` a calibration set.
 
@@ -147,16 +145,16 @@ test. It runs where you run it, and receives only the learner data its manifest 
 **Look at** [Edu-ConvoKit](catalog.md#edu-convokit), connected as a measure with a detector beside it:
 [its folder](../integrations/stanford-edu-convokit/) holds both manifests, the adapter and the fixtures.
 
-1. **Propose it** in a [component proposal](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=component.yml),
+1. Propose it in a [component proposal](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=component.yml),
    naming the work, its slot and its license.
-2. **Copy the template.** `viable-harness component new <owner/name> --slot detector` makes a folder from
-   [the template](../integrations/_template/): a detector over HTTP in plain Node.
-3. **Write its manifest**: what it receives, where it runs, its license, how to cite it, its evidence and its risk.
+2. Copy the template: `viable-harness component new <owner/name> --slot detector` makes a folder from
+   [the template](../integrations/_template/), a detector over HTTP in plain Node.
+3. Write its manifest: what it receives, where it runs, its license, how to cite it, its evidence and its risk.
    [Components](components.md#the-manifest) has the format, and [the review checklist](components.md#the-review-checklist)
    what is checked.
-4. **Try it** with synthetic fixtures: `viable-harness component manifest.json --input fixtures/input.json`, or for a
+4. Try it with synthetic fixtures: `viable-harness component manifest.json --input fixtures/input.json`, or for a
    measure `viable-harness measure record.json --component manifest.json`.
-5. **Open a pull request** with the folder and a test that runs its fixtures.
+5. Open a pull request with the folder and a test that runs its fixtures.
 
 A simulated learner is planned: no agent test uses one yet.
 [Tell us about yours](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=component.yml).
@@ -169,10 +167,10 @@ Lessons, guides or standards an agent can search and cite while it teaches.
 `viable-harness resources get illustrative-mathematics --grade 6 --unit 4` brings one unit's student lessons from its makers,
 and [its connector](../src/resources/illustrativeMath.js) shows how.
 
-1. **List it**, as for [a dataset](#a-dataset-or-a-benchmark), with the license of each part.
-2. **Connect it.** A connector whose `use` returns `{ knowledge }` gives the files a Knowledge step searches. Fetch only the
+1. List it, as for [a dataset](#a-dataset-or-a-benchmark), with the license of each part.
+2. Connect it. A connector whose `use` returns `{ knowledge }` gives the files a Knowledge step searches. Fetch only the
    parts whose license allows the use. [Write a connector](resources.md#write-a-connector) has the steps.
-3. **Try it**: `viable-engine run agent.json --input "..." --knowledge <kb-id>=resource:<id>`.
+3. Try it: `viable-engine run agent.json --input "..." --knowledge <kb-id>=resource:<id>`.
 
 Standards can also come in as a lookup that puts one into an activity's teaching settings, as the
 [Learning Commons Knowledge Graph](catalog.md#learning-commons-knowledge-graph) does.
@@ -183,8 +181,8 @@ Anything public for K-12 AI that people should know about, connected or not. An 
 
 **Look at** [OpenStax](catalog.md#openstax), listed with why it goes no further: [its entry](../catalog/openstax.json).
 
-1. **Check it against its primary source**, its own site, repository, license file, dataset card or paper: the link, the
+1. Check it against its primary source, its own site, repository, license file, dataset card or paper: the link, the
    license of each part, how to get it, and whether it is released. That day is its `verified_at`.
-2. **Send it**: a [catalog issue](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=catalog.yml), or a pull
+2. Send it: a [catalog issue](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=catalog.yml), or a pull
    request with `catalog/<id>.json` and what `npm run catalog:build` writes from it.
    [CONTRIBUTING.md](../../CONTRIBUTING.md#catalog-entries) says what qualifies.

@@ -558,9 +558,9 @@ test('a log line says what happened, and nothing anyone wrote or who they are', 
 });
 
 test('the components answer over plain HTTP, for a language with no MCP client', async () => {
-  const { fetch, calls } = endpoint('FAILED: Gives the answer.', 'What do the denominators need?', 'PASS');
+  const { fetch, calls } = endpoint('FAILED: Does the work.', 'What do the denominators need?', 'PASS');
   const handle = gateway(fetch, { reviewerModel: 'judge', teaching: SETTINGS });
-  const checked = await (await handle(post({ reply: 'It is 5/6.', message: 'What is 1/2 + 1/3?', question: 'What is 1/2 + 1/3?', answer_key: '5/6', rewrite: 1, model: 'tutor', history: [{ role: 'user', content: 'Hi' }, { role: 'nope', content: 'dropped' }] }, {}, '/v1/check'))).json();
+  const checked = await (await handle(post({ reply: 'Make them 3/6 and 2/6, then add the tops.', message: 'What is 1/2 + 1/3?', question: 'What is 1/2 + 1/3?', answer_key: '5/6', rewrite: 1, model: 'tutor', history: [{ role: 'user', content: 'Hi' }, { role: 'nope', content: 'dropped' }] }, {}, '/v1/check'))).json();
   assert.equal(checked.outcome, 'passed');
   assert.equal(checked.reply, 'What do the denominators need?');
   assert.equal(checked.reviewer, 'judge');

@@ -2,7 +2,7 @@
 
 > Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
 
-You already have an AI app or an agent, in any language or framework. You won't rewrite it. Two ways in:
+If you already have an AI app or an agent, in any language or framework, there are two ways in that leave it as it is:
 
 - **Change one URL.** The gateway stands in front of your model endpoint. Each call gets what its moment
   needs from a teacher's settings, each reply is checked before your app sees it, and a record is kept for
@@ -15,9 +15,8 @@ learner is doing, and only the misconceptions and parts of a standard that messa
 sends everything the teacher set on every call; `--picker-model <id>` has a small model read the moment instead of
 rules, for one more call. The `X-Viable-Moment` response header says what it read.
 
-**What "Ran" means on this page:** the recipe was run as written against the gateway, with a small local
-stand-in for the model endpoint. No recipe here has run against a real model, and the versions are the
-ones named at each recipe.
+A recipe marked "Ran" was run as written against the gateway, with a small local stand-in for the model
+endpoint and the versions named at it. None has run against a real model.
 
 ## Change one URL
 
@@ -108,8 +107,8 @@ headers and a `viable` field. In a stream the field is on the chunk with the `fi
 | Your endpoint fails | Its own status and error, so your app's retry logic still works, or a 502 if it can't be reached. No fallback |
 | No `--reviewer-model` | Replies pass through, streams too, marked `not_checked` |
 
-A check is care against waiting, and that is yours to weigh. Your app waits for each round, and `X-Viable-Added-Ms` says how long the
-gateway added. For less: `--rewrites 0` or `1`, or a faster `--reviewer-model`. For more: the other way.
+Your app waits for each round, and `X-Viable-Added-Ms` says how long the gateway added. To wait less, use `--rewrites 0` or `1`, or a
+faster `--reviewer-model`; for more checking, go the other way.
 
 ### Streaming
 
@@ -130,7 +129,7 @@ call is checked too; if it fails, the tool call goes on without it.
 | `X-Viable-Learner` | Names the learner in the records. A pseudonymous ID: letters, digits, dots, dashes, underscores, colons. A name or an email is refused | The request's `user` if it fits that rule, else the call is kept with no learner |
 | `X-Viable-Section` | Applies that section's own help level and note | The activity's |
 
-**A learner's ID never goes to a model.** The `X-Viable-*` headers and the request's `user`,
+A learner's ID never goes to a model: the `X-Viable-*` headers and the request's `user`,
 `safety_identifier` and `prompt_cache_key` stop at the gateway. If a learner types their name, it goes to
 the model as written: the gateway can't tell.
 
@@ -148,9 +147,6 @@ name in `Host`, a proxy that says it passed the request on, and a post with anot
 on localhost too. It takes `application/json` only: a web page can't send that to another site without asking first.
 
 ### The teacher's page
-
-The gateway deletes nothing by itself: what it keeps in `--data-dir` stays until you delete it, or
-`viable-engine forget <id> --data-dir ./records` takes one learner's.
 
 Open `/teacher`. Your browser asks for a password: it's the token, or with no token the one the gateway printed
 when it started, and any user name will do. It always asks, because through a local proxy every visitor would
@@ -172,7 +168,8 @@ opened (to tell conversations apart). The teacher's page then shows how each che
 took, but not the reviewer's reasons: a reason is a model's words about a reply, and it can quote it.
 With `--keep-text` the page shows them.
 
-To forget a learner, delete their two folders: `gateway/<activity>/records/<id>` and
+The gateway deletes nothing by itself: what it keeps in `--data-dir` stays until you delete it.
+`viable-engine forget <id> --data-dir ./records` takes one learner's, or delete their two folders: `gateway/<activity>/records/<id>` and
 `gateway/<activity>/runs/<id>` (a `:` in an ID is `%3A` in the folder's name). On another store, the same
 keys.
 
@@ -433,20 +430,20 @@ HTTPS addresses only, so a local app can't stand in.
 
 ## What the gateway can't do
 
-- **It sees only what passes through it.** An app can call the model some other way, and nothing here can
+- It sees only what passes through it. An app can call the model some other way, and nothing here can
   stop steps the app does elsewhere.
-- **A review is a model's judgment,** not a guarantee that a reply is right or safe.
-- **It checks text to the learner.** Tool call arguments aren't checked. Structured output
+- A review is one model's judgment, so a reply that passed can still be wrong or unsafe.
+- It checks text to the learner. Tool call arguments aren't checked. Structured output
   (`response_format` of `json_object` or `json_schema`) passes through as `not_checked`, because a rewrite
   or a fallback would break your code.
-- **The reviewer and rewrites read text only.** Pictures in a message don't reach them, nor do tool results.
+- The reviewer and rewrites read text only. Pictures in a message don't reach them, nor do tool results.
   A rewrite gets your system message, the conversation and the reviewer's reason, but not your tools or
   settings such as `temperature` and `max_tokens`.
-- **With checks on, one reply at a time:** `n` above 1 is refused.
-- **Chat completions only.** `/v1/responses` is refused rather than passed on unchecked.
-- **No limits per visitor.** It has a token, a 20 MiB limit on a request and five minutes per call. Put
+- With checks on, `n` above 1 is refused.
+- It takes chat completions only. `/v1/responses` is refused, so nothing goes past it unchecked.
+- It has no limits per visitor: a token, a 20 MiB limit on a request and five minutes per call. Put
   anything a browser reaches behind your own server: it sends no CORS headers.
-- **The records are approximate where it can't know.** Two conversations that open with the same words
+- The records are approximate where it can't know. Two conversations that open with the same words
   count as one. The measures that read how a message was written show "No data". The teacher's page reads
   the newest 500 runs and records. With `--data-dir`, run one process per folder.
-- **Consent, class lists and studies aren't here.** See [deploying.md](../../engine/docs/deploying.md).
+- Consent, class lists and studies aren't here. See [deploying.md](../../engine/docs/deploying.md).

@@ -71,8 +71,8 @@ Skill is advice an assistant may ignore; the gateway, your own calls and the [En
 | --- | --- | --- | --- |
 | Before the reply | **Context** | What should it have in mind at this moment, and nothing more? | what the teacher decided ([How the AI helps](skills/writing-how-the-ai-helps/SKILL.md)); standards and misconceptions from [open resources](docs/resources.md); teaching moves, each with its source; what this learner just did |
 | Before the reply | **Rules** | What may it see and do here? | how far it may help; which tools are off, removed rather than only told; no learner's identity; answer keys that reach only the reviewer |
-| While it works | **Loop** | What happens next? | counts tries, changes approach when a learner keeps failing, brings in the teacher and flags it |
-| After the reply | **Checks** | Did it meet the bar? | [VETTING](skills/checking-replies-with-vetting/SKILL.md), which reviews a reply against a policy the learner never sees; [agent tests](docs/agent-tests.md) on your own agent before learners meet it, from your own cases or [open benchmarks](docs/resources.md), with judges you can compare against people |
+| While it works | **Loop** | What happens next? | counts tries, changes approach when a learner keeps failing, brings in the teacher and flags it; with a ladder, [code decides](docs/policy.md) whether a turn gets a question, a hint or a worked example |
+| After the reply | **Checks** | Did it meet the bar? | code first, which stops a draft that states the answer key; then [VETTING](skills/checking-replies-with-vetting/SKILL.md), which reviews a reply against a policy the learner never sees; [agent tests](docs/agent-tests.md) on your own agent before learners meet it, from your own cases or [open benchmarks](docs/resources.md), with judges you can compare against people |
 | After the reply | **Evidence** | What happened, did it help, what should change? | records tied to what went in; [measures](docs/xapi.md) with their definitions; suggested changes a teacher accepts or declines |
 
 A small model can read the moment instead of rules (`pickerModel`), and it reads more of them, in any language, for one more call
@@ -100,15 +100,27 @@ Early results: on 50 learner messages and two models, a one-line tutor prompt go
 settings given before the reply got 68 to 74%. Choosing what goes in for each turn added about 10 more points and a quarter fewer tokens,
 which isn't yet clear of chance on that set, and is clear on not giving the answer away (18 to 20 points on an open-weight model). Finding
 the right misconception for a message worked on only 4 of 19 turns. Rated by a model, on replies, not learning
-([what was done](docs/evidence.md)).
+([what was done](docs/evidence.md#the-first-check)).
 
-What needs no model is checked on every commit, and anyone can run it: six guarantees on 4,122 checks, such as a learner's
-words never entering what the model is told and an answer key reaching only the reviewer; the rules reading 84% of 150 held-out
-messages as labelled; and `review` finding 87% of the problems planted in 30 held-out projects, with no false alarm
-([the scorecard](docs/scorecard.md), and what it doesn't show).
+A teacher's policy holds better when code decides its steps. On 60 scripted conversations with three models, a tutor with a
+carefully written prompt and a guardrail that knows the policy did the step the policy required on 57 to 73 turns in 100. With
+the Harness deciding the step in code it was 83 to 89, and the gap was widest on the two open-weight models, at 25 and 31
+points ([what was run and what it gave](evals/policy-fidelity/results.md); judged by a model, on replies). Where a
+problem is arithmetic, code also names the faulty procedure behind a wrong answer, as often as a model asked the same
+question and with half as many wrong names ([three checks](evals/diagnosis/README.md)).
+[What has been measured](docs/evidence.md) has every check on one page.
 
 <p align="center">
-  <img src="../docs/images/scorecard.svg" width="100%" alt="The scorecard at a glance. Six guarantees hold on 4,122 checks, among them that a learner's words never enter what the model is told and that an answer key reaches only the reviewer. On held-out cases, the rules read 84 percent of 150 English messages as labelled, from 51 percent before, and review finds 87 percent of 53 planted problems, from 79 percent, with no false alarm.">
+  <img src="../docs/images/policy-check.svg" width="100%" alt="Share of turns on which each tutor did the step the teacher's policy requires, on 60 held-out conversations and three reply models. A carefully written prompt with a guardrail: 57 to 73 turns in 100. The Harness with the policy decided by code: 83 to 89 in 100. The prompt alone: 44 to 68. The Harness as it was: 46 to 56.">
+</p>
+
+What needs no model is checked on every commit, and anyone can run it: eight guarantees on 4,439 checks, such as a learner's
+words never entering what the model is told and an answer key reaching only the reviewer. On the half of each set kept for
+testing, the rules read 83% of 150 messages as labelled, `review` finds 87% of the problems planted in 30 projects with no
+false alarm, and code names the faulty procedure behind 70% of 80 wrong answers ([the scorecard](docs/scorecard.md)).
+
+<p align="center">
+  <img src="../docs/images/scorecard.svg" width="100%" alt="The scorecard at a glance. Eight guarantees hold on 4,439 checks, among them that a learner's words never enter what the model is told, that an answer key reaches only the reviewer, and that a reply stating the key is stopped by code. On the test half of each set, the rules read 83 percent of 150 English messages as labelled, from 51 percent before, and review finds 87 percent of 53 planted problems, from 79 percent, with no false alarm.">
 </p>
 
 ## It doesn't compete with where its knowledge comes from
@@ -120,7 +132,7 @@ take from them, credits them, and measures whether it helped. It carries their o
 
 ## Reference
 
-[How it works](docs/how-it-works.md) · [With your stack](docs/with-your-stack.md) · [MCP](docs/mcp.md) · [Skills](skills/) · [Agent tests](docs/agent-tests.md) · [Scorecard](docs/scorecard.md) ·
+[How it works](docs/how-it-works.md) · [A teaching policy in code](docs/policy.md) · [With your stack](docs/with-your-stack.md) · [MCP](docs/mcp.md) · [Skills](skills/) · [Agent tests](docs/agent-tests.md) · [Scorecard](docs/scorecard.md) ·
 [Ways to arrange an activity](docs/designs.md) · [Add your research](docs/add-your-research.md) · [Components](docs/components.md) · [Open resources](docs/resources.md) · [Catalog](docs/catalog.md) · [xAPI](docs/xapi.md) ·
 [Conformance](conformance/README.md)
 

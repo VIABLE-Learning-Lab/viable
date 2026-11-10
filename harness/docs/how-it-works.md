@@ -26,6 +26,11 @@ turn.moment;         // "attempt"
 turn.chosen;         // which misconceptions, skill components and guidance it took
 ```
 
+Some of a teacher's policy doesn't have to be left to the model at all. Given the problem and its key, code sees that a
+learner has the answer and works out which faulty procedure gives a wrong one; with a ladder on the level that steps up,
+code decides whether this turn gets a question, a hint or a worked example; and a draft that states the key is failed
+before any reviewer is asked ([a teaching policy in code](policy.md)).
+
 ## Two stages, which is why there is no vector store
 
 | Stage | Who | From | To | When |
@@ -47,23 +52,25 @@ record can say exactly what the AI was given.
 | Standards ([Learning Commons](https://learningcommons.org)) | About 1 GB for every state | Not in the package. Hosted: `find_standards`. Yours: `viable-harness resources` downloads the release and keeps one state's | The teacher picks one, kept with its learning components | At most 2 components, 1 earlier standard |
 | [Guidance from research](components.md) | 77 pieces on 8 topics, each naming its studies, in the package; anyone's own, up to 500 in a component's file | In the package or that file, and up to 20 copied into an activity | A person, then the moment | At most 2 |
 | Your own documents | Whatever you have | Not in the Harness: your agent's retrieval, or the Engine's knowledge | Search | What search finds |
-| [The catalog](catalog.md) | 64 public goods, described | Descriptions in the package. Data comes from its makers when you fetch it | You | Nothing directly. It becomes test suites, judges and knowledge |
+| [The catalog](catalog.md) | 65 public goods, described | Descriptions in the package. Data comes from its makers when you fetch it | You | Nothing directly. It becomes test suites, judges and knowledge |
 
 ## How a turn chooses
 
 **By rules, with no model call and no cost.** Patterns read the moment: in English, and the commonest ways of asking and of
 being stuck in Spanish and Chinese. Whatever a learner says back to a tutor who left them something to do is an answer, unless
-it is a question, a plea, being stuck or small talk. A list item is taken when it shares at
+it is a question, a plea, being stuck or small talk; where the activity has a problem on the page, so is a first message. A list item is taken when it shares at
 least two words with what was just said, the closest first; a learner's everyday words count as the formal ones a misconception
 uses ("tops and bottoms" as numerators and denominators, "times" as multiplies). Guidance can name its moments, and then those for the moment take
 turns as the conversation goes on, so a learner doesn't hear the same two every time.
 
 **By a small model, for one more call a turn** (`pickerModel`). It reads the conversation and the numbered list, and answers
-which to take. It reads any language, and more of the moments. If it fails or takes too long, rules decide.
+which to take and what each learner message was (an answer, a request for the answer, being stuck, something else). Code
+counts the tries from that, so a count never rests on a model's arithmetic. It reads any language, and more of the moments.
+If it fails or takes too long, rules decide.
 
-How well this works so far: of 30 fractions moments a small model read 29 and rules read 23, and on 150 held-out messages
-across subjects the rules read 84% as labelled ([the scorecard](scorecard.md)). Finding the right misconception for a
-message worked on only 4 of 19 turns ([what was measured](evidence.md)). So nothing is looked up from what a learner says: a turn
+How well this works so far: of 30 fractions moments a small model read 29 and rules read 23, and on the 150 messages kept for testing
+across subjects the rules read 83% as labelled ([the scorecard](scorecard.md)). Finding the right misconception for a
+message worked on only 4 of 19 turns ([what was measured](evidence.md#the-first-check)). So nothing is looked up from what a learner says: a turn
 chooses only among the activity's misconceptions, the teacher's or those chosen for them from the goal, and once a learner has
 tried something and no word points to one, it passes the first two on, to be used only if they fit. A turn's record marks what
 was chosen for the teacher (`by: default`). `defaults: false` in the settings gives the AI only what the teacher chose; a host
