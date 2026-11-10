@@ -89,9 +89,15 @@ function guidanceFor(items, moment, terms, goal, turn = 0) {
   return [...forMoment.slice(start), ...forMoment.slice(0, start), ...byWords].slice(0, BRIEF_LIMITS.guidance);
 }
 
+// A learner's everyday words for what misconceptions name formally, so "added the tops and bottoms" meets "summing numerators and
+// denominators". Only what was said is widened, for matching; what is listed, and what the brief says, stay as written.
+const PLAIN_WORDS = [[/\btops?\b/, 'numerator'], [/\bbottoms?\b/, 'denominator'], [/\btimes\b/, 'multiply multiplies multiplication'], [/\bplus\b/, 'add addition'],
+  [/\b(minus|take ?away)\b/, 'subtract subtraction'], [/\bshar(e|es|ed|ing)\b/, 'divide division'], [/\bbigg(er|est)\b/, 'greater larger']];
+const withFormal = (said) => PLAIN_WORDS.reduce((text, [plain, formal]) => (plain.test(text) ? `${text} ${formal}` : text), String(said).toLowerCase());
+
 function pickByWords(candidates, message, history, goal) {
   const last = [...history].reverse().find((turn) => turn?.role === 'assistant')?.content;
-  const terms = new Set(searchTerms(`${message} ${typeof last === 'string' ? last : ''}`));
+  const terms = new Set(searchTerms(`${withFormal(message)} ${typeof last === 'string' ? last : ''}`));
   const moment = readMoment(message, history);
   return {
     moment,

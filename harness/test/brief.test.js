@@ -101,6 +101,19 @@ test('nothing is looked up from the learner’s words: with none chosen there ar
   assert.match(quiet.text, /What may be behind it, only if it fits what they did/);
 });
 
+test('a learner’s everyday words meet a misconception’s formal ones, and only what was listed', async () => {
+  const listed = { ...teaching, misconceptions: [
+    { id: U(7), description: 'Thinks a decimal with more digits is larger', construct: { id: U(4), description: 'Compare decimals' }, source },
+    { id: U(8), description: 'Rounds to the nearest ten instead of the nearest whole number', construct: { id: U(6), description: 'Round numbers' }, source },
+    teaching.misconceptions[0]
+  ] };
+  const tops = await turnBrief(listed, { message: 'i added the tops and the bottoms so 1/2 + 1/3 is 2/5' });
+  assert.deepEqual(tops.misconceptions.map((item) => item.id), [U(3)], 'tops and bottoms are numerators and denominators');
+  assert.doesNotMatch(tops.text, /numerator, denominator|multiply multiplies/, 'the widened words stay out of the brief');
+  const times = await turnBrief({ ...listed, misconceptions: [...listed.misconceptions.slice(0, 2), { id: U(9), description: 'Multiplies both the numerator and the denominator by the whole number', construct: { id: U(4), description: 'Multiply fractions' }, source }] }, { message: 'i did 3 times the top and the bottom' });
+  assert.deepEqual(times.misconceptions.map((item) => item.id), [U(9)]);
+});
+
 test('a run gets the brief only when asked, and reply steps get its text', async () => {
   const graph = { entry: 'reply', nodes: [{ id: 'reply', type: 'llm', config: { model: 'm', system: 'You tutor.' }, next: 'out' }, { id: 'out', type: 'output', config: { text: '{{reply.content}}' } }] };
   const seen = [];

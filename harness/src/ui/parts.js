@@ -198,7 +198,7 @@ del{color:var(--muted);text-decoration:line-through 1.5px var(--pencil-red);whit
 .case dd{margin:2px 0 0;color:var(--public-text)}
 .case blockquote{margin:0;color:var(--public-ink);white-space:pre-wrap}
 .scale{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);margin:0 0 10px;padding:0;list-style:none;color:var(--muted);font-size:.8125rem;line-height:1.3}
-.scale li{position:relative;padding-top:14px;border-top:1px solid var(--public-rule-strong)}
+.scale li{position:relative;padding:14px 8px 0 0;border-top:1px solid var(--public-rule-strong);overflow-wrap:break-word}
 .scale li::before{content:"";position:absolute;top:-5px;left:0;width:9px;height:9px;border-radius:50%;background:var(--public-rule-strong);-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .scale .on{color:var(--ink-blue);font-weight:700}
 .scale .on::before{background:var(--ink-blue);box-shadow:0 0 0 4px var(--ink-blue-line)}

@@ -1856,7 +1856,7 @@ const ASK_SCRIPT = String.raw`(() => {
   // The thread as the server has it, after something didn't go as the page expected.
   const refreshThread = async () => {
     try {
-      const next = new DOMParser().parseFromString(await (await fetch(location.pathname, { headers: { accept: 'text/html' } })).text(), 'text/html');
+      const next = V.page(await (await fetch(location.pathname, { headers: { accept: 'text/html' } })).text());
       const fresh = next.getElementById('ask-thread');
       if (fresh) { $('ask-thread').innerHTML = fresh.innerHTML; aroundAll(); }
     } catch {}
@@ -1949,7 +1949,7 @@ const ASK_SCRIPT = String.raw`(() => {
     while (running) {
       await new Promise((done) => setTimeout(done, 2500));
       try {
-        const next = new DOMParser().parseFromString(await (await fetch(location.pathname, { headers: { accept: 'text/html' } })).text(), 'text/html');
+        const next = V.page(await (await fetch(location.pathname, { headers: { accept: 'text/html' } })).text());
         const fresh = next.getElementById('ask-thread');
         if (!fresh) break;
         // Only what changed, so a screen reader hears each step once, and what someone opened stays open.

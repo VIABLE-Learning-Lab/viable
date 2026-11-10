@@ -52,7 +52,8 @@ record can say exactly what the AI was given.
 ## How a turn chooses
 
 **By rules, with no model call and no cost.** Patterns read the moment, in English. A list item is taken when it shares at
-least two words with what was just said, the closest first. Guidance can name its moments, and then those for the moment take
+least two words with what was just said, the closest first; a learner's everyday words count as the formal ones a misconception
+uses ("tops and bottoms" as numerators and denominators, "times" as multiplies). Guidance can name its moments, and then those for the moment take
 turns as the conversation goes on, so a learner doesn't hear the same two every time.
 
 **By a small model, for one more call a turn** (`pickerModel`). It reads the conversation and the numbered list, and answers

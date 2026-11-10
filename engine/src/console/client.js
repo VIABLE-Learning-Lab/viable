@@ -415,9 +415,12 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     return body;
   };
 
+  // A page fetched again, to take parts from. In a template its styles and scripts stay inert: parsed as a document, its
+  // <style> would be checked against this page's nonce, which it no longer has, and the console would log a refusal.
+  const page = (html) => { const held = document.createElement('template'); held.innerHTML = html; return held.content; };
   const refresh = async (saved) => {
     const response = await fetch(location.pathname + location.search, { headers: { accept: 'text/html' } });
-    const next = new DOMParser().parseFromString(await response.text(), 'text/html').querySelector('main');
+    const next = page(await response.text()).querySelector('main');
     if (!next) { location.reload(); return; }
     const focused = document.activeElement && document.activeElement.id;
     // What is typed and not saved goes across.
@@ -801,5 +804,5 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
   dress(document);
   fill();
   saveBar();
-  window.viableConsole = { ask, call, closePop, dress, float, refresh, say };
+  window.viableConsole = { ask, call, closePop, dress, float, page, refresh, say };
 })();`;

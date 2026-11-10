@@ -406,13 +406,14 @@ ${ARCHIVED_CSS}`;
 // --- A course's settings ------------------------------------------------------------------------------
 
 // What learners see of a course: a look, drawn small so it can be chosen by eye, and a color that is the course's own. The page keeps them readable, whichever is chosen.
-const ACCENTS = [['#2447a6', 'Blue'], ['#0e7c86', 'Teal'], ['#1f6b55', 'Green'], ['#6b3fa0', 'Purple'], ['#b8336a', 'Pink'], ['#b03a2e', 'Red'], ['#c26a12', 'Orange'], ['#2a2f36', 'Ink']];
+// The colours a course is offered, by name; exported so a host's own settings can offer the same.
+export const COURSE_COLORS = [['#2447a6', 'Blue'], ['#0e7c86', 'Teal'], ['#1f6b55', 'Green'], ['#6b3fa0', 'Purple'], ['#b8336a', 'Pink'], ['#b03a2e', 'Red'], ['#c26a12', 'Orange'], ['#2a2f36', 'Ink']];
 function looksPart(course, code) {
   const held = Object.hasOwn(THEMES, course.appearance?.theme || '') ? course.appearance.theme : 'clear';
   const color = course.appearance?.color || '';
   return `<fieldset class="looks"><legend class="v-label">How it looks to learners</legend>
 <div class="look-list">${Object.entries(THEMES).map(([id, theme]) => `<label class="look"><input class="sr" type="radio" name="appearance.theme" value="${esc(id)}"${id === held ? ' checked' : ''}><span class="look-sample look-${esc(id)}"><b>${esc(theme.name)}</b><span class="look-line"></span><span class="look-line short"></span><span class="look-go"></span></span></label>`).join('')}</div>
-<div class="swatches" role="radiogroup" aria-label="The course’s color"><label class="swatch"><input class="sr" type="radio" name="appearance.color" value=""${color ? '' : ' checked'}><span class="swatch-own">The look’s own</span></label>${ACCENTS.map(([hex, name], index) => `<label class="swatch" data-tip="${esc(name)}"><input class="sr" type="radio" name="appearance.color" value="${esc(hex)}"${hex === color ? ' checked' : ''}><span class="swatch-dot swatch-${index}" aria-hidden="true"></span><span class="sr">${esc(name)}</span></label>`).join('')}</div>
+<div class="swatches" role="radiogroup" aria-label="The course’s color"><label class="swatch"><input class="sr" type="radio" name="appearance.color" value=""${color ? '' : ' checked'}><span class="swatch-own">The look’s own</span></label>${COURSE_COLORS.map(([hex, name], index) => `<label class="swatch" data-tip="${esc(name)}"><input class="sr" type="radio" name="appearance.color" value="${esc(hex)}"${hex === color ? ' checked' : ''}><span class="swatch-dot swatch-${index}" aria-hidden="true"></span><span class="sr">${esc(name)}</span></label>`).join('')}</div>
 <small class="v-note">Learners’ pages follow this, on the course’s home and in every activity. <a href="/console/api/courses/${esc(code)}/try" target="_blank" rel="noopener">See it as a learner</a> once it’s saved.</small>
 </fieldset>`;
 }
@@ -435,7 +436,7 @@ ${Object.entries(THEMES).map(([id, theme]) => `.look-${id}{background:${theme.li
 .swatch input:checked+.swatch-own{border-color:var(--ink-blue);color:var(--public-ink)}
 .swatch-dot{width:26px;height:26px;border:2px solid transparent;border-radius:50%;background-clip:padding-box}
 .swatch input:checked+.swatch-dot{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink-blue)}
-${ACCENTS.map(([hex], index) => `.swatch-${index}{background-color:${hex}}`).join('')}`;
+${COURSE_COLORS.map(([hex], index) => `.swatch-${index}{background-color:${hex}}`).join('')}`;
 
 async function settingsBody({ library, classes, origin, addresses, tabs }, match) {
   const entry = await courseAt(library, match[1]);

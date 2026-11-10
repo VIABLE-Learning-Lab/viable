@@ -223,7 +223,7 @@ const MODELS_SCRIPT = String.raw`(() => {
   };
   const refresh = async () => {
     const response = await fetch(location.pathname, { headers: { accept: 'text/html' } });
-    const next = new DOMParser().parseFromString(await response.text(), 'text/html').querySelector('main');
+    const next = window.viableConsole.page(await response.text()).querySelector('main');
     if (!next) { location.reload(); return; }
     const focused = document.activeElement && document.activeElement.id;
     const scrolled = [...document.querySelectorAll('.models')].map((list) => [list.closest('[data-id]').dataset.id, list.scrollTop]);

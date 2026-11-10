@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
@@ -157,8 +157,9 @@ test('the judge against a person: the table, every disagreement and, from 10 lab
   assert.throws(() => calibrateJudge({}, {}), /test run’s results/);
 });
 
-test('the CLI takes cases from records and calibrates, writing files the test command reads', () => {
+test('the CLI takes cases from records and calibrates, writing files the test command reads', (t) => {
   const dir = mkdtempSync(join(tmpdir(), 'viable-harness-cases-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
   const run = (...args) => spawnSync(process.execPath, [bin, ...args], { encoding: 'utf8' });
   const files = records.map((record, index) => { const path = join(dir, `record-${index}.json`); writeFileSync(path, JSON.stringify(record)); return path; });
   const out = join(dir, 'cases.json');
@@ -231,6 +232,7 @@ test('tests of what is behind an endpoint, with no agent file, make a page named
     assert.match(readFileSync(join(dir, 'report.html'), 'utf8'), /<title>1 of 1 passed \| Tests of my-tutor<\/title>/);
   } finally {
     server.close();
+    rmSync(dir, { recursive: true, force: true });
   }
 });
 
