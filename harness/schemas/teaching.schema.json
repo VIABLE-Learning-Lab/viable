@@ -24,6 +24,10 @@
       ],
       "description": "ask_first: ask what the learner thinks first and build on it; hint: hints and guiding questions, no answers; step_up: ask first, then hints, then a worked example with other numbers once they have really tried; explain: explain and show a worked example when stuck, then let them try; check_only: only check the learner's own work."
     },
+    "defaults": {
+      "type": "boolean",
+      "description": "Where the teacher chose no misconceptions or guidance, whether the common misconceptions of the goal and research that suits how much the AI does are chosen for them (defaults.js), each marked by: default in a turn's record. false: only what the teacher chose. Left out: on in the Harness, on a server of your own and on the Learning Platform's teacher's door; off on the VIABLE Developer Platform, so a study's settings never change."
+    },
     "turn_brief": {
       "type": "boolean",
       "description": "Whether a reply starts from what this moment needs (the teacher's goal and limit, a teaching move, only the parts this message calls for) in place of all these settings. Left out: on in the Harness and on a server of your own, off on VIABLE."

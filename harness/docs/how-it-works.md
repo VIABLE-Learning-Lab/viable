@@ -9,7 +9,9 @@ everything on every turn: a person narrows things down first, and each turn only
 A learner writes *"i got 2/5"*.
 
 1. **What the teacher decided is already a short list:** a goal, how much the AI does, perhaps a standard, a few
-   misconceptions and some guidance from research.
+   misconceptions and some guidance from research. Where they chose none of those last two, the Harness chooses them
+   ([`src/defaults.js`](../src/defaults.js)): the common misconceptions of the math idea the goal names, and research
+   that suits how much the AI does, the same for the same goal and level.
 2. **The moment is read:** giving an answer, asking for the answer, stuck, or trying again.
 3. **The list is cut down to this moment:** one teaching move, and at most two of each other kind.
 4. **Instructions are written** from the teacher's words and the resources' own text, never the learner's, so what a
@@ -57,7 +59,11 @@ turns as the conversation goes on, so a learner doesn't hear the same two every 
 which to take. It reads any language, and more of the moments. If it fails or takes too long, rules decide.
 
 How well this works so far: of 30 moments a small model read 29 and rules read 23, but finding the right misconception for a
-message worked on only 4 of 19 turns ([what was measured](evidence.md)). That is the weakest part, and the evaluation looks at it first.
+message worked on only 4 of 19 turns ([what was measured](evidence.md)). So nothing is looked up from what a learner says: a turn
+chooses only among the activity's misconceptions, the teacher's or those chosen for them from the goal, and once a learner has
+tried something and no word points to one, it passes the first two on, to be used only if they fit. A turn's record marks what
+was chosen for the teacher (`by: default`). `defaults: false` in the settings gives the AI only what the teacher chose; a host
+whose settings belong to studies leaves choosing off unless an activity says `defaults: true`.
 
 ## Keywords, embeddings and RAG
 

@@ -39,11 +39,12 @@ const serverAskModel = (settings, fetch, store) => ({
     const data = btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(''));
     return hearRecording(await settings.resolve(), { type, filename: `recording.${type.split('/')[1] || 'webm'}`, data: `data:${type};base64,${data}` }, { fetch });
   },
-  async chat({ messages, tools }) {
+  // choice: none on a message's last step, when it only says what it did and what is left.
+  async chat({ messages, tools, choice = 'auto' }) {
     const { roles } = await settings.resolve();
     const role = roles.assistant ?? roles.reply;
     const { baseUrl, apiKey, fetch: reach } = onRole(role, fetch);
-    const response = await reach(`${String(baseUrl).replace(/\/+$/, '')}/chat/completions`, { method: 'POST', headers: { 'content-type': 'application/json', ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}) }, body: JSON.stringify({ model: role.model, messages, ...(tools?.length ? { tools, tool_choice: 'auto' } : {}), temperature: 0.2 }) });
+    const response = await reach(`${String(baseUrl).replace(/\/+$/, '')}/chat/completions`, { method: 'POST', headers: { 'content-type': 'application/json', ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}) }, body: JSON.stringify({ model: role.model, messages, ...(tools?.length ? { tools, tool_choice: choice } : {}), temperature: 0.2 }) });
     const data = await response.json().catch(() => null);
     if (!response.ok || !data?.choices?.[0]?.message) throw Object.assign(new Error(`The model (${role.model}) answered ${response.status}${data?.error?.message ? `: ${data.error.message}` : ''}.`), { status: 502, code: 'model_failed' });
     return { content: data.choices[0].message.content, calls: data.choices[0].message.tool_calls };

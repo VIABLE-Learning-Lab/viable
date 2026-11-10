@@ -23,27 +23,35 @@
  *   data-iso                     a datetime-local input showing, and sending, an instant
  *   input.v-input[type=date|datetime-local]  dressed as the date and time picker every screen shares (datePicker.js);
  *                                data-empty says what it shows with nothing chosen, data-default-time the time a day takes
+ *   input.v-input[type=color]    dressed as the console's own colour picker (colorPicker.js): swatches, and a hex code for any other
  *   data-local                   a time element shown in the reader's own time
  *   data-min-from="name"         a date field whose earliest day is that field's, as a range's end is its start's
  *   data-arrange="PUT …"         a board whose items and blocks drag into a new order (dragOrder.js marks); the whole order is sent
  *   data-show-when="name=value"  shown while that field of its form says so (a|b for either, != for anything else, ; between rules for any)
+ *   textarea[data-rich]          dressed as the editor of what learners read (richEditor.js); the textarea stays, and holds the Markdown
  *
  * An answer's go goes there; its said is said where the form or button's [data-say] is, kept by id across
  * the refresh. What someone has typed in any other form stays through a refresh.
  */
 import { icon } from './icons.js';
 import { DATE_PICKER_SCRIPT } from './datePicker.js';
+import { COLOR_PICKER_SCRIPT } from './colorPicker.js';
 import { SHEETS_SCRIPT } from './sheets.js';
 import { DRAG_ORDER_SCRIPT } from './dragOrder.js';
+import { RICH_EDITOR_SCRIPT } from './richEditor.js';
 
 export const CONSOLE_SCRIPT = String.raw`(() => {
   const ICON = ${JSON.stringify({ check: icon('check', 16), chevron: icon('chevron', 16) })};
   // The date and time picker every VIABLE screen shares (datePicker.js): dressDate(input) and tidyDates().
   ${DATE_PICKER_SCRIPT}
+  // The console's colour picker (colorPicker.js): dressColor(input).
+  ${COLOR_PICKER_SCRIPT}
   // An Excel file's sheets, read here (sheets.js): sheetRows(bytes, which) and rowsText(rows).
   ${SHEETS_SCRIPT}
   // Dragging into order by a handle, as every VIABLE screen does it (dragOrder.js): arrangeable(board, onDrop).
   ${DRAG_ORDER_SCRIPT}
+  // The editor of what learners read on a page step (richEditor.js): dressRich(textarea).
+  ${RICH_EDITOR_SCRIPT}
   let line = Promise.resolve();
   const inLine = (work) => { line = line.then(work, work); return line; };
   // Tooltips are the console's own, never the browser's: data-tip on a control, shown after a beat on hover and at once on keyboard
@@ -80,6 +88,14 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
   // A menu that is a details element closes when a click lands elsewhere, or on Escape, back on its button.
   // A click in a date picker or a list opened from a menu (each floats above the page) belongs to that menu.
   document.addEventListener('click', (event) => { for (const menu of document.querySelectorAll('details[data-close-outside][open]')) if (!menu.contains(event.target) && !(event.target.closest && event.target.closest('.vd-pop, .v-pop'))) menu.open = false; });
+  // Cancel in a panel that opens in place: it closes, what was typed waits there for next time, and focus goes back to its button.
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest && event.target.closest('[data-close]');
+    const panel = button && button.closest('details[open]');
+    if (!panel) return;
+    panel.open = false;
+    panel.querySelector('summary')?.focus({ preventScroll: true });
+  });
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
     const menu = event.target.closest && event.target.closest('details[data-close-outside][open]');
@@ -141,6 +157,8 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     for (const select of root.querySelectorAll('select.v-input')) dressSelect(select);
     for (const input of root.querySelectorAll('input[data-list]')) dressSuggest(input);
     for (const input of root.querySelectorAll('input.v-input[type=date],input.v-input[type=datetime-local]')) dressDate(input);
+    for (const input of root.querySelectorAll('input.v-input[type=color]')) dressColor(input);
+    for (const area of root.querySelectorAll('textarea[data-rich]')) dressRich(area);
     // A board's new order goes in one request (data-arrange), and the page is drawn again from what was kept.
     for (const board of root.querySelectorAll('[data-arrange]')) arrangeable(board, (order) => inLine(async () => {
       await call(board.dataset.arrange, { units: order.blocks, activities: order.items.map((entry) => ({ key: entry.key, unit_ref: entry.group })) });
@@ -157,7 +175,8 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     const above = box.top - 16;
     pop.style.minWidth = Math.min(wide ?? box.width, innerWidth - 24) + 'px';
     pop.style.maxWidth = 'min(520px, calc(100vw - 24px))';
-    const up = pop.scrollHeight > below && above > below;
+    // Up when it wouldn't fit below, or there's little room below at all: a list fetched as it opens grows after this.
+    const up = (pop.scrollHeight > below || below < 220) && above > below;
     pop.style.maxHeight = Math.max(140, Math.min(380, up ? above : below)) + 'px';
     pop.style.top = (up ? box.top - 4 - pop.offsetHeight : box.bottom + 4) + 'px';
     pop.style.left = Math.max(12, Math.min(box.left, innerWidth - pop.offsetWidth - 12)) + 'px';
@@ -184,6 +203,12 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     place(pop, anchor, wide);
     anchor.setAttribute('aria-expanded', 'true');
     shown = { pop, anchor };
+    // What fills in after it opens (a list fetched as it opens) moves it to where it fits.
+    if (typeof ResizeObserver === 'function') {
+      const watch = new ResizeObserver(() => { if (shown && shown.pop === pop) place(pop, anchor, wide); });
+      watch.observe(pop);
+      pop.addEventListener('toggle', (event) => { if (event.newState === 'closed') watch.disconnect(); });
+    }
   };
   window.addEventListener('resize', () => closePop(false));
   document.addEventListener('scroll', (event) => { if (shown && !shown.pop.contains(event.target)) closePop(false); }, true);
@@ -500,6 +525,14 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     dialog.showModal();
     (typed || (danger ? no : go)).focus();
   });
+  // A button at work, from the click until what it started is done: it can't be pressed twice, and it shows it's working.
+  const pressed = (button) => {
+    if (!button || button.classList.contains('is-busy')) return () => {};
+    button.classList.add('is-busy');
+    button.setAttribute('aria-busy', 'true');
+    if ('disabled' in button) button.disabled = true;
+    return () => { button.classList.remove('is-busy'); button.removeAttribute('aria-busy'); if ('disabled' in button) button.disabled = false; };
+  };
   // Opening something asks first what would stop it working for learners (data-checks: where to read that), only when
   // something would: each with the way to fix it, and Open anyway.
   const checked = async (element) => {
@@ -565,7 +598,10 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
       return;
     }
     event.preventDefault();
-    agreed(form).then((yes) => { if (yes) return inLine(async () => { say(form, form.dataset.busy || 'Saving…'); const data = await call(form.dataset.api, valuesOf(form)); guardedOff(form); await after(form, data); }).catch((error) => say(again(form), error.message, 'bad')); });
+    const sender = event.submitter || form.querySelector('[type=submit]');
+    if (sender?.classList.contains('is-busy')) return;
+    const done = pressed(sender);
+    agreed(form).then((yes) => { if (yes) return inLine(async () => { say(form, form.dataset.busy || 'Saving…'); const data = await call(form.dataset.api, valuesOf(form)); guardedOff(form); await after(form, data); }).catch((error) => say(again(form), error.message, 'bad')); }).finally(done);
   });
   const guardedOff = (form) => { for (const item of fieldsOf(form)) { if (['checkbox', 'radio'].includes(item.type)) item.defaultChecked = item.checked; else if (item.type !== 'file' && item.tagName !== 'SELECT') item.defaultValue = item.value; } };
 
@@ -580,8 +616,10 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
     if (button.dataset.print != null) { window.print(); return; }
     if (!button.dataset.api) return;
     event.preventDefault();
+    if (button.classList.contains('is-busy')) return;
     const body = button.dataset.body ? JSON.parse(button.dataset.body) : {};
-    agreed(button).then((yes) => { if (yes) return inLine(async () => { if (button.dataset.busy) say(button, button.dataset.busy); const data = await call(button.dataset.api, body); await after(button, data, button.dataset.said); }).catch((error) => say(button, error.message, 'bad')); });
+    const done = pressed(button);
+    agreed(button).then((yes) => { if (yes) return inLine(async () => { if (button.dataset.busy) say(button, button.dataset.busy); const data = await call(button.dataset.api, body); await after(button, data, button.dataset.said); }).catch((error) => say(again(button), error.message, 'bad')); }).finally(done);
   });
   // A button that opens a form with one field already chosen (data-prefill: the form; data-prefill-field and -value), such
   // as Add an activity here under a unit: the form opens where it is, the choice made, the first field ready to type in.
@@ -596,6 +634,9 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
       const dressed = field.id && document.getElementById('menu-' + field.id);
       if (dressed && field.selectedOptions && field.selectedOptions[0]) dressed.querySelector('.v-menu-value').textContent = field.selectedOptions[0].textContent;
     }
+    // The menu it was chosen from has done its work.
+    const menu = button.closest('details[data-close-outside][open]');
+    if (menu && !menu.contains(form)) menu.open = false;
     const holder = form.closest('details');
     if (holder) holder.open = true;
     form.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });

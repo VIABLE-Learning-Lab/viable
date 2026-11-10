@@ -99,7 +99,7 @@ function misconceptionsOf(value) {
     const attribution = list(source.attribution, TEACHING_LIMITS.attribution).map((entry) => text(entry, 600)).filter(Boolean);
     const named = line(source.name, 80);
     return {
-      id, description, construct: { id: String(construct.id).toLowerCase(), description: hinders },
+      id, description, construct: { id: String(construct.id).toLowerCase(), description: hinders }, ...(item.by === 'default' ? { by: 'default' } : {}),
       source: {
         name: named || MISCONCEPTIONS_SOURCE.name,
         license: line(source.license, 120) || MISCONCEPTIONS_SOURCE.license,
@@ -127,7 +127,7 @@ function guidanceOf(value) {
     const component = line(item.component, 120);
     const source = line(item.source, 160);
     const attribution = text(item.attribution, 600);
-    return { text: said, ...(when.length ? { when } : {}), ...(about ? { about } : {}), ...(component ? { component } : {}), ...(source ? { source } : {}), ...(attribution ? { attribution } : {}) };
+    return { text: said, ...(when.length ? { when } : {}), ...(about ? { about } : {}), ...(component ? { component } : {}), ...(source ? { source } : {}), ...(attribution ? { attribution } : {}), ...(item.by === 'default' ? { by: 'default' } : {}) };
   }).filter(Boolean);
 }
 
@@ -169,6 +169,16 @@ export function teachingWith(teaching, way) {
 /** The settings a learner in a section gets: the section's own moments (and help level) over the activity's. */
 export const teachingForSection = (teaching, section) => (section && teachingSettings(teaching)?.sections?.[section] ? teachingWith(teaching, teachingSettings(teaching).sections[section]) : teachingSettings(teaching));
 
+/**
+ * The settings a preview or a try uses at another help level, which nothing saves: that level over the activity's, and over a
+ * section's own, which would win again where the section is read. Not a level: the settings as they are.
+ */
+export function teachingAtLevel(teaching, help) {
+  if (!Object.hasOwn(HELP_LEVELS, String(help))) return teaching;
+  const over = teachingWith(teaching, { help });
+  return over.sections ? { ...over, sections: Object.fromEntries(Object.entries(over.sections).map(([id, own]) => [id, own.help ? { ...own, help } : own])) } : over;
+}
+
 /** How the teacher's instructions are introduced to a model, wherever they reach one. */
 export const teacherNote = (text) => `From the teacher of this activity:\n${text}`;
 
@@ -192,9 +202,11 @@ export function teachingSettings(value) {
   const speaksUp = speaksUpOf(value.speaks_up);
   // What a reviewer reads (VETTING): only the reply unless the teacher lets it read the learner's message too, and an agent's own setting wins.
   const reviewer = value.reviewer_reads === 'message' ? 'message' : null;
-  if (!goal && !help && !watch && !standard && !misconceptions.length && !guidance.length && !sections && !toolsOff.length && !role && !design && !speaksUp && !reviewer) return null;
+  // Whether what is chosen for a teacher where they chose none goes in (defaults.js): kept only when said, as turn_brief is.
+  const own = typeof value.defaults === 'boolean' ? value.defaults : null;
+  if (!goal && !help && !watch && !standard && !misconceptions.length && !guidance.length && !sections && !toolsOff.length && !role && !design && !speaksUp && !reviewer && own === null) return null;
   // Only when set, so settings saved before them read (and version) the same.
-  return { goal: goal || null, help, watch_for: watch || null, standard, ...(role ? { role } : {}), ...(design ? { design } : {}), ...(brief === null ? {} : { turn_brief: brief }), ...(misconceptions.length ? { misconceptions } : {}), ...(guidance.length ? { guidance } : {}), ...(sections ? { sections } : {}), ...(toolsOff.length ? { tools_off: toolsOff } : {}), ...(speaksUp ? { speaks_up: speaksUp } : {}), ...(reviewer ? { reviewer_reads: reviewer } : {}) };
+  return { goal: goal || null, help, watch_for: watch || null, standard, ...(role ? { role } : {}), ...(design ? { design } : {}), ...(brief === null ? {} : { turn_brief: brief }), ...(misconceptions.length ? { misconceptions } : {}), ...(guidance.length ? { guidance } : {}), ...(sections ? { sections } : {}), ...(toolsOff.length ? { tools_off: toolsOff } : {}), ...(speaksUp ? { speaks_up: speaksUp } : {}), ...(reviewer ? { reviewer_reads: reviewer } : {}), ...(own === null ? {} : { defaults: own }) };
 }
 
 /**

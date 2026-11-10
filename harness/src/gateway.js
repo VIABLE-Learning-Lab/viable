@@ -6,6 +6,7 @@
  * no Node imports: gatewayHandler returns (Request) => Response, so it deploys anywhere.
  */
 import { turnBrief } from './brief.js';
+import { withDefaults } from './defaults.js';
 import { checkReply } from './check.js';
 import { allowedTools } from './harness.js';
 import { openAICompatible } from './models.js';
@@ -406,7 +407,8 @@ export function gatewayHandler({ upstream, apiKey = null, token = null, teacherT
     if (!Array.isArray(body.messages) || !body.messages.length) throw failure(400, 'invalid_messages', 'messages must be a list with at least one message.');
     const who = whoOf(request, body);
     const turn = turnOf(body.messages);
-    const settings = who.activity?.teaching ?? null;
+    // With what is chosen where the teacher chose none (defaults.js), unless they turned that off.
+    const settings = withDefaults(who.activity?.teaching ?? null);
     // What this moment needs, or with wholeSettings everything the teacher set.
     const taught = !settings ? null : wholeSettings ? teachingContext(settings, who.section) : await turnBrief(settings, {
       message: turn.message, history: turn.history, section: who.section,
@@ -448,11 +450,12 @@ export function gatewayHandler({ upstream, apiKey = null, token = null, teacherT
   async function instructionsRoute(request) {
     const body = await readBody(request);
     const who = whoOf(request, null, { needsActivity: false });
-    const settings = body.teaching ?? who.activity?.teaching;
+    const given = body.teaching ?? who.activity?.teaching;
+    const settings = withDefaults(given);
     if (!settings) throw failure(400, 'invalid_teaching', 'Give teaching settings as teaching, or name an activity with X-Viable-Activity.');
     const section = body.section ?? who.section;
     const taught = teachingContext(settings, section);
-    return json(200, { instructions: taught?.text ?? null, settings: taught?.context ?? null, watch_for: teachingSettings(settings)?.watch_for ?? null, errors: validateDocument(settings, 'teaching').errors });
+    return json(200, { instructions: taught?.text ?? null, settings: taught?.context ?? null, watch_for: teachingSettings(given)?.watch_for ?? null, errors: validateDocument(given, 'teaching').errors });
   }
 
   async function misconceptionsRoute(request) {

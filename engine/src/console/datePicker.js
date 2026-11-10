@@ -102,7 +102,9 @@ export function tidyDates() {
 export function dressDate(input) {
   if (!input || input.dataset.dateDressed || !['date', 'datetime-local'].includes(input.type)) return;
   input.dataset.dateDressed = '1';
-  const doc = input.ownerDocument;
+  // The page it is on when it opens: a field dressed in a page drawn again after a Save (client.js refresh) was dressed
+  // in the parsed copy, and a calendar made there would never show.
+  let doc = input.ownerDocument;
   const kind = input.type;
   // What every picker on the page shares, kept on the function so the page's script needs nothing else.
   const held = dressDate.held || (dressDate.held = { count: 0, fields: new Set() });
@@ -175,6 +177,7 @@ export function dressDate(input) {
 
   const open = () => {
     if (pop || input.disabled) return;
+    doc = input.ownerDocument;
     const now = new Date();
     const held = readValue(input.value, kind);
     const firstDay = weekStart(Intl.DateTimeFormat().resolvedOptions().locale);

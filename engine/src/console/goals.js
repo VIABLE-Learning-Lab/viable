@@ -83,48 +83,73 @@ export function setGoals(activity, doc, refs, check) {
 }
 
 // What to ask for a goal nothing checks yet: Ask writes the check, and nothing reaches learners until the teacher opens it.
-const askForCheck = (code, goal) => `/console/ask?course=${esc(code)}#say=${esc(encodeURIComponent(`Write a check for goal ${goal.n}, “${goal.text.replace(/[.!]+$/, '')}”: a few questions that show whether learners can do it, as a check for that goal.`))}`;
+const askForCheck = (code, goal) => `/console/ask?course=${esc(code)}#say=${esc(encodeURIComponent(`Make a check for goal ${goal.n}, “${goal.text.replace(/[.!]+$/, '')}”: a new activity with a few questions that show whether learners can do it, marked as a check toward that goal.`))}`;
+
+// Where a goal is worked on, by the activities' own names: those that practise it, and the check where learners show they
+// can, such as a short quiz. With no check, the way to make one; with no activity at all, nothing to do yet but say so.
+function fitLine(goal, { code, activities, locked }) {
+  const naming = activities.filter((activity) => (activity.goals || []).includes(goal.ref) && activity.role !== 'survey');
+  const checks = naming.filter(isCheck);
+  const learn = naming.filter((activity) => !isCheck(activity));
+  const names = (list) => (list.length > 2 ? plural(list.length, 'activity', 'activities') : list.map((activity) => `<a href="/console/courses/${esc(code)}/activities/${esc(activity.key)}">${esc(activity.title)}</a>`).join(' and '));
+  if (!naming.length) return '<p class="goal-fit">No activity works toward it yet.</p>';
+  const parts = [learn.length ? `Practised in ${names(learn)}` : '', checks.length ? `Checked in ${names(checks)}` : `<span tabindex="0" data-tip="A check is an activity where learners show they can do this, such as a short quiz.">No check yet</span>${locked ? '' : ` · <a href="${askForCheck(code, goal)}">Make one with Ask</a>`}`].filter(Boolean);
+  return `<p class="goal-fit">${parts.join(' · ')}</p>`;
+}
 
 function goalRow(goal, { code, activities, units, locked }) {
-  const fit = fitOf(goal, activities);
-  // "In 2 activities · not checked yet", "In 2 activities · checked in 1", "Checked in 1", "In no activity yet".
-  const words = [fit.learn ? `In ${plural(fit.learn, 'activity', 'activities')}` : '', fit.checks ? `checked in ${fit.checks}` : fit.learn ? 'not checked yet' : ''].filter(Boolean).join(' · ') || 'In no activity yet';
   const api = `courses/${esc(code)}/goals/${esc(goal.ref)}`;
   return `<li class="goal" id="goal-${esc(goal.ref)}" data-say-box>
 <span class="goal-n" aria-hidden="true">${goal.n}</span>
 <p class="goal-text"><span class="sr">Goal ${goal.n}: </span>${esc(goal.text)}</p>
-<p class="goal-fit${fit.checks ? '' : ' is-open'}">${esc(words.charAt(0).toUpperCase() + words.slice(1))}${!fit.checks && !locked ? ` · <a href="${askForCheck(code, goal)}">Ask for a check</a>` : ''}</p>
+${fitLine(goal, { code, activities, locked })}
 ${locked ? '' : `<details class="goal-more" data-close-outside><summary class="v-btn is-small icon" aria-label="${esc(`Change or remove goal ${goal.n}`)}" data-tip="Change or remove">${icon('more', 16)}</summary>
 <div class="goal-menu">
 <form class="one-field" id="goal-edit-${esc(goal.ref)}" data-api="PUT ${api}">
 <div class="v-form"><label class="v-label" for="goal-text-${esc(goal.ref)}">Goal ${goal.n}</label><textarea class="v-input" id="goal-text-${esc(goal.ref)}" name="text" rows="3" maxlength="${GOAL_LIMITS.text}" required>${esc(goal.text)}</textarea></div>
 ${units.length ? choose('unit_ref', 'For', goal.unit_ref || '', [{ value: '', label: 'The whole course' }, ...units.map((unit) => ({ value: unit.ref, label: unit.title }))]) : ''}
-<div class="actions"><button class="v-btn is-small is-primary" type="submit">Save</button></div>${say()}</form>
-<button class="v-btn is-small danger" type="button" data-api="DELETE ${api}" data-confirm="${esc(`Remove goal ${goal.n}? Activities that work toward it keep everything else.`)}" data-yes="Remove the goal" data-danger data-said="Removed.">${icon('trash', 14)}<span>Remove the goal</span></button>
+<div class="actions"><button class="v-btn is-small is-primary" type="submit">Save</button><button class="v-btn is-small" type="button" data-close>Cancel</button></div>${say()}</form>
+<div class="goal-menu-end"><button class="v-btn is-small danger" type="button" data-api="DELETE ${api}" data-confirm="${esc(`Remove goal ${goal.n}? Activities that work toward it keep everything else.`)}" data-yes="Remove the goal" data-danger data-said="Removed.">${icon('trash', 14)}<span>Remove the goal</span></button></div>
 </div>
 </details>`}
 ${say()}
 </li>`;
 }
 
-/** A unit's goals (unitRef), or the course's own (null), as a list, with how each is met. Nothing when it has none. */
-export function goalsPart(goals, { code, doc, activities, unitRef, heading = '', locked }) {
+/** A unit's goals, as a list under its name, with how each is met. Nothing when it has none. */
+export function goalsPart(goals, { code, doc, activities, unitRef, locked }) {
   const mine = goals.filter((goal) => (goal.unit_ref || null) === (unitRef || null));
   if (!mine.length) return '';
   const units = doc.course.units || [];
-  return `<div class="goals"${unitRef ? '' : ' id="goals"'}>
-<p class="goals-head">${esc(heading || 'Learners will be able to')}</p>
-<ol class="goal-list">${mine.map((goal) => goalRow(goal, { code, activities, units, locked })).join('')}</ol>
+  return `<div class="goals"><ol class="goal-list">${mine.map((goal) => goalRow(goal, { code, activities, units, locked })).join('')}</ol></div>`;
+}
+
+/**
+ * The course's goals at the top of its activities: what learners will be able to do in the whole course, then Add goals,
+ * where the next one goes. A unit's own goals are under its name. help: a host's tool for writing them.
+ */
+export function courseGoalsPart(goals, { code, doc, activities, locked, help = null }) {
+  const units = doc.course.units || [];
+  const mine = goals.filter((goal) => !goal.unit_ref);
+  const inUnits = goals.length - mine.length;
+  const lead = !goals.length ? 'What learners will be able to do by the end. Each goal then shows the activities that practise it, and the check where learners show they can.'
+    : !mine.length ? `${plural(inUnits, 'goal')}, each under its unit below.` : '';
+  if (locked && !goals.length) return '';
+  return `<div class="goals goals-course" id="goals">
+<h2 class="goals-title">${units.length && mine.length ? 'Goals for the whole course' : 'Goals'}</h2>
+${lead ? `<p class="v-note goals-lead">${esc(lead)}</p>` : ''}
+${mine.length ? `<ol class="goal-list">${mine.map((goal) => goalRow(goal, { code, activities, units, locked })).join('')}</ol>` : ''}
+${locked ? '' : addGoalsPart({ code, units, help })}
 </div>`;
 }
 
-/** The form that adds goals, one a line, to the course or a unit: beside Add an activity and Add a unit. help: a host's tool for writing them. */
+/** The form that adds goals, one a line, to the course or a unit. help: a host's tool for writing them. */
 export function addGoalsPart({ code, units, help = null }) {
-  return `<details class="add-goals"><summary class="v-btn">${icon('plus', 15)}<span>Add goals</span></summary>
+  return `<details class="add-goals" data-close-outside><summary class="v-btn is-small">${icon('plus', 14)}<span>Add goals</span></summary>
 <form class="v-card one-field" id="add-goals" data-api="POST courses/${esc(code)}/goals">
-<div class="v-form"><label class="v-label" for="add-goals-text">What learners will be able to do</label><textarea class="v-input" id="add-goals-text" name="text" rows="4" maxlength="${GOAL_LIMITS.text * 12}" required placeholder="e.g. Compare two fractions with different denominators."></textarea><small class="v-note">One goal a line, as many as you like. Pasted lists keep their order, without their numbers or bullets.</small></div>
+<div class="v-form"><label class="v-label" for="add-goals-text">What learners will be able to do</label><textarea class="v-input" id="add-goals-text" name="text" rows="4" maxlength="${GOAL_LIMITS.text * 12}" required placeholder="e.g. Compare two fractions with different denominators."></textarea><small class="v-note">One goal a line. A pasted list keeps its order, without its numbers or bullets.</small></div>
 ${units.length ? choose('unit_ref', 'For', '', [{ value: '', label: 'The whole course' }, ...units.map((unit) => ({ value: unit.ref, label: unit.title }))]) : ''}
-<div class="actions"><button class="v-btn is-primary" type="submit">Add the goals</button>${help ? `<a class="v-note goal-help" href="${esc(help.href)}" target="_blank" rel="noopener">${esc(help.label)}${icon('out', 13)}</a>` : ''}</div>${say()}
+<div class="actions"><button class="v-btn is-primary" type="submit">Add the goals</button><button class="v-btn" type="button" data-close>Cancel</button>${help ? `<a class="v-note goal-help" href="${esc(help.href)}" target="_blank" rel="noopener">${esc(help.label)}${icon('out', 13)}</a>` : ''}</div>${say()}
 </form>
 </details>`;
 }
@@ -147,17 +172,26 @@ ${goals.length ? `<fieldset class="one-of"><legend class="v-label">Goals it work
 }
 
 export const GOALS_CSS = `.goals{display:grid;gap:4px;margin:4px 0 12px}
-.goals-head{margin:0;color:var(--muted);font-size:.8125rem;font-weight:600}
+.goals-course{gap:6px;margin:0 0 6px}
+.goals-title{margin:4px 0 0;font-size:1.0625rem;font-weight:600;letter-spacing:0}
+.goals-lead{max-width:62ch;font-size:.9375rem}
+.goals-course>.add-goals{margin-top:2px}
+.add-goals>summary{display:inline-flex;align-items:center;gap:6px;list-style:none}
+.add-goals>summary::-webkit-details-marker{display:none}
+.page .add-goals>summary::before{display:none}
+.add-goals[open]>summary{margin-bottom:10px}
 .goal-list{display:grid;gap:2px;margin:0;padding:0;list-style:none}
 .goal{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:2px 10px;align-items:start;padding:6px 0}
 .goal-n{display:grid;place-items:center;width:22px;height:22px;margin-top:1px;border-radius:50%;background:var(--field-mist);color:var(--public-ink);font-size:.75rem;font-weight:600;font-variant-numeric:tabular-nums}
 .goal-text{grid-column:2;margin:0;color:var(--public-ink);line-height:1.45;overflow-wrap:anywhere}
-.goal-fit{grid-column:2;margin:0;color:var(--muted);font-size:.8125rem}
-.goal-fit.is-open{color:var(--public-text)}
-.goal-fit a{white-space:nowrap}
+.goal-fit{grid-column:2;margin:0;color:var(--muted);font-size:.8125rem;line-height:1.5}
+.goal-fit a{color:inherit;text-decoration:underline;text-decoration-color:var(--public-rule-strong);text-underline-offset:2px}
+.goal-fit a:hover{color:var(--public-ink);text-decoration-color:currentColor}
+.goal-fit [data-tip]{text-decoration:underline dotted;text-decoration-color:var(--public-rule-strong);text-underline-offset:3px;cursor:help}
 .goal-more{position:relative;grid-column:3;grid-row:1/span 2}
 .goal-more>summary{list-style:none}.goal-more>summary::-webkit-details-marker{display:none}.page .goal-more>summary::before{display:none}
-.goal-menu{position:absolute;right:0;z-index:5;display:grid;gap:10px;width:min(340px,calc(100vw - 48px));margin-top:6px;padding:14px;border:1px solid var(--public-rule);border-radius:var(--radius);background:var(--surface);box-shadow:var(--public-shadow)}
+.goal-menu{position:absolute;right:0;z-index:5;display:grid;gap:14px;width:min(340px,calc(100vw - 48px));margin-top:6px;padding:16px;border:1px solid var(--public-rule);border-radius:var(--radius);background:var(--surface);box-shadow:var(--public-shadow)}
+.goal-menu-end{padding-top:12px;border-top:1px solid var(--public-rule)}
 .goal .say{grid-column:2/-1}
 .add-goals>form{margin-top:10px}
 .goal-help{display:inline-flex;align-items:center;gap:4px}

@@ -20,13 +20,15 @@ import { renderHome } from '../learner/home.js';
 import { CHAT_PAGE_LIMITS, attachable, chatPageConfig, chatPageSettings, chatPageVoice, lookOf, mediaReaders, profileSettings } from '../learner/settings.js';
 import { draftTexts, embedOrigins, keptEvents, openedNow, panelOpenAt, publicWorkspace, versionsFrom, workspaceContext, workspaceSettings } from '../learner/workspace.js';
 import { gradeResponse, normalizeItems } from '../learner/questions.js';
-import { CONVERSATION_ID, RUN_ID, SSE_HEADERS, annotationTarget, answersSoFar, chatReply, doneButton, doneHow, embedPage, embedSite, homeUnits, kindOf, learnerInfo, messageAttachments, noteOf, progressHooks, questionReplies, readMessage, readVisitor, releaseState, runEvents, sseStream, stepAllows, stepMove, stepReply, voiceRecording } from '../learner/logic.js';
+import { CONVERSATION_ID, RUN_ID, SSE_HEADERS, annotationTarget, answersSoFar, chatReply, uncheckedIn, doneButton, doneHow, embedPage, embedSite, homeUnits, kindOf, learnerInfo, messageAttachments, noteOf, progressHooks, questionReplies, readMessage, readVisitor, releaseState, runEvents, sseStream, stepAllows, stepMove, stepReply, voiceRecording } from '../learner/logic.js';
 import { sanitizeAfter, sanitizeSignals } from '../../../harness/src/utils/researchMetrics.js';
 import { teachingForSection, teachingSettings } from '../../../harness/src/utils/teaching.js';
+import { withDefaults } from '../../../harness/src/defaults.js';
 import { suggestChanges } from '../../../harness/src/suggest.js';
 import { TEACHER_PAGE_HEADERS, teacherView } from '../../../harness/src/view.js';
 import { keptTurnEvents, settingsShown, turnRecord, watchHooks, watchSlot } from '../learner/watch.js';
 import { SPEAK_UP, speakUpInput, speakUpMove, speakUpNote, speaksUpOf, speaksUpOnPage } from '../../../harness/src/speakUp.js';
+import { HELP_LEVELS, teachingAtLevel } from '../../../harness/src/utils/teaching.js';
 import { isLocalRequest } from '../../../harness/src/net/local.js';
 import { applyModels } from './models.js';
 import { graphOf, hearRecording, readReply } from './runtime.js';
@@ -636,7 +638,8 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
       const hintsOpened = open?.type === 'questions' && open.hints && learner ? await hintsGiven(page, learner, open, state) : 0;
       const section = learner?.section ?? null;
       // A section's own moments and help level, where it has them, over the activity's.
-      const teaching = teachingForSection(await teachingOf(page), section);
+      // What the teacher chose, and where they chose none what is chosen for them (defaults.js).
+      const teaching = withDefaults(teachingForSection(await teachingOf(page), section));
       // Whether their last answer here was right, from the record of marking it: never what the page says.
       const lastCorrect = open?.type === 'questions' && learner && state?.item != null ? answersSoFar((await store.get(keys.answers(page.code, learner.id, page.key, open.id)))?.rows || [])[state.item]?.correct ?? null : null;
       const made = page.kind === 'activity' ? workspaceContext(page.workspace, state, page.sets, { ...versions, hintsOpened, lastCorrect }, page.open, teaching, section, at, page.opening) : null;
@@ -682,7 +685,7 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
           trace?.({ kind: 'failed', message: String(error?.message || error) });
           throw error?.code === 'nothing_heard' ? error : Object.assign(error, { fromRun: true });
         }
-        const reply = chatReply({ output: result.output, conversationId, runId, transcript: heard ?? result.transcript, heard: Boolean(spoken), ownMedia: url.origin });
+        const reply = chatReply({ output: result.output, conversationId, runId, transcript: heard ?? result.transcript, heard: Boolean(spoken), ownMedia: url.origin, unchecked: uncheckedIn(result.steps) });
         // An agent with no Speech step of its own: a reply to a spoken message is read aloud, or every reply where the page says so. A reply is never lost for it.
         if (can.speech && !chatPageVoice(graph).replies && reply.reply.text && (spoken || settings.voice.autoplay === 'always')) {
           const clip = await readReply(can.using, reply.reply.text, { save, fetch: modelFetch }).catch((error) => { console.error(`A reply wasn't read aloud: ${error?.message || error}`); return null; });
@@ -1049,6 +1052,8 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
     // On a learner's page, only where a teacher asked for it too: a shared computer's browser keeps their cookie until it closes.
     const asksForPanel = (url) => traces !== 'token' || url.searchParams.get('panel') === '1';
     async function panelFor(page, request, url, context) {
+      // A try-out is the token holder's, asked for by its address (?try=1): what the AI did is beside it, with the levels to try, as on the teacher's door.
+      if (page.trying) return { fontBase: null, ...(typeof panel === 'function' ? await panel(page, request, url) : panel), control: { param: 'help', ...page.helpTry } };
       if (!panel || !asksForPanel(url) || !await granted(request, url, context)) return null;
       return typeof panel === 'function' ? panel(page, request, url) : panel;
     }
@@ -1063,7 +1068,7 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
       const signedIn = traces === 'token';
       const beside = watched ? watchSlot({ ...watched, teaching: await teachingOf(page), signOut: signedIn ? '/teacher/signout' : null, record: page.kind === 'activity' && mode === 'page' }, nonce) : null;
       // The panel's page goes on asking for it, and no other site frames it.
-      return html(renderChatPage({ slug: page.slug, mode, settings: page.settings, workspace: page.workspace, opening: page.opening || null, speaksUp: page.kind === 'activity' ? speaksUpOnPage(await teachingOf(page)) : null, course, how: page.how, sets: page.sets, host: { ...await host(page), slots: beside ? { beside } : {}, query: beside && signedIn ? '?panel=1' : '' } }, nonce), 200, chatPageHeaders(nonce, { sites: beside ? "'self'" : sites, frames: embedOrigins(page.workspace), reads, fonts: Boolean(beside) }));
+      return html(renderChatPage({ slug: page.slug, mode, settings: page.settings, workspace: page.workspace, opening: page.opening || null, speaksUp: page.kind === 'activity' ? speaksUpOnPage(await teachingOf(page)) : null, course, how: page.how, sets: page.sets, host: { ...await host(page), slots: beside ? { beside } : {}, query: beside && signedIn ? '?panel=1' : '' } }, nonce), 200, chatPageHeaders(nonce, { sites: beside ? "'self'" : sites, frames: embedOrigins(page.workspace), reads, fonts: beside ? (watched.fontBase === null ? 'inline' : true) : false }));
     };
 
     async function chatRoute(slug, rest, request, url, context) {
@@ -1101,7 +1106,7 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
       const nonce = crypto.randomUUID().replace(/-/g, '');
       const how = howOf(course);
       const section = url.searchParams.get('section');
-      return html(renderHome({ course, how: { identify: how.identify }, ask: how.via === 'typed' ? typedCopy(how.ask) : ASKED[how.via] || ASKED.browser, query: `${course.trying ? '?try=1' : ''}${section ? `${course.trying ? '&' : '?'}section=${encodeURIComponent(section)}` : ''}`, reenter: how.via === 'browser', tellsCode: !['proxy', 'list'].includes(how.via), host: {}, ...(course.trying ? { visitorKey: TRY_VISITOR, badge: 'Trying it out' } : {}) }, nonce), 200, pageHeaders(nonce, { ancestors: '*' }));
+      return html(renderHome({ course, how: { identify: how.identify }, ask: how.via === 'typed' ? typedCopy(how.ask) : ASKED[how.via] || ASKED.browser, query: `${course.trying ? `?try=1${course.tried ? `&help=${course.tried}` : ''}` : ''}${section ? `${course.trying ? '&' : '?'}section=${encodeURIComponent(section)}` : ''}`, reenter: how.via === 'browser', tellsCode: !['proxy', 'list'].includes(how.via), host: {}, ...(course.trying ? { visitorKey: TRY_VISITOR, badge: 'Trying it out' } : {}) }, nonce), 200, pageHeaders(nonce, { ancestors: '*' }));
     }
 
     // A learner's section: the list's, or from a section's link, once; only a teacher changes it after that. Someone trying it out may try each section's link.
@@ -1196,17 +1201,25 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
       return { object: 'course.learner', section: found.name };
     }
 
-    // Who holds the token may open what isn't open yet. They are a learner apart, and left out of what learners did.
+    // Who holds the token may open what isn't open yet. They are a learner apart, and left out of what learners did. A try may use
+    // another help level (?help=) on its own turns, over each activity's and its sections' own: nothing is saved, and helpTry says both.
     const tryOuts = new WeakMap();
-    const tryingOut = (course) => {
-      if (!tryOuts.has(course)) tryOuts.set(course, { ...course, trying: true, activities: new Map([...course.activities].map(([key, activity]) => [key, { ...activity, trying: true, release: 'open', opens_at: null, closes_at: null, not_for_learners: releaseState(activity).state !== 'open' }])) });
-      return tryOuts.get(course);
+    const tryingOut = (course, help = null) => {
+      const level = Object.hasOwn(HELP_LEVELS, String(help)) ? String(help) : null;
+      if (!tryOuts.has(course)) tryOuts.set(course, new Map());
+      const held = tryOuts.get(course);
+      if (!held.has(level)) held.set(level, { ...course, trying: true, tried: level, activities: new Map([...course.activities].map(([key, activity]) => {
+        const own = teachingSettings(activity.teaching)?.help || null;
+        const tried = level && level !== own ? level : null;
+        return [key, { ...activity, trying: true, release: 'open', opens_at: null, closes_at: null, not_for_learners: releaseState(activity).state !== 'open', ...(tried ? { teaching: teachingAtLevel(activity.teaching, tried) } : {}), helpTry: { own, tried } }];
+      })) });
+      return held.get(level);
     };
 
     async function courseRoute(code, rest, request, url, context) {
       const given = courses.get(code);
       // Only where asked for: a teacher still signed in on a shared computer doesn't turn a learner's ordinary link into the teacher's view.
-      const course = given && url.searchParams.get('try') === '1' && await holdsToken(request) ? tryingOut(given) : given;
+      const course = given && url.searchParams.get('try') === '1' && await holdsToken(request) ? tryingOut(given, url.searchParams.get('help')) : given;
       if (!course) return request.method === 'GET' && (!rest || !rest.includes('/')) ? unavailable('Not available', 'This course isn’t open right now. Check the link with your teacher.') : answer({ error: { message: 'This course isn’t available.', code: 'course_not_found' } }, 404);
       const address = context.address || '';
       if (!rest) return request.method === 'GET' ? homePage(course, url) : null;
@@ -1243,7 +1256,7 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
         }
         // Who's asking isn't known yet on this page, so one that isn't for everyone holds nothing of its panels but their names.
         const waiting = !course.trying && (howOf(course).via !== 'browser' || state.state !== 'open' || own.length > 0);
-        return servePage(activity, 'page', { request, url, context, course: { ...(course.trying ? { preview: true, visitorKey: TRY_VISITOR, query: '?try=1' } : {}), waiting, title: course.title, url: `/course/${code}${course.trying ? '?try=1' : ''}`, activity: activity.title, level: activity.level, identify: howOf(course).identify, asks: Object.values(teachingSettings(await teachingOf(activity))?.sections || {}).some((own) => own.speaks_up), shared: course.shared_devices, done: doneButton(activity.done_when, activity.workspace?.panels || []) ? 'button' : 'auto' } });
+        return servePage(activity, 'page', { request, url, context, course: { ...(course.trying ? { preview: true, visitorKey: TRY_VISITOR, query: `?try=1${activity.helpTry.tried ? `&help=${activity.helpTry.tried}` : ''}` } : {}), waiting, title: course.title, url: `/course/${code}${course.trying ? '?try=1' : ''}`, activity: activity.title, level: activity.level, identify: howOf(course).identify, asks: Object.values(teachingSettings(await teachingOf(activity))?.sections || {}).some((own) => own.speaks_up), shared: course.shared_devices, done: doneButton(activity.done_when, activity.workspace?.panels || []) ? 'button' : 'auto' } });
       }
       if (more[0] === 'reading' && more.length === 2 && request.method === 'POST') return readingPdf(activity, more[1], request, url, context);
       return more.length === 1 ? pageEndpoint(activity, more[0], request, url, context) : null;

@@ -10,7 +10,7 @@ import { activityKeys, cutWords, slugOf } from '../server/library.js';
 import { readPackage } from '../server/runtime.js';
 import { icon } from './icons.js';
 import { choose, courseHead, dropZone, esc, FORMS_CSS, oneOf, plural, say, text, toggle, withForms } from './forms.js';
-import { addGoals, addGoalsPart, GOAL_LIMITS, goalsIn, goalsPart, goalWords, GOALS_CSS, isCheck, removeGoal } from './goals.js';
+import { addGoals, courseGoalsPart, GOAL_LIMITS, goalsIn, goalsPart, goalWords, GOALS_CSS, isCheck, removeGoal } from './goals.js';
 
 const refused = (message, status = 400, code = 'invalid_course') => Object.assign(new Error(message), { status, code });
 const ARCHIVE_BYTES = 50 * 1024 * 1024;
@@ -266,7 +266,7 @@ async function activitiesBody({ library, classes, origin, addresses, signIn, tab
   // Up and down move a row within its own group, so the ends are the group's.
   const goals = goalsIn(doc);
   const rows = (list) => list.map((activity, index) => activityRow(activity, code, meta.version, index, list.length, locked, sections, releases[activity.key] || {}, doc, goals)).join('');
-  const goalsHere = (unitRef, heading) => goalsPart(goals, { code, doc, activities, unitRef, heading, locked });
+  const goalsHere = (unitRef) => goalsPart(goals, { code, doc, activities, unitRef, locked });
   const loose = activities.filter((activity) => !units.some((unit) => unit.ref === activity.unit_ref));
   const api = `courses/${esc(code)}`;
   // A unit is a section of the list itself: named, renamed and moved where it is, with its activities under it.
@@ -297,25 +297,24 @@ ${locked ? SAVING : ''}
 ${shut ? `<p class="notice">Only personal codes on the class list open this course, and nobody is on it yet. <a href="/console/courses/${esc(code)}/people">Add your class</a>.</p>` : ''}
 <section class="block" aria-label="Activities"${locked ? '' : ` data-arrange="PUT ${api}/arrangement"`}>
 ${locked ? '' : `<div class="list-tools">
-<details class="add-panel"${startOpen ? ' open' : ''}><summary class="v-btn is-primary">${icon('plus', 15)}<span>Add an activity</span></summary>
+<details class="add-panel"${startOpen ? ' open' : ' data-close-outside'}><summary class="v-btn is-primary">${icon('plus', 15)}<span>Add an activity</span></summary>
 <form class="v-card add" id="add-activity" data-api="POST ${api}/activities">
 <input type="hidden" name="version" value="${meta.version}">
 ${text('title', 'Its title', '', { required: true, maxlength: 160, autocomplete: 'off', placeholder: 'e.g. Practice: adding fractions' })}
 ${units.length ? choose('unit_ref', 'In the unit', '', [{ value: '', label: 'No unit' }, ...units.map((unit) => ({ value: unit.ref, label: unit.title }))]) : ''}
 ${oneOf('kind', 'What learners do first', 'page', Object.entries(KINDS).map(([value, kind]) => ({ value, label: kind.label, hint: kind.hint })))}
 <div data-show-when="kind=embed">${text('url', 'Its address', '', { type: 'url', placeholder: 'https://' })}</div>
-<div class="actions"><button class="v-btn is-primary" type="submit">Add it</button><span class="v-note">It stays hidden from learners until you open it.</span></div>${say()}
+<div class="actions"><button class="v-btn is-primary" type="submit">Add it</button>${startOpen && !activities.length ? '' : '<button class="v-btn" type="button" data-close>Cancel</button>'}<span class="v-note">It stays hidden from learners until you open it.</span></div>${say()}
 </form>
 </details>
-<details class="add-unit"><summary class="v-btn">${icon('plus', 15)}<span>Add a unit</span></summary>
+<details class="add-unit" data-close-outside><summary class="v-btn">${icon('plus', 15)}<span>Add a unit</span></summary>
 <form class="v-card one-field" id="add-unit" data-api="POST ${api}/units">
 ${text('title', 'Its name', '', { required: true, maxlength: 160, autocomplete: 'off', placeholder: 'e.g. Week 1: Fractions', hint: 'A heading on the course’s home that groups activities, such as a week or a topic.' })}
-<div class="actions"><button class="v-btn is-primary" type="submit">Add the unit</button></div>${say()}
+<div class="actions"><button class="v-btn is-primary" type="submit">Add the unit</button><button class="v-btn" type="button" data-close>Cancel</button></div>${say()}
 </form>
 </details>
-${addGoalsPart({ code, units, help: goalHelp })}
 </div>`}
-${goalsHere(null, units.length ? 'Learners will be able to, in the whole course' : 'Learners will be able to')}
+${courseGoalsPart(goals, { code, doc, activities, locked, help: goalHelp })}
 ${!activities.length && !units.length ? '<p class="v-empty">No activities yet. Add the first one above: it stays hidden from learners until you open it.</p>' : units.length
     ? `${units.map((unit, index) => `<div class="unit-block" data-unit="${esc(unit.ref)}"${locked ? '' : ` data-drag-block="${esc(unit.ref)}"`}>${unitHead(unit, index)}${goalsHere(unit.ref)}${rowsOf(inUnit(unit.ref), unit.ref, locked ? 'Nothing in this unit.' : 'Nothing here yet: add an activity here, or drag one in.')}</div>`).join('')}${loose.length
       ? `<div class="loose-block"><div class="unit-head"><h2 class="unit">Not in a unit <small>${esc(plural(loose.length, 'activity', 'activities'))}</small></h2></div>${rowsOf(loose, '', '')}</div>`

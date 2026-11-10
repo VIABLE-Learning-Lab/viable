@@ -74,6 +74,8 @@ existing files.
 - **Class lists.** Pasted lists read as lists in any script or case, numbered, with IDs or emails, with a button to send a note that only looks like one. Two columns of first and last names are refused rather than read as sections.
 - **A preview shows everything.** Trying a course opens activities learners can't yet, and says so on each.
 - **For hosts.** `consoleApp` gives a host the console's routes and pages for whoever it has signed in, with `library`, `classes`, `records` and `threads` of its own. `simple` leaves out what such a host decides for teachers.
+- **A colour picker of the console's own.** An agent's colour opens twelve named swatches, each 4.5:1 on white and 3:1 on a chat page's dark background, and a hex code for any other, in place of the browser's control. The input stays, hidden, and holds the value (`dressColor` in `console/colorPicker.js`).
+- **Try it at another help level.** On the Engine, Try it has what the AI did beside the page, since only the token holder reaches a try, and its How much the AI does opens the try again at another level (`?help=`) for that try's own turns; the activity and its sections keep their own. `teachingAtLevel` (`harness/src/utils/teaching.js`) gives the settings at a level, for a preview or a try.
 
 ## 0.3.0 (2026-11-05)
 

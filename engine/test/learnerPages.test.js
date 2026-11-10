@@ -195,3 +195,12 @@ test('a page can’t write what only a server records, and a hidden or dated act
   assert.equal(releaseState({ release: 'open', closes_at: '2026-11-01T00:00:00Z', role: 'instruction' }, { now }).state, 'closed');
   assert.equal(releaseState({ release: 'open', role: 'instruction' }, { now }).state, 'open');
 });
+
+test('a reply no review passed says so to the page, so its work list doesn’t say the answer was checked', async () => {
+  const { chatReply, uncheckedIn } = await import('../src/learner/logic.js');
+  assert.equal(uncheckedIn([{ nodeType: 'vetting', output: { outcome: 'unverified' } }, { nodeType: 'output', output: { text: 'x' } }]), true);
+  assert.equal(uncheckedIn([{ nodeType: 'vetting', output: { outcome: 'passed' } }]), false);
+  assert.equal(uncheckedIn([{ nodeType: 'llm', output: { content: 'x' } }]), false);
+  assert.equal(chatReply({ output: { text: 'x' }, conversationId: 'c', runId: 'r', unchecked: true }).reply.unchecked, true);
+  assert.equal(chatReply({ output: { text: 'x' }, conversationId: 'c', runId: 'r' }).reply.unchecked, undefined);
+});

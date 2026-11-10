@@ -9,6 +9,7 @@ import { kindOfActivity, courseAt } from './course.js';
 import { flowOf, flowWords, PANEL_WORDS, reviewOf } from './flow.js';
 import { esc, qrSvg, reachOf, say } from './forms.js';
 import { icon } from './icons.js';
+import { goalWords, goalsIn, isCheck } from './goals.js';
 
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -27,10 +28,13 @@ async function openerOf(here, code) {
 const card = (title, body, { id = '', className = '' } = {}) => `<section class="ask-card v-card ${className}"${id ? ` id="${esc(id)}" data-say-box` : ''}><h3>${esc(title)}</h3>${body}</section>`;
 const copyRow = (label, link, state = '') => `<li><div><strong>${esc(label)}</strong>${state}<code>${esc(link)}</code></div><button class="v-btn is-small" type="button" data-copy="${esc(link)}">Copy</button></li>`;
 
-// Opening something a learner would trip on says so first.
-function openButton(doc, code, activity, meta) {
-  return `<button class="v-btn is-small" type="button" data-api="POST courses/${esc(code)}/activities/${esc(activity.key)}/release" data-body='${esc(JSON.stringify({ version: meta.version, release: 'open' }))}' data-checks="courses/${esc(code)}/checks?activity=${esc(activity.key)}" data-said="Open to learners. Their link is below.">Open to learners</button>`;
+// Opening something a learner would trip on says so first. No version: a card can be drawn before Ask's next change to the
+// same course, and opening is about who can reach it, not about its words.
+function openButton(code, activity, said = 'Open to learners.') {
+  return `<button class="v-btn is-small" type="button" data-api="POST courses/${esc(code)}/activities/${esc(activity.key)}/release" data-body='{"release":"open"}' data-checks="courses/${esc(code)}/checks?activity=${esc(activity.key)}" data-busy="Opening…" data-said="${esc(said)}">Open to learners</button>`;
 }
+// Where an activity sits in a course, and what it is for: its unit, the goals it works toward, whether it is a check.
+const placeWords = (doc, activity) => [(doc.course.units || []).find((unit) => unit.ref === activity.unit_ref)?.title, goalWords(activity, goalsIn(doc))].filter(Boolean);
 
 const SHOWS = { page: 'to read', questions: 'to answer', writing: 'to write', reading: 'to read', embed: 'to try' };
 
@@ -48,20 +52,38 @@ async function activityCard(here, spec, context = {}) {
   const notes = reviewOf(doc, activity);
   const row = (step, index) => `<li><span class="ask-flow-n">${index + 1}</span><div><strong>${esc(step.title)}</strong><small>${esc(step.panels.map((panel) => (panel.type === 'questions' ? `${panel.questions} question${panel.questions === 1 ? '' : 's'}` : SHOWS[panel.type] || PANEL_WORDS[panel.type])).join(', '))}${step.has_ai ? ', with the AI' : ''}</small>${step.says ? `<q>${esc(step.says)}</q>` : ''}</div></li>`;
   const reach = opened(activity) && !context.shared?.has(code) ? await reachPart(here, code, doc, meta, opened) : null;
-  return card(activity.title, `<div class="ask-activity-head"><span class="v-pill${opened(activity) ? ' is-open' : ''}">${opened(activity) ? 'Open' : 'Hidden'}</span>${activity.minutes ? `<span class="v-note">About ${esc(activity.minutes)} minutes</span>` : ''}${taught.design?.label ? `<span class="v-note">Built on ${esc(taught.design.label)}</span>` : ''}</div>
+  return card(activity.title, `<div class="ask-activity-head"><span class="v-pill${opened(activity) ? ' is-open' : ''}">${opened(activity) ? 'Open' : 'Hidden'}</span>${isCheck(activity) ? '<span class="ask-tag">Check</span>' : ''}${placeWords(doc, activity).map((words) => `<span class="v-note">${esc(words)}</span>`).join('')}${activity.minutes ? `<span class="v-note">About ${esc(activity.minutes)} minutes</span>` : ''}${taught.design?.label ? `<span class="v-note">Built on ${esc(taught.design.label)}</span>` : ''}</div>
 ${taught.goal ? `<p class="ask-goal">${esc(taught.goal)}</p>` : ''}
 ${steps.length ? `<ol class="ask-flow">${steps.map(row).join('')}</ol>` : `<p class="v-note">A conversation with the AI${activity.opening?.says ? `, which starts: “${esc(activity.opening.says)}”` : ''}.</p>`}
 ${notes.length ? `<ul class="ask-notes">${notes.map((note) => `<li class="is-${esc(note.level)}">${esc(note.says)}</li>`).join('')}</ul>` : ''}${say()}
-<div class="actions"><a class="v-btn is-small is-primary" href="/console/api/courses/${esc(code)}/try/${esc(activity.key)}" target="_blank" rel="noopener">Try it as a learner</a><a class="v-btn is-small" href="/console/courses/${esc(code)}/activities/${esc(activity.key)}">See all of it</a>${opened(activity) ? '' : openButton(doc, code, activity, meta)}</div>
+<div class="actions"><a class="v-btn is-small is-primary" href="/console/api/courses/${esc(code)}/try/${esc(activity.key)}" target="_blank" rel="noopener">Try it as a learner</a><a class="v-btn is-small" href="/console/courses/${esc(code)}/activities/${esc(activity.key)}">See all of it</a>${opened(activity) ? '' : openButton(code, activity, 'Open to learners. Their link is below.')}</div>
 ${reach ? `<div class="ask-reach"><h4>${reach.ready ? 'Learners can open it now' : 'Before learners can open it'}</h4>${reach.html}</div>` : ''}`, { id: `activity-${code}-${activity.key}` });
 }
 
+// The course whole, as its page has it: unit by unit, each activity with what learners do, what it is for and whether it is
+// open, and what this message made or changed marked (spec.added, spec.changed: keys).
 async function courseCard(here, spec) {
-  const { code, doc, meta } = await courseAt(here.library, spec.course);
+  const { code, doc } = await courseAt(here.library, spec.course);
   const list = activitiesOf(doc);
   const opened = await openerOf(here, code);
-  return card(doc.course.title, `${list.length ? `<ul class="ask-rows ask-activities">${list.map((activity) => `<li><div><a href="/console/courses/${esc(code)}/activities/${esc(activity.key)}"><strong>${esc(activity.title)}</strong></a><small>${esc(flowWords(doc, activity))}${activity.teaching?.help ? `. The AI ${esc(HELP_WORDS[activity.teaching.help])}` : ''}</small></div><span class="v-pill${opened(activity) ? ' is-open' : ''}">${opened(activity) ? 'Open' : 'Hidden'}</span><span class="ask-row-do">${opened(activity) ? '' : openButton(doc, code, activity, meta)}</span></li>`).join('')}</ul>` : '<p class="v-note">No activities yet.</p>'}${say()}
-<div class="actions"><a class="v-btn is-small is-primary" href="/console/api/courses/${esc(code)}/try" target="_blank" rel="noopener">Try it as a learner</a><a class="v-btn is-small" href="/console/courses/${esc(code)}">Change it</a><a class="v-btn is-small" href="/console/courses/${esc(code)}/share">Share</a></div>`, { id: `course-${code}` });
+  const goals = goalsIn(doc);
+  const added = new Set(spec.added || []);
+  const changed = new Set(spec.changed || []);
+  const row = (activity) => {
+    const mark = added.has(activity.key) ? '<span class="ask-tag is-new">New</span>' : changed.has(activity.key) ? '<span class="ask-tag">Changed</span>' : '';
+    const what = [flowWords(doc, activity), activity.teaching?.help ? `The AI ${HELP_WORDS[activity.teaching.help]}` : '', goalWords(activity, goals)].filter(Boolean).join(' · ');
+    return `<li><div><span class="ask-row-title"><a href="/console/courses/${esc(code)}/activities/${esc(activity.key)}"><strong>${esc(activity.title)}</strong></a>${isCheck(activity) ? '<span class="ask-tag">Check</span>' : ''}${mark}</span><small>${esc(what)}</small></div><span class="v-pill${opened(activity) ? ' is-open' : ''}">${opened(activity) ? 'Open' : 'Hidden'}</span><span class="ask-row-do">${opened(activity) ? '' : openButton(code, activity)}</span></li>`;
+  };
+  const units = doc.course.units || [];
+  const loose = list.filter((activity) => !units.some((unit) => unit.ref === activity.unit_ref));
+  const groups = [...units.map((unit) => ({ title: unit.title, items: list.filter((activity) => activity.unit_ref === unit.ref) })), ...(loose.length ? [{ title: units.length ? 'Not in a unit' : null, items: loose }] : [])];
+  const body = list.length || units.length ? groups.map((group) => `${group.title ? `<p class="ask-unit">${esc(group.title)}</p>` : ''}${group.items.length ? `<ul class="ask-rows ask-activities">${group.items.map(row).join('')}</ul>` : '<p class="v-note ask-unit-empty">No activity yet.</p>'}`).join('') : '<p class="v-note">No activities yet.</p>';
+  const counts = [goals.length ? `${goals.length} goal${goals.length === 1 ? '' : 's'}` : '', list.length ? `${list.length} activit${list.length === 1 ? 'y' : 'ies'}` : '', list.filter(opened).length ? `${list.filter(opened).length} open` : 'All hidden from learners'].filter(Boolean).join(' · ');
+  // What is left before learners come, where the course is: the same checks Open to learners asks about.
+  const left = list.length && here.classes ? (await courseChecks(here, code, doc).catch(() => [])).filter((item) => !item.ok) : [];
+  const ready = left.length ? `<div class="ask-ready"><p class="ask-unit">Before learners come</p><ul class="ask-checks">${left.map(checkRow).join('')}</ul></div>` : '';
+  return card(doc.course.title, `<p class="v-note ask-card-sub">${esc(counts)}</p>${body}${ready}${say()}
+<div class="actions"><a class="v-btn is-small is-primary" href="/console/api/courses/${esc(code)}/try" target="_blank" rel="noopener">Try it as a learner</a><a class="v-btn is-small" href="/console/courses/${esc(code)}">See the course</a><a class="v-btn is-small" href="/console/courses/${esc(code)}/share">Share</a></div>`, { id: `course-${code}` });
 }
 
 async function tryCard(here, spec) {
@@ -196,6 +218,9 @@ export async function courseChecks(here, code, doc, { activity = null } = {}) {
   return checks;
 }
 
+// One thing to look at before learners come, with the way to it.
+const checkRow = (item) => `<li class="${item.ok ? 'is-ok' : 'is-todo'}">${icon(item.ok ? 'check' : 'alert', 15)}<span>${esc(item.words)}</span>${!item.ok && item.href ? `<a class="v-btn is-small" href="${esc(item.href)}"${item.href.includes('/try') ? ' target="_blank" rel="noopener"' : ''}>${esc(item.label)}</a>` : ''}</li>`;
+
 async function checklistCard(here, spec) {
   const { code, doc } = await courseAt(here.library, spec.course);
   const list = activitiesOf(doc);
@@ -203,7 +228,7 @@ async function checklistCard(here, spec) {
   const checks = await courseChecks(here, code, doc);
   const open = list.filter(await openerOf(here, code));
   const left = checks.filter((item) => !item.ok).length;
-  const row = (item) => `<li class="${item.ok ? 'is-ok' : 'is-todo'}">${icon(item.ok ? 'check' : 'alert', 15)}<span>${esc(item.words)}</span>${!item.ok && item.href ? `<a class="v-btn is-small" href="${esc(item.href)}"${item.href.includes('/try') ? ' target="_blank" rel="noopener"' : ''}>${esc(item.label)}</a>` : ''}</li>`;
+  const row = checkRow;
   return card(left ? `Before learners come: ${plural(left, 'thing')} to look at` : 'Ready for learners', `<ul class="ask-checks">${checks.map(row).join('')}</ul>
 <p class="v-note">${open.length ? `Open to learners: ${esc(named(open))}.` : 'Nothing is open to learners yet: each activity opens with its own button, when you choose.'}</p>
 <div class="actions"><a class="v-btn is-small" href="/console/courses/${esc(code)}">See the course</a><a class="v-btn is-small" href="/console/courses/${esc(code)}/share">Share</a></div>`, { id: `checklist-${code}` });
@@ -325,6 +350,14 @@ export const ASK_CARD_CSS = `.ask-pair{display:grid;grid-template-columns:repeat
 .ask-rows small{color:var(--muted);font-size:.8125rem}
 .ask-rows code{font-size:.8125rem;overflow-wrap:anywhere}
 .ask-rows.ask-activities li{display:grid;grid-template-columns:minmax(0,1fr) 74px 140px;justify-content:initial}
+.ask-unit{margin:6px 0 0;color:var(--public-ink);font-size:.875rem;font-weight:600}
+.ask-unit+.ask-rows{margin-top:4px}
+.ask-unit-empty{margin:2px 0 0;font-size:.875rem}
+.ask-ready{display:grid;gap:6px;padding-top:4px}
+.ask-card-sub{margin-top:-6px;font-size:.875rem}
+.ask-row-title{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;min-width:0}
+.ask-tag{display:inline-block;padding:0 7px;border:1px solid var(--public-rule-strong);border-radius:var(--radius-pill);color:var(--public-text);font-size:.75rem;font-weight:600;line-height:1.6}
+.ask-tag.is-new{border-color:var(--ink-blue-line,var(--ink-blue));color:var(--ink-blue)}
 .ask-activities .v-pill{justify-self:start}
 .ask-row-do{display:flex;justify-content:flex-end}
 .ask-activity-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:-4px}

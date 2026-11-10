@@ -252,7 +252,7 @@ function watchPanel(config) {
       const more = el('details', 'listening', el('summary', null, `Listening for ${set.listens_for.length} misconception${set.listens_for.length === 1 ? '' : 's'}`), list, from);
       kids.push(more);
     }
-    const said = el('p', 'said-back', note || (config.control?.tried && !config.control.url ? `For this try only${config.control.own ? `; the activity is set to ${HELP_NAMES[config.control.own]}` : ''}. Ask again to see the difference.` : ''));
+    const said = el('p', 'said-back', note || (config.control?.tried && !config.control.url ? `This try uses ${HELP_NAMES[config.control.tried]}, for this try only${config.control.own ? `; the activity stays on ${HELP_NAMES[config.control.own]}` : ''}. Ask again to see the difference.` : ''));
     said.setAttribute('role', 'status');
     kids.push(said);
     part.replaceChildren(...kids);

@@ -6,8 +6,10 @@ import { markSvg, themeCss } from '../../../harness/src/ui/theme.js';
 import { escapeHtml } from '../learner/shell.js';
 import { CONSOLE_SCRIPT } from './client.js';
 import { DATE_PICKER_CSS } from './datePicker.js';
+import { COLOR_PICKER_CSS } from './colorPicker.js';
 import { DRAG_ORDER_CSS } from './dragOrder.js';
 import { icon } from './icons.js';
+import { RICH_EDITOR_CSS } from './richEditor.js';
 
 const CONSOLE_CSS = `[hidden]{display:none!important}
 h1{font-size:clamp(1.9rem,3.4vw,2.6rem)}
@@ -31,6 +33,7 @@ html{scrollbar-color:var(--public-rule-strong) transparent;scrollbar-width:thin}
 .side-courses{display:grid;grid-template-columns:minmax(0,1fr);gap:1px;margin:2px 0 6px 17px;padding:0 0 0 8px;border-left:1px solid var(--public-rule);list-style:none}
 .side .side-courses a{min-width:0;padding:5px 8px;color:var(--muted);font-size:.875rem}
 .side .side-courses a>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side .side-courses small{color:var(--muted);font-weight:400}
 .side .side-courses a[aria-current=page]{background:var(--field-mist);color:var(--public-ink);font-weight:600}
 .side .side-courses a.side-more{font-size:.8125rem}
 .side>nav{min-height:0;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}
@@ -92,6 +95,12 @@ dialog.v-dialog .actions{display:flex;flex-direction:row-reverse;flex-wrap:wrap;
 .v-btn.danger:hover{border-color:var(--pencil-red);background:color-mix(in srgb,var(--pencil-red) 8%,transparent)}
 @keyframes v-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .v-form{grid-template-columns:minmax(0,1fr)}
+.one-field{display:grid;gap:14px}
+.stack{display:grid;gap:16px}
+.v-btn.is-busy{cursor:progress;pointer-events:none}
+.v-btn.is-busy::after{content:"";flex:none;width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:v-spin .7s linear infinite}
+@keyframes v-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.v-btn.is-busy::after{animation:none;border-right-color:currentColor;opacity:.45}}
 .v-menu-native{position:absolute;width:1px;height:1px;margin:0;padding:0;border:0;opacity:0;pointer-events:none}
 .v-menu-field{position:relative;min-width:0}
 .v-menu-button{display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;cursor:pointer}
@@ -135,7 +144,7 @@ const SPEED_CSS = `html.is-going::before,html.is-working::before{content:"";posi
 .side{view-transition-name:v-side}
 @media (prefers-reduced-motion:no-preference){@view-transition{navigation:auto}::view-transition-old(root),::view-transition-new(root){animation-duration:.14s}}
 @media (prefers-reduced-motion:reduce){html.is-going::before,html.is-working::before{animation:none;transform:scaleX(.9)}}`;
-const SHARED_CSS = `${themeCss()}\n${CONSOLE_CSS}\n${SPEED_CSS}\n${DATE_PICKER_CSS}\n${DRAG_ORDER_CSS}`;
+const SHARED_CSS = `${themeCss()}\n${CONSOLE_CSS}\n${SPEED_CSS}\n${DATE_PICKER_CSS}\n${COLOR_PICKER_CSS}\n${DRAG_ORDER_CSS}\n${RICH_EDITOR_CSS}`;
 const ASSETS = Object.fromEntries([[`base-${hashOf(SHARED_CSS)}.css`, { type: 'text/css; charset=utf-8', body: SHARED_CSS }], [`base-${hashOf(CONSOLE_SCRIPT)}.js`, { type: 'text/javascript; charset=utf-8', body: CONSOLE_SCRIPT }]]);
 const [SHARED_CSS_FILE, SHARED_JS_FILE] = Object.keys(ASSETS);
 /** A page's own large stylesheet or script as a shared file too, named when the module loads so every copy of the server knows it. */
@@ -182,7 +191,8 @@ ${links.map(external).join('')}
 export const consolePage = ({ title, pages, current, body, script = '', css = '', cssFile = null, scriptFile = null, links = [], brand = 'VIABLE Engine', signOut = '/teacher/signout?next=console', notice = '', home = null, who = null, person = null, credit = null, courses = [], courseHere = null, coursesMore = 0 }, nonce) => {
   const name = `${markSvg({ size: 28 })}<span class="brand-name"><strong>${escapeHtml(brand.split(' ')[0])}</strong><small>${escapeHtml(brand.split(' ').slice(1).join(' '))}</small></span>`;
   // Under Courses, the teacher's courses: the one open now is where they are, so Courses itself isn't marked then.
-  const courseList = courses.length ? `<ul class="side-courses" aria-label="Your courses">${courses.map((course) => `<li><a href="/console/courses/${escapeHtml(course.code)}${escapeHtml(courseHere?.tabPath || '')}" data-tip="${escapeHtml(course.title)}"${courseHere?.code === course.code ? ' aria-current="page"' : ''}><span>${escapeHtml(course.title)}</span></a></li>`).join('')}${coursesMore ? `<li><a class="side-more" href="/console/courses"><span>${coursesMore} more</span></a></li>` : ''}</ul>` : '';
+  const twin = (course) => courses.filter((other) => other.title.toLowerCase() === course.title.toLowerCase()).length > 1;
+  const courseList = courses.length ? `<ul class="side-courses" aria-label="Your courses">${courses.map((course) => `<li><a href="/console/courses/${escapeHtml(course.code)}${escapeHtml(courseHere?.tabPath || '')}" data-tip="${escapeHtml(twin(course) ? `${course.title} (${course.code})` : course.title)}"${courseHere?.code === course.code ? ' aria-current="page"' : ''}><span>${escapeHtml(course.title)}${twin(course) ? ` <small>${escapeHtml(course.code)}</small>` : ''}</span></a></li>`).join('')}${coursesMore ? `<li><a class="side-more" href="/console/courses"><span>${coursesMore} more</span></a></li>` : ''}</ul>` : '';
   const navItem = (page) => `<li><a href="/console/${escapeHtml(page.id)}"${page.id === current && !(page.id === 'courses' && courseHere) ? ' aria-current="page"' : ''}${page.fill ? ` data-fill="${escapeHtml(page.fill)}"` : ''}>${escapeHtml(page.title)}</a>${page.id === 'courses' ? courseList : ''}</li>`;
   return `<!doctype html>
 <html lang="en">

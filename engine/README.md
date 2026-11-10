@@ -23,7 +23,8 @@ It keeps everything in `~/.viable-engine`, and opens its console, signed in.
    of its models is for.
 2. **Courses.** Start from nothing, from an example, or from a file.
 3. **An activity.** Say what learners do, the goal, and how much the AI does. Type what a learner might say to see exactly what the
-   AI would be told at that moment. **Try it**, as a learner, without being counted. Then open it.
+   AI would be told at that moment. **Try it**, as a learner, without being counted, with what the AI did beside it and
+   another help level to try. Then open it.
 4. **People.** Let anyone with the link in, or paste your class list and print a card for each learner with their personal code.
 5. **Share** the link or its QR code. A class on your network needs `--host 0.0.0.0`, on a network you trust, since that's plain
    http; a class anywhere needs a [server](#where-it-runs) on https.

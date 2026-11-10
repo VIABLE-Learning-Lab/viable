@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import './no-network.js';
 import { MOVES, readMoment, turnBrief } from '../src/brief.js';
-import { teachingContext } from '../src/utils/teaching.js';
+import { teachingContext, teachingSettings } from '../src/utils/teaching.js';
 import { runWithServices } from '../../engine/src/server/runtime.js';
 
 const U = (n) => `00000000-0000-4000-8000-00000000000${n}`;
@@ -58,7 +58,7 @@ test('words the learner shares with a resource choose it, and the learner’s ow
 
 test('what a brief chooses keeps where it came from', async () => {
   const brief = await turnBrief(teaching, { message: 'i was summing numerators and denominators to add fractions with different denominators' });
-  assert.ok(brief.misconceptions.length && brief.misconceptions.every((item) => item.source?.name), 'the teacher’s choices and the graph’s');
+  assert.ok(brief.misconceptions.length && brief.misconceptions.every((item) => item.source?.name && item.from === 'teacher'), 'the teacher’s choices, with their source');
   assert.ok(brief.components.length && brief.components.every((item) => item.source?.name === 'Learning Commons'));
   assert.doesNotMatch(brief.text, /CC BY|Learning Commons/, 'credit is for whoever reads the turn, not more words for the model');
 });
@@ -88,12 +88,17 @@ test('a picker chooses only from what it was offered, and a failed one falls bac
   }
 });
 
-test('a standard in another subject doesn’t search the mathematics graph', async () => {
+test('nothing is looked up from the learner’s words: with none chosen there are none, and the ones chosen go when no word points at one', async () => {
   const science = { goal: 'Explain moon phases using fractions of the orbit.', standard: { ...teaching.standard, subject: 'Science' }, misconceptions: [] };
   const offered = [];
   const call = async (_env, request) => { offered.push(request.messages[1].content); return { content: '{"moment":"other"}' }; };
   await turnBrief(science, { message: 'why', picker: { call, model: 'small' } });
   assert.match(offered[0], /Misconceptions:\n\(none\)/);
+  const none = await turnBrief({ goal: 'Add fractions with unlike denominators.', help: 'hint' }, { message: 'i added the tops and the bottoms so 1/2 + 1/3 is 2/5' });
+  assert.deepEqual(none.misconceptions, [], 'a math goal with none chosen gets none from the graph');
+  const quiet = await turnBrief(teaching, { message: 'is it 2/5?' });
+  assert.deepEqual(quiet.misconceptions.map((item) => item.id), [U(3), U(5)], 'the teacher’s list, when no word points at one of it');
+  assert.match(quiet.text, /What may be behind it, only if it fits what they did/);
 });
 
 test('a run gets the brief only when asked, and reply steps get its text', async () => {
@@ -139,4 +144,32 @@ test('a small model chooses guidance too, and a number it makes up is dropped', 
   const guidance = [{ text: 'One.' }, { text: 'Two.', when: ['stuck'] }];
   const brief = await turnBrief({ goal: 'G', help: 'hint', guidance }, { message: 'je ne sais pas', picker: { call, model: 'small' } });
   assert.deepEqual(brief.guidance.map((item) => item.text), ['Two.']);
+});
+
+test('where a teacher chose none, the Harness chooses: the goal’s common misconceptions and research for the help level, the same each time, each turn taking what fits, and none when turned off', async () => {
+  const { withDefaults } = await import('../src/defaults.js');
+  const plain = { goal: 'Add fractions with unlike denominators.', help: 'hint' };
+  const chosen = withDefaults(plain);
+  assert.equal(chosen.misconceptions.length, 3);
+  assert.equal(chosen.guidance.length, 4);
+  assert.ok([...chosen.misconceptions, ...chosen.guidance].every((item) => item.by === 'default'), 'marked as chosen for the teacher');
+  assert.deepEqual(withDefaults(plain).misconceptions.map((item) => item.id), chosen.misconceptions.map((item) => item.id), 'the same goal gives the same set');
+  assert.equal(plain.misconceptions, undefined, 'the settings themselves are left as they were');
+  const tried = await turnBrief(chosen, { message: 'i got 2/5' });
+  assert.ok(tried.misconceptions.length && tried.misconceptions.every((item) => item.from === 'default'), 'a turn says whose they were');
+  assert.match(tried.misconceptions.map((item) => item.description).join(' '), /summing numerators and denominators/);
+  const asked = await turnBrief(chosen, { message: 'just tell me the answer' });
+  assert.equal(asked.misconceptions.length, 0);
+  assert.ok(asked.guidance.length >= 1, 'research for asking for the answer');
+  assert.equal(withDefaults({ ...plain, defaults: false }).misconceptions, undefined, 'turned off, only what the teacher chose');
+  assert.equal(withDefaults({ goal: 'Write a persuasive letter.', help: 'hint' }).misconceptions, undefined, 'no misconceptions for a goal outside mathematics');
+  assert.equal(withDefaults({ ...plain, standard: { ...teaching.standard, subject: 'Science' } }).misconceptions, undefined);
+  const own = withDefaults(teaching);
+  assert.deepEqual(own.misconceptions, teaching.misconceptions, 'the teacher’s own list stands');
+  assert.equal(teachingSettings({ ...plain, defaults: false }).defaults, false);
+  assert.equal(teachingSettings({ ...plain, defaults: true }).defaults, true);
+  assert.equal(teachingSettings(plain).defaults, undefined, 'kept only when said');
+  // A host whose settings belong to studies chooses only where an activity asks.
+  assert.equal(withDefaults(plain, { on: false }).misconceptions, undefined, 'off there unless asked');
+  assert.equal(withDefaults({ ...plain, defaults: true }, { on: false }).misconceptions.length, 3, 'and on where an activity asks');
 });

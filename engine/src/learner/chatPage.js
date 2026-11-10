@@ -1483,6 +1483,8 @@ const CHAT_SCRIPT = String.raw`(() => {
       if (data.stale) showStale();
       hear(data.transcript);
       if (data.title && !chat.named) chat.title = data.title;
+      // A fallback no review passed isn't a checked answer: the work list doesn't say it was.
+      if (data.reply.unchecked) done.querySelector('[data-stage="checking"]')?.remove();
       const el = settle({ role: 'bot', text: data.reply.text, citations: data.reply.citations || [], images: data.reply.images || [], audio: data.reply.audio || [], run_id: data.run_id || null });
       // The workspace knows the answers, to tell text pasted from them from the visitor's own.
       if (window.VIABLE_WS && window.VIABLE_WS.reply) window.VIABLE_WS.reply(data.reply.text || '');

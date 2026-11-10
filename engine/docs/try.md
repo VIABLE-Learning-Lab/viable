@@ -74,7 +74,9 @@ deserves. The tour there clears only the copy's own storage (`viable-chat:` and 
 ## The panel on your own server
 
 It is off by default. It carries instructions, drafts and reviewers' reasons, so a learner must never get it.
-The route decides on each request, never the page.
+The route decides on each request, never the page. A try-out from the console's **Try it** has it on any server,
+since only the token holder reaches one, with the help levels to try for that try alone
+([learner-pages.md](learner-pages.md)).
 
 `viable-engine serve ... --panel` grants it to whoever holds the token. With no `--token-env`, the server
 makes a token at start and prints it once, so the grant is never decided by a header. Sign in at `/teacher`;

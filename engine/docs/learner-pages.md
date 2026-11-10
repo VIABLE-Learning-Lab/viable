@@ -168,8 +168,11 @@ site may frame that page.
 
 The panel reads every turn of the page's learner in that activity again when it opens (`POST …/watch`, under the
 same rule), from the kept turn: its review, what a search found and `turn_record` (the step, and what the Harness
-read of the moment). A teacher's try-out (Try it on the console, `?try=1` with the token) marks its turns `tried`,
-and the console's activity page lists them under **What the AI did in your tries**.
+read of the moment). A teacher's try-out (Try it on the console, `?try=1` with the token) has the panel beside it on
+any server, since only the token holder reaches it, and marks its turns `tried`; the console's activity page lists
+them under **What the AI did in your tries**. In the panel, **How much the AI does** tries another level on that
+try's own turns: the page opens again with it in its address (`?help=`), a section's own level gives way to it too,
+the panel says which level the try uses, and nothing is saved, so the activity keeps its own.
 
 ## When the AI writes first
 

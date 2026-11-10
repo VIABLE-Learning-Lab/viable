@@ -43,8 +43,9 @@ async function server(script, { model = true, pages = {} } = {}) {
   const page = async (path) => { const response = await handler(new Request(`${BASE}/console/${path}`, { headers: { authorization: `Bearer ${TOKEN}`, accept: 'text/html' } })); assert.equal(response.status, 200, path); return response.text(); };
   if (model) await ok('POST', 'providers', { name: 'A provider', base_url: 'http://model.test/v1', key: 'a-key' }).then(({ id }) => ok('PUT', 'roles/reply', { provider: id, model: 'reply-model' }));
   // One message, read to its end: the events, in order.
-  const ask = async (message, thread) => {
-    const response = await api('POST', 'ask', { message, ...(thread ? { thread } : {}) });
+  // about: the course the box names, as the page sends it with each message.
+  const ask = async (message, thread, about = null) => {
+    const response = await api('POST', 'ask', { message, ...(thread ? { thread } : {}), ...(about ? { about } : {}) });
     assert.equal(response.status, 200, await response.clone().text());
     const text = await response.text();
     return text.split('\n\n').filter(Boolean).map((frame) => ({ name: /^event: (.+)$/m.exec(frame)?.[1], data: JSON.parse(/^data: (.+)$/m.exec(frame)?.[1] || 'null') }));
@@ -345,7 +346,13 @@ test('with no model it says so and sends nothing, a model’s failure is said, a
   const redirect = await none.handler(new Request(`${BASE}/console`, { headers: { authorization: `Bearer ${TOKEN}`, accept: 'text/html' } }));
   assert.match(redirect.headers.get('location'), /\/console\/courses$/, 'until a model is set, the front door is the courses page');
 
-  const s = await server(following([SETUP[0], new Response(JSON.stringify({ error: { message: 'Overloaded' } }), { status: 503 })]));
+  // Busy once, it tries again a moment later and goes on.
+  const busy = () => new Response(JSON.stringify({ error: { message: 'Overloaded' } }), { status: 503 });
+  const again = await server(following([SETUP[0], busy(), 'Made it.']));
+  const went = await again.ask('Fractions');
+  assert.ok(went.some((event) => event.name === 'said' && /Made it/.test(event.data.html)), 'one failure is tried again');
+  // Busy twice, it says so, and what was made stays.
+  const s = await server(following([SETUP[0], busy(), busy()]));
   const events = await s.ask('Fractions');
   assert.ok(events.some((event) => event.name === 'said' && event.data.failed));
   assert.equal(events.at(-1).name, 'done');
@@ -357,8 +364,10 @@ test('with no model it says so and sends nothing, a model’s failure is said, a
 test('a long run stops at its limit, an unknown tool is refused, a stop is heard, and a second message waits its turn', async () => {
   const loop = await server(() => [call('list_courses', {})]);
   const events = await loop.ask('Keep going');
-  assert.ok(events.some((event) => event.name === 'said' && /more steps than I can take/.test(event.data.html)));
-  assert.ok(loop.sent.length <= 14);
+  assert.ok(events.some((event) => event.name === 'said' && /as much as I can do in one go[\s\S]*Say go on/.test(event.data.html)), 'a run out of steps says so, and how to go on');
+  assert.ok(loop.sent.length <= 40);
+  assert.equal(loop.sent.at(-1).tool_choice, 'none', 'its last step has nothing to call');
+  assert.equal(loop.sent.at(-2).tool_choice, 'auto');
 
   const unknown = await server([[call('delete_everything', {})], 'I can’t do that.']);
   await unknown.ask('Delete everything');
@@ -436,8 +445,10 @@ test('what would reach learners at once is refused: sections on a course in use,
   assert.doesNotMatch(await say(call('set_how_ai_helps', { course: code, activity: 'practice', goal: 'Add fractions.' })), /is open/);
 
   await ok('POST', `courses/${code}/activities/practice/release`, { version: await version(), release: 'open' });
-  assert.match(await say(call('add_questions', { course: code, activity: 'practice', questions: [{ type: 'fill', prompt: 'Next?', accept: ['1'] }] })), /is open and uses these questions/);
-  assert.match(await say(call('set_how_ai_helps', { course: code, activity: 'practice', goal: 'Another goal.' })), /is open, so learners would get this/);
+  // Once learners can reach it, a change to its questions or to how the AI helps waits for the teacher's button, which says what it would do.
+  const waits = async (...calls) => { queue.length = 0; queue.push(calls); const events = await ask('go'); return events.filter((event) => event.name === 'card').map((event) => event.data.html).join('\n'); };
+  assert.match(await waits(call('change_questions', { course: code, activity: 'practice', add: [{ type: 'fill', prompt: 'Next?', accept: ['1'] }] })), /Change “Practice”\?[\s\S]*Add: Next\?/);
+  assert.match(await waits(call('set_how_ai_helps', { course: code, activity: 'practice', goal: 'Another goal.' })), /Change “Practice”\?[\s\S]*Goal: Another goal/);
   assert.match(await say(call('add_sections', { course: code, names: ['Period 2'] })), /first section would stop each of them/);
 });
 
@@ -461,6 +472,61 @@ test('what Ask looks up and sets says whose work it is, in the page’s words', 
   assert.match(done, /How much the AI does: Gives hints/);
   assert.match(done, new RegExp(`Skill: ${skill} at Integrating, from Carnegie Skills Progressions, CC BY 4\\.0`));
   assert.match(done, /Listening for 1 misconception, from Eedi Misconceptions Graph v1\.0, CC BY 4\.0/);
+});
+
+test('an activity with none of its own has misconceptions and research chosen for it, shown, used each turn, and made the teacher’s to change', async () => {
+  const s = await server(following(SETUP));
+  const events = await s.ask('Fractions for my grade 5 class, period 2.');
+  const done = events.filter((event) => event.name === 'step' && event.data.state === 'done').map((event) => event.data.html).join('\n');
+  assert.match(done, /Chosen for it: 3 common misconceptions of its goal/);
+  assert.match(done, /Chosen for it: 4 pieces of research for how much the AI does/);
+  const at = 'courses/fractions-period-2/activities/practice-adding-fractions';
+  let page = await s.page(at);
+  assert.match(page, /Chosen for you: 3 common misconceptions and 4 pieces of research/, 'the fold says what is chosen');
+  assert.match(page, /Chosen for you, the common ones for your goal[\s\S]*Believes that fractions are added by summing numerators and denominators/, 'the class’s own mistake, from the goal');
+  assert.doesNotMatch(page, /data-api="DELETE [^"]*\/misconceptions\//, 'nothing is stored: it follows the goal');
+  // What the AI is told, and a moment tried, are what it works from.
+  assert.match(page, /Common misconceptions to listen for:/);
+  const moment = await s.ok('GET', `${at}/brief?message=${encodeURIComponent('i got 2/5')}`);
+  assert.match(moment.html, /summing numerators and denominators/);
+  // Change these: they become the teacher's own list, to remove from or add to.
+  await s.ok('POST', `${at}/misconceptions/suggested`, {});
+  page = await s.page(at);
+  assert.match(page, /Your own: the AI listens for these, and only these\./);
+  assert.match(page, /data-api="DELETE [^"]*\/misconceptions\//);
+});
+
+test('the course a conversation is about is in front of the model each round, with today’s date, and its card says what is left before learners come', async () => {
+  const s = await server(following([...SETUP, 'Here it is.']));
+  const first = await s.ask('Fractions for my grade 5 class, period 2.');
+  const card = first.find((event) => event.name === 'card' && /id="course-fractions-period-2"/.test(event.data.html))?.data.html || '';
+  assert.match(card, /Before learners come[\s\S]*ask-checks/, 'the course card lists what is left');
+  const about = first.find((event) => event.name === 'about')?.data.about;
+  assert.equal(about?.course, 'fractions-period-2', 'the box names the course it made');
+  await s.ask('What is in it now?', threadOf(first), about);
+  const system = s.sent.at(-1).messages[0].content;
+  assert.match(system, /The course “Fractions, period 2” as it is now \(course: fractions-period-2\):/);
+  assert.match(system, /- practice-adding-fractions: “Practice: adding fractions”/, 'each activity by its key');
+  assert.match(system, /Today is \d{4}-\d{2}-\d{2} \(UTC\)\./);
+});
+
+test('every script a console page loads parses, so no page is left without its buttons', async () => {
+  const { consoleAsset } = await import('../src/console/layout.js');
+  const s = await server(following(SETUP));
+  await s.ask('Fractions for my grade 5 class, period 2.');
+  const names = new Set();
+  const inline = [];
+  for (const at of ['ask', 'courses/fractions-period-2', 'courses/fractions-period-2/activities/practice-adding-fractions', 'courses']) {
+    const html = await s.page(at);
+    for (const [, name] of html.matchAll(/<script[^>]* src="\/console\/assets\/([^"]+\.js)"/g)) names.add(name);
+    for (const [, code] of html.matchAll(/<script nonce="[^"]+">([\s\S]*?)<\/script>/g)) inline.push([at, code]);
+  }
+  assert.ok(names.size >= 2, 'the console’s script and Ask’s');
+  for (const name of names) {
+    const body = await consoleAsset(name).text();
+    assert.doesNotThrow(() => new Function(body), name);
+  }
+  for (const [at, code] of inline) assert.doesNotThrow(() => new Function(code), at);
 });
 
 test('an activity card says it opens to learners, and once open, shows how they get to it', async () => {
@@ -739,7 +805,7 @@ test('changing a conversation into steps changes that activity: there is no seco
     if (at === 1) { course = JSON.parse(last.content).course; return [call('add_activity', { course, title: 'Bees', kind: 'chat' })]; }
     if (at === 2) return 'Done.';
     if (at === 3) return [call('change_activity', { course, activity: 'nope', title: 'Bees again' })];
-    if (at === 4) { assert.match(last.content, /No activity here goes by “nope”.*bees \(“Bees”\)/); return [call('change_activity', { course, activity: 'Bees', steps: CASE_STEPS, says: undefined })]; }
+    if (at === 4) { assert.match(last.content, /"error":"It named an activity this course doesn’t have, so nothing changed\.","next":"No activity goes by “nope”.*bees \(“Bees”\)/); return [call('change_activity', { course, activity: 'Bees', steps: CASE_STEPS, says: undefined })]; }
     if (at === 5) return [call('add_activity', { course, title: 'bees', kind: 'chat' })];
     if (at === 6) { assert.match(last.content, /already has “Bees”/); return 'Done.'; }
     return 'Done.';
@@ -753,6 +819,70 @@ test('changing a conversation into steps changes that activity: there is no seco
   assert.deepEqual(courses[0].activities.map((activity) => activity.title), ['Bees']);
   const { activities } = courses[0];
   assert.equal(activities[0].kind, 'several');
+});
+
+test('a week of lessons is planned and worked through: the plan is ticked off, goals are named by number or words, a copy takes its new name, and the course is shown whole, first', async () => {
+  const s = await server(following([
+    [call('plan', { parts: [{ text: 'Goals for the week' }, { text: 'Lesson 1' }, { text: 'Lesson 2' }] }), call('create_course', { title: 'Fractions week', units: ['Lesson 1', 'Lesson 2'] })],
+    (course) => [call('change_course', { course, goals: [{ text: 'Compare fractions.', unit: 'Lesson 1' }, { text: 'Add fractions with like denominators.', unit: 'Lesson 2' }] }), call('plan', { parts: [{ text: 'Goals for the week', done: true }, { text: 'Lesson 1' }, { text: 'Lesson 2' }] })],
+    (course) => [call('add_activity', { course, title: 'Compare fractions', unit: 'Lesson 1', goals: ['1'], steps: [{ title: 'Try it', shows: 'questions', questions: [{ type: 'fill', prompt: 'Which is bigger, 1/2 or 1/3?', accept: ['1/2'] }] }] })],
+    (course) => [call('copy_activity', { course, activity: 'compare-fractions', title: 'Add fractions', unit: 'Lesson 2' })],
+    (course) => [call('change_activity', { course, activity: 'Add fractions', goals: ['Add fractions with like denominators'] }), call('plan', { parts: [{ text: 'Goals for the week', done: true }, { text: 'Lesson 1', done: true }, { text: 'Lesson 2', done: true }] })],
+    'A week of two lessons, hidden for now.'
+  ]));
+  const events = await s.ask('Plan a week of fractions: two lessons, with goals.');
+  const told = s.sent.flatMap((body) => body.messages.filter((message) => message.role === 'tool').map((message) => JSON.parse(message.content)));
+  assert.ok(told.some((answer) => answer.goals?.[1]?.ref === 'add-fractions-with-like-denominators'), 'a change to the goals answers with their refs');
+  const plans = events.filter((event) => event.name === 'plan');
+  assert.equal(plans.length, 3);
+  assert.match(plans.at(-1).data.html, /3 of 3 done/);
+  const thread = await s.store.get(`ask/threads/${threadOf(events)}`);
+  assert.equal(thread.shown.filter((item) => item.kind === 'plan').length, 1, 'one plan a message, kept up to date');
+  assert.ok(!thread.shown.some((item) => item.kind === 'step' && item.tool === 'plan'), 'planning isn’t a step of its own');
+
+  const { courses } = await s.ok('GET', 'ask/choices');
+  const code = courses[0].code;
+  assert.deepEqual(courses[0].activities.map((activity) => activity.title), ['Compare fractions', 'Add fractions'], 'the copy took its new name: no “(copy)” is left');
+  const course = await s.page(`courses/${code}`);
+  assert.match(course, /Compare fractions<\/strong>[\s\S]{0,400}?Goal 1</, 'a goal named by its number');
+  assert.match(course, /Add fractions<\/strong>[\s\S]{0,400}?Goal 2</, 'and by its words');
+
+  const cards = events.filter((event) => event.name === 'card');
+  assert.ok(cards.some((event) => event.data.first && /Fractions week/.test(event.data.html)), 'the course is shown whole, first among the cards');
+  assert.ok(events.some((event) => event.name === 'about' && event.data.about.course === code), 'the box now names the course it made');
+  assert.equal(thread.context.course, code);
+
+  const page = await s.page(`ask/${thread.id}`);
+  assert.match(page, /class="ask-plan"[\s\S]*3 of 3 done/);
+  assert.match(page, /<details class="ask-run">/, 'once done, the work folds away');
+  assert.match(page, new RegExp(`id="course-${code}"[\\s\\S]*Compare fractions[\\s\\S]*class="ask-tag is-new">New[\\s\\S]*Add fractions`), 'the course whole, with what this message made');
+  assert.doesNotMatch(page, /id="activity-|id="questions-/, 'several activities made: each is a click away on the course’s card, not a card of its own');
+  assert.match(page, /data-about="[^"]*Fractions week/, 'the box names the course after a reload too');
+});
+
+test('a step that failed and was put right leaves the work folded; an archived course says so once', async () => {
+  const s = await server(following([
+    [call('create_course', { title: 'Old course' })],
+    (course) => [call('add_activity', { course, title: 'Bees', kind: 'chat' })],
+    (course) => [call('change_activity', { course, activity: 'nope', summary: 'About bees.' })],
+    (course) => [call('change_activity', { course, activity: 'bees', summary: 'About bees.' })],
+    'Done.',
+    (course) => [call('read_course', { course })],
+    'It is archived.'
+  ]));
+  const first = await s.ask('Make a course about bees');
+  const thread = threadOf(first);
+  const page = await s.page(`ask/${thread}`);
+  assert.match(page, /<details class="ask-run">[\s\S]*?1 put right/, 'a failure put right doesn’t hold the work open');
+  assert.match(page, /class="ask-step is-failed is-fixed" data-tool="change_activity"><details>/);
+  assert.match(page, /It named an activity this course doesn’t have, so nothing changed\./, 'the teacher reads a few plain words');
+  assert.doesNotMatch(page, /No activity goes by/, 'what the model was told to do next isn’t shown');
+
+  const { courses } = await s.ok('GET', 'ask/choices');
+  await s.ok('POST', `courses/${courses[0].code}/archive`, {});
+  await s.ask('Read it again', thread);
+  const told = s.sent.flatMap((body) => body.messages.filter((message) => message.role === 'tool').map((message) => JSON.parse(message.content)));
+  assert.ok(told.some((answer) => /“Old course” is archived/.test(answer.error || '') && /restores it/.test(answer.next || '')), 'an archived course: the teacher reads that it is archived, and the model is told not to try again');
 });
 
 test('a reading step needs its PDF, a step needs what it shows, and six steps is the most', async () => {
@@ -899,11 +1029,12 @@ test('goals as a unit is planned: Ask writes them, adds a check toward them, and
   const told = s.sent.flatMap((body) => body.messages.filter((message) => message.role === 'tool').map((message) => JSON.parse(message.content)));
   const read = told.find((answer) => Array.isArray(answer.goals));
   assert.deepEqual(read.goals.map(({ n, unit }) => [n, unit]), [[1, null], [2, 'Week 1'], [3, 'Week 1']], 'the whole course’s goal first, then the unit’s, numbered across the course');
-  assert.ok(told.some((answer) => /has no goal “no-such-goal”/.test(JSON.stringify(answer))), 'a goal the course hasn’t got is refused with the refs it has');
+  assert.ok(told.some((answer) => /No goal “no-such-goal”.*add-fractions-with-unlike-denominators \(2: /.test(answer.next || '')), 'a goal the course hasn’t got is refused, and the model is told the goals it has');
   assert.equal(events.at(-1).name, 'done');
   const page = await s.page('courses/fractions-period-2');
   assert.match(page, /Fractions check<\/strong><\/a><span class="row-tag">Check<\/span><\/span><span class="v-note">[^<]*Goals 2, 3</);
-  assert.match(page, /<p class="goal-fit">Checked in 1<\/p>/, 'goals only a check names');
+  assert.match(page, /<p class="goal-fit">Checked in <a href="\/console\/courses\/fractions-period-2\/activities\/fractions-check">Fractions check<\/a><\/p>/, 'a goal only a check names says where it is checked, by the check’s name');
+  assert.match(page, /<p class="goal-fit">No activity works toward it yet\.<\/p>/, 'and one nothing names says so, with nothing to press');
   assert.doesNotMatch(page, /Not a goal/, 'nothing is made when a goal is refused');
 
   // The whole list again, one goal gone and one new: the words that stay keep their ref, and the new one never takes the old ref.

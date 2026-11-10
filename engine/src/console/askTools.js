@@ -15,12 +15,14 @@ import { keepable } from './memory.js';
 import { MEMORY_LIMITS, memoryTerms, pickMemories } from '../../../harness/src/memory.js';
 import { normalizeItems } from '../learner/questions.js';
 import { activityIn, withTeaching } from './activity.js';
+import { suggestedFor } from './suggested.js';
 import { changeCourse, courseAt, kindOfActivity } from './course.js';
 import { GOAL_LIMITS, goalsIn, isCheck, setGoals } from './goals.js';
 import { activitiesOf } from './askCards.js';
 import { flowOf, openingFrom, reviewOf, STEP_LIMIT, withSteps } from './flow.js';
 
-const refused = (message) => Object.assign(new Error(message), { status: 400, code: 'invalid_request' });
+// In two parts: what the teacher reads under a step, and what the model is told to do next (next), which only the model gets.
+const refused = (message, next = null) => Object.assign(new Error(message), { status: 400, code: 'invalid_request', ...(next ? { next } : {}) });
 const clean = (value, limit) => String(value ?? '').trim().slice(0, limit);
 
 // A pasted class list shouldn't reach a model: lines that read as names, in any script or case, with or without numbering, an ID or an email.
@@ -129,65 +131,65 @@ const SUMMARY = string('A line about it, on the course’s home: what learners w
 
 const QUESTIONS = {
   type: 'array',
-  description: 'Questions to answer. Write them for these learners, and check each answer yourself. A question only asks: how to work it out, or any part of the answer, goes in its hints, never in the question.',
+  description: 'Questions for these learners; work out each answer yourself. A question only asks: the method and any part of the answer go in hints.',
   items: {
     type: 'object',
     required: ['type', 'prompt'],
     properties: {
-      type: { enum: ['single', 'multiple', 'fill', 'short', 'open'], description: 'single: one right choice. multiple: several right choices. fill: a word or number, checked. short: a short answer, checked if you give accepted answers. open: a longer answer for the teacher to read.' },
-      prompt: string('The question, asking only: no method or part of the answer in it.'),
-      choices: { type: 'array', items: { type: 'string' }, description: 'For single and multiple: every choice, in order.' },
-      right: { type: 'array', items: { type: 'string' }, description: 'For single and multiple: the right choice or choices, word for word.' },
-      accept: { type: 'array', items: { type: 'string' }, description: 'For fill and short: the answers to accept.' },
+      type: { enum: ['single', 'multiple', 'fill', 'short', 'open'], description: 'single or multiple: one or several right choices. fill: a word or number, checked. short: checked against accept if given. open: for the teacher to read.' },
+      prompt: string('The question only.'),
+      choices: { type: 'array', items: { type: 'string' }, description: 'single, multiple: every choice.' },
+      right: { type: 'array', items: { type: 'string' }, description: 'single, multiple: the right ones, word for word.' },
+      accept: { type: 'array', items: { type: 'string' }, description: 'fill, short: answers to accept.' },
       hints: { type: 'array', items: { type: 'string' }, description: 'Up to 5, from a nudge to a bigger hint. Never the answer.' },
-      explanation: string('Why the answer is right, shown after they answer.')
+      explanation: string('Why it is right, shown after.')
     }
   }
 };
 const TEACHING = {
-  role: string('Who the AI is in this activity, when it plays someone: a friendly skeptic, a beginner for them to teach, someone in a scene. For the AI only.'),
+  role: string('Who the AI plays, if anyone: a friendly skeptic, a beginner to teach. For the AI only.'),
   goal: string('What learners should be able to do by the end, in the teacher’s words where you have them.'),
-  help: { enum: HELP, description: 'How much the AI does, from the least to the most; each does what the one before does, and one thing more. check_only (Only checks): what is right and which part to look at again; for their own writing, a quiz, showing what they know. ask_first (Asks questions): also questions that help them find the way, no hints; for discussion and reasoning. hint (Gives hints): also hints, never the answer; for practice on what has been taught. step_up (Shows an example): also, once they have really tried, a worked example with other numbers; the default for most activities. explain (Explains): also explains the idea directly; for something new.' },
-  watch_for: string('What the teacher wants to hear about. For the teacher, never given to the AI.'),
-  speaks_up: { type: 'object', description: 'When the AI writes first, unasked. Off unless the teacher asks for it or the design calls for it: help that comes unasked can also interrupt, and never in a first try or a test. Leave a moment out to keep it off; an empty object turns all off. The page asks only when a moment comes, and the server holds to how often.', properties: {
-    quiet_minutes: { type: 'integer', description: 'Nothing done on a step for this many minutes (2 to 10): it checks in.' },
-    alone_minutes: { type: 'integer', description: 'Working on a step this many minutes (5 to 15) without writing to the AI: it asks how it is going.' },
-    wrong_after: { type: 'integer', description: 'An answer wrong this many times on a question (1 or 2), where learners see right and wrong: it asks how they got theirs.' },
-    right_every: { type: 'integer', description: 'Every this many right answers (1 to 3): it asks why it works.' },
-    writing_words: { type: 'integer', description: 'While writing, about every this many new words (100 to 400), at a pause: it looks at the draft.' },
+  help: { enum: HELP, description: 'How much the AI does, least to most, each adding one thing. check_only: what is right, where to look again (their own writing, a quiz, showing what they know). ask_first: questions to find the way, no hints (discussion, reasoning). hint: hints, never the answer (practice). step_up: after a real try, a worked example with other numbers (the default). explain: explains directly (something new).' },
+  watch_for: string('What the teacher wants to hear about. Never given to the AI.'),
+  speaks_up: { type: 'object', description: 'When the AI writes first, unasked: off unless the teacher or the design asks, never in a first try or a test. A moment left out stays off; {} turns all off.', properties: {
+    quiet_minutes: { type: 'integer', description: 'Checks in after this many idle minutes (2-10).' },
+    alone_minutes: { type: 'integer', description: 'Asks how it goes after this many minutes working alone (5-15).' },
+    wrong_after: { type: 'integer', description: 'After this many wrong answers to a question (1-2), asks how they got theirs.' },
+    right_every: { type: 'integer', description: 'Every this many right answers (1-3), asks why it works.' },
+    writing_words: { type: 'integer', description: 'While writing, about every this many new words (100-400), looks at the draft.' },
     handed_in: { type: 'boolean', description: 'When they hand in writing.' },
-    writing_how: { enum: ['ask', 'point', 'fix'], description: 'On their writing: ask (how it is going, nothing about the text), point (one place to look again, not what is wrong), fix (one or two things to change; they make the change).' },
-    writing_focus: { enum: ['language', 'ideas', 'rubric'], description: 'What a note on their writing is about: spelling and grammar, ideas and structure, or the rubric. Leave out for whatever matters most.' },
-    most: { type: 'integer', description: 'At most this many times in a step each day, 1 to 10. Default 2.' },
-    gap_minutes: { type: 'integer', description: 'At least this many minutes between two, 1 to 30. Default 3.' }
+    writing_how: { enum: ['ask', 'point', 'fix'], description: 'ask: how it is going. point: one place to look again. fix: one or two changes for them to make.' },
+    writing_focus: { enum: ['language', 'ideas', 'rubric'], description: 'What a note on writing is about; leave out for what matters most.' },
+    most: { type: 'integer', description: 'Most times in a step a day (1-10, default 2).' },
+    gap_minutes: { type: 'integer', description: 'Minutes between two (1-30, default 3).' }
   } },
-  reviewer_reads: { enum: ['reply', 'message'], description: 'For an AI with a reviewer: reply (the default) keeps it from reading the learner, so a learner can’t argue with it; message lets it read the learner’s message too, so it holds back fewer good replies, and a learner could write to it. Only when the teacher asks.' }
+  reviewer_reads: { enum: ['reply', 'message'], description: 'Only if the teacher asks. reply (default): the reviewer reads only the AI’s reply. message: the learner’s too, holding back fewer good replies.' }
 };
 
 const STEPS = {
   type: 'array', maxItems: STEP_LIMIT,
-  description: 'What learners do, in order, each step one thing on screen. Write the real content: what you put here is what they read. A step they move on from when they say they’re ready. Replaces what the activity held.',
+  description: 'What learners do, in order, one thing on screen each. What you write is what they read: the real content. Replaces what the activity held.',
   items: {
     type: 'object', required: ['title', 'shows'],
     properties: {
-      title: string('What the step is called, in a few plain words learners will see, such as The case or Your first call.'),
-      shows: { enum: ['page', 'questions', 'writing', 'reading', 'embed'], description: 'page: something to read that you write. questions: questions to answer. writing: something to write. reading: a PDF the teacher added. embed: a web page at an https address.' },
-      text: string('For page: what learners read, in Markdown with short paragraphs, **bold**, lists, > quotes for sources. The whole of the case, the evidence or the task, never a summary of it.'),
+      title: string('A few plain words learners see, such as The case.'),
+      shows: { enum: ['page', 'questions', 'writing', 'reading', 'embed'], description: 'page: text you write. reading: a PDF the teacher added. embed: an https page.' },
+      text: string('page: what learners read, in Markdown (short paragraphs, **bold**, lists, > quotes). The whole case, evidence or task, never a summary.'),
       questions: QUESTIONS,
-      feedback: { enum: ['each', 'end', 'none'], description: 'For questions: when they find out. each: after each answer. none: not here, such as a first call they will come back to.' },
+      feedback: { enum: ['each', 'end', 'none'], description: 'questions: when they find out; none for a first call they come back to.' },
       tries: { type: 'integer', description: 'For questions: tries per question. 1 for a first call.' },
       prompt: string('For writing: what to write, for whom and why.'),
       rubric: { type: 'array', items: { type: 'string' }, description: 'For writing: what makes it good, one point each, as “name: what it means”.' },
       min_words: { type: 'integer' }, max_words: { type: 'integer' },
-      same_writing: { type: 'boolean', description: 'For writing: this goes on with the writing of the step before, draft and all, such as to get feedback on it.' },
+      same_writing: { type: 'boolean', description: 'writing: carries on the draft of the step before.' },
       material: string('For reading: the PDF the teacher added, by its id.'),
       url: string('For embed: its https address, one the teacher gave or a search found.'),
-      ai: { type: 'boolean', description: 'Whether the AI is beside them here. false wherever the first try should be their own. A step you give no ai_does or ai_says has no AI unless this is true.' },
+      ai: { type: 'boolean', description: 'The AI beside them. false where the first try must be theirs. Without ai_does or ai_says, off unless true.' },
       ai_does: string('Where the AI is on: what it does here and what it holds back, for the AI only. Be concrete.'),
       ai_says: string('Where the AI is on: the first thing it says here, to the learner. A question only this step could ask, in a sentence or two.'),
-      starters: { type: 'array', items: { type: 'string' }, description: 'Where the AI is on: up to 3 short things a learner might say, as buttons. Words a learner would use.' },
-      new_chat: { type: 'boolean', description: 'Where the AI is on: this step starts a new conversation. Leave it out when it needs what was said before, such as talking over a scene.' },
-      keep_earlier: { type: 'boolean', description: 'Whether they can go back to the steps before this one, such as to reread the case while they write. They can unless you say false, which is for a test.' }
+      starters: { type: 'array', items: { type: 'string' }, description: 'Up to 3 short things a learner might say, as buttons.' },
+      new_chat: { type: 'boolean', description: 'Starts a new conversation; leave out when it needs what was said before.' },
+      keep_earlier: { type: 'boolean', description: 'They can go back to earlier steps unless false (a test).' }
     }
   }
 };
@@ -230,7 +232,7 @@ export async function knownActivity(here, args) {
   const wanted = String(args.activity);
   const found = list.find((activity) => activity.key === wanted) || list.find((activity) => activity.title.toLowerCase() === wanted.toLowerCase());
   if (found) return found.key;
-  throw refused(`No activity here goes by “${clean(wanted, 60)}”, so nothing changed. This course has: ${list.map((activity) => `${activity.key} (“${clean(activity.title, 60)}”)`).join(', ') || 'none yet'}. An activity’s key stays the same when its title changes.`);
+  throw refused('It named an activity this course doesn’t have, so nothing changed.', `No activity goes by “${clean(wanted, 60)}”. This course has: ${list.map((activity) => `${activity.key} (“${clean(activity.title, 60)}”)`).join(', ') || 'none yet'}. A key stays the same when a title changes.`);
 }
 
 // Whether learners can reach an activity now: for everyone, or for a section of its own.
@@ -335,7 +337,7 @@ function goalsFrom(doc, list) {
   const used = new Set();
   return items.map(({ text, unit }) => {
     const found = unit ? units.find((item) => item.title.toLowerCase() === unit.toLowerCase()) : null;
-    if (unit && !found) throw refused(`This course has no unit “${clean(unit, 80)}”. Its units: ${units.map((item) => `“${item.title}”`).join(', ') || 'none yet'}. Add it with units in the same change, or leave unit out.`);
+    if (unit && !found) throw refused('A goal named a unit this course doesn’t have, so nothing changed.', `No unit “${clean(unit, 80)}”. Its units: ${units.map((item) => `“${item.title}”`).join(', ') || 'none yet'}. Add it with units in the same change, or leave unit out.`);
     let ref = held.find((goal) => sameWords(goal.text, text) && !used.has(goal.ref))?.ref;
     if (!ref) {
       const start = cutWords(slugOf(text, 'goal'), 40);
@@ -346,13 +348,28 @@ function goalsFrom(doc, list) {
     return { ref, text, unit_ref: found?.ref ?? null };
   });
 }
-// An activity's goals as passed, each one the course has, said before anything changes.
+// An activity's goals as passed, each one the course has, said before anything changes: by its ref, its number as the teacher
+// sees it, or its words, since a model that has just written the goals often names them by what they say.
 function goalRefs(doc, refs) {
   if (refs === undefined) return undefined;
   const known = goalsIn(doc);
-  const unknown = (refs || []).filter((ref) => !known.some((goal) => goal.ref === ref));
-  if (unknown.length) throw refused(`This course has no goal “${clean(unknown[0], 60)}”. ${known.length ? `Its goals, by ref: ${known.map((goal) => `${goal.ref} (${goal.n})`).join(', ')}.` : 'It has no goals yet: add them with change_course first.'}`);
-  return [...new Set(refs || [])];
+  const named = (Array.isArray(refs) ? refs : []).map((given) => {
+    const value = String(given ?? '').trim();
+    return known.find((goal) => goal.ref === value)?.ref || (/^\d+$/.test(value) ? known.find((goal) => goal.n === Number(value))?.ref : null) || known.find((goal) => sameWords(goal.text, value))?.ref || { unknown: value };
+  });
+  const unknown = named.find((item) => typeof item === 'object');
+  if (unknown) throw refused('It named a goal this course doesn’t have, so nothing changed.', known.length ? `No goal “${clean(unknown.unknown, 60)}”. Name a goal by its ref, its number or its words. The goals: ${known.map((goal) => `${goal.ref} (${goal.n}: ${clean(goal.text, 60)})`).join('; ')}.` : 'It has no goals yet: add them with change_course first.');
+  return [...new Set(named)];
+}
+// An archived course is in list_courses by name only: reading it says so, instead of a failure to try again.
+async function openCourse(here, given) {
+  try { return await courseAt(here.library, given); } catch (error) {
+    if (error?.status !== 404 || !here.library.archived) throw error;
+    const wanted = String(given ?? '').trim().toUpperCase();
+    const gone = (await here.library.archived().catch(() => [])).find((item) => String(item.code || '').toUpperCase() === wanted);
+    if (gone) throw refused(`“${clean(gone.title, 80)}” is archived.`, 'An archived course can’t be read or changed until the teacher restores it under Archived on Courses. Don’t try again; mention it only if it matters.');
+    throw error;
+  }
 }
 const pageOf = (code, key) => `/console/courses/${code}${key ? `/activities/${key}` : ''}`;
 const READING_LAYOUT = { ai_width: 36, resizable: true, collapsible: true };
@@ -373,7 +390,7 @@ const CHANGE_FIELDS = {
   url: string('For a web page: its https address.'), ai: string('Which AI is beside them, by its name from read_activity, or none for no AI.'), done_when: { enum: ['auto', 'self', 'opened'], description: 'When it counts as done: when its work is finished, when they say so, or when they open it.' },
   material: string('A PDF the teacher added, by its id, to be the reading in this activity.'),
   steps: STEPS, ...OPENING, design: DESIGN,
-  goals: { type: 'array', items: { type: 'string' }, description: 'The course’s goals it works toward, by their refs from read_course: all of them, replacing what it names.' },
+  goals: { type: 'array', items: { type: 'string' }, description: 'The course’s goals it works toward, each by ref, number or words: the whole list.' },
   check: { type: 'boolean', description: 'true: a check, where learners show what they can do for its goals. false: an activity to learn in.' }
 };
 const CHANGE_WORDS = { goals: 'Goals it works toward', check: 'A check', title: 'Title', summary: 'The line about it', minutes: 'Minutes', unit: 'Unit', role: 'Who the AI is here', goal: 'Goal', help: 'How far the AI may go', says: 'What the AI says first', watch_for: 'What you want to hear about', prompt: 'What to write', rubric: 'What makes it good', min_words: 'At least (words)', max_words: 'At most (words)', lock_on_submit: 'Handed in once', feedback: 'When they find out', tries: 'Tries per question', hints: 'They can see the hints', url: 'Its address', ai: 'Which AI', done_when: 'When it counts as done', material: 'The reading', starters: 'What learners can tap to say', speaks_up: 'When the AI writes first', reviewer_reads: 'What its reviewer reads', design: 'Built on' };
@@ -402,7 +419,7 @@ function changeActivity(doc, activity, args, reading = null, readings = new Map(
   if (args.unit !== undefined) {
     const wanted = clean(args.unit, 160).toLowerCase();
     const unit = (doc.course.units || []).find((item) => item.title.toLowerCase() === wanted);
-    if (wanted && !unit) throw refused(`This course has no unit called “${clean(args.unit, 80)}”.`);
+    if (wanted && !unit) throw refused('It named a unit this course doesn’t have, so nothing changed.', `No unit “${clean(args.unit, 80)}”. Its units: ${(doc.course.units || []).map((item) => `“${item.title}”`).join(', ') || 'none yet'}. Add it with change_course, or leave unit out.`);
     activity.unit_ref = unit?.ref ?? null;
   }
   const panel = (type) => activity.workspace?.panels?.find((item) => item.type === type);
@@ -474,10 +491,67 @@ function setLines(after) {
   ].filter(Boolean).join('\n');
 }
 
+// What is chosen for an activity where it has none of its own, for the model and in a step's words.
+const countsOf = (chosen) => ({ misconceptions: chosen.misconceptions.length, guidance: chosen.guidance.length });
+const tookFor = (took) => (took?.misconceptions || took?.guidance ? { chosen_for_it: { misconceptions: took.misconceptions, guidance: took.guidance, note: 'Chosen for it from its goal and how much the AI does, since it has none of its own; each turn takes what fits the moment. They follow its goal and help level, and are on its page. Set your own with set_how_ai_helps only if they don’t fit.' } } : {});
+const tookWords = (took) => [took?.misconceptions ? `Chosen for it: ${plural(took.misconceptions, 'common misconception')} of its goal` : '', took?.guidance ? `Chosen for it: ${plural(took.guidance, 'piece')} of research for how much the AI does` : ''].filter(Boolean).join('\n');
+
+// Guidance pieces Ask chose, by framework and item, as they are kept on an activity.
+async function guidancePieces(list) {
+  if (!Array.isArray(list) || !list.length) return [];
+  const { GUIDANCE } = await import('../../../harness/src/components/guidance.js');
+  return list.flatMap(({ component, item } = {}) => {
+    const framework = GUIDANCE.find((entry) => entry.id === component);
+    return framework && Number.isInteger(item) && item >= 1 && item <= framework.runs.items.length ? guidanceFrom(framework, { chosen: [item] }) : [];
+  });
+}
+// How the AI would help, in the words a teacher reads on a button.
+const howWords = (args, taken) => [
+  ...wordsOf(Object.fromEntries(['goal', 'help', 'watch_for', 'role', 'speaks_up', 'reviewer_reads'].filter((name) => args[name] !== undefined).map((name) => [name, args[name]]))),
+  ...(args.misconceptions?.length ? [`Listen for ${plural(Math.min(8, args.misconceptions.length), 'misconception')}`] : []),
+  ...(args.skill?.code ? [`A skill: ${clean(args.skill.code, 40)}`] : []),
+  ...(taken.length ? [`${plural(taken.length, 'piece')} of guidance from research`] : [])
+];
+// How the AI helps, saved: the settings first, then each misconception and the skill on its own, so one that can't be
+// added doesn't hide what was saved, and both are said.
+async function setHow(here, code, key, args, taken, call) {
+  await changeCourse(here.library, code, null, (draft) => {
+    const held = activityIn(draft, key).activity;
+    const teaching = teachingFrom(args);
+    // What it passes is the list: misconceptions and guidance it names replace those there, suggested or chosen before.
+    if (taken.length) teaching.guidance = taken.slice(0, 20);
+    if (Array.isArray(args.misconceptions) && args.misconceptions.length) teaching.misconceptions = [];
+    if (Object.keys(teaching).length) withTeaching(held, teaching);
+  }, 'How the AI helps, by Ask');
+  const missed = [];
+  for (const id of (args.misconceptions || []).slice(0, 8)) {
+    try { await call('POST', `courses/${code}/activities/${key}/misconceptions`, { id: String(id) }); } catch (error) { missed.push(`a misconception (${clean(id, 60)}): ${error.message}`); }
+  }
+  if (args.skill?.code) {
+    try { await call('POST', `courses/${code}/activities/${key}/standard`, { skill: String(args.skill.code), level: String(args.skill.level ?? 2) }); } catch (error) { missed.push(`the skill ${clean(args.skill.code, 40)}: ${error.message}`); }
+  }
+  const { doc } = await courseAt(here.library, code);
+  const { activity } = activityIn(doc, key);
+  const took = countsOf(suggestedFor(activity.teaching, { on: !here.defaultsAsked }));
+  const after = teachingSettings(activity.teaching);
+  return { done: `Set how the AI helps in “${activity.title}”`, link: { href: pageOf(code, key), label: 'Its page' }, course: code, forModel: { goal: after?.goal ?? null, help: after?.help ?? null, misconceptions: after?.misconceptions?.length ?? 0, guidance: after?.guidance?.length ?? 0, open: false, ...tookFor(took), ...(missed.length ? { not_saved: missed, note: 'The rest was saved. Say what wasn’t, and why.' } : {}) }, detail: [setLines(after), ...missed.map((line) => `Not added: ${line}`)].filter(Boolean).join('\n') };
+}
+
 export const ASK_TOOLS = [
+  // What a longer request comes to, as the teacher would name its parts: shown above the steps, ticked off as they are done.
+  {
+    name: 'plan', tier: 'look', says: () => 'Planning',
+    description: 'For a request with several parts (a week of lessons, several activities): the parts in order, each done or not. Call it first, then again with the parts done marked, alongside your next calls.',
+    parameters: { type: 'object', required: ['parts'], properties: { parts: { type: 'array', maxItems: 12, items: { type: 'object', required: ['text'], properties: { text: string('A part in a few plain words, such as Lesson 2: compare and add.'), done: { type: 'boolean' } } } } } },
+    async run(_here, args) {
+      const parts = (Array.isArray(args.parts) ? args.parts : []).slice(0, 12).map((part) => ({ text: clean(part?.text, 120), done: part?.done === true })).filter((part) => part.text);
+      if (!parts.length) throw refused('The plan had no parts.', 'Give plan its parts, each with text.');
+      return { plan: parts, forModel: { kept: parts.length, done: parts.filter((part) => part.done).length } };
+    }
+  },
   {
     name: 'list_courses', tier: 'look', says: () => 'Looking at your courses',
-    description: 'The courses here, with their addresses and activities, and those archived: what the person made before. Read one with read_course.',
+    description: 'Every course here with its code and activities, and archived ones by name only: they can’t be read until the teacher restores them. Read one with read_course.',
     parameters: { type: 'object', properties: {} },
     async run(here) {
       const courses = await here.library.courses();
@@ -491,7 +565,7 @@ export const ASK_TOOLS = [
     description: 'One course: its units, its goals (what learners will be able to do), sections, how many learners, and each activity with its kind, whether it is open, the goals it works toward, whether it is a check, its own goal and how much the AI does. Names are never in it.',
     parameters: { type: 'object', required: ['course'], properties: { course: COURSE } },
     async run(here, args) {
-      const { code, doc } = await courseAt(here.library, args.course);
+      const { code, doc } = await openCourse(here, args.course);
       const [people, sections, releases] = await Promise.all([here.classes.people(code), here.classes.sections(code), here.classes.releases(code)]);
       return { done: `Read “${doc.course.title}”`, link: { href: pageOf(code), label: 'The course' }, course: code, forModel: { course: code, title: doc.course.title, audience: doc.course.audience ?? null, sign_in: doc.course.identify ?? 'browser', units: (doc.course.units || []).map((unit) => unit.title), goals: goalsFor(doc), sections: sections.map((section) => section.name), learners: people.length, activities: brief(doc, releases, sections) } };
     }
@@ -662,7 +736,7 @@ export const ASK_TOOLS = [
   },
   {
     name: 'add_activity', tier: 'draft', says: (args) => `Adding “${clean(args.title, 80)}”`,
-    description: 'An activity in a course, hidden from learners until the teacher opens it. Give it steps: what learners do, in order, with everything they read written out. kind is for the rare activity that is one thing only: chat is a conversation alone; questions is questions to answer with the AI beside them; writing is a piece of writing with the AI beside it; reading is a PDF the teacher added here, or gives on its page; embed is a web page at an https address.',
+    description: 'A new activity, hidden until the teacher opens it. Give it steps, with everything learners read written out. kind is only for an activity that is one thing: chat (a conversation alone), questions, writing, reading (a PDF the teacher added), embed (an https page).',
     parameters: {
       type: 'object', required: ['course', 'title'],
       properties: {
@@ -681,12 +755,13 @@ export const ASK_TOOLS = [
       const title = clean(args.title, 160);
       // Two activities of one title read as one that was lost: a change belongs on the one that is there.
       const twin = activitiesOf(before).find((item) => item.title.toLowerCase() === title.toLowerCase());
-      if (twin) throw refused(`This course already has “${clean(twin.title, 80)}” (activity: ${twin.key}). To change it, use change_activity, with steps if it needs a new shape. To make another, give it another title.`);
+      if (twin) throw refused(`This course already has “${clean(twin.title, 80)}”, so nothing new was made.`, `It is activity ${twin.key}. To change it, use change_activity, with steps if it needs a new shape. To make another, give it another title.`);
       // A unit that isn't there is said before anything is made, as change_activity says it: the model would otherwise say it is in one.
-      if (args.unit && !(before.course.units || []).some((unit) => unit.title.toLowerCase() === clean(args.unit, 160).toLowerCase())) throw refused(`This course has no unit “${clean(args.unit, 80)}”. Its units: ${(before.course.units || []).map((unit) => `“${unit.title}”`).join(', ') || 'none yet'}. Add it with change_course first, or leave unit out.`);
+      if (args.unit && !(before.course.units || []).some((unit) => unit.title.toLowerCase() === clean(args.unit, 160).toLowerCase())) throw refused('It named a unit this course doesn’t have, so nothing was made.', `No unit “${clean(args.unit, 80)}”. Its units: ${(before.course.units || []).map((unit) => `“${unit.title}”`).join(', ') || 'none yet'}. Add it with change_course first, or leave unit out.`);
       const readings = await readingsOf(here, args.steps);
       const design = await designOf(args.design);
-      goalRefs(before, args.goals);
+      // A goal by its ref, its number or its words: what is kept is the ref.
+      if (args.goals !== undefined) args = { ...args, goals: goalRefs(before, args.goals) };
       // Before anything is made, so a bad question or an empty step leaves no empty activity behind.
       (args.questions || []).forEach((question, index) => questionItem(question, `q${index + 1}`));
       if (stepped) stepsOk(before, title, args.steps, readings);
@@ -713,60 +788,37 @@ export const ASK_TOOLS = [
       }, `Set up ${title} by Ask`);
       const { doc: now } = await courseAt(here.library, code);
       const made = activityIn(now, key).activity;
-      return { done: `Added “${title}”, hidden for now`, link: { href: pageOf(code, key), label: 'Its page' }, course: code, cards: [{ kind: 'activity', course: code, activity: key }, ...(questionsIn(made).length ? [{ kind: 'questions', course: code, activity: key }] : [])], forModel: { course: code, activity: key, open: false, ...reviewFor(now, made) }, detail: stepped ? stepLines(args.steps) : args.questions?.length ? `${args.questions.length} questions:\n${args.questions.map((question, index) => `${index + 1}. ${clean(question.prompt, 200)}`).join('\n')}` : (args.goal ? `Goal: ${clean(args.goal, 300)}` : null) };
-    }
-  },
-  {
-    name: 'add_questions', tier: 'draft', says: (args) => `Adding ${(args.questions || []).length} questions`,
-    description: 'More questions in a questions activity that is still hidden.',
-    parameters: { type: 'object', required: ['course', 'activity', 'questions'], properties: { course: COURSE, activity: ACTIVITY, step: string('Which step’s questions, by its title from read_activity, when more than one step has questions.'), questions: QUESTIONS } },
-    async run(here, args) {
-      const { code } = await courseAt(here.library, args.course);
-      const releases = await here.classes.releases(code);
-      await changeCourse(here.library, code, null, (doc) => {
-        const { activity, list } = activityIn(doc, args.activity);
-        // Anything using these questions counts: this activity, for a section of its own, or another with the same set.
-        const keys = activityKeys(list);
-        const sets = (item) => (item.workspace?.panels || []).filter((panel) => panel.type === 'questions').map((panel) => panel.set_ref);
-        const reached = list.find((item, index) => sets(item).some((set) => sets(activity).includes(set)) && reaches(item, releases[keys[index]]));
-        if (reached) throw refused(`“${reached.title}” is open and uses these questions, so learners would meet new ones at once. Tell the teacher, and let them add questions on its page.`);
-        addQuestions(doc, activity, args.questions || [], args.step);
-      }, 'Added questions by Ask');
-      return { done: `Added ${(args.questions || []).length} questions`, link: { href: pageOf(code, args.activity), label: 'Its page' }, course: code, forModel: { added: (args.questions || []).length }, detail: (args.questions || []).map((question, index) => `${index + 1}. ${clean(question.prompt, 200)}`).join('\n') };
+      // What is chosen for it where it has none of its own (the Harness's defaults.js): said, not stored, so it follows its goal and level.
+      const took = countsOf(suggestedFor(made.teaching, { on: !here.defaultsAsked }));
+      return { done: `Added “${title}”, hidden for now`, link: { href: pageOf(code, key), label: 'Its page' }, course: code, cards: [{ kind: 'activity', course: code, activity: key }, ...(questionsIn(made).length ? [{ kind: 'questions', course: code, activity: key }] : [])], forModel: { course: code, activity: key, open: false, ...tookFor(took), ...reviewFor(now, made) }, detail: [stepped ? stepLines(args.steps) : args.questions?.length ? `${args.questions.length} questions:\n${args.questions.map((question, index) => `${index + 1}. ${clean(question.prompt, 200)}`).join('\n')}` : (args.goal ? `Goal: ${clean(args.goal, 300)}` : null), tookWords(took)].filter(Boolean).join('\n') };
     }
   },
   {
     name: 'set_how_ai_helps', tier: 'draft', says: () => 'Setting how the AI helps',
-    description: 'An activity’s goal, how much the AI does, when it writes first, what its reviewer reads, what the teacher wants to hear about, misconceptions to listen for, a durable skill, and guidance from research, for an activity still hidden. Only what you pass changes.',
+    description: 'How the AI helps in an activity: its goal, how much it does, when it writes first, what its reviewer reads, what the teacher wants to hear about, misconceptions to listen for, a durable skill, and guidance from research. Only what you pass changes. If learners can reach it, the teacher gets a button instead.',
     parameters: {
       type: 'object', required: ['course', 'activity'],
       properties: {
         course: COURSE, activity: ACTIVITY, ...TEACHING,
-        misconceptions: { type: 'array', items: { type: 'string' }, description: 'Up to 8 ids from find_misconceptions that this class is likely to hold.' },
+        misconceptions: { type: 'array', items: { type: 'string' }, description: 'Up to 8 ids from find_misconceptions this class is likely to hold, replacing those it has.' },
         skill: { type: 'object', properties: { code: string('Its code from find_skills.'), level: { type: 'integer', description: '1 to 4: Exploring, Analyzing, Integrating, Extending.' } } },
-        guidance: { type: 'array', items: { type: 'object', properties: { component: string('From find_guidance.'), item: { type: 'integer' } } }, description: 'Pieces from find_guidance that fit this activity. A few well-chosen ones, not all.' }
+        guidance: { type: 'array', items: { type: 'object', properties: { component: string('From find_guidance.'), item: { type: 'integer' } } }, description: 'Pieces from find_guidance that fit this activity, replacing those it has. A few, not all.' }
       }
     },
     async run(here, args, call) {
       const { code, doc } = await courseAt(here.library, args.course);
       const { activity } = activityIn(doc, args.activity);
-      if (reaches(activity, (await here.classes.releases(code))[args.activity])) throw refused(`“${activity.title}” is open, so learners would get this on their next message. Tell the teacher: they can change it on its page, or hide it first.`);
-      const { GUIDANCE } = args.guidance?.length ? await import('../../../harness/src/components/guidance.js') : { GUIDANCE: [] };
-      const taken = (args.guidance || []).flatMap(({ component, item }) => {
-        const framework = GUIDANCE.find((entry) => entry.id === component);
-        return framework && Number.isInteger(item) && item >= 1 && item <= framework.runs.items.length ? guidanceFrom(framework, { chosen: [item] }) : [];
-      });
-      await changeCourse(here.library, code, null, (draft) => {
-        const held = activityIn(draft, args.activity).activity;
-        const teaching = teachingFrom(args);
-        const kept = held.teaching?.guidance || [];
-        if (taken.length) teaching.guidance = [...kept, ...taken.filter((piece) => !kept.some((item) => item.text === piece.text))].slice(0, 20);
-        if (Object.keys(teaching).length) withTeaching(held, teaching);
-      }, 'How the AI helps, by Ask');
-      for (const id of (args.misconceptions || []).slice(0, 8)) await call('POST', `courses/${code}/activities/${args.activity}/misconceptions`, { id: String(id) });
-      if (args.skill?.code) await call('POST', `courses/${code}/activities/${args.activity}/standard`, { skill: String(args.skill.code), level: String(args.skill.level ?? 2) });
-      const after = teachingSettings(activityIn((await courseAt(here.library, code)).doc, args.activity).activity.teaching);
-      return { done: `Set how the AI helps in “${activity.title}”`, link: { href: pageOf(code, args.activity), label: 'Its page' }, course: code, forModel: { goal: after?.goal ?? null, help: after?.help ?? null, misconceptions: after?.misconceptions?.length ?? 0, guidance: after?.guidance?.length ?? 0, open: activity.release !== 'hidden' }, detail: setLines(after) };
+      const taken = await guidancePieces(args.guidance);
+      // Learners would meet it on their next message: a button for the teacher, as a change to what they do is.
+      if (reaches(activity, (await here.classes.releases(code))[args.activity])) {
+        const words = howWords(args, taken);
+        if (!words.length) throw refused('There was nothing to change.', 'Pass what to change.');
+        return { course: code, propose: { card: { kind: 'change', course: code, activity: args.activity, how: args, words, what: `change how the AI helps in the activity ${args.activity}` }, title: activity.title, course: code, says: 'Asking you to change how the AI helps' } };
+      }
+      return setHow(here, code, args.activity, args, taken, call);
+    },
+    async apply(here, card, call) {
+      await setHow(here, card.course, card.activity, card.how, await guidancePieces(card.how.guidance), call);
     }
   },
   {
@@ -808,7 +860,7 @@ export const ASK_TOOLS = [
   },
   {
     name: 'change_activity', tier: 'draft', says: () => 'Changing the activity',
-    description: 'Changes an activity: only what you pass. This is how to give one a new shape: steps replaces what learners do, so a conversation alone can become steps, on the same activity. If learners can reach it, this shows the teacher a button instead, and nothing changes until they press it. For the questions of a step, use change_questions.',
+    description: 'Changes an activity, only what you pass; steps gives it a new shape. If learners can reach it, the teacher gets a button instead. For a step’s questions, use change_questions.',
     parameters: { type: 'object', required: ['course', 'activity'], properties: { course: COURSE, activity: ACTIVITY, ...CHANGE_FIELDS } },
     async run(here, args) {
       if (args.url !== undefined) givenAddress(here, args.url);
@@ -819,7 +871,7 @@ export const ASK_TOOLS = [
       const reading = args.material && here.materials ? await here.materials.forReading(String(args.material)) : null;
       const readings = await readingsOf(here, args.steps);
       const design = await designOf(args.design);
-      goalRefs(doc, args.goals);
+      if (args.goals !== undefined) args = { ...args, goals: goalRefs(doc, args.goals) };
       const words = wordsOf(args, { material: reading?.title, design: design?.label, goals: args.goals && goalsIn(doc).filter((goal) => args.goals.includes(goal.ref)).map((goal) => goal.n).join(', ') });
       if (!words.length) throw refused('Say what to change.');
       // Tried on a copy first, so a bad change is said now and never reaches a button.
@@ -835,7 +887,7 @@ export const ASK_TOOLS = [
   },
   {
     name: 'change_questions', tier: 'draft', says: () => 'Changing the questions',
-    description: 'Adds, rewrites or removes questions in an activity. Read the activity first for their ids. If learners can reach them, this shows the teacher a button instead.',
+    description: 'Adds, rewrites or removes an activity’s questions (read it first for their ids). If learners can reach them, the teacher gets a button instead.',
     parameters: { type: 'object', required: ['course', 'activity'], properties: { course: COURSE, activity: ACTIVITY, step: string('Which step’s questions, by its title from read_activity, when more than one step has questions.'), add: QUESTIONS, replace: { type: 'array', description: 'Questions to rewrite: each whole, with its id.', items: { ...QUESTIONS.items, required: ['id', 'type', 'prompt'], properties: { id: string('Its id, from read_activity.'), ...QUESTIONS.items.properties } } }, remove: { type: 'array', items: { type: 'string' }, description: 'The ids of questions to take out.' } } },
     async run(here, args) {
       const { code, doc } = await courseAt(here.library, args.course);
@@ -868,7 +920,8 @@ export const ASK_TOOLS = [
       const reachable = (doc.course.activities || []).some((activity, index) => reaches(activity, releases[keys[index]]));
       if (reachable) return { course: code, propose: { card: { kind: 'change', course: code, activity: null, course_change: args, words, what: `change the course ${code}` }, title: doc.course.title, course: code, says: 'Asking you to change it' } };
       await ASK_TOOLS.find((tool) => tool.name === 'change_course').apply(here, { course: code, course_change: args }, call);
-      return { done: `Changed “${clean(args.title || doc.course.title, 80)}”`, link: { href: pageOf(code), label: 'The course' }, course: code, forModel: { changed: true }, detail: words.join('\n') };
+      const now = args.goals !== undefined || args.units !== undefined ? (await courseAt(here.library, code)).doc : null;
+      return { done: `Changed “${clean(args.title || doc.course.title, 80)}”`, link: { href: pageOf(code), label: 'The course' }, course: code, forModel: { changed: true, ...(now ? { units: (now.course.units || []).map((unit) => unit.title), goals: goalsFor(now) } : {}) }, detail: words.join('\n') };
     },
     async apply(here, card, call) {
       const args = card.course_change;
@@ -883,14 +936,19 @@ export const ASK_TOOLS = [
     }
   },
   {
-    name: 'copy_activity', tier: 'draft', says: () => 'Copying the activity',
-    description: 'A hidden copy of an activity, right after it in the course, to change into a new one.',
-    parameters: { type: 'object', required: ['course', 'activity'], properties: { course: COURSE, activity: ACTIVITY } },
+    name: 'copy_activity', tier: 'draft', says: (args) => (args.title ? `Making “${clean(args.title, 80)}” from a copy` : 'Copying the activity'),
+    description: 'A hidden copy of an activity, right after it, to change into a new one: give its new title, and its unit, here.',
+    parameters: { type: 'object', required: ['course', 'activity'], properties: { course: COURSE, activity: ACTIVITY, title: ACTIVITY_TITLE, unit: string('Its unit, by title.') } },
     async run(here, args, call) {
-      const { code } = await courseAt(here.library, args.course);
+      const { code, doc } = await courseAt(here.library, args.course);
+      const title = clean(args.title, 160);
+      if (title && activitiesOf(doc).some((item) => item.title.toLowerCase() === title.toLowerCase())) throw refused(`This course already has “${clean(title, 80)}”, so nothing was copied.`, 'Give the copy another title, or change the one that is there.');
+      // Said before the copy is made, so a wrong unit leaves no copy behind.
+      if (args.unit !== undefined && clean(args.unit, 160) && !(doc.course.units || []).some((unit) => unit.title.toLowerCase() === clean(args.unit, 160).toLowerCase())) throw refused('It named a unit this course doesn’t have, so nothing was copied.', `No unit “${clean(args.unit, 80)}”. Its units: ${(doc.course.units || []).map((item) => `“${item.title}”`).join(', ') || 'none yet'}.`);
       const { go } = await call('POST', `courses/${code}/activities/${args.activity}/copy`, {});
       const key = go.split('/').at(-1);
-      return { done: 'Made a copy, hidden for now', link: { href: pageOf(code, key), label: 'Its page' }, course: code, forModel: { activity: key, open: false } };
+      if (title || args.unit !== undefined) await changeCourse(here.library, code, null, (draft) => changeActivity(draft, activityIn(draft, key).activity, { ...(title ? { title } : {}), ...(args.unit !== undefined ? { unit: args.unit } : {}) }), 'Copied by Ask');
+      return { done: title ? `Made “${clean(title, 80)}” from a copy, hidden for now` : 'Made a copy, hidden for now', link: { href: pageOf(code, key), label: 'Its page' }, course: code, forModel: { activity: key, ...(title ? { title } : {}), open: false } };
     }
   },
   {

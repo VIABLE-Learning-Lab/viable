@@ -6,6 +6,8 @@
  */
 import { guidanceFrom } from '../../../harness/src/components/contract.js';
 import { HELP_LADDER, treeHtml } from '../../../harness/src/ui/parts.js';
+import { guidanceFor, misconceptionsFor, suggestedFor } from './suggested.js';
+import { withDefaults } from '../../../harness/src/defaults.js';
 import { sourceName, TRACE_CSS, turnTree } from '../learner/watch.js';
 import { SPEAK_UP } from '../../../harness/src/speakUp.js';
 import { TEACHING_LIMITS, teachingContext, teachingSettings } from '../../../harness/src/utils/teaching.js';
@@ -14,13 +16,34 @@ import { ITEM_TYPES, normalizeItems } from '../learner/questions.js';
 import { activityKeys } from '../server/library.js';
 import { changeCourse, courseAt, kindOfActivity } from './course.js';
 import { addStep, changeStep, flowOf, moveStep, newRef, openingFrom, PANEL_WORDS, removeStep, reviewOf, STEP_LIMIT } from './flow.js';
-import { choose, dropZone, esc, oneOf, say, text, toggle, withForms } from './forms.js';
+import { choose, dropZone, esc, oneOf, plural, say, text, toggle, withForms } from './forms.js';
 import { GOALS_CSS, setGoals, whatForPart } from './goals.js';
 
 // Large data, loaded when a page asks for it, so a server that never opens these starts small.
 const misconceptions = () => import('../../../harness/src/utils/misconceptions.js');
 const skills = () => import('../../../harness/src/utils/skills.js');
 const research = () => import('../../../harness/src/components/guidance.js');
+
+/**
+ * What is chosen for an activity, made the teacher's own for each kind it has none of, so they can remove or add to it: the
+ * page's Change these. Returns how many of each it took.
+ */
+export async function takeSuggested(library, code, key, kinds = ['misconceptions', 'guidance']) {
+  const { doc } = await courseAt(library, code);
+  const teaching = activityIn(doc, key).activity.teaching || {};
+  const mine = (items) => items.map(({ by: _by, ...item }) => item);
+  const take = {
+    misconceptions: kinds.includes('misconceptions') && !teaching.misconceptions?.length ? mine(misconceptionsFor(teaching.goal)) : [],
+    guidance: kinds.includes('guidance') && !teaching.guidance?.length ? mine(guidanceFor(teaching.help)) : []
+  };
+  if (take.misconceptions.length || take.guidance.length) {
+    await changeCourse(library, code, null, (draft) => {
+      const { activity } = activityIn(draft, key);
+      withTeaching(activity, { ...(take.misconceptions.length && !activity.teaching?.misconceptions?.length ? { misconceptions: take.misconceptions } : {}), ...(take.guidance.length && !activity.teaching?.guidance?.length ? { guidance: take.guidance } : {}) });
+    }, 'Took what its goal suggests');
+  }
+  return { misconceptions: take.misconceptions.length, guidance: take.guidance.length };
+}
 const refused = (message, status = 400, code = 'invalid_activity') => Object.assign(new Error(message), { status, code });
 const clean = (value, limit) => String(value ?? '').trim().slice(0, limit);
 // Whose work something is, in a line that opens to the attribution it asks for.
@@ -126,7 +149,7 @@ const onThisForm = (id, markup) => markup.replaceAll('type="radio"', `type="radi
 // What a panel holds, on its step's form. Names are the panel's: a panel can be in more than one step.
 function panelFields(panel, doc, code, activityKey, locked) {
   const name = (field) => `panels.${panel.id}.${field}`;
-  if (panel.type === 'page') return text(name('text'), 'What learners read', panel.text, { rows: Math.min(18, Math.max(6, String(panel.text ?? '').split('\n').length + 2)), maxlength: 12000, placeholder: 'Say what they are doing here, why it matters and how long it takes. Then the case itself: the story, the numbers, the sources.', hint: 'Markdown works: **bold**, lists, > a quote, [a link](https://…). Write the real thing: the case, the numbers, the task.' });
+  if (panel.type === 'page') return text(name('text'), 'What learners read', panel.text, { rows: Math.min(18, Math.max(6, String(panel.text ?? '').split('\n').length + 2)), maxlength: 12000, 'data-rich': true, placeholder: 'Say what they are doing here, why it matters and how long it takes. Then the case itself: the story, the numbers, the sources.', hint: 'Write the real thing, as they will read it: the case, the numbers, the task.' });
   if (panel.type === 'writing') return `${text(name('prompt'), 'What to write', panel.prompt, { rows: 4, maxlength: 8000 })}
 <div class="fields two">${text(name('min_words'), 'At least (words)', panel.min_words ?? '', { type: 'number', min: 1 })}${text(name('max_words'), 'At most (words)', panel.max_words ?? '', { type: 'number', min: 1 })}</div>
 ${text(name('rubric_lines'), 'What makes it good', (panel.rubric || []).map((row) => `${row.criterion}${row.description ? `: ${row.description}` : ''}`).join('\n'), { rows: 3, hint: 'One per line: a name, a colon, what it means. Learners see these, and so does the AI.' })}
@@ -272,7 +295,7 @@ function standardBlock(activity, api, locked) {
   const shown = chosen ? `<div class="chosen"><div><strong>${esc(chosen.code || (chosen.kind === 'skill' ? 'Skill' : 'Standard'))}${chosen.level?.name ? ` · ${esc(chosen.level.name)}` : ''}</strong><p>${esc(chosen.description)}</p>${credits([chosen.source])}</div>${locked ? '' : `<button class="v-btn is-small" type="button" data-api="DELETE ${api}/standard" aria-label="Remove the standard or skill">Remove</button>`}</div>` : '';
   return `<div class="part" id="standard" data-say-box>
 <h3>Standard or skill <small>optional</small></h3>
-${shown || `<p class="v-note">Collaboration, communication or critical thinking, from the Carnegie Skills Progressions. If you choose one, the AI gets its words, and what a learner at that level does, with each message.</p>
+${shown || `<p class="v-note">Only when you want the AI to work on one with learners: collaboration, communication or critical thinking, from the Carnegie Skills Progressions. It is never chosen for you. The AI then gets its words, and what a learner at that level does.</p>
 <form class="find" id="find-skill" data-search="${api}/find-skill" data-into="skills-found">
 <label class="sr" for="skill-q">Search durable skills</label><input class="v-input" id="skill-q" name="q" type="search" placeholder="A durable skill, such as evidence or feedback" autocomplete="off">
 <label class="sr" for="skill-level">Level learners work toward</label><select class="v-input" id="skill-level" name="level">${SKILL_LEVELS.map((name, index) => `<option value="${index + 1}"${index === 1 ? ' selected' : ''}>${name}</option>`).join('')}</select>
@@ -297,21 +320,27 @@ ${frameworks.map((framework) => `<details class="framework" id="g-${esc(framewor
 <ul class="picked">${framework.runs.items.map(piece(framework)).join('')}</ul>
 </details>`).join('')}`;
 }
-function guidanceBlock(activity, api, locked) {
+function guidanceBlock(activity, api, locked, suggested = []) {
   const chosen = activity.teaching?.guidance || [];
+  const whole = activity.teaching?.turn_brief === false;
+  const level = HELP_LADDER.find((item) => item.id === activity.teaching?.help)?.name;
   return `<div class="part" id="guidance" data-say-box>
-<h3>Guidance from research <small>optional · with each message it gets at most two pieces that fit the moment</small></h3>
-${chosen.length ? `<ul class="picked">${chosen.map((item, index) => `<li><div><p>${esc(item.text)}</p>${credit(item.source, item.attribution)}</div>${locked ? '' : `<button class="v-btn is-small" type="button" data-api="DELETE ${api}/guidance/${index}" data-said="Removed.">Remove</button>`}</li>`).join('')}</ul>` : ''}
+<h3>Guidance from research <small>optional · ${whole ? 'all of it goes with every message' : 'each message gets the ones that fit the moment, two at most'}</small></h3>
+${chosen.length ? `<ul class="picked">${chosen.map((item, index) => `<li><div><p>${esc(item.text)}</p>${credit(item.source, item.attribution)}</div>${locked ? '' : `<button class="v-btn is-small" type="button" data-api="DELETE ${api}/guidance/${index}" data-said="Removed.">Remove</button>`}</li>`).join('')}</ul>`
+    : suggested.length ? `<div class="suggested"><p class="v-note">Chosen for you, for “${esc(level)}”: ${whole ? 'the AI gets all of these with every message' : 'each message gets the ones that fit the moment'}. Choose your own to use those instead.</p><ul class="picked">${suggested.map((item) => `<li><div><p>${esc(item.text)}</p>${credit(item.source, item.attribution)}</div></li>`).join('')}</ul>${locked ? '' : `<div class="actions"><button class="v-btn is-small" type="button" data-api="POST ${api}/guidance/suggested" data-busy="Copying…" data-said="They’re yours now: remove any, or add more.">Change these</button></div>`}</div>`
+    : `<p class="v-note">None chosen${activity.teaching?.defaults === false ? ', and nothing is chosen for you' : ''}, so the AI gets none.${activity.teaching?.help || activity.teaching?.defaults === false ? '' : ' Choose how much the AI does, and some are chosen for you.'}</p>`}
 ${locked ? '' : `<details class="library" id="guidance-library" data-load="${api}/guidance-library"><summary>${chosen.length ? 'Choose more' : 'Choose from what research says'}</summary><div data-loaded></div></details>`}
 ${say()}
 </div>`;
 };
 
-function misconceptionsBlock(activity, api, locked) {
+function misconceptionsBlock(activity, api, locked, suggested = []) {
   const chosen = activity.teaching?.misconceptions || [];
   return `<div class="part" id="misconceptions" data-say-box>
 <h3>Misconceptions to listen for <small>optional · for math</small></h3>
-${chosen.length ? `<ul class="picked">${chosen.map((item) => `<li><p>${esc(item.description)}<small>${esc(item.construct?.description)}</small></p>${locked ? '' : `<button class="v-btn is-small" type="button" data-api="DELETE ${api}/misconceptions/${esc(item.id)}" aria-label="Remove “${esc(item.description)}”">Remove</button>`}</li>`).join('')}</ul>` : '<p class="v-note">The AI gets the one that fits what a learner just did, on the turn it fits.</p>'}
+${chosen.length ? `<p class="v-note">Your own: the AI listens for these, and only these.</p><ul class="picked">${chosen.map((item) => `<li><p>${esc(item.description)}<small>${esc(item.construct?.description)}</small></p>${locked ? '' : `<button class="v-btn is-small" type="button" data-api="DELETE ${api}/misconceptions/${esc(item.id)}" aria-label="Remove “${esc(item.description)}”">Remove</button>`}</li>`).join('')}</ul>`
+    : suggested.length ? `<div class="suggested"><p class="v-note">Chosen for you, the common ones for your goal: the AI listens for them when a learner has tried something. Choose your own to use those instead.</p><ul class="picked">${suggested.map((item) => `<li><p>${esc(item.description)}<small>${esc(item.construct?.description)}</small></p></li>`).join('')}</ul>${locked ? '' : `<div class="actions"><button class="v-btn is-small" type="button" data-api="POST ${api}/misconceptions/suggested" data-busy="Copying…" data-said="They’re yours now: remove any, or add more.">Change these</button></div>`}</div>`
+    : `<p class="v-note">None chosen${activity.teaching?.defaults === false ? ', and nothing is chosen for you' : ''}, so the AI listens for none.${activity.teaching?.goal || activity.teaching?.defaults === false ? '' : ' Set a goal above, and the common ones for it are chosen for you.'}</p>`}
 ${locked || chosen.length >= 8 ? '' : `<form class="find" id="find-misconception" data-search="${api}/find-misconception" data-into="misconceptions-found">
 <label class="sr" for="misconception-q">Search misconceptions by words</label><input class="v-input" id="misconception-q" name="q" type="search" placeholder="Words, such as adding fractions" autocomplete="off">
 <button class="v-btn is-small" type="submit">Find</button>
@@ -339,13 +368,13 @@ ${choose(`teaching.sections.${section.id}.speaks`, 'When the AI writes first', s
 </div>`).join('')}</details>`;
 }
 
-const readsBlock = (activity, api, sections, steps) => {
-  const taught = teachingContext(activity.teaching);
+const readsBlock = (activity, api, sections, steps, { on = true } = {}) => {
+  const taught = teachingContext(withDefaults(activity.teaching, { on }));
   const speaks = Object.keys(SPEAK_UP).filter((kind) => activity.teaching?.speaks_up?.[kind]);
   const own = sections.filter((section) => activity.teaching?.sections?.[section.id]);
   return `<aside class="reads" aria-labelledby="reads-title">
 <h2 id="reads-title">What the AI is told</h2>
-<p class="v-note">Your settings here, in the words the AI gets with every message. You don’t edit it: change a setting and it changes too, before you save.</p>
+<p class="v-note">${activity.teaching?.turn_brief === false ? 'Your settings here, in the words the AI gets with every message.' : 'Your settings here, in the words the AI gets. Each message gets your goal and how far to go, and only the parts of the rest that fit the moment: try one below.'} You don’t edit it: change a setting and it changes too, before you save.</p>
 <pre class="said" id="reads-now" data-reads="${api}/reads" aria-live="polite">${esc(taught?.text || 'Nothing yet: set a goal or how much the AI does.')}</pre>
 ${steps.filter((step) => step.has_ai && (step.brief || step.says)).map((step, index) => `<details class="for-group" id="reads-step-${index}"><summary>And in “${esc(step.title)}”</summary><pre class="said">${esc([step.brief ? `In this step: ${step.brief}` : '', step.says ? `You began this step by saying: “${step.says}”` : ''].filter(Boolean).join('\n'))}</pre></details>`).join('')}
 ${own.map((section) => `<details class="for-group"><summary>For ${esc(section.name)}</summary><pre class="said">${esc(teachingContext(activity.teaching, section.id)?.text || '')}</pre></details>`).join('')}
@@ -360,13 +389,14 @@ ${own.map((section) => `<details class="for-group"><summary>For ${esc(section.na
 };
 
 // What fewer teachers need, in one place that says what is set inside it: the rest of what reaches the AI, and what reaches the teacher.
-function moreForTheAi({ activity, api, locked, sections, code, tools, off, hears, reads, simple, onForm, steps = [] }) {
+function moreForTheAi({ activity, api, locked, sections, code, tools, off, hears, reads, simple, onForm, steps = [], suggested = { misconceptions: [], guidance: [] }, chooses = true }) {
   const t = activity.teaching || {};
   const count = (n, one, many) => (n ? `${n} ${n === 1 ? one : many}` : '');
   const set = [t.standard ? (t.standard.code || (t.standard.kind === 'skill' ? 'a skill' : 'a standard')) : '', count(t.misconceptions?.length, 'misconception', 'misconceptions'), count(t.guidance?.length, 'piece of research', 'pieces of research'), count(Object.keys(t.sections || {}).length, 'section of its own', 'sections of their own'), count(off.length, 'tool off', 'tools off'), t.turn_brief === false ? 'every setting with every message' : '', t.watch_for ? 'something to hear about' : ''].filter(Boolean);
-  return `<details class="more-ai" id="more-ai"${set.length ? ' data-set' : ''}><summary><strong>More ways to shape the AI</strong><small>${set.length ? `Set here: ${esc(set.join(', '))}` : 'A standard or skill, misconceptions, research, a section of its own, what it may use'}</small></summary>
+  return `<details class="more-ai" id="more-ai"${set.length ? ' data-set' : ''}><summary><strong>More ways to shape the AI</strong><small>${set.length ? `Set here: ${esc(set.join(', '))}` : suggested.misconceptions.length || suggested.guidance.length ? `Chosen for you: ${esc([suggested.misconceptions.length ? plural(suggested.misconceptions.length, 'common misconception') : '', suggested.guidance.length ? plural(suggested.guidance.length, 'piece') + ' of research' : ''].filter(Boolean).join(' and '))}` : 'A standard or skill, misconceptions, research, a section of its own, what it may use'}</small></summary>
 <div class="fields">
 ${onForm(toggle('teaching.turn_brief', 'Give the AI only what each moment needs', t.turn_brief !== false, { hint: 'It reads what the learner just did, then gets your goal and limit, a teaching move, and only the parts of your settings this message calls for. Off, it gets all of them with every message.' }))}
+${onForm(toggle('teaching.defaults', 'Choose for me where I choose none', chooses, { hint: 'Common misconceptions for your goal, and research that suits how much the AI does, each shown below. Off, the AI gets only what you choose.' }))}
 ${text('teaching.watch_for', 'What you want to hear about', t.watch_for, { rows: 2, maxlength: 500, form: FORM, hint: 'For you, in Progress. It is never sent to the AI.' })}
 ${sectionsBlock(activity, sections, code, steps)}
 ${tools.length ? `<fieldset class="one-of"><legend class="v-label">What the AI may not use here</legend><div class="tools">${tools.map((name) => onForm(toggle('teaching.tools_off', TOOL_WORDS[name], off.includes(name), { value: name }))).join('')}</div></fieldset>` : ''}
@@ -377,12 +407,12 @@ ${onForm(toggle('files_on', 'Attach PDFs', Boolean(reads.files) && activity.atta
 </div></fieldset>`}
 </div>
 ${standardBlock(activity, api, locked)}
-${misconceptionsBlock(activity, api, locked)}
-${guidanceBlock(activity, api, locked)}
+${misconceptionsBlock(activity, api, locked, suggested.misconceptions)}
+${guidanceBlock(activity, api, locked, suggested.guidance)}
 </details>`;
 }
 
-async function activityBody({ library, classes, records, settings, origin, simple, url, agentPage }, match) {
+async function activityBody({ library, classes, records, settings, origin, simple, url, agentPage, defaultsAsked = false }, match) {
   const entry = await courseAt(library, match[1]);
   const { doc, meta, code } = entry;
   const found = activityIn(doc, match[2]);
@@ -434,11 +464,11 @@ ${choose('agent_ref', 'Which AI', activity.agent_ref ?? '', [...(kind === 'chat'
 ${aiFlowPart(agent, agent ? (simple ? agentPage?.(agent.ref) : `/console/agents/${(agents.find((item) => item.ref === agent.ref) || {}).slug || agent.ref}`) : null, simple)}
 ${reviewerPart(agent, activity, onForm)}
 </div>
-${agent ? moreForTheAi({ activity, api, locked, sections, code, tools, off, hears, reads, simple, onForm, steps: flowOf(doc, activity) }) : ''}
+${agent ? moreForTheAi({ activity, api, locked, sections, code, tools, off, hears, reads, simple, onForm, steps: flowOf(doc, activity), suggested: suggestedFor(activity.teaching, { on: !defaultsAsked }), chooses: defaultsAsked ? activity.teaching?.defaults === true : activity.teaching?.defaults !== false }) : ''}
 </section>
 ${records?.tried && agent ? `<details class="block tried" id="tried" data-load="${api}/tried"><summary><strong>What the AI did in your tries</strong><small>Each message you sent with Try it, with what the Harness read, each draft and what the reviewer said. Kept with the run, so it is here in any browser.</small></summary><div data-loaded><p class="v-note">Loading…</p></div></details>` : ''}
 </div>
-<div class="beside">${readsBlock(activity, api, sections, flowOf(doc, activity))}</div>
+<div class="beside">${readsBlock(activity, api, sections, flowOf(doc, activity), { on: !defaultsAsked })}</div>
 </div>
 </div>
 <div class="act-panel narrow" id="tab-details" role="tabpanel" aria-labelledby="tab-btn-details" hidden>
@@ -872,7 +902,7 @@ function applyForm(activity, body, doc) {
     return [id, { help: entry.help, note: entry.note, ...(speaks ? { speaks_up: speaks } : {}) }];
   }));
   const reviewer = teaching.reviewer_reads === undefined ? activity.teaching?.reviewer_reads : teaching.reviewer_reads;
-  withTeaching(activity, { ...(teaching.role !== undefined ? { role: teaching.role } : {}), ...(teaching.goal !== undefined ? { goal: teaching.goal } : {}), help: teaching.help === undefined ? activity.teaching?.help ?? null : teaching.help || null, ...(teaching.watch_for !== undefined ? { watch_for: teaching.watch_for } : {}), tools_off: teaching.tools_off ?? activity.teaching?.tools_off ?? [], turn_brief: teaching.turn_brief === false ? false : undefined, ...(sections ? { sections } : {}), speaks_up: speaksUp || null, reviewer_reads: reviewer || null });
+  withTeaching(activity, { ...(teaching.role !== undefined ? { role: teaching.role } : {}), ...(teaching.goal !== undefined ? { goal: teaching.goal } : {}), help: teaching.help === undefined ? activity.teaching?.help ?? null : teaching.help || null, ...(teaching.watch_for !== undefined ? { watch_for: teaching.watch_for } : {}), tools_off: teaching.tools_off ?? activity.teaching?.tools_off ?? [], turn_brief: teaching.turn_brief === false ? false : undefined, defaults: teaching.defaults === false ? false : undefined, ...(sections ? { sections } : {}), speaks_up: speaksUp || null, reviewer_reads: reviewer || null });
   if (body.voice_on !== undefined) activity.voice = { ...activity.voice, input: body.voice_on };
   if (body.images_on !== undefined || body.files_on !== undefined) activity.attachments = { ...activity.attachments, ...(body.images_on !== undefined ? { images: body.images_on } : {}), ...(body.files_on !== undefined ? { files: body.files_on } : {}) };
   const opens = body.release === 'scheduled' ? body.opens_at : null;
@@ -1030,10 +1060,10 @@ export const activityPages = [
         return { said: 'Saved.' };
       }],
       // What the AI would read with this goal, limit and role: for the page to follow what is being typed. Nothing is saved or called.
-      ['POST', /^courses\/([\w-]+)\/activities\/([\w-]+)\/reads$/, async ({ library }, match, body) => {
+      ['POST', /^courses\/([\w-]+)\/activities\/([\w-]+)\/reads$/, async ({ library, defaultsAsked = false }, match, body) => {
         const { doc } = await courseAt(library, match[1]);
         const { activity } = activityIn(doc, match[2]);
-        const taught = teachingContext({ ...activity.teaching, goal: clean(body?.goal, TEACHING_LIMITS.goal), role: clean(body?.role, TEACHING_LIMITS.role), help: body?.help || null });
+        const taught = teachingContext(withDefaults({ ...activity.teaching, goal: clean(body?.goal, TEACHING_LIMITS.goal), role: clean(body?.role, TEACHING_LIMITS.role), help: body?.help || null }, { on: !defaultsAsked }));
         return { text: taught?.text || 'Nothing yet: set a goal or how much the AI does.' };
       }],
       ['POST', /^courses\/([\w-]+)\/activities\/([\w-]+)\/misconceptions$/, async ({ library }, match, body) => {
@@ -1045,6 +1075,11 @@ export const activityPages = [
       ['DELETE', /^courses\/([\w-]+)\/activities\/([\w-]+)\/misconceptions\/([\w-]+)$/, async ({ library }, match) => {
         await changeCourse(library, match[1], null, (doc) => { const { activity } = activityIn(doc, match[2]); withTeaching(activity, { misconceptions: (activity.teaching?.misconceptions || []).filter((item) => item.id !== match[3]) }); }, 'Removed a misconception');
         return { said: 'Removed.' };
+      }],
+      ['POST', /^courses\/([\w-]+)\/activities\/([\w-]+)\/(misconceptions|guidance)\/suggested$/, async ({ library }, match) => {
+        const took = await takeSuggested(library, match[1], match[2], [match[3]]);
+        if (!took[match[3]]) throw refused(match[3] === 'misconceptions' ? 'Nothing is chosen for this goal now. Search by a few words instead.' : 'Nothing is chosen now: choose how much the AI does first.');
+        return { said: 'They’re yours now: remove any, or add more.' };
       }],
       ['GET', /^courses\/([\w-]+)\/activities\/([\w-]+)\/guidance-library$/, async ({ library }, match) => {
         const { doc, code } = await courseAt(library, match[1]);
@@ -1108,7 +1143,7 @@ export const activityPages = [
         };
         return { html: `<ol class="tried-list">${turns.reverse().map((turn, index) => `<li>${treeHtml(turnTree(turn.events, { fold: true, open: index === 0 }))}${tellAsk(turn.events)}</li>`).join('')}</ol>` };
       }],
-      ['GET', /^courses\/([\w-]+)\/activities\/([\w-]+)\/brief$/, async ({ library, url }, match) => {
+      ['GET', /^courses\/([\w-]+)\/activities\/([\w-]+)\/brief$/, async ({ library, url, defaultsAsked = false }, match) => {
         const { doc } = await courseAt(library, match[1]);
         const { activity } = activityIn(doc, match[2]);
         const message = clean(url.searchParams.get('message'), 1000);
@@ -1116,7 +1151,7 @@ export const activityPages = [
         const event = Object.hasOwn(SPEAK_UP, url.searchParams.get('event') || '') ? url.searchParams.get('event') : null;
         if (!message && !event) return { html: '<p class="v-note">Type something first.</p>' };
         const { turnBrief } = await import('../../../harness/src/brief.js');
-        const brief = await turnBrief(activity.teaching, { message: event ? '' : message, event });
+        const brief = await turnBrief(withDefaults(activity.teaching, { on: !defaultsAsked }), { message: event ? '' : message, event });
         if (!brief) return { html: '<p class="v-note">Nothing is set yet, so the AI would get only its own instructions.</p>' };
         return { html: `<p class="moment-read">${esc(MOMENT_WORDS[brief.moment] || brief.moment)}</p><pre class="said">${esc(brief.text)}</pre>` };
       }]

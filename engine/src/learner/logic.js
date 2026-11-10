@@ -104,7 +104,11 @@ export function embedPage(value, site) {
  * The reply to a message: its text with [n] markers, sources, pictures and audio at https addresses.
  * ownMedia: the origin of a host that keeps them at its own /media/ (server/learner.js).
  */
-export function chatReply({ output: raw, conversationId, runId, stale = false, transcript = null, heard = false, ownMedia = null }) {
+/** Whether a run's reply is one no review passed: a review step ran out of tries (or couldn't run), so a fallback was said. */
+export const uncheckedIn = (steps) => (steps || []).some((step) => step?.nodeType === 'vetting' && step?.output?.outcome === 'unverified');
+
+// unchecked: the reply is a fallback no review passed, so the page doesn't say the answer was checked.
+export function chatReply({ output: raw, conversationId, runId, stale = false, transcript = null, heard = false, ownMedia = null, unchecked = false }) {
   const output = deliverOutput(raw, 'none');
   const shown = (type, most) => (output.attachments || []).filter((item) => item?.type === type).map((item) => String(item.url || '')).map((url) => (/^https:\/\//i.test(url) ? url : ownMedia && url.startsWith('/media/') ? `${ownMedia}${url}` : null)).filter(Boolean).slice(0, most).map((url) => ({ url }));
   return {
@@ -119,7 +123,8 @@ export function chatReply({ output: raw, conversationId, runId, stale = false, t
       citations: (output.citations || []).map((item) => ({ index: item.index, title: item.title || null, url: item.link || item.url || null, ...(item.page ? { page: item.page } : {}) })),
       images: shown('image', 4),
       audio: shown('audio', 2),
-      ...(output.awaiting_input ? { awaiting_input: true } : {})
+      ...(output.awaiting_input ? { awaiting_input: true } : {}),
+      ...(unchecked ? { unchecked: true } : {})
     }
   };
 }

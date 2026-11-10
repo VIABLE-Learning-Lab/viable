@@ -6,7 +6,6 @@
  * what is chosen but can't write instructions into it. It is off unless a host asks for it.
  */
 import { readJsonAnswer } from './agentTests.js';
-import { findMisconceptions } from './utils/misconceptions.js';
 import { MISCONCEPTIONS_SOURCE } from './utils/misconceptionsSource.js';
 import { teachingContext } from './utils/teaching.js';
 import { searchTerms } from './utils/terms.js';
@@ -54,18 +53,14 @@ export function readMoment(message, history = []) {
 
 const unique = (items) => [...new Map(items.map((item) => [item.id, item])).values()];
 
-// What could be chosen: the teacher's choices first, then what Eedi's graph holds for the goal and
-// standard, then for the learner's own words (searched here, sent nowhere). Each keeps where it came from,
-// so whoever reads the turn sees whose work went in.
-function candidatesOf(settings, message, extra = []) {
+// What could be chosen: what the teacher chose, or where they chose none what is chosen for them from the goal and how much
+// the AI does (defaults.js, applied where a host hands the settings to a run), and what a host adds. Nothing is looked up from the learner's words: matched that way, a misconception was right on 4 turns
+// of 19 (docs/evidence.md), so the list a teacher can see is the whole list. Each keeps where it came from.
+function candidatesOf(settings, _message, extra = []) {
   const standard = settings.standard;
-  const chosen = (settings.misconceptions || []).map((item) => ({ id: item.id, description: item.description, from: 'teacher', source: item.source || MISCONCEPTIONS_SOURCE }));
-  // Eedi's graph is mathematics only, so a standard in another subject doesn't search it.
-  const words = standard && !/math/i.test(standard.subject || '') ? '' : [settings.goal, standard?.description, ...(standard?.learning_components || []).map((item) => item.description)].filter(Boolean).join(' ').slice(0, 4000);
-  const search = (text) => (searchTerms(text).length ? findMisconceptions(text).data.flatMap((construct) => construct.misconceptions) : []);
-  const found = [...search(words), ...(standard && !/math/i.test(standard.subject || '') ? [] : search(message.slice(0, BRIEF_LIMITS.messageChars)))];
+  const chosen = (settings.misconceptions || []).map((item) => ({ id: item.id, description: item.description, from: item.by === 'default' ? 'default' : 'teacher', source: item.source || MISCONCEPTIONS_SOURCE }));
   return {
-    misconceptions: unique([...chosen, ...extra.map((item) => ({ id: item.id, description: item.description, from: item.from ?? 'host', ...(item.source ? { source: item.source } : {}) })), ...found.map((item) => ({ id: item.id, description: item.description, from: 'graph', source: MISCONCEPTIONS_SOURCE }))]).slice(0, BRIEF_LIMITS.candidates),
+    misconceptions: unique([...chosen, ...extra.map((item) => ({ id: item.id, description: item.description, from: item.from ?? 'host', ...(item.source ? { source: item.source } : {}) }))]).slice(0, BRIEF_LIMITS.candidates),
     components: (standard?.learning_components || []).map((item) => ({ id: item.id, description: item.description, ...(standard.source ? { source: standard.source } : {}) })),
     prior: (standard?.prior || []).map((item) => ({ id: item.uuid, description: item.description, ...(standard.source ? { source: standard.source } : {}) })),
     guidance: settings.guidance || []
@@ -100,7 +95,9 @@ function pickByWords(candidates, message, history, goal) {
   const moment = readMoment(message, history);
   return {
     moment,
-    misconceptions: byWords(candidates.misconceptions, terms, BRIEF_LIMITS.misconceptions),
+    // Once they have tried something (an answer, or again), what the teacher listed and no word points at still goes, a few at a
+    // time, told only if it fits what they did. Asking for the answer, or stuck before trying, has nothing of theirs to fit.
+    misconceptions: ((matched) => (matched.length || !['attempt', 'repeated'].includes(moment) ? matched : candidates.misconceptions.slice(0, BRIEF_LIMITS.misconceptions)))(byWords(candidates.misconceptions, terms, BRIEF_LIMITS.misconceptions)),
     components: byWords(candidates.components, terms, BRIEF_LIMITS.components),
     prior: [],
     guidance: guidanceFor(candidates.guidance, moment, terms, goal, Math.floor(history.length / 2))
