@@ -34,6 +34,13 @@ test('the rules read held-out messages, and review finds held-out problems, at l
   for (const row of scored.review) assert.equal(row.extra, 0, 'review points at nothing that wasn’t planted');
 });
 
+test('the cases go with both packages, so the command works wherever it is installed', () => {
+  for (const file of ['../package.json', '../../package.json']) {
+    const { files } = JSON.parse(readFileSync(new URL(file, import.meta.url), 'utf8'));
+    assert.ok(files.includes('scorecard') || files.includes('harness/scorecard'), `${file} leaves the scorecard's cases out of what it packs`);
+  }
+});
+
 test('both halves of each set are the same size for every label, so neither is the easier one', () => {
   const moments = JSON.parse(readFileSync(new URL('../scorecard/learner-moments.json', import.meta.url), 'utf8'));
   for (const language of ['en', 'es', 'zh']) for (const label of moments.labels) {

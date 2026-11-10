@@ -31,6 +31,7 @@
     "harness/src",
     "harness/schemas",
     "harness/conformance",
+    "harness/scorecard",
     "harness/skills",
     "harness/docs",
     "harness/README.md",
