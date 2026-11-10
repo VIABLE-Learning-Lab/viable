@@ -513,7 +513,7 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
       const { state } = await stateFor(activity, learner);
       if (state === 'upcoming') throw pageError('This activity hasn’t opened yet.', 403, 'activity_not_open');
       if (state === 'closed') throw pageError('This activity has closed. Ask your teacher if you need more time.', 403, 'activity_closed');
-      if (state !== 'open') throw pageError('This activity isn’t open for your class yet.', 403, 'activity_not_open');
+      if (state !== 'open') throw pageError('This activity isn’t open for your class right now.', 403, 'activity_not_open');
     };
     const progressOf = (activity, learner) => store.get(keys.progress(activity.code, learner.id, activity.key));
     const stepOf = async (activity, learner) => {
@@ -1238,7 +1238,7 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
         const someone = state.state !== 'open' && own.some((override) => releaseState(activity, { override, now: now() }).state === 'open');
         if (state.state !== 'open' && !someone) {
           const at = (iso) => new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: course.doc.course.time_zone || 'UTC', timeZoneName: 'short' });
-          const text = state.state === 'upcoming' ? `“${activity.title}” opens ${at(state.opens_at)}.` : state.state === 'closed' ? `“${activity.title}” closed ${at(state.closes_at)}. Ask your teacher if you need more time.` : `“${activity.title}” isn’t open yet. Your teacher will open it when it’s time.`;
+          const text = state.state === 'upcoming' ? `“${activity.title}” opens ${at(state.opens_at)}.` : state.state === 'closed' ? `“${activity.title}” closed ${at(state.closes_at)}. Ask your teacher if you need more time.` : `“${activity.title}” isn’t open right now. Your teacher will open it when it’s time.`;
           return unavailable('Not open', text, 200, { back: { href: `/course/${code}`, label: `Back to ${course.title}` }, color: activity.settings.color, look: activity.settings.course_theme });
         }
         // Who's asking isn't known yet on this page, so one that isn't for everyone holds nothing of its panels but their names.

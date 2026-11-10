@@ -36,13 +36,14 @@ export function questions(panel, api) {
   const drafted = (item) => { if (!drafts.has(item.id)) return false; const value = drafts.get(item.id); return Array.isArray(value) ? value.some((part) => part != null && String(part).trim() !== '') && !(item.type === 'order' && value.join() === item.choices.map((c) => c.id).join()) : value != null && String(typeof value === 'object' ? 'x' : value).trim() !== ''; };
   const sentWord = (item) => (panel.feedback === 'each' && item.gradable ? 'checked' : 'sent');
   const where = el('div', 'ws-q-where');
+  where.setAttribute('aria-live', 'polite');
   const progress = el('div', 'ws-progress');
   progress.setAttribute('role', 'group');
   progress.setAttribute('aria-label', 'Questions');
   head.append(where, progress);
   const card = el('section', 'ws-card ws-qcard');
   const bar = el('footer', 'ws-foot ws-qbar');
-  const prev = button('ws-btn ghost', [icon('left', 15), el('span', null, 'Previous')], () => show(index - 1));
+  const prev = button('ws-btn ghost', [icon('left', 15), el('span', null, 'Previous')], () => { if (index > 0) show(index - 1); });
   const hint = button('ws-btn ghost', [icon('bulb', 15), el('span', null, 'Hint')]);
   const ask = button('ws-btn ghost', [icon('chat', 15), el('span', null, 'Ask ' + (CONFIG.title || 'the assistant'))]);
   const check = button('ws-btn primary', 'Check');
@@ -60,6 +61,9 @@ export function questions(panel, api) {
   }
   const letter = (i) => String.fromCharCode(65 + i);
   const t = () => track.get(items[index].id);
+  // Buttons that can't be used just now say so (aria-disabled) and keep focus, where disabling would drop it to the page.
+  const off = (b, on) => b.setAttribute('aria-disabled', String(Boolean(on)));
+  const isOff = (b) => b.getAttribute('aria-disabled') === 'true';
   const leave = () => {
     const k = t(); if (!k || !k.since) return;
     k.since = 0;
@@ -75,12 +79,14 @@ export function questions(panel, api) {
   const status = (item) => { const entry = done[item.id]; if (!entry) return drafted(item) ? 'drafted' : ''; if (panel.feedback === 'each' && entry.correct === true) return 'ok'; if (panel.feedback === 'each' && entry.correct === false) return 'no'; return 'did'; };
   const STATUS_WORDS = { ok: 'right', no: 'not right yet', did: 'answered', '': 'not answered' };
   function renderProgress() {
+    const focused = progress.contains(document.activeElement);
     progress.replaceChildren(...items.map((item, i) => {
       const state = status(item);
       const seg = button('ws-step ' + state + (i === index ? ' on' : ''), el('span', 'sr', 'Question ' + (i + 1) + ', ' + (state === 'drafted' ? 'not ' + sentWord(item) + ' yet' : STATUS_WORDS[state])), () => show(i));
       seg.setAttribute('aria-current', i === index ? 'step' : 'false');
       return seg;
     }));
+    if (focused) progress.children[index].focus();
     const answered = items.filter((item) => done[item.id]).length;
     api.setBadge(panel.id, answered + '/' + items.length, answered === items.length);
   }
@@ -117,17 +123,24 @@ export function questions(panel, api) {
     const k = t();
     if (!k.firstSeen) k.firstSeen = Date.now();
     k.since = Date.now(); k.viewStart = Date.now(); k.last = Date.now(); k.active = 0; k.changes = 0;
-    where.replaceChildren(el('span', null, 'Question ' + (index + 1) + ' of ' + items.length));
-    if (item.skill) where.append(el('span', 'ws-chip', item.skill));
-    prev.disabled = index === 0;
+    // Said (aria-live) when it changes: drawn again for the same question (its answers loading), it isn't said twice.
+    const at = 'Question ' + (index + 1) + ' of ' + items.length;
+    if (where.firstChild?.textContent !== at) {
+      where.replaceChildren(el('span', null, at));
+      if (item.skill) where.append(el('span', 'ws-chip', item.skill));
+    }
+    off(prev, index === 0);
     const last = index === items.length - 1;
     next.lastChild.previousSibling.textContent = last ? (panel.feedback === 'end' ? 'See results' : 'Finish') : 'Next';
     // In steps, the last question's way on is the next step (results first, where they come at the end); looking back at an
     // earlier step, the way back to the one they are on is on every question.
     onward?.refresh();
     const back = Boolean(onward) && onward.classList.contains('is-back');
+    const onNext = document.activeElement === next;
     next.hidden = last && Boolean(onward) && (back || panel.feedback !== 'end');
     if (onward) onward.hidden = !(back || (last && panel.feedback !== 'end'));
+    // Next gave its place to the way on while focused: focus goes there.
+    if (onNext && next.hidden) (onward.querySelector('button:not(:disabled)') || check).focus();
     renderProgress();
     results.hidden = true;
     card.hidden = false;
@@ -167,7 +180,8 @@ export function questions(panel, api) {
           const choice = item.choices.find((c) => c.id === id);
           const li = el('li', 'ws-order-item');
           li.draggable = true;
-          const move = (by) => { const order = [...response]; [order[pos], order[pos + by]] = [order[pos + by], order[pos]]; response = order; changed(); draw(); list.children[pos + by]?.querySelector(by < 0 ? '.up' : '.down')?.focus(); };
+          // Focus follows the item: its same arrow, or the other one where it reached the end.
+          const move = (by) => { const order = [...response]; [order[pos], order[pos + by]] = [order[pos + by], order[pos]]; response = order; changed(); draw(); const moved = list.children[pos + by]; (moved?.querySelector((by < 0 ? '.up' : '.down') + ':not(:disabled)') || moved?.querySelector('.ws-move:not(:disabled)'))?.focus(); };
           const up = button('ws-move up', icon('left', 14), () => move(-1)); up.disabled = pos === 0; up.setAttribute('aria-label', 'Move up');
           const down = button('ws-move down', icon('right', 14), () => move(1)); down.disabled = pos === response.length - 1; down.setAttribute('aria-label', 'Move down');
           li.append(icon('grip', 15), el('span', 'ws-order-n', String(pos + 1)), rich(choice ? choice.text : id, 'ws-order-text'), up, down);
@@ -205,6 +219,7 @@ export function questions(panel, api) {
     }
     card.append(answer);
     const hints = el('div', 'ws-hints');
+    hints.setAttribute('aria-live', 'polite');
     const feedback = el('div', 'ws-feedback');
     feedback.setAttribute('role', 'status');
     card.append(hints, feedback);
@@ -213,18 +228,20 @@ export function questions(panel, api) {
     const hintCount = panel.hints ? item.hints || 0 : 0;
     let hintIndex = 0;
     hint.hidden = !hintCount;
-    const setHintLabel = () => { hint.lastChild.textContent = hintIndex >= hintCount ? 'No more hints' : 'Hint' + (hintCount > 1 ? ' · ' + (hintCount - hintIndex) + ' left' : ''); hint.disabled = hintIndex >= hintCount; };
+    const setHintLabel = () => { hint.lastChild.textContent = hintIndex >= hintCount ? 'No more hints' : 'Hint' + (hintCount > 1 ? ' · ' + (hintCount - hintIndex) + ' left' : ''); off(hint, hintIndex >= hintCount); };
     setHintLabel();
     ask.hidden = !api.aiAvailable || !(panel.sees || []).length;
     const lock = (entry) => {
       const out = panel.tries && entry.tries >= panel.tries;
       const right = entry.correct === true && panel.feedback === 'each';
       const locked = Boolean(out || right);
-      check.disabled = locked;
+      off(check, locked);
+      // An answer locked while focused (Enter checks from a choice): focus goes to Check, beside Next.
+      if (locked && card.contains(document.activeElement)) check.focus();
       card.querySelectorAll('input, textarea, .ws-move').forEach((node) => { node.disabled = locked; });
       card.querySelectorAll('.ws-order-item').forEach((node) => { node.draggable = !locked; });
     };
-    check.disabled = false;
+    off(check, false);
     const say = (entry) => {
       feedback.className = 'ws-feedback';
       feedback.replaceChildren();
@@ -256,7 +273,8 @@ export function questions(panel, api) {
     forAi.setAttribute('aria-hidden', 'true');
     card.append(forAi);
     hint.onclick = async () => {
-      hint.disabled = true;
+      if (isOff(hint)) return;
+      off(hint, true);
       try {
         const data = await post('/questions', { panel: panel.id, action: 'hint', item: item.id, index: hintIndex });
         t().hints += 1; hintIndex = data.index + 1;
@@ -268,9 +286,10 @@ export function questions(panel, api) {
     };
     ask.onclick = () => { t().ai = true; api.askAi('I’m on question ' + (index + 1) + '. Can you help me think about it?'); };
     check.onclick = async () => {
+      if (isOff(check)) return;
       const k = t();
       if (item.type === 'spoken' && !(response && response.audio)) { feedback.className = 'ws-feedback no'; feedback.textContent = 'Record your answer first.'; return; }
-      check.disabled = true;
+      off(check, true);
       card.querySelectorAll('.ws-model').forEach((node) => node.remove());
       try {
         const sent = item.type === 'spoken' ? { audio: response.audio, seconds: response.seconds } : { response };
@@ -281,8 +300,8 @@ export function questions(panel, api) {
         say(entry); renderProgress(); onward?.refresh();
         // Where they see right and wrong: the AI may write first about it, if the teacher chose that (the chat counts tries and right answers).
         if (entry.correct != null && (panel.feedback || 'each') === 'each' && window.VIABLE_CHAT && window.VIABLE_CHAT.speakFirst) window.VIABLE_CHAT.speakFirst(entry.correct ? 'right' : 'wrong', { item: item.id, tries: entry.tries });
-        check.disabled = false; lock(entry);
-      } catch (error) { check.disabled = false; feedback.className = 'ws-feedback no'; feedback.textContent = error.message; }
+        lock(entry);
+      } catch (error) { off(check, false); feedback.className = 'ws-feedback no'; feedback.textContent = error.message; }
     };
   }
   // In a course, the way on from the end of the questions.
@@ -326,8 +345,11 @@ export function questions(panel, api) {
         const reader = new FileReader();
         reader.onload = () => onTake({ audio: String(reader.result), seconds });
         reader.readAsDataURL(blob);
+        const onStop = document.activeElement === stop;
         stop.hidden = true; start.hidden = true; again.hidden = false; time.hidden = false;
         say.textContent = 'Listen back, then send it, or record again.';
+        // Stop hides itself: focus goes to the take's own row, beside the player.
+        if (onStop) again.focus();
       };
       rec.start(1000); began = Date.now();
       start.hidden = true; again.hidden = true; stop.hidden = false; time.hidden = false; audio.hidden = true;
@@ -391,11 +413,11 @@ export function questions(panel, api) {
     } catch (error) { results.replaceChildren(el('p', 'ws-muted', error.message)); }
   }
   next.addEventListener('click', () => (index === items.length - 1 ? finish() : show(index + 1)));
-  // Choices from the keyboard: A–L or 1–9 pick, Enter checks (not while typing an answer).
+  // Choices from the keyboard: A–L or 1–9 pick, Enter checks (not while typing an answer, nor on what Enter opens or presses itself).
   wrap.addEventListener('keydown', (e) => {
     if (e.target.closest('input[type=text], textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
     const item = items[index];
-    if (e.key === 'Enter' && !check.disabled && e.target.tagName !== 'BUTTON') { e.preventDefault(); check.click(); return; }
+    if (e.key === 'Enter' && !isOff(check) && !e.target.closest('button, a, summary, audio')) { e.preventDefault(); check.click(); return; }
     if (!['single', 'multiple'].includes(item.type)) return;
     const n = /^[1-9]$/.test(e.key) ? Number(e.key) - 1 : /^[a-l]$/i.test(e.key) ? e.key.toLowerCase().charCodeAt(0) - 97 : -1;
     const inputs = card.querySelectorAll('.ws-option input');

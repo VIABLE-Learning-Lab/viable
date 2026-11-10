@@ -481,6 +481,34 @@
             }
           }
         },
+        "goals": {
+          "type": "array",
+          "maxItems": 60,
+          "description": "What learners will be able to do: the course's learning goals, each in a unit (unit_ref) or the course's as a whole (null). Activities name the goals they work toward, and a check (role) shows whether they are met.",
+          "items": {
+            "type": "object",
+            "required": [
+              "ref",
+              "text"
+            ],
+            "properties": {
+              "ref": {
+                "$ref": "#/$defs/ref"
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 400
+              },
+              "unit_ref": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
         "activities": {
           "type": "array",
           "maxItems": 100,
@@ -595,10 +623,20 @@
         "role": {
           "enum": [
             "instruction",
+            "check",
             "pretest",
             "posttest",
             "survey"
-          ]
+          ],
+          "description": "instruction: learners learn and practise. check: learners show what they can do, for the goals it names (an assessment of the teacher's own). pretest and posttest: the same for every learner, for a study. survey: a questionnaire."
+        },
+        "goals": {
+          "type": "array",
+          "maxItems": 12,
+          "description": "The course's goals this activity works toward, or checks when its role is check, by their refs.",
+          "items": {
+            "$ref": "#/$defs/ref"
+          }
         },
         "agent_ref": {
           "type": [

@@ -19,7 +19,7 @@ export const BASE_CSS = `
 *{box-sizing:border-box}[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font:var(--size)/1.6 var(--font);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 button,input,select,textarea{font:inherit;color:inherit}
-:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:10px 18px;border:1px solid var(--accent);border-radius:var(--r-sm);background:var(--accent);color:var(--on-accent);font-weight:640;text-decoration:none;cursor:pointer;transition:filter .15s,transform .12s,opacity .15s}
 .btn:hover:not(:disabled){filter:brightness(1.06)}.btn:active:not(:disabled){transform:scale(.98)}

@@ -9,9 +9,9 @@ a change, and how it gets reviewed and merged.
 - **Report a bug or ask for a feature** with an [issue](https://github.com/VIABLE-Learning-Lab/viable/issues/new/choose).
 - **Ask, answer or show what you built** in [Discussions](https://github.com/VIABLE-Learning-Lab/viable/discussions).
 - **Improve the docs or an example**: small fixes are the best first pull request.
-- **Bring your research in as a component**: open a [component proposal](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=component.yml) first, then see [docs/components.md](harness/docs/components.md).
-- **List a public good in the catalog**: see [Catalog entries](#catalog-entries).
-- **Connect one to agents**: see [Connectors](#connectors).
+- **Add your work**: research guidance, a dataset or a benchmark, a model or a tool that reads conversations, open
+  content, or a resource to list. [Add your work](harness/docs/add-your-research.md) starts each from one already in the
+  catalog; [Components](#components), [Catalog entries](#catalog-entries) and [Connectors](#connectors) below hold the rules.
 - **Fix or build something**: look for [good first issues](https://github.com/VIABLE-Learning-Lab/viable/labels/good%20first%20issue) and [help wanted](https://github.com/VIABLE-Learning-Lab/viable/labels/help%20wanted); for anything larger than a fix, open an issue first so we can agree on where it belongs.
 
 ## Set up

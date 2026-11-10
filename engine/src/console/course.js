@@ -10,6 +10,7 @@ import { activityKeys, cutWords, slugOf } from '../server/library.js';
 import { readPackage } from '../server/runtime.js';
 import { icon } from './icons.js';
 import { choose, courseHead, dropZone, esc, FORMS_CSS, oneOf, plural, say, text, toggle, withForms } from './forms.js';
+import { addGoals, addGoalsPart, GOAL_LIMITS, goalsIn, goalsPart, goalWords, GOALS_CSS, isCheck, removeGoal } from './goals.js';
 
 const refused = (message, status = 400, code = 'invalid_course') => Object.assign(new Error(message), { status, code });
 const ARCHIVE_BYTES = 50 * 1024 * 1024;
@@ -72,13 +73,13 @@ ${saving && using && !using.roles.reply ? '<p class="notice">No model writes rep
 ${cards.length || simple ? '' : '<p class="v-note first-door">Only want a chat button for a website? <a href="/console/chat-pages">Start with a chat page</a>.</p>'}
 ${cards.length ? `<ul class="course-list">${cards.join('')}</ul>` : ''}
 ${saving && !cards.length ? await startParts(tools) : ''}
-${archived.length ? archivedPart(archived, { forGood: !library.archives, just: tools.url?.searchParams.get('archived') }) : ''}`;
+${archived.length ? archivedPart(archived, { forGood: !library.archives, just: tools.url?.searchParams.get('archived'), keeps: library.keeps }) : ''}`;
 }
 
 // An activity taken off a course waits at the foot of its activities: learners can't open it, and it comes back as it was, last in the
 // course, or is deleted. Where a host keeps what learners did, deleting takes it out of the course; here it takes their work too.
-function archivedActivitiesPart(list, { code, forGood, just }) {
-  const sure = (entry) => (forGood ? `This deletes “${entry.title}” and what learners did in it from this server. It can’t be undone.` : `Delete “${entry.title}”? It leaves the course, and you can’t bring it back.`);
+function archivedActivitiesPart(list, { code, forGood, just, keeps = null }) {
+  const sure = (entry) => (forGood ? `This deletes “${entry.title}” and what learners did in it from this server. It can’t be undone.` : `Delete “${entry.title}” for good? It leaves the course, and you can’t bring it back.${keeps ? ` ${keeps}` : ''}`);
   const row = (entry) => `<li id="archived-activity-${esc(entry.ref)}"${entry.ref === just ? ' class="is-just"' : ''} data-say-box><div><strong>${esc(entry.title)}</strong><small>${entry.ref === just ? 'Archived just now' : `Archived <time data-local datetime="${esc(entry.archived_at)}">${esc(String(entry.archived_at).slice(0, 10))}</time>`}</small></div>
 <div class="actions"><button class="v-btn is-small" type="button" data-api="POST courses/${esc(code)}/archived-activities/${esc(entry.ref)}/restore" data-busy="Restoring…">Restore</button><button class="v-btn is-small danger" type="button" data-api="DELETE courses/${esc(code)}/archived-activities/${esc(entry.ref)}" data-confirm="${esc(sure(entry))}" data-yes="Delete">Delete</button></div><p class="say" data-say role="status"></p></li>`;
   return `<details class="archived" id="archived-activities"${just != null ? ' open' : ''}><summary>Archived <small>${list.length}</small></summary>
@@ -89,8 +90,8 @@ function archivedActivitiesPart(list, { code, forGood, just }) {
 
 // What waits under Archived: learners can't open it, and it can come back as it was or be deleted. Where a host keeps what learners did
 // (library.archives), deleting takes it out of the teacher's courses; here it takes it, and their work, off the server.
-function archivedPart(list, { forGood, just }) {
-  const sure = (entry) => (forGood ? `This deletes “${entry.title}”, its versions and everything its learners did from this server. It can’t be undone.` : `Delete “${entry.title}”? It leaves your courses, and you can’t bring it back.`);
+function archivedPart(list, { forGood, just, keeps = null }) {
+  const sure = (entry) => (forGood ? `This deletes “${entry.title}”, its versions and everything its learners did from this server. It can’t be undone.` : `Delete “${entry.title}” for good? It leaves your courses, and you can’t bring it back.${keeps ? ` ${keeps}` : ''}`);
   const row = (entry) => `<li id="archived-${esc(entry.code)}"${entry.code === just ? ' class="is-just"' : ''} data-say-box><div><strong>${esc(entry.title)}</strong><small>${entry.code === just ? 'Archived just now' : `Archived <time data-local datetime="${esc(entry.archived_at)}">${esc(entry.archived_at.slice(0, 10))}</time>`}</small></div>
 <div class="actions"><button class="v-btn is-small" type="button" data-api="POST archived/${esc(entry.code)}/restore" data-busy="Restoring…">Restore</button><button class="v-btn is-small danger" type="button" data-api="DELETE archived/${esc(entry.code)}" data-confirm="${esc(sure(entry))}"${forGood ? ' data-type="DELETE"' : ''} data-yes="Delete">Delete</button></div>${say()}</li>`;
   return `<details class="archived" id="archived"${just != null ? ' open' : ''}><summary>Archived <small>${list.length}</small></summary>
@@ -226,7 +227,7 @@ function forSections(activity, code, sections, own, open) {
   return `<details class="by-section" id="for-${esc(activity.key)}"><summary>For one section${differ.length ? `: ${esc(differ.map((section) => `${section.name} ${own[section.id].release === 'open' ? 'open' : 'hidden'}`).join(', '))}` : ''}</summary><ul>${sections.map(row).join('')}</ul></details>`;
 }
 
-function activityRow(activity, code, version, index, count, locked, sections, own, doc) {
+function activityRow(activity, code, version, index, count, locked, sections, own, doc, goals = []) {
   const key = esc(activity.key);
   const api = `courses/${esc(code)}/activities/${key}`;
   const open = activity.release !== 'hidden';
@@ -235,7 +236,7 @@ function activityRow(activity, code, version, index, count, locked, sections, ow
   const unitMenu = units.length && !locked ? `<select class="v-input small row-unit" name="unit_ref" data-api="POST ${api}/unit" aria-label="Unit for ${esc(activity.title)}">${[{ ref: '', title: 'No unit' }, ...units].map((unit) => `<option value="${esc(unit.ref)}"${(activity.unit_ref || '') === unit.ref ? ' selected' : ''}>${esc(unit.title)}</option>`).join('')}</select>` : '';
   return `<li class="row" id="activity-${key}" data-key="${key}"${locked ? '' : ` data-drag-item="${key}"`} data-say-box>
 ${locked ? '' : `<span class="drag-handle" data-drag="activity" aria-hidden="true">${icon('grip', 16)}</span>`}
-<div class="row-what"><a href="/console/courses/${esc(code)}/activities/${key}"><strong>${esc(activity.title)}</strong></a><span class="v-note">${esc(kindWords(activity, doc))}</span></div>
+<div class="row-what">${isCheck(activity) ? `<span class="row-title"><a href="/console/courses/${esc(code)}/activities/${key}"><strong>${esc(activity.title)}</strong></a><span class="row-tag">Check</span></span>` : `<a href="/console/courses/${esc(code)}/activities/${key}"><strong>${esc(activity.title)}</strong></a>`}<span class="v-note">${esc([kindWords(activity, doc), goalWords(activity, goals)].filter(Boolean).join(' · '))}</span></div>
 <span class="v-pill${open ? ' is-open' : ''}">${esc(stateWords(activity))}</span>
 <div class="actions row-do">
 ${locked ? '' : `<button class="v-btn is-small" type="button" data-api="POST ${api}/release" data-body='${esc(JSON.stringify({ version, release: open ? 'hidden' : 'open' }))}'${open ? '' : ` data-checks="courses/${esc(code)}/checks?activity=${key}"`} data-said="${open ? 'Hidden from learners.' : 'Open to learners.'}">${open ? 'Hide' : 'Open'}</button>`}
@@ -248,7 +249,7 @@ ${say()}
 </li>`;
 }
 
-async function activitiesBody({ library, classes, origin, addresses, signIn, tabs, simple, url }, match) {
+async function activitiesBody({ library, classes, origin, addresses, signIn, tabs, simple, url, goalHelp = null }, match) {
   const entry = await courseAt(library, match[1]);
   const { doc, meta, code } = entry;
   const course = doc.course;
@@ -263,7 +264,9 @@ async function activitiesBody({ library, classes, origin, addresses, signIn, tab
   const [sections, releases, people, archived] = await Promise.all([classes.sections(code), classes.releases(code), needsList ? classes.people(code) : [], library.archivedActivities ? library.archivedActivities(entry.id) : []]);
   const shut = needsList && !people.some((person) => person.listed);
   // Up and down move a row within its own group, so the ends are the group's.
-  const rows = (list) => list.map((activity, index) => activityRow(activity, code, meta.version, index, list.length, locked, sections, releases[activity.key] || {}, doc)).join('');
+  const goals = goalsIn(doc);
+  const rows = (list) => list.map((activity, index) => activityRow(activity, code, meta.version, index, list.length, locked, sections, releases[activity.key] || {}, doc, goals)).join('');
+  const goalsHere = (unitRef, heading) => goalsPart(goals, { code, doc, activities, unitRef, heading, locked });
   const loose = activities.filter((activity) => !units.some((unit) => unit.ref === activity.unit_ref));
   const api = `courses/${esc(code)}`;
   // A unit is a section of the list itself: named, renamed and moved where it is, with its activities under it.
@@ -278,7 +281,8 @@ ${locked ? '' : `<div class="actions unit-do">
 <fieldset class="unit-days"><legend class="v-label">Its dates <small>if it has them</small></legend><div class="unit-days-row">${text('starts_on', 'From', unit.starts_on || '', { type: 'date', 'data-empty': 'No start' })}${text('ends_on', 'To', unit.ends_on || '', { type: 'date', 'data-empty': 'No end', min: unit.starts_on || null, 'data-min-from': 'starts_on' })}</div><small class="v-note">Learners see them on the course’s home, beside the unit’s name. They don’t open or close anything.</small></fieldset>
 <div class="actions"><button class="v-btn is-small is-primary" type="submit">Save</button></div>${say()}</form>
 <div class="unit-menu-row"><button class="v-btn is-small" type="button" data-api="POST ${api}/units/${esc(unit.ref)}/move" data-body='{"by":-1}'${index === 0 ? ' disabled' : ''}><span class="turned">${icon('chevron', 14)}</span><span>Move up</span></button><button class="v-btn is-small" type="button" data-api="POST ${api}/units/${esc(unit.ref)}/move" data-body='{"by":1}'${index === units.length - 1 ? ' disabled' : ''}>${icon('chevron', 14)}<span>Move down</span></button></div>
-<button class="v-btn is-small danger" type="button" data-api="DELETE ${api}/units/${esc(unit.ref)}" data-confirm="${esc(`Remove the unit “${unit.title}”? Its activities stay in the course, in no unit.`)}" data-yes="Remove the unit" data-danger data-said="Removed.">${icon('trash', 14)}<span>Remove the unit</span></button>
+<button class="v-btn is-small" type="button" data-prefill="add-goals" data-prefill-field="unit_ref" data-prefill-value="${esc(unit.ref)}">${icon('plus', 14)}<span>Add goals to this unit</span></button>
+<button class="v-btn is-small danger" type="button" data-api="DELETE ${api}/units/${esc(unit.ref)}" data-confirm="${esc(`Remove the unit “${unit.title}”? Its activities and goals stay in the course, in no unit.`)}" data-yes="Remove the unit" data-danger data-said="Removed.">${icon('trash', 14)}<span>Remove the unit</span></button>
 </div>
 </details>
 </div>`}
@@ -309,15 +313,17 @@ ${text('title', 'Its name', '', { required: true, maxlength: 160, autocomplete: 
 <div class="actions"><button class="v-btn is-primary" type="submit">Add the unit</button></div>${say()}
 </form>
 </details>
+${addGoalsPart({ code, units, help: goalHelp })}
 </div>`}
-${!activities.length ? '<p class="v-empty">No activities yet. Add the first one above: it stays hidden from learners until you open it.</p>' : units.length
-    ? `${units.map((unit, index) => `<div class="unit-block" data-unit="${esc(unit.ref)}"${locked ? '' : ` data-drag-block="${esc(unit.ref)}"`}>${unitHead(unit, index)}${rowsOf(inUnit(unit.ref), unit.ref, locked ? 'Nothing in this unit.' : 'Nothing here yet: add an activity here, or drag one in.')}</div>`).join('')}${loose.length
+${goalsHere(null, units.length ? 'Learners will be able to, in the whole course' : 'Learners will be able to')}
+${!activities.length && !units.length ? '<p class="v-empty">No activities yet. Add the first one above: it stays hidden from learners until you open it.</p>' : units.length
+    ? `${units.map((unit, index) => `<div class="unit-block" data-unit="${esc(unit.ref)}"${locked ? '' : ` data-drag-block="${esc(unit.ref)}"`}>${unitHead(unit, index)}${goalsHere(unit.ref)}${rowsOf(inUnit(unit.ref), unit.ref, locked ? 'Nothing in this unit.' : 'Nothing here yet: add an activity here, or drag one in.')}</div>`).join('')}${loose.length
       ? `<div class="loose-block"><div class="unit-head"><h2 class="unit">Not in a unit <small>${esc(plural(loose.length, 'activity', 'activities'))}</small></h2></div>${rowsOf(loose, '', '')}</div>`
       : locked ? '' : `<div class="loose-block is-empty"><p class="unit loose-drop">Not in a unit</p>${rowsOf([], '', 'Drop it here to take it out of its unit.')}</div>`}`
     : rowsOf(activities, '', '')}
 </section>
-${archived.length ? archivedActivitiesPart(archived, { code, forGood: !library.archives, just: url?.searchParams.get('archived-activity') }) : ''}`,
-    css: ACTIVITIES_CSS
+${archived.length ? archivedActivitiesPart(archived, { code, forGood: !library.archives, just: url?.searchParams.get('archived-activity'), keeps: library.keeps }) : ''}`,
+    css: `${ACTIVITIES_CSS}\n${GOALS_CSS}`
   };
 }
 
@@ -474,13 +480,19 @@ ${versions ? `<section class="block" aria-labelledby="versions-title" data-say-b
 <ul class="versions">${versions}</ul>${say()}
 </section>` : ''}
 ${locked || given ? '' : `<section class="block" aria-labelledby="end-title" data-say-box>
-<h2 id="end-title">Close or ${library.archive ? 'archive' : 'delete'}</h2>
+<h2 id="end-title">Close, archive or delete</h2>
+<dl class="end-ways">
+<div><dt>Hide</dt><dd>One activity, from the course’s page: learners don’t see it until you open it again.</dd></div>
+<div><dt>Close</dt><dd>The whole course: learners can’t open it or save work until you open it again. What they did stays.</dd></div>
+${library.archive ? `<div><dt>Archive</dt><dd>Closed, and off your list: it waits under Archived at the foot of your courses, to restore as it was, with its learners and their work.</dd></div>
+<div><dt>Delete</dt><dd>From Archived, for good.${library.archives ? (library.keeps ? ` ${esc(library.keeps)}` : ' What learners did is kept.') : ' Everything its learners did goes with it, off this server.'}</dd></div>` : `<div><dt>Delete</dt><dd>For good: the course and its versions are gone from this server, with every learner’s work in it. Download it first if you may want it.</dd></div>`}
+</dl>
 <div class="end">
-<div><p class="v-note">Closed, learners can’t open it. Their work stays, and you can open it again.</p><button class="v-btn" type="button" data-api="POST courses/${esc(code)}/status" data-body='${esc(JSON.stringify({ status: meta.status === 'closed' ? 'open' : 'closed' }))}' data-said="${meta.status === 'closed' ? 'Open again.' : 'Closed.'}">${meta.status === 'closed' ? 'Open it again' : 'Close this course'}</button></div>
-${library.archive ? `<div><p class="v-note">Archived, learners can’t open it, and it moves to Archived at the foot of your courses. From there you can restore it as it was, or delete it.</p><button class="v-btn" type="button" data-api="POST courses/${esc(code)}/archive" data-confirm="Archive “${esc(course.title)}”? Learners can’t open it until you restore it." data-yes="Archive">Archive this course</button></div>` : `<div><p class="v-note">Deleted, the course and its versions are gone from this server, with every learner’s work in it. This can’t be undone. Download it first if you may want it.</p><button class="v-btn danger" type="button" data-api="DELETE courses/${esc(code)}" data-confirm="This deletes “${esc(course.title)}”, its versions and everything its learners did. It can’t be undone." data-type="DELETE" data-yes="Delete">Delete this course</button></div>`}
+<div class="actions"><button class="v-btn" type="button" data-api="POST courses/${esc(code)}/status" data-body='${esc(JSON.stringify({ status: meta.status === 'closed' ? 'open' : 'closed' }))}'${meta.status === 'closed' ? '' : ` data-confirm="${esc(`Close “${course.title}”? Learners can’t open it or save work until you open it again, and anyone in it now loses what they haven’t saved. What they did stays.`)}" data-yes="Close it"`} data-said="${meta.status === 'closed' ? 'Open again.' : 'Closed.'}">${meta.status === 'closed' ? 'Open it again' : 'Close this course'}</button>
+${library.archive ? `<button class="v-btn" type="button" data-api="POST courses/${esc(code)}/archive" data-confirm="Archive “${esc(course.title)}”? Learners can’t open it until you restore it." data-yes="Archive">Archive this course</button>` : `<button class="v-btn danger" type="button" data-api="DELETE courses/${esc(code)}" data-confirm="This deletes “${esc(course.title)}”, its versions and everything its learners did. It can’t be undone." data-type="DELETE" data-yes="Delete">Delete this course</button>`}</div>
 </div>${say()}
 </section>`}`,
-    css: `${LOOKS_CSS}\n.settings{display:grid;gap:18px;max-width:640px}.versions{margin:12px 0 0;padding:0;list-style:none;border-top:1px solid var(--public-rule)}.versions li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;padding:10px 0;border-bottom:1px solid var(--public-rule)}.file-actions{margin-top:12px}.end{display:grid;gap:18px;margin-top:12px}.end>div{display:grid;gap:10px;justify-items:start}.danger{border-color:var(--pencil-red);color:var(--pencil-red)}.danger:hover{border-color:var(--pencil-red);background:color-mix(in srgb,var(--pencil-red) 8%,transparent)}`
+    css: `${LOOKS_CSS}\n.settings{display:grid;gap:18px;max-width:640px}.versions{margin:12px 0 0;padding:0;list-style:none;border-top:1px solid var(--public-rule)}.versions li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;padding:10px 0;border-bottom:1px solid var(--public-rule)}.file-actions{margin-top:12px}.end{display:grid;gap:18px;margin-top:14px}.end-ways{display:grid;gap:8px;max-width:62ch;margin:12px 0 0}.end-ways>div{display:grid;grid-template-columns:5.5em minmax(0,1fr);gap:2px 12px}.end-ways dt{color:var(--public-ink);font-weight:600}.end-ways dd{margin:0;color:var(--public-text)}@media (max-width:480px){.end-ways>div{grid-template-columns:minmax(0,1fr)}}.danger{border-color:var(--pencil-red);color:var(--pencil-red)}.danger:hover{border-color:var(--pencil-red);background:color-mix(in srgb,var(--pencil-red) 8%,transparent)}`
   };
 }
 
@@ -598,6 +610,27 @@ export const coursePages = [
         await library.setStatus(entry.id, body?.status);
         return {};
       }],
+      // Goals, one a line: what learners will be able to do, in the whole course or a unit.
+      ['POST', /^courses\/([\w-]+)\/goals$/, async ({ library }, match, body) => {
+        let added = 0;
+        await changeCourse(library, match[1], null, (doc) => { added = addGoals(doc, String(body?.text ?? '').split('\n'), body?.unit_ref ? String(body.unit_ref) : null); }, 'Added goals');
+        return { said: `Added ${plural(added, 'goal')}. Say which activities work toward ${added === 1 ? 'it' : 'them'} in each activity’s Details.` };
+      }],
+      ['PUT', /^courses\/([\w-]+)\/goals\/([\w.-]+)$/, async ({ library }, match, body) => {
+        const words = clean(body?.text, GOAL_LIMITS.text);
+        if (!words) throw refused('Write what learners will be able to do.');
+        await changeCourse(library, match[1], null, (doc) => {
+          const goal = (doc.course.goals || []).find((item) => item.ref === match[2]);
+          if (!goal) throw refused('That goal isn’t in this course anymore.', 404, 'goal_not_found');
+          goal.text = words;
+          if (body?.unit_ref !== undefined) goal.unit_ref = body.unit_ref && (doc.course.units || []).some((unit) => unit.ref === body.unit_ref) ? body.unit_ref : null;
+        }, 'Changed a goal');
+        return { said: 'Saved.' };
+      }],
+      ['DELETE', /^courses\/([\w-]+)\/goals\/([\w.-]+)$/, async ({ library }, match) => {
+        await changeCourse(library, match[1], null, (doc) => removeGoal(doc, match[2]), 'Removed a goal');
+        return { said: 'Removed.' };
+      }],
       // A unit at a time, by its ref: renaming one keeps what is in it (the list of titles, below, is Ask's way).
       ['POST', /^courses\/([\w-]+)\/units$/, async ({ library }, match, body) => {
         const title = clean(body?.title, 160);
@@ -673,7 +706,7 @@ export const coursePages = [
           const units = doc.course.units || [];
           if (!units.some((item) => item.ref === match[2])) throw refused('That unit isn’t in this course anymore.', 404, 'unit_not_found');
           doc.course.units = units.filter((item) => item.ref !== match[2]);
-          for (const activity of doc.course.activities || []) if (activity.unit_ref === match[2]) activity.unit_ref = null;
+          for (const item of [...(doc.course.activities || []), ...(doc.course.goals || [])]) if (item.unit_ref === match[2]) item.unit_ref = null;
         }, 'Removed a unit');
         return { said: 'Removed. Its activities stay in the course, in no unit.' };
       }],
@@ -701,7 +734,7 @@ export const coursePages = [
             return { ref, title };
           });
           const kept = new Set(doc.course.units.map((unit) => unit.ref));
-          for (const activity of doc.course.activities || []) if (activity.unit_ref && !kept.has(activity.unit_ref)) activity.unit_ref = null;
+          for (const item of [...(doc.course.activities || []), ...(doc.course.goals || [])]) if (item.unit_ref && !kept.has(item.unit_ref)) item.unit_ref = null;
         }, 'Units');
         return { said: 'Saved.' };
       }]

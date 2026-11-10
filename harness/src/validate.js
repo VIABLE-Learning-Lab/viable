@@ -26,12 +26,15 @@ function refErrors(pkg, graphKnowledgeRefs) {
   const agents = refs(pkg.agents);
   const sets = refs(pkg.question_sets);
   const units = refs(pkg.course?.units);
+  const goals = refs(pkg.course?.goals);
   const files = refs(pkg.files);
   const knowledgeBases = refs(pkg.knowledge_bases);
   (pkg.knowledge_bases || []).forEach((kb, i) => (kb?.file_refs || []).forEach((ref, j) => { if (!files.has(ref)) errors.push(`$.knowledge_bases[${i}].file_refs[${j}]: the package has no file "${ref}"`); }));
   if (graphKnowledgeRefs) (pkg.agents || []).forEach((agent, i) => graphKnowledgeRefs(agent?.graph).forEach((ref) => { if (!knowledgeBases.has(ref)) errors.push(`$.agents[${i}].graph: the package has no knowledge base "${ref}"`); }));
+  (pkg.course?.goals || []).forEach((goal, i) => { if (goal?.unit_ref != null && !units.has(goal.unit_ref)) errors.push(`$.course.goals[${i}].unit_ref: the package has no unit "${goal.unit_ref}"`); });
   (pkg.course?.activities || []).forEach((activity, i) => {
     const where = `$.course.activities[${i}]`;
+    (activity?.goals || []).forEach((ref, j) => { if (!goals.has(ref)) errors.push(`${where}.goals[${j}]: the package has no goal "${ref}"`); });
     if (activity?.agent_ref != null && !agents.has(activity.agent_ref)) errors.push(`${where}.agent_ref: the package has no agent "${activity.agent_ref}"`);
     if (activity?.unit_ref != null && !units.has(activity.unit_ref)) errors.push(`${where}.unit_ref: the package has no unit "${activity.unit_ref}"`);
     (activity?.workspace?.panels || []).forEach((panel, j) => {

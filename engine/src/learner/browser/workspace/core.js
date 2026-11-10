@@ -39,14 +39,15 @@ export function onwardFoot(api, cls = 'ws-foot') {
   foot.append(el('span', 'ws-grow'), onward);
   return foot;
 }
-/** Asks in place of a footer's own controls, with the page's buttons: resolves true for yes, and puts the footer back. */
+/** Asks in place of a footer's own controls, with the page's buttons: resolves true for yes, and puts the footer back, focus too. */
 export function askIn(foot, text, yes, no = 'Not yet') {
   return new Promise((resolve) => {
     const kept = [...foot.childNodes];
+    const from = document.activeElement;
     const sure = el('div', 'ws-sure');
     sure.setAttribute('role', 'group');
     sure.setAttribute('aria-label', text);
-    const answer = (value) => { foot.replaceChildren(...kept); resolve(value); };
+    const answer = (value) => { foot.replaceChildren(...kept); if (foot.contains(from)) from.focus(); resolve(value); };
     const go = button('ws-btn primary', yes, () => answer(true));
     sure.append(el('p', 'ws-sure-text', text), button('ws-btn ghost', no, () => answer(false)), go);
     sure.addEventListener('keydown', (event) => { if (event.key === 'Escape') { event.preventDefault(); answer(false); } });

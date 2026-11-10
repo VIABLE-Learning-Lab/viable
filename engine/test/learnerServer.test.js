@@ -191,7 +191,7 @@ test('a course: a browser’s own learner with a code, questions graded here wit
   assert.ok(!html.includes(doc.course.activities[0].teaching.watch_for), 'no teacher’s note in the page');
 
   const closed = await call('/course/equivalent-fractions/check-equivalent-fractions');
-  assert.match(await closed.text(), /isn’t open yet/);
+  assert.match(await closed.text(), /isn’t open right now/);
   assert.equal((await post('/course/equivalent-fractions/check-equivalent-fractions/questions', { visitor: VISITOR, action: 'state', panel: 'check' })).status, 403, 'a hidden activity takes nothing');
 
   const base = '/course/equivalent-fractions/practice-equivalent-fractions';

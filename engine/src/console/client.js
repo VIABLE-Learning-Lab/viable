@@ -78,8 +78,8 @@ export const CONSOLE_SCRIPT = String.raw`(() => {
   });
   document.addEventListener('focusin', (event) => { const target = event.target.closest && event.target.closest('[data-tip]'); if (target && target.matches(':focus-visible')) showTip(target, true); });
   // A menu that is a details element closes when a click lands elsewhere, or on Escape, back on its button.
-  // A click in a date picker opened from a menu (it floats above the page) belongs to that menu.
-  document.addEventListener('click', (event) => { for (const menu of document.querySelectorAll('details[data-close-outside][open]')) if (!menu.contains(event.target) && !(event.target.closest && event.target.closest('.vd-pop'))) menu.open = false; });
+  // A click in a date picker or a list opened from a menu (each floats above the page) belongs to that menu.
+  document.addEventListener('click', (event) => { for (const menu of document.querySelectorAll('details[data-close-outside][open]')) if (!menu.contains(event.target) && !(event.target.closest && event.target.closest('.vd-pop, .v-pop'))) menu.open = false; });
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
     const menu = event.target.closest && event.target.closest('details[data-close-outside][open]');

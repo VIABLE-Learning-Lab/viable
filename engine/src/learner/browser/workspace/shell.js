@@ -212,12 +212,15 @@ export function createShell({ panels, factories, steps = null }) {
   });
 
   // The AI as a corner panel (ai: corner) or, on narrow screens, a sheet opened from the button.
+  // Closed (its ×, or Escape in the chat script) with focus inside, focus goes back to the button that opens it.
   function setOpen(on) {
+    const inside = Boolean(app && app.contains(document.activeElement));
     document.body.classList.toggle('ai-open', on);
     if (on) document.body.classList.remove('ai-new');
     if (floating) floating.setAttribute('aria-expanded', String(on));
     if (on) setTimeout(() => document.getElementById('input')?.focus(), 60);
     syncFloating(); reportLayout();
+    if (!on && inside && floating && !floating.hidden) floating.focus();
   }
   function syncFloating() {
     const isFloating = AI === 'corner' || (AI !== 'off' && narrow.matches);

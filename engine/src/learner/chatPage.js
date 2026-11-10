@@ -128,7 +128,7 @@ button{font:inherit;color:inherit}
 @media (hover:none){.chat-tools{opacity:1}}
 .chat-tools button{width:26px;height:26px;display:grid;place-items:center;border:0;border-radius:7px;background:transparent;color:var(--muted);cursor:pointer}
 .chat-tools button:hover{background:var(--panel);color:var(--ink)}
-.chat input{flex:1;min-width:0;margin:3px;padding:5px 8px;border:1px solid var(--accent-line);border-radius:8px;background:var(--panel);color:var(--ink);font:inherit;font-size:.86rem;outline:0;box-shadow:0 0 0 3px var(--accent-soft)}
+.chat input{flex:1;min-width:0;margin:3px;padding:5px 8px;border:1px solid var(--accent-line);border-radius:8px;background:var(--panel);color:var(--ink);font:inherit;font-size:.86rem;box-shadow:0 0 0 3px var(--accent-soft)}
 .chats-toast{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 10px 8px;padding:8px 12px;border-radius:10px;background:var(--ink);color:var(--panel);font-size:.82rem;animation:rise .2s cubic-bezier(.2,.8,.2,1)}
 .chats-toast button{border:0;background:transparent;color:inherit;font-weight:650;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .chats-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;margin:0;padding:10px 16px 14px;border-top:1px solid var(--line-2);font-size:.74rem;color:var(--muted)}
@@ -141,7 +141,7 @@ button{font:inherit;color:inherit}
 .send.stop{background:var(--ink);color:var(--panel)}
 @keyframes pulse{50%{opacity:.25}}
 .top{display:flex;align-items:center;gap:12px;padding:12px 14px 12px 16px;border-bottom:1px solid var(--line-2);background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:saturate(1.4) blur(10px);position:relative;z-index:1}
-.who{flex:1;min-width:0}.who h1{margin:0;font-family:var(--font-head);font-size:.98rem;font-weight:var(--head-weight);letter-spacing:var(--head-track);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who{flex:1;min-width:0}.who h1,.who h2{margin:0;font-family:var(--font-head);font-size:.98rem;font-weight:var(--head-weight);letter-spacing:var(--head-track);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .who p{margin:0;font-size:.78rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .who p::before{content:"";display:inline-block;width:6px;height:6px;margin:0 8px 0 2px;vertical-align:1px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px color-mix(in srgb,#22c55e 18%,transparent)}
 .avatar{flex:none;display:grid;place-items:center;border-radius:50%;overflow:hidden;background:#fff;color:var(--on-accent);font-weight:650}
@@ -150,7 +150,6 @@ button{font:inherit;color:inherit}
 .avatar.av-md{width:36px;height:36px;font-size:.95rem}.avatar.av-sm{width:28px;height:28px;font-size:.8rem}.avatar.av-xl{width:64px;height:64px;font-size:1.6rem;box-shadow:var(--shadow)}
 .icon-btn{width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:10px;background:transparent;color:var(--muted);cursor:pointer;transition:background .15s,color .15s}
 .icon-btn:hover{background:var(--line-2);color:var(--ink)}
-:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
 .log{flex:1;min-height:0;overflow-y:auto;scroll-behavior:smooth;overscroll-behavior:contain}
 .inner{max-width:740px;margin:0 auto;padding:22px 18px 12px;display:flex;flex-direction:column;gap:22px;min-height:100%}
 .hero{margin:auto 0;padding:24px 4px 8px;display:grid;justify-items:center;text-align:center;gap:10px;animation:rise .4s cubic-bezier(.2,.8,.2,1)}
@@ -217,7 +216,6 @@ a.cite:hover{background:var(--accent);color:var(--on-accent)}
 .clip-play:disabled{background:var(--line);color:var(--muted);cursor:not-allowed}
 .clip.idle .clip-play svg,.clip.error .clip-play svg{margin-left:2px}
 .clip-play .spin{animation:spin .8s linear infinite}
-.clip-play:focus-visible,.clip-seek:focus-visible,.clip-open:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
 .clip-body{flex:1;min-width:0;display:grid;gap:7px}
 .clip-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:.78rem;line-height:1.2}
 .clip-label{overflow:hidden;color:var(--ink-2);font-weight:600;text-overflow:ellipsis;white-space:nowrap}
@@ -268,6 +266,7 @@ body.checking:not(.gated)::before{content:"";position:fixed;left:50%;top:50%;wid
 .composer{position:relative;padding:8px 14px calc(10px + env(safe-area-inset-bottom));background:var(--panel)}
 .box{max-width:740px;margin:0 auto;display:flex;align-items:flex-end;gap:8px;padding:7px 7px 7px 16px;border:1px solid var(--line);border-radius:22px;background:var(--panel);box-shadow:var(--shadow);transition:border-color .15s,box-shadow .15s}
 .box:focus-within{border-color:var(--accent-line);box-shadow:0 0 0 4px var(--accent-soft),var(--shadow)}
+.box:has(textarea:focus-visible){outline:2px solid var(--ink);outline-offset:2px}
 .box textarea{flex:1;resize:none;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;line-height:1.5;padding:7px 0;max-height:180px;min-height:24px}
 .box textarea::placeholder{color:var(--muted)}
 @media (max-width:640px){.box textarea,.ws-q-text,.ws-blank{font-size:max(16px,1em)}}
@@ -301,6 +300,8 @@ body.checking:not(.gated)::before{content:"";position:fixed;left:50%;top:50%;wid
 .chat-tools [data-tip]::after{bottom:auto;top:50%;left:auto;right:calc(100% + 6px);transform:translate(3px,-50%)}.chat-tools [data-tip]:hover::after,.chat-tools [data-tip]:focus-visible::after{transform:translate(0,-50%)}
 .send[data-tip]:hover::after,.send[data-tip]:focus-visible::after,.barge[data-tip]:hover::after,.barge[data-tip]:focus-visible::after,.clip-open[data-tip]:hover::after,.clip-open[data-tip]:focus-visible::after,.top [data-tip-at=below]:hover::after,.top [data-tip-at=below]:focus-visible::after{transform:none}
 [data-tip]:disabled::after{display:none}
+/* Escape hides a tooltip until the pointer or focus moves on (WCAG 1.4.13). */
+body.tips-off [data-tip]::after{display:none}
 @media (hover:none){[data-tip]::after{display:none}}
 .box.recording{padding-left:7px;border-color:var(--accent-line)}.box.recording textarea{display:none}
 .box.talking{padding-left:7px;border-color:var(--accent-line)}.box.talking textarea{display:none}
@@ -368,7 +369,7 @@ ${course ? themeOf(settings.course_theme).page : ''}
 </head>
 <body class="mode-${mode}${workspace ? ` has-workspace ai-${workspace.ai}${workspace.layout?.corner === 'left' ? ' corner-left' : ''}` : ''}${course && !workspace ? ' has-course' : ''}${(course ? course.identify !== 'browser' || course.asks : Boolean(host.asks)) ? ' checking' : ''}">
 ${course && !workspace ? `<header class="crs-strip"><a class="crs-back" href="${escapeHtml(course.url)}">${ICON.back}<span>${escapeHtml(course.title)}</span></a><strong>${escapeHtml(course.activity || '')}</strong>${course.done === 'button' ? '<button class="crs-done" type="button" data-done>I’m done</button>' : ''}${course.preview ? '<span class="crs-preview">Preview: not counted</span>' : ''}</header>` : ''}
-${workspace ? '<div class="ws-shell">\n<section id="ws" class="ws" aria-label="Activity"></section>\n' : ''}<div class="app">
+${workspace ? '<div class="ws-shell">\n<main id="ws" class="ws" aria-label="Activity"></main>\n' : ''}<div class="app">
   <nav id="chats" class="chats" aria-label="Chats" inert>
     <div class="chats-head"><strong>Chats</strong><button id="chats-close" class="icon-btn" type="button" data-tip="Close" data-tip-at="below" aria-label="Close chats">${ICON.close}</button></div>
     <button id="chats-new" class="chats-new" type="button">${ICON.pen}<span>New chat</span></button>
@@ -381,12 +382,12 @@ ${workspace ? '<div class="ws-shell">\n<section id="ws" class="ws" aria-label="A
   <header class="top">
     <button id="menu" class="icon-btn" type="button" data-tip="Chats" data-tip-at="below" aria-label="Chats" aria-controls="chats" aria-expanded="false">${ICON.chats}</button>
     ${avatarHtml(settings, 'md')}
-    <div class="who"><h1>${escapeHtml(settings.title)}</h1><p data-tip="${escapeHtml(settings.tagline || 'AI assistant')}" data-tip-at="below">${escapeHtml(settings.tagline || 'AI assistant')}</p></div>
+    <div class="who"><${workspace ? 'h2' : 'h1'}>${escapeHtml(settings.title)}</${workspace ? 'h2' : 'h1'}><p data-tip="${escapeHtml(settings.tagline || 'AI assistant')}" data-tip-at="below">${escapeHtml(settings.tagline || 'AI assistant')}</p></div>
     <button id="new" class="icon-btn" type="button" data-tip="New chat" data-tip-at="below" aria-label="New chat">${ICON.pen}</button>
     <button id="close" class="icon-btn" type="button" data-tip="Close" data-tip-at="below" aria-label="Close chat" hidden>${ICON.close}</button>
   </header>
   ${before.html || ''}
-  <main id="log" class="log" aria-label="Conversation"><div id="inner" class="inner"></div></main>
+  <${workspace ? 'section' : 'main'} id="log" class="log" aria-label="Conversation"><div id="inner" class="inner"></div></${workspace ? 'section' : 'main'}>
   <p id="said-aloud" class="sr" aria-live="polite"></p>
   <form id="form" class="composer">
     <button id="jump" class="jump" type="button" data-tip="Latest message" aria-label="Jump to the latest message" hidden>${ICON.down}</button>
@@ -469,7 +470,7 @@ body.has-workspace .scrim,body.has-workspace .scrim.open{background:transparent;
 .ws-split.fixed::before{cursor:default}
 .ws-grip{position:absolute;top:50%;left:-3px;width:6px;height:44px;margin-top:-22px;border-radius:99px;background:var(--accent);opacity:0;transition:opacity .15s}
 .ws-split:not(.fixed):hover .ws-grip,.ws-split:focus-visible .ws-grip,body.ws-dragging .ws-grip{opacity:.55}
-.ws-split:focus-visible .ws-grip{opacity:1;box-shadow:0 0 0 3px var(--accent-soft)}
+.ws-split:focus-visible .ws-grip{opacity:1;outline:2px solid var(--ink);outline-offset:2px}
 body.ws-dragging{cursor:col-resize;user-select:none}body.ws-dragging iframe{pointer-events:none}
 body.ai-collapsed .ws-split{display:none}
 .ws-rail{display:none}
@@ -502,7 +503,6 @@ body.gated .app{display:flex!important;position:static!important;width:auto!impo
 .ws-stepper-btn:hover{border-color:var(--accent-line)}
 .ws-stepper-btn .ws-i{color:var(--muted);transition:transform .16s cubic-bezier(.2,.8,.2,1)}
 .ws-stepper-btn[aria-expanded=true] .ws-i{transform:rotate(180deg)}
-.ws-stepper-btn:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
 .ws-stepper-track{display:flex;gap:4px;margin:0;padding:0;list-style:none}
 .ws-stepper-track li{width:16px;height:6px;border-radius:99px;background:var(--line);transition:background .2s}
 .ws-stepper-track li.done{background:var(--accent-line)}.ws-stepper-track li.here{background:var(--accent)}
@@ -513,7 +513,7 @@ body.gated .app{display:flex!important;position:static!important;width:auto!impo
 .ws-steps-list{display:grid;gap:2px;margin:0;padding:0;list-style:none}
 .ws-steps-row,.ws-steps-go{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:8px 10px;border:0;border-radius:10px;background:none;color:inherit;font:inherit;text-align:left}
 .ws-steps-go{cursor:pointer}.ws-steps-go:hover{background:var(--line-2)}
-.ws-steps-go:focus-visible{outline:2px solid var(--accent-text);outline-offset:-2px}
+.ws-steps-go:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
 .ws-steps-list [aria-current]{background:var(--accent-soft)}
 .ws-steps-mark{display:inline-grid;flex:none;place-items:center;width:26px;height:26px;border:1.5px solid var(--line);border-radius:50%;color:var(--muted);font-size:.78rem;font-weight:700;font-variant-numeric:tabular-nums}
 .ws-steps-list .done .ws-steps-mark{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
@@ -543,7 +543,7 @@ body.gated .app{display:flex!important;position:static!important;width:auto!impo
 .ws-tab{flex:none;display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border:0;border-radius:10px;background:none;color:var(--muted);font:inherit;font-size:.86rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,box-shadow .15s}
 .ws-tab:hover{color:var(--ink)}
 .ws-tab[aria-selected=true]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.08),0 1px 1px rgba(15,23,42,.04)}
-.ws-tab:focus-visible{outline:2px solid var(--accent-text);outline-offset:1px}
+.ws-tab:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
 .ws-badge{padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--ink-2);font-size:.7rem;font-weight:650;font-variant-numeric:tabular-nums}
 .ws-badge.done{background:color-mix(in srgb,#16a34a 16%,transparent);color:color-mix(in srgb,#15803d 80%,var(--ink))}
 .ws-body{flex:1;min-height:0;overflow:auto;position:relative;overscroll-behavior:contain}
@@ -569,14 +569,15 @@ body.gated .app{display:flex!important;position:static!important;width:auto!impo
 .ws-note-line{display:flex;align-items:flex-start;gap:7px;margin:4px 0 28px;color:var(--muted);font-size:.8rem;line-height:1.5}
 .ws-note-line .ws-i{margin-top:3px}
 .ws-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:8px 15px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel);color:var(--ink);font:inherit;font-size:.88rem;font-weight:620;cursor:pointer;white-space:nowrap;transition:border-color .15s,background .15s,transform .15s,opacity .15s}
-.ws-btn:hover:not(:disabled){border-color:var(--accent-line)}
-.ws-btn:active:not(:disabled){transform:scale(.98)}
+.ws-btn:hover:not(:disabled,[aria-disabled=true]){border-color:var(--accent-line)}
+.ws-btn:active:not(:disabled,[aria-disabled=true]){transform:scale(.98)}
 .ws-btn.primary{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
-.ws-btn.primary:hover:not(:disabled){filter:brightness(1.06)}
+.ws-btn.primary:hover:not(:disabled,[aria-disabled=true]){filter:brightness(1.06)}
 .ws-btn.ghost{border-color:transparent;background:transparent;color:var(--ink-2)}
-.ws-btn.ghost:hover:not(:disabled){background:var(--line-2);color:var(--ink)}
-.ws-btn:disabled{opacity:.45;cursor:default}
-.ws-btn:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
+.ws-btn.ghost:hover:not(:disabled,[aria-disabled=true]){background:var(--line-2);color:var(--ink)}
+.ws-btn:disabled,.ws-btn[aria-disabled=true]{opacity:.45;cursor:default}
+/* A button that can't be used just now keeps focus: less faded then, so its ring shows. */
+.ws-btn[aria-disabled=true]:focus-visible{opacity:.75}
 .ws-grow{flex:1}
 .ws-foot{position:sticky;bottom:0;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:2px -36px 0;padding:12px 36px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line-2);background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:saturate(1.4) blur(12px)}
 .ws-count{display:inline-flex;align-items:center;gap:10px;color:var(--ink-2);font-size:.86rem;font-weight:600;font-variant-numeric:tabular-nums}
@@ -596,7 +597,7 @@ body.gated .app{display:flex!important;position:static!important;width:auto!impo
 @container (min-width:760px){.ws-seg{display:none}.ws-write.has-plan .ws-col>.ws-label{display:block}.ws-write.has-plan{grid-template-columns:minmax(260px,.75fr) minmax(0,1.5fr);align-items:start}.ws-write.has-plan .ws-col{display:block!important}.ws-col.plan{position:sticky;top:12px}}
 .ws-paper{display:block;width:100%;min-height:52vh;resize:none;overflow:hidden;padding:28px 32px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);color:var(--ink);font:inherit;font-size:17px;line-height:1.8;box-shadow:0 1px 2px rgba(15,23,42,.04);transition:border-color .15s,box-shadow .15s}
 .ws-paper.plan{min-height:34vh;padding:20px 22px;font-size:15px;line-height:1.7;background:color-mix(in srgb,var(--panel) 94%,var(--accent))}
-.ws-paper:focus{outline:none;border-color:var(--accent-line);box-shadow:0 0 0 4px var(--accent-soft)}
+.ws-paper:focus{border-color:var(--accent-line);box-shadow:0 0 0 4px var(--accent-soft)}
 .ws-paper::placeholder{color:var(--muted)}
 .ws-paper[readonly]{background:var(--line-2)}
 .ws-drawer{position:fixed;top:72px;right:16px;bottom:84px;z-index:8;width:min(380px,calc(100% - 32px));overflow:auto;padding:18px 20px;border:1px solid var(--line);border-radius:20px;background:var(--panel);box-shadow:0 30px 70px -30px rgba(15,23,42,.5);animation:rise .2s cubic-bezier(.2,.8,.2,1)}
@@ -613,14 +614,14 @@ body.gated .app{display:flex!important;position:static!important;width:auto!impo
 .ws-step::before{content:"";display:block;height:6px;border-radius:99px;background:var(--line);transition:background .2s,height .2s}
 .ws-step.drafted::before{background:none;box-shadow:inset 0 0 0 1.5px var(--accent-line)}.ws-step.did::before{background:var(--accent-line)}.ws-step.ok::before{background:#16a34a}.ws-step.no::before{background:#ef4444}
 .ws-step.on::before{height:6px;box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--accent)}
-.ws-step:focus-visible{outline:none}.ws-step:focus-visible::before{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--accent)}
+.ws-step:focus-visible{outline:none}.ws-step:focus-visible::before{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--ink)}
 .ws-qcard{display:grid;gap:18px;padding:26px 28px}
 .md-inline{display:inline}.md-inline .math{display:inline}
 .ws-q-prompt{font-size:1.07rem;line-height:1.7;color:var(--ink)}.ws-q-prompt>.md>p,.ws-q-prompt>.md-inline{font-weight:540}.ws-q-prompt .md p{margin:0 0 .65em}.ws-q-prompt .md .code,.ws-q-prompt .md .table,.ws-q-prompt .md .diagram{font-weight:400}
 .ws-q-prompt .md pre{font-size:.86rem}
 .ws-q-prompt.cloze{font-size:1.06rem;line-height:2.3}
 .ws-blank{width:9em;margin:0 4px;padding:3px 9px;border:0;border-bottom:2px solid var(--accent-line);border-radius:7px 7px 0 0;background:var(--accent-soft);color:var(--ink);font:inherit;font-weight:600}
-.ws-blank:focus{outline:none;border-bottom-color:var(--accent)}
+.ws-blank:focus{border-bottom-color:var(--accent)}
 .ws-q-answer{display:grid;gap:9px}
 .ws-option{position:relative;display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:center;padding:13px 16px;border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--panel);cursor:pointer;transition:border-color .15s,background .15s}
 .ws-option:hover{border-color:var(--accent-line)}
@@ -633,7 +634,7 @@ body.gated .app{display:flex!important;position:static!important;width:auto!impo
 .ws-criterion-text{display:block;margin-top:4px;color:var(--ink-2);font-size:.86rem;line-height:1.55}
 .ws-option:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
 .ws-option:has(input:checked) .ws-key{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
-.ws-option:has(input:focus-visible){outline:2px solid var(--accent-text);outline-offset:2px}
+.ws-option:has(input:focus-visible){outline:2px solid var(--ink);outline-offset:2px}
 @media (forced-colors:active){.ws-option input{position:static;opacity:1;pointer-events:auto}.ws-option{grid-template-columns:auto 28px minmax(0,1fr)}}
 .ws-option:has(input:disabled){cursor:default}
 .ws-option.is-right:has(input:checked){border-color:#16a34a;background:color-mix(in srgb,#16a34a 9%,var(--panel))}.ws-option.is-right:has(input:checked) .ws-key{border-color:#16a34a;background:#16a34a;color:#fff}
@@ -649,7 +650,7 @@ body.gated .app{display:flex!important;position:static!important;width:auto!impo
 .ws-move.up .ws-i{transform:rotate(90deg)}.ws-move.down .ws-i{transform:rotate(90deg)}
 .ws-move:disabled{opacity:.3;cursor:default}
 .ws-q-text{width:100%;padding:13px 15px;border:1.5px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);font:inherit;font-size:16px}
-.ws-q-text:focus{outline:none;border-color:var(--accent-line);box-shadow:0 0 0 4px var(--accent-soft)}
+.ws-q-text:focus{border-color:var(--accent-line);box-shadow:0 0 0 4px var(--accent-soft)}
 textarea.ws-q-text{min-height:120px;resize:vertical;line-height:1.65}textarea.ws-q-text.long{min-height:240px}
 .ws-q-text.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;min-height:240px;tab-size:4;background:var(--code)}
 .ws-hints{display:grid;gap:8px}.ws-hints:empty{display:none}
@@ -702,10 +703,10 @@ textarea.ws-q-text{min-height:120px;resize:vertical;line-height:1.65}textarea.ws
 .rd-of{color:var(--muted);font-size:.84rem;white-space:nowrap}
 .rd-zoom{min-width:54px;height:30px;border:0;border-radius:8px;background:none;color:var(--ink-2);font-size:.82rem;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer}.rd-zoom:hover{background:var(--line-2)}
 .rd-find{width:min(220px,40vw);height:32px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}
-.rd-find:focus,.rd-page:focus{outline:none;border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-soft)}
+.rd-find:focus,.rd-page:focus{border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-soft)}
 .rd-found{color:var(--muted);font-size:.8rem;white-space:nowrap}
 .rd-scroll{flex:1;min-height:0;overflow:auto;background:color-mix(in srgb,var(--bg) 70%,var(--line));overscroll-behavior:contain}
-.rd-scroll:focus-visible{outline:2px solid var(--accent-text);outline-offset:-2px}
+.rd-scroll:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
 .rd-pages{display:grid;justify-items:center;gap:16px;padding:18px 24px 40px}
 .rd-status{margin:60px 0;color:var(--muted)}
 .rd-sheet{position:relative;background:#fff;box-shadow:0 1px 3px rgba(15,23,42,.12),0 8px 24px -12px rgba(15,23,42,.25);border-radius:3px}
@@ -733,7 +734,7 @@ textarea.ws-q-text{min-height:120px;resize:vertical;line-height:1.65}textarea.ws
 .rd-quote{margin:0;padding:2px 0 2px 10px;border-left:3px solid var(--accent-line);color:var(--ink-2);font-size:.84rem;line-height:1.5;max-height:6.5em;overflow:auto}
 .rd-colors{display:flex;gap:6px}
 .rd-note{width:100%;min-height:80px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:.88rem;line-height:1.5;resize:vertical}
-.rd-note:focus{outline:none;border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-soft)}
+.rd-note:focus{border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-soft)}
 .rd-row{display:flex;align-items:center;gap:6px}
 .rd-list{position:absolute;top:49px;right:0;bottom:0;z-index:11;width:min(320px,90%);overflow:auto;padding:14px;border-left:1px solid var(--line);background:var(--panel);box-shadow:-18px 0 40px -28px rgba(15,23,42,.4)}
 .rd-list h3{margin:0 0 10px;font-size:.92rem}
@@ -2080,12 +2081,21 @@ const CHAT_SCRIPT = String.raw`(() => {
   });
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
+    // A tooltip showing goes with it, until the pointer or focus moves on.
+    tipAt = document.querySelector('[data-tip]:hover');
+    document.body.classList.add('tips-off');
     if (talk) { e.preventDefault(); endTalk(); return; }
     if (recording) { e.preventDefault(); stopRecording(true); return; }
     if (reading && !reading.stopped) { e.preventDefault(); reading.stop(); reading = null; updateSend(); return; }
     if (chats.classList.contains('open') && !wide()) { openChats(false); menu.focus(); return; }
+    // The AI as a corner panel or a sheet beside an activity closes, from inside it (its ×, which the workspace hears).
+    if (document.body.classList.contains('ai-open') && !$('close').hidden && e.target.closest && e.target.closest('.app')) { e.preventDefault(); $('close').click(); return; }
     if (CONFIG.mode === 'widget') closeWidget();
   });
+  let tipAt = null;
+  const tipsBack = () => { tipAt = null; document.body.classList.remove('tips-off'); };
+  document.addEventListener('pointerover', (e) => { if (!tipAt || !tipAt.contains(e.target)) tipsBack(); });
+  document.addEventListener('focusin', tipsBack);
   // Who the learner is, on a course activity: the line under the message box says who they are, with
   // a way to hand the computer on (a new visitor id; the course home asks who the next one is).
   const who = $('whoami'), LEARNER = KEY + ':learner';
@@ -2137,10 +2147,13 @@ const CHAT_SCRIPT = String.raw`(() => {
   }
   function closed(title, message) {
     hush();
-    const box = document.createElement('div'); box.className = 'crs-gate'; box.setAttribute('role', 'alertdialog');
-    const card = document.createElement('div'); const h = document.createElement('h2'); h.textContent = title; const p = document.createElement('p');
-    p.textContent = message;
+    const box = document.createElement('div'); box.className = 'crs-gate'; box.setAttribute('role', 'alertdialog'); box.setAttribute('aria-modal', 'true');
+    box.setAttribute('aria-labelledby', 'crs-gate-title'); box.setAttribute('aria-describedby', 'crs-gate-text');
+    const card = document.createElement('div'); const h = document.createElement('h2'); h.id = 'crs-gate-title'; h.textContent = title; const p = document.createElement('p');
+    p.id = 'crs-gate-text'; p.textContent = message;
     const back = document.createElement('a'); back.href = CONFIG.course.url; back.textContent = 'Back to ' + CONFIG.course.title;
+    // Nothing behind it can be reached: the way back is the one way on.
+    for (const node of document.body.children) node.inert = true;
     card.append(h, p, back); box.append(card); document.body.append(box); back.focus();
   }
   // The AI writes first at the moments the activity's teacher chose (CONFIG.speaksUp): quiet on a step, working a while without
@@ -2235,7 +2248,7 @@ const CHAT_SCRIPT = String.raw`(() => {
     if (v.hidden) { closed('Not part of your course', 'This activity isn’t part of your course.'); return; }
     if (v.look) {
       Object.assign(CONFIG, { title: v.look.title, greeting: v.look.greeting || '', starters: v.look.starters || [], avatar: v.look.avatar_url || null });
-      document.querySelectorAll('.who h1').forEach((h) => { h.textContent = v.look.title; });
+      document.querySelectorAll('.who h1, .who h2').forEach((h) => { h.textContent = v.look.title; });
       document.querySelectorAll('.who p').forEach((p) => { p.textContent = p.title = v.look.tagline || 'AI assistant'; });
       input.placeholder = v.look.placeholder || input.placeholder;
       const notice = $('notice-text'); if (notice) notice.textContent = v.look.notice || '';
@@ -2277,16 +2290,16 @@ const CHAT_SCRIPT = String.raw`(() => {
     if (!res.ok) throw Object.assign(new Error((data.error && data.error.message) || 'That couldn’t be checked. Try again.'), { code: data.error && data.error.code });
     return data;
   };
-  // A course activity's "I'm done" (in its bar, or the workspace's).
+  // A course activity's "I'm done" (in its bar, or the workspace's). Busy or done, it says so (aria-disabled) and keeps focus.
   document.addEventListener('click', async (e) => {
     const done = e.target.closest && e.target.closest('[data-done]');
-    if (!done || done.disabled) return;
-    done.disabled = true;
+    if (!done || done.getAttribute('aria-disabled') === 'true') return;
+    done.setAttribute('aria-disabled', 'true');
     try {
       const res = await fetch(ENDPOINT('done'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visitor }) });
       if (!res.ok) throw new Error('not saved');
       done.textContent = 'Done ✓'; done.classList.add('is-done');
-    } catch (err) { done.disabled = false; done.textContent = 'Couldn’t save that. Try again'; }
+    } catch (err) { done.setAttribute('aria-disabled', 'false'); done.textContent = 'Couldn’t save that. Try again'; }
   });
   // A page with nothing more to ask lets the learner in at once; one that must know who they are, or
   // whose host has something to say first, asks first (gated meanwhile).

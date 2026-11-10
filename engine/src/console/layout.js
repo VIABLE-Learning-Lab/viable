@@ -28,6 +28,12 @@ html{scrollbar-color:var(--public-rule-strong) transparent;scrollbar-width:thin}
 .side a:not(.brand){display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;border-radius:var(--radius-sm);color:var(--public-text);text-decoration:none}
 .side a:not(.brand):hover{background:var(--field-mist);color:var(--public-ink)}
 .side a[aria-current=page]{background:var(--field-mist);color:var(--public-ink);font-weight:600}
+.side-courses{display:grid;grid-template-columns:minmax(0,1fr);gap:1px;margin:2px 0 6px 17px;padding:0 0 0 8px;border-left:1px solid var(--public-rule);list-style:none}
+.side .side-courses a{min-width:0;padding:5px 8px;color:var(--muted);font-size:.875rem}
+.side .side-courses a>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side .side-courses a[aria-current=page]{background:var(--field-mist);color:var(--public-ink);font-weight:600}
+.side .side-courses a.side-more{font-size:.8125rem}
+.side>nav{min-height:0;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}
 .side-foot{display:grid;gap:2px;margin-top:auto;font-size:.875rem}
 .side-account{position:relative}
 .side-account-button{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:var(--radius-sm);color:var(--public-ink);cursor:pointer;list-style:none;transition:background-color .12s}
@@ -117,7 +123,7 @@ dialog.v-dialog .actions{display:flex;flex-direction:row-reverse;flex-wrap:wrap;
 .v-drop u{color:var(--ink-blue);text-decoration:underline 1px var(--ink-blue-line);text-underline-offset:.22em}
 .v-drop small{color:var(--muted);font-size:.8125rem;line-height:1.45}
 @media (prefers-reduced-motion:reduce){dialog.v-dialog[open],.v-pop:popover-open{animation:none}.v-menu-button .v-icon{transition:none}}
-@media (max-width:760px){.console{display:block}.side{position:static;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 12px;height:auto;padding:10px 16px;border-right:0;border-bottom:1px solid var(--public-rule)}.brand{padding:0}.side nav{grid-column:1/-1;grid-row:2}.side ul{display:flex;flex-wrap:wrap;gap:2px}.side li a{white-space:nowrap}.side-foot{display:flex;align-items:center;gap:2px;margin:0}.side-account-name,.side-account-button>.v-icon:last-child{display:none}.side-account-button{padding:4px}.side-account-panel{top:calc(100% + 6px);bottom:auto;left:auto;right:0;width:min(280px,calc(100vw - 32px));transform-origin:top right}.side-foot button{width:100%}}
+@media (max-width:760px){.side-courses{display:none}.console{display:block}.side{position:static;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 12px;height:auto;padding:10px 16px;border-right:0;border-bottom:1px solid var(--public-rule)}.brand{padding:0}.side nav{grid-column:1/-1;grid-row:2}.side ul{display:flex;flex-wrap:wrap;gap:2px}.side li a{white-space:nowrap}.side-foot{display:flex;align-items:center;gap:2px;margin:0}.side-account-name,.side-account-button>.v-icon:last-child{display:none}.side-account-button{padding:4px}.side-account-panel{top:calc(100% + 6px);bottom:auto;left:auto;right:0;width:min(280px,calc(100vw - 32px));transform-origin:top right}.side-foot button{width:100%}}
 @media (max-width:760px){.page input.v-input,.page textarea{font-size:max(16px,1em)}}`;
 
 // What every page shares is one file each, kept by the browser for good under a name that changes with what is in it, so a click fetches only what is new on the next page.
@@ -173,8 +179,11 @@ ${links.map(external).join('')}
  * signed in (person, their name, else who), and in their menu the AI credit where a host has it (credit: { fill, href }), what Ask remembers, the host's
  * links [{ href, title }], and Sign out. A server of one's own has no account: its foot is the server.
  */
-export const consolePage = ({ title, pages, current, body, script = '', css = '', cssFile = null, scriptFile = null, links = [], brand = 'VIABLE Engine', signOut = '/teacher/signout?next=console', notice = '', home = null, who = null, person = null, credit = null }, nonce) => {
+export const consolePage = ({ title, pages, current, body, script = '', css = '', cssFile = null, scriptFile = null, links = [], brand = 'VIABLE Engine', signOut = '/teacher/signout?next=console', notice = '', home = null, who = null, person = null, credit = null, courses = [], courseHere = null, coursesMore = 0 }, nonce) => {
   const name = `${markSvg({ size: 28 })}<span class="brand-name"><strong>${escapeHtml(brand.split(' ')[0])}</strong><small>${escapeHtml(brand.split(' ').slice(1).join(' '))}</small></span>`;
+  // Under Courses, the teacher's courses: the one open now is where they are, so Courses itself isn't marked then.
+  const courseList = courses.length ? `<ul class="side-courses" aria-label="Your courses">${courses.map((course) => `<li><a href="/console/courses/${escapeHtml(course.code)}${escapeHtml(courseHere?.tabPath || '')}" data-tip="${escapeHtml(course.title)}"${courseHere?.code === course.code ? ' aria-current="page"' : ''}><span>${escapeHtml(course.title)}</span></a></li>`).join('')}${coursesMore ? `<li><a class="side-more" href="/console/courses"><span>${coursesMore} more</span></a></li>` : ''}</ul>` : '';
+  const navItem = (page) => `<li><a href="/console/${escapeHtml(page.id)}"${page.id === current && !(page.id === 'courses' && courseHere) ? ' aria-current="page"' : ''}${page.fill ? ` data-fill="${escapeHtml(page.fill)}"` : ''}>${escapeHtml(page.title)}</a>${page.id === 'courses' ? courseList : ''}</li>`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -192,7 +201,7 @@ ${css ? `<style nonce="${nonce}">${css}</style>` : ''}
 <div class="console">
 <header class="side">
 ${home ? `<a class="brand" href="${escapeHtml(home)}">${name}</a>` : `<div class="brand">${name}</div>`}
-<nav aria-label="The console"><ul>${pages.filter((page) => page.nav !== false).map((page) => `<li><a href="/console/${escapeHtml(page.id)}"${page.id === current ? ' aria-current="page"' : ''}${page.fill ? ` data-fill="${escapeHtml(page.fill)}"` : ''}>${escapeHtml(page.title)}</a></li>`).join('')}</ul></nav>
+<nav aria-label="The console"><ul>${pages.filter((page) => page.nav !== false).map(navItem).join('')}</ul></nav>
 <div class="side-foot">${accountHtml({ who, name: person, credit, links, brand, signOut })}</div>
 </header>
 <main class="page" id="main">${notice}${body}</main>

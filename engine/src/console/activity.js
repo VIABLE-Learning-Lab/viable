@@ -15,6 +15,7 @@ import { activityKeys } from '../server/library.js';
 import { changeCourse, courseAt, kindOfActivity } from './course.js';
 import { addStep, changeStep, flowOf, moveStep, newRef, openingFrom, PANEL_WORDS, removeStep, reviewOf, STEP_LIMIT } from './flow.js';
 import { choose, dropZone, esc, oneOf, say, text, toggle, withForms } from './forms.js';
+import { GOALS_CSS, setGoals, whatForPart } from './goals.js';
 
 // Large data, loaded when a page asks for it, so a server that never opens these starts small.
 const misconceptions = () => import('../../../harness/src/utils/misconceptions.js');
@@ -441,6 +442,7 @@ ${records?.tried && agent ? `<details class="block tried" id="tried" data-load="
 </div>
 </div>
 <div class="act-panel narrow" id="tab-details" role="tabpanel" aria-labelledby="tab-btn-details" hidden>
+${whatForPart(activity, doc, { code, form: FORM })}
 <section class="block" aria-labelledby="open-title">
 <h2 id="open-title">When it is open</h2>
 <div class="fields">
@@ -475,7 +477,7 @@ ${units.length ? choose('unit_ref', 'Unit', activity.unit_ref ?? '', [{ value: '
 </div>
 <div class="save-bar" id="save-bar" data-save-bar><button class="v-btn is-primary" type="submit" form="${FORM}" disabled${locked ? ' data-locked' : ''}>Save</button><span class="v-note" data-when-changed>Not saved yet.</span><span class="v-note" data-when-saved>Learners get what you save on their next message.</span>${say()}</div>
 `,
-    css: `${ACTIVITY_CSS}\n${TRACE_CSS}`,
+    css: `${ACTIVITY_CSS}\n${TRACE_CSS}\n${GOALS_CSS}`,
     script: ACTIVITY_SCRIPT
   };
 }
@@ -845,6 +847,7 @@ function applyForm(activity, body, doc) {
   activity.summary = clean(body.summary, 600) || null;
   activity.minutes = Number.isInteger(body.minutes) && body.minutes > 0 ? Math.min(body.minutes, 600) : null;
   if (body.unit_ref !== undefined) activity.unit_ref = (doc.course.units || []).some((unit) => unit.ref === body.unit_ref) ? body.unit_ref : null;
+  setGoals(activity, doc, body.goals, body.check);
   // A package's several panels and steps stay as they are; the form sends no kind for them.
   if (body.kind) {
     const held = activity.workspace?.panels?.[0] || null;

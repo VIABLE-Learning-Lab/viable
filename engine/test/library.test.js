@@ -163,8 +163,8 @@ test('who holds the token can try what is hidden, as a learner apart; nobody els
   const handler = await app(store);
   await json(await call(handler, 'POST', 'courses', { title: 'Tried' }));
   await json(await call(handler, 'POST', 'courses/tried/activities', { title: 'Hidden one', kind: 'chat', version: 1 }));
-  assert.match(await (await page(handler, '/course/tried/hidden-one')).text(), /isn’t open yet/);
-  assert.match(await (await handler(new Request(`${URL_BASE}/course/tried/hidden-one`, { headers: { authorization: `Bearer ${TOKEN}`, accept: 'text/html' } }))).text(), /isn’t open yet/, 'a session alone lifts nothing: a teacher may have left it on a shared computer');
+  assert.match(await (await page(handler, '/course/tried/hidden-one')).text(), /isn’t open right now/);
+  assert.match(await (await handler(new Request(`${URL_BASE}/course/tried/hidden-one`, { headers: { authorization: `Bearer ${TOKEN}`, accept: 'text/html' } }))).text(), /isn’t open right now/, 'a session alone lifts nothing: a teacher may have left it on a shared computer');
   const asTeacher = await handler(new Request(`${URL_BASE}/course/tried/hidden-one?try=1`, { headers: { authorization: `Bearer ${TOKEN}`, accept: 'text/html' } }));
   assert.match(await asTeacher.text(), /Preview: not counted/);
   const home = await handler(new Request(`${URL_BASE}/course/tried/home?try=1`, { method: 'POST', headers: { ...headers, origin: URL_BASE }, body: JSON.stringify({ visitor: 'c'.repeat(32) }) }));

@@ -63,6 +63,8 @@ function fromHere(request, url) {
 // The pages a teacher needs, for a host that decides models, agents and knowledge for them.
 export const TEACHING_PAGES = [...askPages(() => PAGES), courseList, newCourse, activitiesTab, ...peoplePages, ...progressPages, settingsTab, ...sharePages, ...activityPages];
 export const TEACHING_TABS = TEACHING_PAGES.filter((page) => page.courseTab);
+// How many courses the sidebar lists under Courses: more go on the Courses page.
+const SIDE_COURSES = 6;
 
 /**
  * The console's pages and routes, for whichever host has signed someone in. tools: what they reach a course through (library,
@@ -93,6 +95,19 @@ export function consoleApp({ tools, pages = PAGES, readBody, readJson, brand, si
       return known ? refusal(error.status, error.code, error.message) : refusal(500, 'server_error', 'Something went wrong. Try again.');
     }
   }
+  // The teacher's courses under Courses in the sidebar, the latest first and the one open now among them, so another is a
+  // click away from any page; on a course's tab, each opens on the same tab.
+  async function coursesBeside(rest) {
+    if (!pages.some((item) => item.id === 'courses') || !tools.library) return {};
+    const here = /^courses\/([\w-]+)(?:(\/[\w-]+).*)?$/.exec(rest);
+    const tab = here ? pages.find((item) => item.courseTab && item.tabPath === (here[2] || '')) : null;
+    let all = [];
+    try { all = tools.library.titles ? await tools.library.titles() : (await tools.library.courses()).map(({ code, doc }) => ({ code, title: doc.course?.title || code })); } catch { return {}; }
+    const shown = all.slice(0, SIDE_COURSES);
+    const open = here && all.find((course) => course.code === here[1]);
+    if (open && !shown.includes(open)) shown.splice(Math.min(shown.length, SIDE_COURSES - 1), 1, open);
+    return { courses: shown, courseHere: open ? { code: open.code, tabPath: tab?.tabPath || '' } : null, coursesMore: Math.max(0, all.length - shown.length) };
+  }
   async function renderPage(rest, request, url) {
     const page = pages.find((item) => (item.match ? item.match.test(rest) : rest === item.id));
     const nonce = nonceOf();
@@ -103,7 +118,7 @@ export function consoleApp({ tools, pages = PAGES, readBody, readJson, brand, si
       if (error?.status !== 404) throw error;
       return missing(error.message);
     }
-    return new Response(consolePage({ title: made.title || page.title, pages, current: page.section || page.id, brand, signOut, links, notice, home, who, person, credit, ...made }, nonce), { status: 200, headers: consoleHeaders(nonce) });
+    return new Response(consolePage({ title: made.title || page.title, pages, current: page.section || page.id, brand, signOut, links, notice, home, who, person, credit, ...(await coursesBeside(rest)), ...made }, nonce), { status: 200, headers: consoleHeaders(nonce) });
   }
   return { api, renderPage };
 }

@@ -885,3 +885,40 @@ test('a schedule card sets when an activity opens and closes, through its own ro
   assert.equal(doc.course.activities[0].opens_at, '2030-01-02T09:00:00.000Z');
   assert.equal(doc.course.activities[0].release, 'hidden', 'it waits for its time');
 });
+
+test('goals as a unit is planned: Ask writes them, adds a check toward them, and a goal that goes leaves no activity naming it', async () => {
+  const s = await server(following([
+    ...SETUP.slice(0, 2),
+    (course) => [call('change_course', { course, goals: [{ text: 'Add fractions with unlike denominators.', unit: 'Week 1' }, { text: 'Explain why the pieces must match.', unit: 'Week 1' }, { text: 'Use fractions in a recipe.' }] })],
+    (course) => [call('read_course', { course })],
+    (course) => [call('add_activity', { course, title: 'Fractions check', kind: 'questions', unit: 'Week 1', goals: ['add-fractions-with-unlike-denominators', 'explain-why-the-pieces-must-match'], check: true, questions: [{ type: 'fill', prompt: 'What is 1/3 + 1/6?', accept: ['1/2', '3/6'] }] })],
+    (course) => [call('add_activity', { course, title: 'Not a goal', kind: 'chat', goals: ['no-such-goal'] })],
+    'Goals and a check are set.'
+  ]));
+  const events = await s.ask('Plan week 1 with goals and a check.');
+  const told = s.sent.flatMap((body) => body.messages.filter((message) => message.role === 'tool').map((message) => JSON.parse(message.content)));
+  const read = told.find((answer) => Array.isArray(answer.goals));
+  assert.deepEqual(read.goals.map(({ n, unit }) => [n, unit]), [[1, null], [2, 'Week 1'], [3, 'Week 1']], 'the whole course’s goal first, then the unit’s, numbered across the course');
+  assert.ok(told.some((answer) => /has no goal “no-such-goal”/.test(JSON.stringify(answer))), 'a goal the course hasn’t got is refused with the refs it has');
+  assert.equal(events.at(-1).name, 'done');
+  const page = await s.page('courses/fractions-period-2');
+  assert.match(page, /Fractions check<\/strong><\/a><span class="row-tag">Check<\/span><\/span><span class="v-note">[^<]*Goals 2, 3</);
+  assert.match(page, /<p class="goal-fit">Checked in 1<\/p>/, 'goals only a check names');
+  assert.doesNotMatch(page, /Not a goal/, 'nothing is made when a goal is refused');
+
+  // The whole list again, one goal gone and one new: the words that stay keep their ref, and the new one never takes the old ref.
+  const again = await server(following([
+    ...SETUP.slice(0, 2),
+    (course) => [call('change_course', { course, goals: [{ text: 'Add fractions with unlike denominators.' }] })],
+    (course) => [call('add_activity', { course, title: 'Practice two', kind: 'chat', goals: ['add-fractions-with-unlike-denominators'] })],
+    (course) => [call('change_course', { course, goals: [{ text: 'add fractions with unlike denominators' }, { text: 'Subtract fractions with unlike denominators.' }] })],
+    (course) => [call('change_course', { course, goals: [{ text: 'Subtract fractions with unlike denominators.' }, { text: 'Multiply a fraction by a whole number.' }] })],
+    'Done.'
+  ]));
+  await again.ask('Goals, then change them.');
+  const kept = await again.page('courses/fractions-period-2');
+  assert.match(kept, /Practice two<\/strong><\/a><span class="v-note">(?:(?!Goal)[^<])*<\/span>/, 'the activity named the goal that went, so it names none now');
+  assert.doesNotMatch(kept, /goal-add-fractions-with-unlike-denominators"/, 'and the new goal didn’t take its ref');
+  const between = again.sent.flatMap((body) => body.messages.filter((message) => message.role === 'tool').map((message) => message.content)).join('\n');
+  assert.doesNotMatch(between, /has no unit|isn’t in this course/);
+});

@@ -51,9 +51,13 @@ export function writing(panel, api) {
   if (panel.rubric && panel.rubric.length) {
     drawer = el('aside', 'ws-drawer');
     drawer.setAttribute('aria-label', 'Rubric');
+    drawer.tabIndex = -1;
     drawer.hidden = true;
+    drawer.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); toggleRubric(false); } });
     const top = el('div', 'ws-drawer-head');
-    top.append(el('strong', null, 'How this will be judged'), button('icon-btn', icon('close', 16), () => toggleRubric(false)));
+    const close = button('icon-btn', icon('close', 16), () => toggleRubric(false));
+    close.setAttribute('aria-label', 'Close the rubric');
+    top.append(el('strong', null, 'How this will be judged'), close);
     const list = el('ol', 'ws-criteria');
     panel.rubric.forEach((row, i) => {
       const li = el('li', 'ws-criterion');
@@ -79,10 +83,13 @@ export function writing(panel, api) {
   function updateRubricButton() { if (rubricButton && panel.self_check) rubricButton.lastChild.textContent = 'Rubric · ' + checks.size + '/' + panel.rubric.length; }
   function toggleRubric(on) {
     if (!drawer) return;
+    // Opened, focus goes into it; closed from inside, back to the Rubric button.
+    const inside = drawer.contains(document.activeElement);
     drawer.hidden = !on;
     rubricButton.setAttribute('aria-expanded', String(on));
-    if (on) rubricOpen = Date.now();
-    else if (rubricOpen) { emit(panel.id, 'rubric', { visible_ms: Date.now() - rubricOpen }); rubricOpen = 0; }
+    if (on) { rubricOpen = Date.now(); drawer.focus(); }
+    else if (inside) rubricButton.focus();
+    if (!on && rubricOpen) { emit(panel.id, 'rubric', { visible_ms: Date.now() - rubricOpen }); rubricOpen = 0; }
   }
 
   // The plan and the draft: side by side where there is room, else one at a time.
@@ -125,7 +132,11 @@ export function writing(panel, api) {
   const foot = el('footer', 'ws-foot');
   const count = el('div', 'ws-count');
   const countText = el('span');
+  // The count is said with the writing (aria-describedby), in words; the meter only shows it.
+  countText.id = 'ws-' + panel.id + '-count';
+  fields.draft.text.setAttribute('aria-describedby', countText.id);
   const meter = el('span', 'ws-meter');
+  meter.setAttribute('aria-hidden', 'true');
   const meterFill = el('i');
   meter.append(meterFill);
   count.append(countText);
@@ -158,9 +169,10 @@ export function writing(panel, api) {
   function grow(text) { text.style.height = 'auto'; text.style.height = Math.max(text.scrollHeight, 0) + 'px'; }
   function updateCount() {
     const n = words(fields.draft.text.value);
-    countText.textContent = plural(n, 'word');
+    const short = panel.min_words && n < panel.min_words, long = panel.max_words && n > panel.max_words;
+    countText.textContent = plural(n, 'word') + (short ? ' · ' + (panel.min_words - n) + ' to go' : long ? ' · ' + (n - panel.max_words) + ' over' : '');
     const goal = panel.min_words || panel.max_words;
-    count.className = 'ws-count' + (panel.min_words && n < panel.min_words ? ' short' : panel.max_words && n > panel.max_words ? ' long' : goal ? ' ok' : '');
+    count.className = 'ws-count' + (short ? ' short' : long ? ' long' : goal ? ' ok' : '');
     if (goal) meterFill.style.width = Math.min(100, Math.round(n / (panel.max_words || panel.min_words) * 100)) + '%';
     if (!handed) api.setBadge(panel.id, n ? plural(n, 'word') : null);
   }
@@ -250,7 +262,10 @@ export function writing(panel, api) {
     if (panel.lock_on_submit) {
       // Read-only from now on: what was handed in stays as it is.
       Object.values(fields).forEach((f) => { f.text.readOnly = true; });
+      // Hand in goes; focus that was on it goes to the way on, or to the writing as it was handed in.
+      const onSubmit = document.activeElement === submit;
       submit.hidden = true;
+      if (onSubmit) (onward?.querySelector('button:not(:disabled)') || fields.draft.text).focus();
       setStatus('saved', 'Handed in. It can’t be changed now.');
       status.querySelector('.ws-i').replaceWith(icon('lock', 13));
       return;

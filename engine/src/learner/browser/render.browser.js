@@ -136,6 +136,7 @@ function enhanceText(root, ctx) {
             const a = makeLink(/^https?:\/\//i.test(String(cite.url || '')) ? cite.url : '#', String(n));
             a.className = 'cite';
             a.title = cite.title || 'Source';
+            a.setAttribute('aria-label', `Source ${n}`);
             replacement.appendChild(a);
           }
         }
@@ -197,9 +198,9 @@ function typeset(nodes) {
         // page's CSP allows no inline styles (even parsing them reports a violation), and the page's
         // stylesheet lays out display math instead.
         const markup = window.ViableMath.renderToString(node.dataset.tex, { displayMode: node.dataset.display === 'true', throwOnError: false, trust: false });
+        // No label over it: screen readers read the MathML itself, where TeX would be read out as code.
         node.innerHTML = purifier.sanitize(markup.replace(/\sstyle="[^"]*"/g, ''), { USE_PROFILES: { mathMl: true } });
         node.classList.add('ready');
-        node.setAttribute('aria-label', node.dataset.tex);
       } catch { /* the TeX source stays visible */ }
     }
   }).catch(() => {});
@@ -297,6 +298,16 @@ function downloadDiagram(img) {
   } catch { save(img.src, 'diagram.svg'); }
 }
 
+// A drawn diagram's alt text: its kind, from the word its Mermaid code starts with (after front matter and %% lines), and
+// its title where the code gives one (accTitle:, or title: in front matter).
+const DIAGRAM_KINDS = { graph: 'Flowchart', flowchart: 'Flowchart', sequenceDiagram: 'Sequence diagram', classDiagram: 'Class diagram', stateDiagram: 'State diagram', erDiagram: 'Entity relationship diagram', journey: 'Journey diagram', gantt: 'Gantt chart', pie: 'Pie chart', quadrantChart: 'Quadrant chart', xychart: 'Chart', mindmap: 'Mind map', timeline: 'Timeline', gitGraph: 'Git graph', sankey: 'Sankey diagram' };
+function diagramAlt(source) {
+  const text = String(source || '');
+  const kind = DIAGRAM_KINDS[(/^(?:\s*(?:%%.*|---[\s\S]*?---))*\s*([A-Za-z]+)/.exec(text) || [])[1]] || 'Diagram';
+  const title = (/^\s*(?:accTitle|title)\s*:\s*(\S.*)$/m.exec(text) || [])[1];
+  return title ? `${kind}: ${title.trim()}` : kind;
+}
+
 function diagramBlock(pre, code) {
   const block = document.createElement('div');
   block.className = 'code diagram';
@@ -335,7 +346,7 @@ function diagramBlock(pre, code) {
   const attempt = () => { view.hidden = false; pre.hidden = true; view.replaceChildren(wait); block.querySelector('.diagram-note')?.remove(); tools.replaceChildren(); draw(); };
   const draw = () => drawDiagram(code.textContent).then((svg) => {
     const img = document.createElement('img');
-    img.alt = 'Diagram';
+    img.alt = diagramAlt(code.textContent);
     img.decoding = 'async';
     img.onerror = () => showCode('This diagram couldn’t be shown, so here is its code.');
     img.onload = () => {
@@ -410,9 +421,13 @@ function render(text, ctx = {}) {
   }
   enhanceText(root, ctx);
 
+  // A table scrolls sideways in its own box, which the keyboard can reach (a named region) to scroll it.
   for (const table of [...root.querySelectorAll('table')]) {
     const wrap = document.createElement('div');
     wrap.className = 'table';
+    wrap.tabIndex = 0;
+    wrap.setAttribute('role', 'region');
+    wrap.setAttribute('aria-label', 'Table');
     table.replaceWith(wrap);
     wrap.appendChild(table);
   }

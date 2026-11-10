@@ -26,7 +26,10 @@ export function reading(panel, api) {
   const find = el('input', 'rd-find'); find.type = 'search'; find.placeholder = 'Find'; find.setAttribute('aria-label', 'Find in the document');
   const found = el('span', 'rd-found');
   const listButton = button('rd-btn wide', [icon('marker', 15), el('span', null, 'Highlights')], () => toggleList());
-  bar.append(el('span', 'rd-group', null), find, found, el('span', 'ws-grow'), listButton);
+  // The words found can be highlighted, noted or asked about from the keyboard: they become the passage the toolbar works on.
+  const hitButton = button('rd-btn wide', [icon('marker', 15), el('span', null, panel.highlights ? 'Highlight this' : 'Ask about this')], () => pickHit());
+  hitButton.hidden = true;
+  bar.append(el('span', 'rd-group', null), find, found, hitButton, el('span', 'ws-grow'), listButton);
   bar.firstChild.append(prev, pageInput, of, next, el('span', 'rd-sep'), zoomOut, zoomLabel, zoomIn);
   if (!panel.highlights) listButton.hidden = true;
   const scroller = el('div', 'rd-scroll');
@@ -152,7 +155,8 @@ export function reading(panel, api) {
   }
   const touch = () => { const clock = clocks.get(current); if (!clock || !clock.since) return; const now = Date.now(); if (clock.last) clock.active += Math.min(now - clock.last, IDLE); clock.last = now; api.touch(); };
   ['pointerdown', 'wheel', 'keydown', 'touchstart'].forEach((type) => scroller.addEventListener(type, touch, { passive: true }));
-  scroller.addEventListener('scroll', () => { touch(); hideTools(); }, { passive: true });
+  // Scrolling closes the toolbar by a selection, unless the keyboard is in it.
+  scroller.addEventListener('scroll', () => { touch(); if (!tools.contains(document.activeElement)) hideTools(); }, { passive: true });
   function setCurrent(n) {
     if (n === current && pageInput.value === String(n)) return;
     current = n; pageInput.value = String(n);
@@ -183,7 +187,7 @@ export function reading(panel, api) {
   find.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); step(e.shiftKey ? -1 : 1); } if (e.key === 'Escape') { find.value = ''; search(); } });
   async function search() {
     query = find.value.trim().toLowerCase();
-    hits = []; hit = -1;
+    hits = []; hit = -1; hitButton.hidden = true;
     pages.forEach((entry) => entry.box.querySelectorAll('.rd-hit').forEach((node) => node.remove()));
     if (!query || !doc) { found.textContent = ''; return; }
     found.textContent = 'Finding…';
@@ -203,6 +207,16 @@ export function reading(panel, api) {
     hit = (hit + by + hits.length) % hits.length;
     found.textContent = (hit + 1) + ' of ' + hits.length;
     go(hits[hit].page);
+    hitButton.hidden = !(panel.highlights || api.aiAvailable);
+  }
+  function pickHit() {
+    const item = hits[hit], entry = item && pages.get(item.page);
+    if (!entry || !entry.string) return;
+    const box = entry.box.getBoundingClientRect();
+    const r = rects(item.page, item.start, item.end)[0] || { left: 0, top: 0, width: box.width, height: 0 };
+    pending = { page: item.page, start: item.start, end: item.end, exact: entry.string.slice(item.start, item.end), prefix: entry.string.slice(Math.max(0, item.start - 32), item.start), suffix: entry.string.slice(item.end, item.end + 32), rect: { left: box.left + r.left, top: box.top + r.top, width: r.width, bottom: box.top + r.top + r.height } };
+    placeTools(pending.rect);
+    tools.querySelector('button')?.focus();
   }
   function markFound(n) {
     const entry = pages.get(n);
@@ -304,6 +318,7 @@ export function reading(panel, api) {
         mark.type = 'button'; place(mark, r);
         mark.setAttribute('aria-label', 'Highlight: ' + quoteOf(note).slice(0, 80) + (note.note ? '. Note: ' + note.note : ''));
         if (i) mark.tabIndex = -1;
+        else mark.dataset.note = note.id;
         if (note.note && i === 0) mark.classList.add('has-note');
         mark.onclick = (e) => { e.stopPropagation(); edit(note, mark.getBoundingClientRect()); };
         entry.marks.append(mark);
@@ -354,35 +369,55 @@ export function reading(panel, api) {
     const s = selected();
     if (!s || (!panel.highlights && !api.aiAvailable)) { if (!tools.matches(':hover')) hideTools(); return; }
     pending = s;
+    placeTools(s.rect);
+  });
+  function placeTools(rect) {
     const origin = wrap.getBoundingClientRect();
     tools.hidden = false;
-    tools.style.left = Math.max(8, Math.min(origin.width - tools.offsetWidth - 8, s.rect.left - origin.left + s.rect.width / 2 - tools.offsetWidth / 2)) + 'px';
-    tools.style.top = Math.max(8, s.rect.top - origin.top - tools.offsetHeight - 10) + 'px';
-  });
+    tools.style.left = Math.max(8, Math.min(origin.width - tools.offsetWidth - 8, rect.left - origin.left + rect.width / 2 - tools.offsetWidth / 2)) + 'px';
+    tools.style.top = Math.max(8, rect.top - origin.top - tools.offsetHeight - 10) + 'px';
+  }
   function hideTools() { tools.hidden = true; pending = null; }
+  // Escape leaves the toolbar, back to where it was opened from.
+  const away = () => (hitButton.hidden ? scroller : hitButton);
+  tools.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); hideTools(); away().focus(); } });
+  // A highlight's first mark, the one Tab reaches.
+  const markOf = (note) => [...(pages.get(note.page)?.marks.querySelectorAll('.rd-mark[data-note]') || [])].find((node) => node.dataset.note === String(note.id));
   async function highlight(color, withNote) {
     const s = pending;
     if (!s) return;
+    const keys = tools.contains(document.activeElement);
     hideTools();
     document.getSelection()?.removeAllRanges();
     const target = { selector: [{ type: 'TextQuoteSelector', exact: s.exact, prefix: s.prefix, suffix: s.suffix }, { type: 'TextPositionSelector', start: s.start, end: s.end }] };
+    let note = null;
     try {
-      const note = await post('/annotations', { panel: panel.id, page: s.page, target, color });
+      note = await post('/annotations', { panel: panel.id, page: s.page, target, color });
       notes.push(note); paint(s.page); renderList();
       emit(panel.id, 'highlight', { page: s.page, color, chars: s.exact.length });
       if (withNote) { const first = pages.get(s.page).marks.querySelector('.rd-mark:last-of-type'); edit(note, first ? first.getBoundingClientRect() : s.rect); }
     } catch (error) { flash(error.message); }
+    // From the keyboard, focus goes to the new highlight (its note has it where one was asked for).
+    if (keys && card.hidden) ((note && markOf(note)) || away()).focus();
   }
   // A highlight's own card: its note, its color, and removing it.
   const card = el('div', 'rd-card'); card.hidden = true; card.setAttribute('role', 'dialog'); card.setAttribute('aria-label', 'Highlight');
   wrap.append(card);
+  let cardNote = null;
+  // Closed from the keyboard (Done, Escape, Remove), focus goes back to the highlight, or to the document where it's gone.
+  function closeCard() {
+    if (card.hidden) return;
+    card.hidden = true;
+    ((cardNote && markOf(cardNote)) || scroller).focus();
+  }
   function edit(note, rect) {
+    cardNote = note;
     card.replaceChildren();
     const quote = el('blockquote', 'rd-quote', quoteOf(note));
     const colors = el('div', 'rd-colors');
     COLORS.forEach((color) => { const b = button('rd-swatch ' + color + (note.color === color ? ' on' : ''), null, () => save({ color })); b.setAttribute('aria-label', color); b.style.setProperty('--swatch', SWATCH[color]); colors.append(b); });
     const remove = button('rd-tool danger', [icon('trash', 14), el('span', null, 'Remove')], async () => {
-      try { await post('/annotations', { panel: panel.id, action: 'remove', id: note.id }); notes = notes.filter((item) => item.id !== note.id); paint(note.page); renderList(); emit(panel.id, 'highlight', { page: note.page, color: note.color, chars: quoteOf(note).length, removed: true }); card.hidden = true; }
+      try { await post('/annotations', { panel: panel.id, action: 'remove', id: note.id }); notes = notes.filter((item) => item.id !== note.id); paint(note.page); renderList(); emit(panel.id, 'highlight', { page: note.page, color: note.color, chars: quoteOf(note).length, removed: true }); closeCard(); }
       catch (error) { flash(error.message); }
     });
     card.append(quote, colors);
@@ -391,7 +426,7 @@ export function reading(panel, api) {
       text = el('textarea', 'rd-note'); text.placeholder = 'Write a note…'; text.value = note.note || ''; text.maxLength = 2000; text.setAttribute('aria-label', 'Your note');
       card.append(text);
     }
-    const close = button('rd-tool', 'Done', async () => { if (text && (text.value.trim() || null) !== (note.note || null)) await save({ note: text.value }); card.hidden = true; });
+    const close = button('rd-tool', 'Done', async () => { if (text && (text.value.trim() || null) !== (note.note || null)) await save({ note: text.value }); closeCard(); });
     const row = el('div', 'rd-row'); row.append(remove, el('span', 'ws-grow'), close);
     card.append(row);
     async function save(change) {
@@ -408,7 +443,7 @@ export function reading(panel, api) {
     card.style.top = Math.min(origin.height - card.offsetHeight - 8, rect.bottom - origin.top + 8) + 'px';
     (text || close).focus();
   }
-  wrap.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !card.hidden) { card.hidden = true; } });
+  wrap.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !card.hidden) closeCard(); });
   scroller.addEventListener('pointerdown', (e) => { if (!card.contains(e.target)) card.hidden = true; });
   function toggleList(open = list.hidden) { list.hidden = !open; listButton.setAttribute('aria-expanded', String(open)); if (open) renderList(); }
   function renderList() {

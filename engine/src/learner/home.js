@@ -50,7 +50,7 @@ a.next:hover{border-color:var(--accent-line);border-left-color:var(--accent)}
 .list li+li{border-top:1px solid var(--line-2)}
 .card{display:flex;align-items:center;gap:14px;margin:0 -10px;padding:14px 10px;border-radius:var(--r-sm);color:inherit;text-decoration:none;transition:background .15s}
 a.card:hover{background:var(--line-2)}
-a.card:focus-visible{outline:2px solid var(--accent-text);outline-offset:-2px}
+a.card:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
 .kind{position:relative;flex:none;display:grid;place-items:center;width:38px;height:38px;border:1.5px solid var(--accent-line);border-radius:50%;color:var(--accent-text)}
 .ic{display:contents}.kind svg{width:18px;height:18px}
 .card.done .kind{border-color:transparent;background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
@@ -76,7 +76,8 @@ a.card:focus-visible{outline:2px solid var(--accent-text);outline-offset:-2px}
 .gate-card p{margin:0;color:var(--ink-2);font-size:.92rem}
 .gate-card input{width:100%;padding:12px 14px;border:var(--bw) solid var(--line);border-radius:var(--r-sm);background:var(--panel);color:var(--ink);font-size:1rem;text-align:center}
 .gate-card input.code{font:600 1.05rem/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase}
-.gate-card input:focus{outline:none;border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-soft)}
+.gate-card input:focus{border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-soft)}
+.gate-card label{margin-bottom:-6px;color:var(--ink-2);font-size:.88rem;font-weight:620}
 .err{color:var(--danger);font-size:.85rem}.err.note{color:var(--ink-2)}.btn.confirm{width:100%;margin-top:10px}.err input{margin-top:12px}#join-go[hidden]{display:none}
 .choices{display:grid;gap:8px}
 .skeleton{height:62px;margin:6px 0;border-radius:var(--r-sm);background:var(--line-2);animation:wait 1.2s ease-in-out infinite alternate}
@@ -146,26 +147,27 @@ export function renderHome({ course, how, ask = {}, query = '', visitorKey = 'vi
   <form id="join" class="gate-card" hidden>
     <h1>${escapeHtml(copy.title)}</h1>
     <p>${escapeHtml(copy.text)}</p>
-    <input id="entry" class="${copy.code ? 'code' : ''}" type="${copy.email ? 'email' : 'text'}" inputmode="${copy.email ? 'email' : 'text'}" autocomplete="${copy.autocomplete || 'off'}" autocapitalize="${copy.code ? 'characters' : 'off'}" spellcheck="false" maxlength="120" placeholder="${escapeHtml(copy.label)}" aria-label="${escapeHtml(copy.label)}" required>
+    <label for="entry">${escapeHtml(copy.label)}</label>
+    <input id="entry" class="${copy.code ? 'code' : ''}" type="${copy.email ? 'email' : 'text'}" inputmode="${copy.email ? 'email' : 'text'}" autocomplete="${copy.autocomplete || 'off'}" autocapitalize="${copy.code ? 'characters' : 'off'}" spellcheck="false" maxlength="120" aria-describedby="join-err" required>
     <p id="join-err" class="err" role="alert" hidden></p>
     <button id="join-go" class="btn" type="submit">Continue</button>
     ${reenter ? '<button id="join-fresh" class="btn ghost" type="button">Start fresh</button>' : ''}
   </form>
   <div id="who" class="gate-card" hidden>
-    <h1 id="who-title"></h1>
+    <h1 id="who-title" tabindex="-1"></h1>
     <p>This computer may be shared. Make sure your work goes to you.</p>
     <button id="who-yes" class="btn" type="button">Yes, that’s me</button>
     <button id="who-no" class="btn ghost" type="button">No, I’m someone else</button>
   </div>
   <div id="pick" class="gate-card" hidden>
-    <h1>Which class are you in?</h1>
+    <h1 tabindex="-1">Which class are you in?</h1>
     <p>Choose once; your teacher can change it later.</p>
     <div id="pick-list" class="choices"></div>
   </div>
   <div id="slot" hidden>${before.html || ''}</div>
 </div>
 <main id="main" class="sheet">
-  <section class="hero"><h1>${escapeHtml(course.title)}</h1>${course.description ? `<p>${escapeHtml(course.description)}</p>` : ''}<p class="kept"><span>${escapeHtml(KEPT[course.data_level] || KEPT.minimal)}${course.alsoSeen ? ` ${escapeHtml(course.alsoSeen)}` : ''}</span>${before.note || ''}</p>${tellsCode ? '<p id="your-code" class="kept" hidden></p>' : ''}<div id="bar" class="bar" hidden><span><i></i></span><b></b></div></section>
+  <section class="hero"><h1 tabindex="-1">${escapeHtml(course.title)}</h1>${course.description ? `<p>${escapeHtml(course.description)}</p>` : ''}<p class="kept"><span>${escapeHtml(KEPT[course.data_level] || KEPT.minimal)}${course.alsoSeen ? ` ${escapeHtml(course.alsoSeen)}` : ''}</span>${before.note || ''}</p>${tellsCode ? '<p id="your-code" class="kept" hidden></p>' : ''}<div id="bar" class="bar" hidden><span><i></i></span><b></b></div></section>
   ${infoCard(course.info)}
   <div id="next"></div>
   <div id="units"><div class="unit"><div class="list"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div></div></div>
@@ -203,8 +205,14 @@ const HOME_SCRIPT = String.raw`(() => {
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const when = (iso) => new Date(iso).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   const day = (d) => new Date(d + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' });
-  const show = (which) => { $('gate').hidden = !which; $('main').hidden = Boolean(which); ['join', 'who', 'pick', 'slot'].forEach((id) => { $(id).hidden = id !== which; }); if (which === 'join') setTimeout(() => ($('join-err').querySelector('input') || $('entry')).focus(), 50); };
-  const ROLE = { pretest: 'Before you start', posttest: 'Check what you learned', survey: 'Survey' };
+  // Focus goes to what is asked now (its field, or its card's heading), and to the course once the asking is done.
+  const show = (which) => {
+    const asked = !which && !$('gate').hidden;
+    $('gate').hidden = !which; $('main').hidden = Boolean(which); ['join', 'who', 'pick', 'slot'].forEach((id) => { $(id).hidden = id !== which; });
+    if (which === 'join') setTimeout(() => ($('join-err').querySelector('input') || $('entry')).focus(), 50);
+    else if (which === 'who' || which === 'pick' || asked) setTimeout(() => $(which || 'main').querySelector('h1').focus(), 50);
+  };
+  const ROLE = { check: 'Check', pretest: 'Before you start', posttest: 'Check what you learned', survey: 'Survey' };
   const STATE = { new: 'Start', started: 'Continue', done: 'Done' };
   // Each kind of activity's icon (fixed markup, never learner or author text), and the marks beside them.
   const PATHS = {
@@ -246,7 +254,7 @@ const HOME_SCRIPT = String.raw`(() => {
   if (linkCode || linkId || opening) { ['join', 'open'].forEach((key) => params.delete(key)); if (CONFIG.linkParam) params.delete(CONFIG.linkParam); history.replaceState(null, '', location.pathname + (String(params) ? '?' + params : '')); }
   let typedIn = false;
   async function join(said) {
-    $('join-go').disabled = true; $('join-err').hidden = true;
+    $('join-go').disabled = true; $('join-err').hidden = true; $('join-err').replaceChildren();
     // Someone who has just typed who they are stays on the home long enough to see their code.
     try { await post('/join', said); here(); typedIn = said.entry != null; await load(); }
     catch (error) {

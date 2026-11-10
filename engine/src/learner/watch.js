@@ -202,7 +202,6 @@ function watchPanel(config) {
     config.note ? el('p', 'mode', config.note) : null,
     config.warning ? el('p', 'warning', config.warning) : null);
   const turns = el('div', 'turns');
-  turns.setAttribute('aria-live', 'polite');
   const empty = el('p', 'empty', config.hint || 'Each message to the AI shows here, as it happens.');
   const foot = el('p', 'foot', config.record ? 'Every reply is kept with its run: this reads the same after a reload, and the activity’s page keeps your previews.' : 'Only while this page is open.');
   foot.hidden = true;
@@ -316,7 +315,9 @@ function watchPanel(config) {
     root.querySelector('.settings').open = false;
     const told = [event.teaching?.role ? `Who it is here: ${event.teaching.role}` : null, event.teaching?.told, event.step?.brief ? `In “${event.step.title}”: ${event.step.brief}` : null].filter(Boolean);
     const rounds = el('ol', 'rounds watch live');
+    // Only where a turn stands is said as it happens, not each draft in full (turns kept from before are not).
     const statusLine = el('p', 'status');
+    if (!replaying) statusLine.setAttribute('role', 'status');
     // A turn the AI began says so, and why: the moment the teacher chose.
     const first = event.first ? config.firstWords?.[event.first] || 'A moment the teacher chose' : null;
     const said = el('blockquote', 'said', first || event.message);

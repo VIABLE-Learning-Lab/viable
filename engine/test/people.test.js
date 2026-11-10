@@ -332,14 +332,14 @@ test('a section’s own opening: on the home, the activity’s page and every en
   await s.post(`/course/${code}/home?section=period-3`, { visitor: inThree });
   const cards = async (who) => (await s.post(`/course/${code}/home`, { visitor: who })).data.units.flatMap((unit) => unit.activities).map((card) => card.key);
   assert.deepEqual(await cards(inTwo), ['practice'], 'hidden for the course');
-  assert.match(await (await s.learnerPage(`/course/${code}/quiz`)).text(), /isn’t open yet/);
+  assert.match(await (await s.learnerPage(`/course/${code}/quiz`)).text(), /isn’t open right now/);
   const before = await version(s, code);
   // Open early, for one section.
   await s.ok('POST', `courses/${code}/activities/quiz/for-section`, { section: two.id, release: 'open' });
   assert.equal(await version(s, code), before, 'a teacher mid-class, not a new version');
   assert.deepEqual(await cards(inTwo), ['practice', 'quiz']);
   assert.deepEqual(await cards(inThree), ['practice']);
-  assert.ok((await s.learnerPage(`/course/${code}/quiz`)).status === 200 && !/isn’t open yet/.test(await (await s.learnerPage(`/course/${code}/quiz`)).text()), 'the page is served, and each endpoint decides');
+  assert.ok((await s.learnerPage(`/course/${code}/quiz`)).status === 200 && !/isn’t open right now/.test(await (await s.learnerPage(`/course/${code}/quiz`)).text()), 'the page is served, and each endpoint decides');
   assert.equal((await s.post(`/course/${code}/quiz/open`, { visitor: inTwo })).status, 200);
   assert.equal((await s.post(`/course/${code}/quiz/messages`, { visitor: inTwo, message: 'hi' })).status, 200);
   const refused = await s.post(`/course/${code}/quiz/open`, { visitor: inThree });
