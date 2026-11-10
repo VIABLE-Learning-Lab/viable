@@ -28,23 +28,57 @@ export const MOVES = {
 /** The studies each move rests on, for whoever reads what a turn was given. */
 export const MOVE_SOURCES = { attempt: 'Black & Wiliam (1998); Hattie & Timperley (2007)', asks_answer: 'Bastani et al. (2025)', stuck: 'Hattie & Timperley (2007)', repeated: 'Beck & Gong (2013)' };
 
-// These read English. A picker model reads other languages, so a multilingual class needs one.
-const ASKS_ANSWER = /\b(?:(?:tell|give|show)\s+(?:me\s+)?(?:the\s+|what\s+the\s+)?(?:answer|solution)|what(?:['’]?s|\s+is)\s+the\s+answer|just\s+(?:tell|give|say|do|solve)|(?:do|solve|finish)\s+(?:it|this|that)\s+for\s+me|(?:need|want)\s+(?:the\s+)?answer)\b/i;
-const STUCK = /\b(?:stuck|lost|confused|no\s+idea|idk|dunno|give\s+up|don['’]?t\s+(?:get|know|understand)|can['’]?t\s+do|how\s+do\s+(?:i|you)|where\s+do\s+i\s+(?:start|begin))\b/i;
+// These read English well, and the commonest ways of asking and of being stuck in Spanish and Chinese, so that a message in
+// those isn't taken for an answer. A picker model reads any language, so a multilingual class needs one. How well they read is
+// measured on messages they were not written from (docs/scorecard.md): a change here is tried on that set's development half only.
+const ASKS_ANSWER = new RegExp([
+  String.raw`\b(?:tell|give|show)\s+(?:me\s+|us\s+)?(?:the\s+|what\s+the\s+)?(?:answer|solution)`,
+  String.raw`\bwhat(?:['’]?s|\s+is)\s+the\s+answer`,
+  String.raw`\bjust\s+(?:tell|give|say|do|solve|the\s+\w+)`,
+  String.raw`\b(?:need|want)\s+(?:the\s+)?answer`,
+  // The work handed over: "do it for me", "can you balance it for me", "fix my code", "write my conclusion".
+  String.raw`\b(?:do|solve|write|fix|make|balance|finish|answer|find|calculate|complete|simplify|work)\b[^.?!]*\bfor\s+me\b`,
+  String.raw`^\W*(?:(?:can|could|will|would)\s+(?:you|u)\s+)?(?:please\s+|pl[sz]\s+)?(?:just\s+)?(?:write|fix|solve|finish|balance)\s+(?:my|the|this|it|that)\b`,
+  // "tell me which one", "tell me the verb": told, where a hint or a reason isn't what is asked for.
+  String.raw`\b(?:pl(?:ease|[sz])\s+)?tell\s+(?:me|us)\b(?!\s+(?:if|whether|how|why|more|about|a\s+hint|what\s+(?:to|i)))`,
+  String.raw`^\W*(?:the\s+)?answers?\W*(?:pl(?:ease|[sz]))?\W*$`,
+  String.raw`^\W*(?:so\s+)?(?:what(?:['’]?s|\s+is)\s+it(?:\s+then)?|which\s+(?:one|is\s+it))\W*$`,
+  String.raw`\b(?:dime|d[ií]game|dame|deme|solo\s+dime)\b|cu[aá]l\s+es\s+la\s+(?:respuesta|soluci[oó]n)|\b(?:hazlo|resu[eé]lvelo|escr[ií]belo)\b`,
+  '告诉我|答案是(?:什么|多少|啥)|给我答案|直接(?:告诉|给|说)|帮我(?:做|写|算|解|改)'
+].join('|'), 'i');
+const STUCK = /\b(?:stuck|lost|confused|no\s+(?:idea|clue)|idk|dunno|give\s+up|forgot|blank|um+|uh+|hmm+|don['’]?t\s+(?:even\s+)?(?:get|know|understand|see|remember)|can['’]?t\s+(?:do|figure|remember|see)|too\s+hard|keep\s+getting|how\s+do\s+(?:i|you)|what\s+do\s+i\s+do|where\s+do\s+i\s+(?:start|begin)|no\s+(?:entiendo|comprendo|puedo|tengo\s+idea)|ni\s+idea|me\s+rindo|(?:perdid|atascad|confundid)[oa]|c[oó]mo\s+(?:se\s+hace|lo\s+hago|empiezo))\b|\bno\s+s[eé](?![a-zñ])|muy\s+dif[ií]cil|不会|不懂|不知道|不明白|看不懂|没思路|卡住|怎么(?:做|办|写|算)|太难|^[\s.?!…。？！]+$/i;
 const WORKED = /=|\b(?:got|i\s+think|is\s+it|it['’]?s|its|my\s+answer|right|correct|i\s+did|i\s+added|i\s+put|i\s+made|i\s+multiplied|i\s+changed|so)\b/i;
 const BARE_FRACTION = /^\W*\d+(?:\s+\d+)?\s*\/\s*\d+\W*$/;
-const isAttempt = (text) => (/\d/.test(text) && WORKED.test(text)) || BARE_FRACTION.test(text);
+// A question put to the tutor rather than an answer to the tutor's: "what does numerator mean", "can i use a calculator".
+// "is it 12?" and "mitochondria?" are answers offered as questions, so they don't count.
+const ASKS_TUTOR = /^\W*(?:what|whats|why|how|when|where|who|which|can|could|do|does|did|will|would|should|may|is\s+(?:this|that|there)|are\s+(?:we|you|there)|for\s+this)\b|^\W*(?:qu[eé]|por\s*qu[eé]|c[oó]mo|cu[aá]ndo|d[oó]nde|puedo|podemos|tenemos\s+que)\s|(?:什么意思|是什么|为什么|可以|能不能|要不要)|[吗呢]\s*[?？]?\s*$/i;
+// Said to be sociable, or about the tool or the class, with nothing of the task in it.
+const SOCIAL = /^\W*(?:hi+|hey+|hello+|yo|ok(?:ay)?|k|thanks?(?:\s+you)?|thx|ty|cool|nice|yay+|lol|bye|good\s+(?:morning|afternoon)|hola|gracias|vale|adi[oó]s)\b|^\W*(?:你好|您好|谢谢|好的|嗯|哈哈|再见)/i;
+// What the tutor just said leaves the task with them, unless it only says they have it: "Yes, correct.", "Your code works now."
+// A question always does, and so does "Not quite. Look at the step again."
+const SAYS_DONE = /^\W*(?:yes|yep|yeah|correct|right|nice|great|good|well\s+done|perfect|exactly|that['’]?s\s+(?:it|right|correct))\b|\b(?:is|are|looks?)\s+(?:right|correct|strong|good|great)\b|\bworks?\s+(?:now|well)\b/i;
+const leavesATask = (said) => Boolean(said) && (said.includes('?') || !SAYS_DONE.test(said));
+
+// An answer or some working. With figures and the words that go with working, or a bare fraction, it is one anywhere. After the
+// tutor set something (before: what the tutor last said), so is whatever isn't a question back, a plea, being stuck or small talk:
+// "gravity", "he loves it" and a line of code are answers too, and most answers outside arithmetic have no figure in them.
+function isAttempt(text, before = '') {
+  if ((/\d/.test(text) && WORKED.test(text)) || BARE_FRACTION.test(text)) return !(ASKS_TUTOR.test(text) && !/\bis\s+it\b/i.test(text));
+  if (!leavesATask(before) || !/[\p{L}\p{N}]/u.test(text)) return false;
+  return !ASKS_TUTOR.test(text) && !SOCIAL.test(text) && !ASKS_ANSWER.test(text) && !STUCK.test(text);
+}
+const saidBefore = (history, index) => { for (let i = index - 1; i >= 0; i -= 1) if (history[i]?.role === 'assistant') return String(history[i].content || ''); return ''; };
 
 /** How many times the learner has tried, in the conversation so far. */
-export const triesIn = (history = []) => history.filter((turn) => turn?.role === 'user' && isAttempt(String(turn.content || ''))).length;
+export const triesIn = (history = []) => history.filter((turn, index) => turn?.role === 'user' && isAttempt(String(turn.content || ''), saidBefore(history, index))).length;
 
 /** The moment as the learner's words show it: attempt, asks_answer, stuck, repeated or other. */
 export function readMoment(message, history = []) {
   const text = String(message || '');
   const tries = triesIn(history);
-  const attempt = isAttempt(text);
   const asks = ASKS_ANSWER.test(text);
   const stuck = STUCK.test(text);
+  const attempt = !asks && !stuck && isAttempt(text, saidBefore(history, history.length));
   if (tries >= 2 && (attempt || asks || stuck)) return 'repeated';
   if (asks) return 'asks_answer';
   if (stuck) return 'stuck';

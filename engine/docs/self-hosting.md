@@ -397,7 +397,7 @@ newest 200, until the server stops.
 **It takes the same token and session as the teacher's page.** One sign-in opens both, and the token never goes in an
 address. A change has to come from the console's own page, or from a program holding the token: another site's post, and
 anything but `application/json`, are refused. The same is on offer as JSON at `/console/api/` (`models`, `providers`,
-`providers/<id>`, `providers/<id>/test`, `providers/<id>/try`, `providers/<id>/model`, `roles/<role>`).
+`providers/<id>`, `providers/<id>/test`, `providers/<id>/try`, `providers/<id>/model`, `roles/<role>`). From another device, sign in over HTTPS: over plain HTTP the form isn't offered, because the token would cross the network for anyone on it to read. On the computer that runs the server, `http://127.0.0.1` is fine.
 
 **A key goes in and doesn't come back.** The browser is told only that one is saved. It is encrypted at rest with AES-GCM,
 from `VIABLE_ENGINE_SECRET`, or else from a random key the store keeps in its own folder, readable only by its owner

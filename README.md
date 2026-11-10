@@ -72,6 +72,8 @@ This is used with minors, so its defaults protect them wherever it runs:
 - A reply that wasn't checked says so. It is never shown as checked.
 - A server of your own answers only your own machine until you set a token, and its logs hold no learner's words.
 
+The ones code can hold are checked on every case of [the scorecard](harness/docs/scorecard.md), which anyone can run.
+
 Running this doesn't make a deployment compliant with COPPA, FERPA or any other law by itself:
 [deploying.md](engine/docs/deploying.md) lists what you still have to do. Report vulnerabilities privately
 ([SECURITY.md](SECURITY.md)).

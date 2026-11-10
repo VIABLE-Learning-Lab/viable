@@ -20,7 +20,7 @@ import { MAX_SPEECH_CHARACTERS, speechRuns } from '../utils/speechText.js';
 import { parseBase64Asset } from '../utils/base64Asset.js';
 import { ExpressionError, evaluateCondition, evaluateExpression, expressionPaths, openContext, renderTemplate, renderValue, resolvePath } from './expression.js';
 import { sanitizeRequestPayloadForLogging } from '../utils/logRedaction.js';
-import { DEFAULT_VETTING_REVIEWER, GUARDRAIL_MODEL_CHECKS, parallelPaths, routerRoutes } from './graph.js';
+import { DEFAULT_VETTING_REVIEWER, GUARDRAIL_MODEL_CHECKS, agentStepTools, parallelPaths, routerRoutes } from './graph.js';
 import { learnerWords, reachedAmong } from '../../../harness/src/checks/answerReached.js';
 import { readReview, redraftTurns, replyText, reviewMessages, reviewRounds, vettingPromptSet, withLearnerMessage, withTeacher } from '../../../harness/src/checks/vetting.js';
 import { agentVettingControls, reasoningBudget, REVIEW_TOKENS, thinkingBudget, vettingModelOptions } from '../../../harness/src/utils/vettingControls.js';
@@ -248,7 +248,7 @@ export async function runAgentGraph(env, graph, options = {}) {
       let result;
       try {
         if (path && (node.type === 'output' || node.type === 'ask')) {
-          throw new AgentRunError(path.startsWith('each:') ? `Step "${node.id}" is inside a For each loop, so it can't reply or ask.` : `Parallel path "${path}" must reach its join step before replying.`, { status: 422, code: 'invalid_graph' });
+          throw new AgentRunError(path.startsWith('each:') ? `Step "${node.id}" is inside a For each loop, so it can't reply or ask.` : path.startsWith('tool:') ? `Step "${node.id}" is one of an Agent step's tools, so it can't reply or ask.` : `Parallel path "${path}" must reach its join step before replying.`, { status: 422, code: 'invalid_graph' });
         }
         hooks.onStepStart?.(node);
         result = await handler(node, ctx, env, services, hooks, budgets, step);
@@ -1290,7 +1290,7 @@ const HANDLERS = {
   // Autonomous tool loop: the model chooses tools until it gives a final answer.
   async agent(node, ctx, env, services, hooks, budgets, step) {
     const cfg = node.config || {};
-    const tools = allowedByTeacher(buildAgentTools(cfg.tools || {}, services, ctx), ctx.scope());
+    const tools = allowedByTeacher([...buildAgentTools(cfg.tools || {}, services, ctx), ...drawnTools(node, ctx)], ctx.scope());
     // An upper limit on tool calls, not a target: the model answers when it has enough.
     const maxTools = clampInt(cfg.max_turns, 1, MAX_AGENT_TOOL_CALLS, 5);
     // gpt-oss models call tools only through native function calling: asked for JSON, they stop
@@ -2133,6 +2133,32 @@ function buildAgentTools(cfg, services, ctx) {
     }
   }
   return tools;
+}
+
+// Tools the builder drew: each is the steps from branches[name] back to the Agent step, as a For each step's body is, run when
+// the model calls it with what it passed as {{tool.input}}. They share the run's outputs, so they run one call at a time
+// (other tools of the same turn still run beside them), and what comes back is the last step's result as a trace keeps it.
+function drawnTools(node, ctx) {
+  let queue = Promise.resolve();
+  let calls = 0;
+  const run = async (name, input) => {
+    const outer = ctx.iteration;
+    const counts = { ...ctx.loopCounts };
+    const from = ctx.steps.length;
+    ctx.iteration = { ...outer, tool: { name, input: input ?? '' } };
+    try {
+      await ctx.walk(node.branches[name], node.id, `tool:${node.id}/${name}#${calls += 1}`);
+    } finally {
+      ctx.iteration = outer;
+      ctx.loopCounts = counts;
+    }
+    const last = ctx.steps.slice(from).at(-1)?.nodeId;
+    return last ? ctx.traceOutputs[last] ?? null : null;
+  };
+  return agentStepTools(node.config).filter((tool) => node.branches?.[tool.name]).map((tool) => ({
+    name: tool.name, parameters: { input: 'string' }, description: tool.description,
+    run: ({ input } = {}) => (queue = queue.catch(() => {}).then(() => run(tool.name, input)))
+  }));
 }
 
 // Nested runs share this run's deadline, budgets, provider keys and billing hooks.

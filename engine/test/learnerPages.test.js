@@ -105,6 +105,26 @@ test('a page’s headers hold it to its own scripts, and to the sites that may f
   assert.equal(headers['Cache-Control'], 'no-store');
 });
 
+test('an order question’s choice ids say nothing of the answer: sorting what the page gets is not the key', () => {
+  const steps = ['Prophase', 'Metaphase', 'Anaphase', 'Telophase', 'Cytokinesis'];
+  const saved = (choices = steps, answer) => normalizeItems([{ id: 'mitosis', type: 'order', prompt: 'Put the phases in order.', choices, ...(answer ? { answer } : {}) }])[0];
+  let keyed = 0;
+  for (let i = 0; i < 20; i += 1) {
+    const item = saved();
+    assert.deepEqual(item.choices.map((choice) => choice.text), steps, 'stored in the order that is right');
+    for (const choice of item.choices) assert.match(choice.id, /^z[a-z0-9]{3}$/);
+    const shown = publicItem(item).choices;
+    assert.deepEqual(shown.map((choice) => choice.id), shown.map((choice) => choice.id).sort(), 'the page shows them by id, which was drawn at random');
+    if (gradeResponse(item, shown.map((choice) => choice.id).sort()).correct) keyed += 1;
+  }
+  assert.ok(keyed < 5, `sorting the ids graded correct ${keyed} times of 20; by chance it is 1 in 120`);
+  // Ids an author gave, in order or not, are replaced too, and the answer follows them; saving again keeps what was drawn.
+  const given = saved([{ id: '1', text: 'Metaphase' }, { id: '2', text: 'Prophase' }], { order: ['2', '1'] });
+  assert.deepEqual(given.choices.map((choice) => choice.text), ['Prophase', 'Metaphase']);
+  assert.equal(gradeResponse(given, given.answer.order).correct, true);
+  assert.deepEqual(normalizeItems([given])[0], given);
+});
+
 test('publicWorkspace is the gate: no key, explanation, hint or model answer reaches a page, and no later step at all', () => {
   const ws = workspaceOn(panels());
   const shown = publicWorkspace(ws, SET);

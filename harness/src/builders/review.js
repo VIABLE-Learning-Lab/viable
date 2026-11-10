@@ -9,7 +9,7 @@ const MOST = { bytes: 512 * 1024, files: 5000 };
 
 const SERVER = /(^|\/)(api|server|servers|backend|functions|edge-functions|workers?|lambda|scripts?)(\/|$)|(^|\/)(route|middleware|server|worker)\.[a-z]+$|\.(server|config)\.[a-z]+$/;
 const PAGE_FILE = /\.(html?|vue|svelte|astro|jsx|tsx)$/;
-const MODEL_CALL = /chat\.completions\.create|\/chat\/completions|messages\.create\(|generateContent\(|generateContentStream\(|responses\.create\(|streamText\(|generateText\(/;
+const MODEL_CALL = /chat\.completions\.create|\/chat\/completions|messages\.create\(|generateContent\(|generateContentStream\(|responses\.create\(|streamText\(|generateText\(|:(?:stream)?generateContent\b|api\.anthropic\.com\/v1\/messages/i;
 const FUNCTION_ONLY = /^\s*["']use server["']/m;
 const PUBLIC_FOLDER = /(^|\/)(public|static|assets|wwwroot)\//;
 
@@ -21,7 +21,8 @@ function inBrowser(path, text, project) {
   if (SERVER.test(path) || FUNCTION_ONLY.test(text)) return false;
   // In Next's app folder a component runs on the server unless it says otherwise.
   if (project.next && /(^|\/)app\//.test(path) && !/^\s*["']use client["']/m.test(text)) return false;
-  return PAGE_FILE.test(path) || /\b(document\.|window\.|localStorage|useState\()/.test(text);
+  // A front end's source folder is bundled for the browser, whatever a file in it looks like alone.
+  return PAGE_FILE.test(path) || /\b(document\.|window\.|localStorage|useState\()/.test(text) || (project.frontSource && /^src\//.test(path));
 }
 const isPublicData = (path) => PUBLIC_FOLDER.test(path) && path.endsWith('.json');
 
@@ -38,11 +39,14 @@ const PROVIDER = /https:\/\/(?:api\.openai\.com|api\.anthropic\.com|generativela
 const BY_ADDRESS = /\b(req\.ip|request\.ip|remoteAddress|get_remote_address|getClientIp|clientIp|client_ip|ip_address)\b|x-forwarded-for|cf-connecting-ip|x-real-ip|\.limit\(\s*ip\b/i;
 const LIMITER = /rate.?limit|slowapi|throttl|flask_limiter|\blimiter\b|\b429\b|too many/i;
 const ANSWER = /(?<![@:.\w-])["']?\b(correct_?answer|correct_?option|answer_?key|correct|is_?correct|answer)\b["']?\s*[:=]\s*(["'`]?[\d[/]|true\b|false\b|["'`][^"'`\s]{1,24}["'`])|\b(q|question|prompt)\s*:\s*["'`].*\b(a|ans)\s*:\s*["'`\d]/i;
+const ANSWER_SET = /\b(solutions?|answers|answer_?keys?)\b\s*[:=]\s*[[{]/i;
+// A name put into what the model is told: "The student's name is {name}", or content: `Hi ${firstName}`.
+const NAME_IN_PROMPT = /(student|learner|pupil|child)(?:'s|’s)?\s+name\s+is|(content|prompt|system|instruction)\b.*(\$\{\s*(first_?|student_?|learner_?)?name\s*\}|\{(first_?|student_?|learner_?)?name\}|["'`]\s*\+\s*(first_?|student_?|learner_?)?name\b)/i;
 const LEARNER_NAME = /\b(student|learner|pupil|child|kid)s?(\.|_|\[["'])(name|first_?name|last_?name|full_?name|email)\b|\b(student|learner|pupil|child)_?name\b|\bdisplayName\b/i;
 const OUTPUT_LIMIT = /max_tokens|max_completion_tokens|maxOutputTokens|maxTokens|max_output_tokens|maxCompletionTokens/;
 const BUDGET_WORDS = /budget|quota|spend|credit|daily.?limit|per.?day|cost.?limit|max.?cost/i;
 const TEACHER_WORDS = /teacher|instructor|admin|dashboard/i;
-const SHOWS_ITS_FOLDER = /static\(\s*(__dirname|process\.cwd\(\)|["'`]\.\/?["'`]|path\.join\(\s*__dirname\s*\))\s*\)/;
+const SHOWS_ITS_FOLDER = /static\(\s*(__dirname|process\.cwd\(\)|["'`]\.\.?\/?["'`]|path\.(join|resolve)\(\s*__dirname\s*(,\s*["'`]\.\.\/?["'`]\s*)?\))\s*\)|(join|resolve)\(\s*(process\.cwd\(\)|__dirname)\s*,[^)]*\b(req|request)\.url/;
 const TRACKER = /googletagmanager\.com|google-analytics\.com|\bgtag\(|\bfbq\(|connect\.facebook\.net|static\.hotjar\.com|clarity\.ms|cdn\.segment\.com|\bmixpanel\.|\bposthog\./i;
 
 export const RULES = [
@@ -77,7 +81,7 @@ export const RULES = [
     id: 'env-can-be-committed', level: 'must', title: 'A .env file git isn’t told to ignore',
     why: 'The keys in it go into the repository with the next commit, and from there anywhere.',
     fix: 'Add .env to .gitignore. If it has been committed, make new keys: the old ones have been seen.',
-    find: (project) => project.envFiles.filter((name) => !/(^|\n)\s*\.env/.test(project.gitignore)).map((file) => ({ file, line: 1 }))
+    find: (project) => project.envFiles.filter((name) => !/(^|\n)[ \t]*\/?(\*?\.env\*?|\.env\.\*)[ \t]*(\r?\n|$)/.test(project.gitignore) && !new RegExp(`(^|\\n)[ \\t]*/?${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[ \\t]*(\\r?\\n|$)`).test(project.gitignore)).map((file) => ({ file, line: 1 }))
   },
   {
     id: 'server-shows-its-folder', level: 'must', title: 'A server handing out its whole folder',
@@ -105,14 +109,14 @@ export const RULES = [
     id: 'prompt-in-the-page', level: 'look', title: 'What the AI is told, in the page',
     why: 'Learners can read it and change it, and an answer key in it is one they can read.',
     fix: 'Keep what the AI is told on the server, and don’t let a request from the page replace it.',
-    find(project) { return each((file) => (inBrowser(file.path, file.text, project) ? linesMatching(file, /\brole\s*:\s*["'`]system["'`]/) : []))(project); }
+    find(project) { return each((file) => (inBrowser(file.path, file.text, project) ? linesMatching(file, /\brole\s*:\s*["'`]system["'`]|\bsystem_?instruction\b|\bsystem_?prompt\b\s*[:=]|\bsystem\s*:\s*["'`]/i).slice(0, 3) : []))(project); }
   },
   {
     id: 'answers-in-the-page', level: 'look', title: 'Answers the page can read',
     why: 'The class can read them with View Source. A browser’s word that an answer was right can’t be trusted either.',
     fix: 'Fine for practice nobody is graded on. For anything that counts, keep answers on a server, and check there.',
     find(project) {
-      return each((file) => (((inBrowser(file.path, file.text, project) || isPublicData(file.path)) && /question|quiz|prompt|\bq\s*:/i.test(file.path + file.text)) ? linesMatching(file, ANSWER).slice(0, 1) : []))(project);
+      return each((file) => (((inBrowser(file.path, file.text, project) || isPublicData(file.path)) && /question|quiz|prompt|exercise|\bq\s*:/i.test(file.path + file.text)) ? [...linesMatching(file, ANSWER), ...linesMatching(file, ANSWER_SET)].slice(0, 1) : []))(project);
     }
   },
   {
@@ -143,7 +147,7 @@ export const RULES = [
     id: 'names-to-the-model', level: 'look', title: 'A learner’s name near a model call',
     why: 'Anything in a prompt goes to the model’s provider, and for a child that can break its terms and the law. The AI doesn’t need a name to help.',
     fix: 'Send their words and what they’re working on, never who they are. If it must address them, fill the name in after the reply comes back.',
-    find: each((file) => (MODEL_CALL.test(file.text) ? linesMatching(file, LEARNER_NAME).slice(0, 3) : []))
+    find: each((file) => (MODEL_CALL.test(file.text) ? [...new Set([...linesMatching(file, LEARNER_NAME), ...linesMatching(file, NAME_IN_PROMPT)])].slice(0, 3) : []))
   },
   {
     id: 'name-kept-in-the-browser', level: 'look', title: 'A learner’s name kept in the browser',
@@ -162,7 +166,7 @@ export const RULES = [
     why: 'On Supabase, a table without row-level security can be read with the key the page already has.',
     fix: 'Turn on row-level security on every table, and write who can reach what.',
     find(project) {
-      if (project.files.some((file) => /\.sql$/.test(file.path) && /row level security/i.test(file.text)) || !project.files.some((file) => /supabase/i.test(file.path))) return [];
+      if (project.files.some((file) => /\.sql$/.test(file.path) && /row level security/i.test(file.text)) || !project.files.some((file) => /supabase/i.test(file.path) || /supabase/i.test(file.text))) return [];
       return each((file) => (/\.sql$/.test(file.path) ? linesMatching(file, /create table/i).slice(0, 1) : []))(project);
     }
   }
@@ -188,7 +192,7 @@ function read(folder) {
   walk(folder);
   let gitignore = '';
   try { gitignore = readFileSync(join(folder, '.gitignore'), 'utf8'); } catch { /* none */ }
-  return { files, envFiles, gitignore, next: files.some((file) => /(^|\/)next\.config\.[a-z]+$/.test(file.path)) };
+  return { files, envFiles, gitignore, next: files.some((file) => /(^|\/)next\.config\.[a-z]+$/.test(file.path)), frontSource: files.some((file) => /^src\/.*\.(jsx|tsx|vue|svelte)$/.test(file.path)) };
 }
 
 /** What a project's text suggests, most serious first. Lines say where to look; a secret itself is never repeated. */

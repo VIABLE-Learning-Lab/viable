@@ -8,7 +8,7 @@ import {
 } from '../src/agents/steps/index.js';
 import { stepsPath, stepsText } from '../scripts/build-steps.mjs';
 
-const FLOW_KINDS = ['next', 'terminal', 'none', 'branches', 'routes', 'paths', 'cases'];
+const FLOW_KINDS = ['next', 'terminal', 'none', 'branches', 'routes', 'paths', 'cases', 'tools'];
 const LOADERS = ['voices', 'reasoning_efforts'];
 
 // The step settings panel before manifests (the portal's agentNodeTypes.ts, 2026-11-01): every field

@@ -95,6 +95,16 @@ export function parallelPaths(config = {}) {
     .filter((name) => typeof name === 'string' && HANDLE_NAME.test(name) && name !== 'join');
 }
 
+/** The tools an Agent step's builder drew: steps from branches[name] back to the step, called by name. */
+export const AGENT_STEP_TOOLS = 8;
+export function agentStepTools(config = {}) {
+  return (Array.isArray(config.tools?.steps) ? config.tools.steps : [])
+    .filter((tool) => tool && typeof tool.name === 'string' && HANDLE_NAME.test(tool.name) && !RESERVED_TOOL_NAMES.has(tool.name))
+    .map((tool) => ({ name: tool.name, description: typeof tool.description === 'string' ? tool.description : '' }));
+}
+// Names the Agent step's own tools go by, and its way on.
+const RESERVED_TOOL_NAMES = new Set(['next', 'fetch_url', 'search_knowledge', 'browse_knowledge', 'read_document', 'recall_memory', 'save_memory', 'call_agent']);
+
 function describeRequirement({ all = [], any = [] } = {}) {
   return [
     ...all.map((key) => `config.${key}`),
@@ -135,6 +145,7 @@ export function describeGraphSchema(limits = DEFAULT_GRAPH_LIMITS) {
       'Every next, branches, and condition case target must name an existing node.',
       'A condition step checks config.cases [{when, to, label}] in order: the first case that holds decides, else config.default. label (1–60 characters) names a case on its connection; routing ignores it, and the step\'s result adds the matched case\'s case_number and label.',
       'An each step ("For each") runs its body once per item of config.items (a list, such as an llm list output), one item after another, up to max_items (default 10, at most 25). branches.each is the body\'s first step and the body\'s last step points back to the each step; branches.done (else next) runs after the last item. Body steps read the item as {{item}} and {{item_number}} (or the name in config.as). Its result: count, items, results [{item, number, outputs: {stepId: output}}] and values (config.collect worked out after each item, else the last body step\'s output). Body steps count toward the run\'s step and model call limits and can\'t reply or ask.',
+      `An agent step's own tools: config.tools.steps lists at most ${AGENT_STEP_TOOLS} { name, description } and branches[name] is each tool's first step, whose last step points back to the agent step (as an each step's body does). The model calls a tool by name with one input, which the tool's steps read as {{tool.input}}; it gets back the last step's result. A tool's steps run one call at a time, count toward the run's limits, can't reply or ask, and can't hold another agent step. An activity's tools_off removes a tool by its name.`,
       'At least one output node must be reachable from entry.',
       'A step\'s config.model must be a model whose mode in /v1/models is the step\'s model_mode: chat models answer, image steps take image_generation, speech steps audio_speech and transcribe steps audio_transcription.',
       'Image steps default to operation=generate. operation=edit requires source (a picture number of this conversation, or an address), image (one URL) or images ([{image_url}]), and a model connection with image_editing=true; operation=auto edits when source names a picture and generates otherwise. Operation and source values may be templates. Missing sources never fall back to generation.',
@@ -285,6 +296,7 @@ export function validateGraph(graph, options = {}) {
 
   for (const node of nodes) {
     if (node?.type === 'each' && node.branches?.each && ids.has(node.branches.each)) errors.push(...eachBodyErrors(node, nodeMap));
+    if (node?.type === 'agent') for (const tool of agentStepTools(node.config)) if (ids.has(node.branches?.[tool.name])) errors.push(...toolBodyErrors(node, tool.name, nodeMap));
   }
 
   const hasOutput = nodes.some((n) => n?.type === 'output');
@@ -379,6 +391,12 @@ function validateOrchestrationNode(node) {
   }
   if (node.type === 'agent' && cfg.tools?.agents != null && (!Array.isArray(cfg.tools.agents) || cfg.tools.agents.length > 5 || cfg.tools.agents.some((slug) => typeof slug !== 'string' || !slug))) {
     errors.push(`${label} tools.agents must list at most 5 agent slugs.`);
+  }
+  if (node.type === 'agent' && cfg.tools?.steps != null) {
+    const tools = agentStepTools(cfg);
+    if (!Array.isArray(cfg.tools.steps) || cfg.tools.steps.length > AGENT_STEP_TOOLS) errors.push(`${label} tools.steps must list at most ${AGENT_STEP_TOOLS} tools, each { name, description }.`);
+    else if (tools.length !== cfg.tools.steps.length || new Set(tools.map((tool) => tool.name)).size !== tools.length) errors.push(`${label} tool names must be unique, of lowercase letters, numbers, - or _, and not a name its own tools use (such as search_knowledge or next).`);
+    else if (tools.some((tool) => !tool.description.trim() || tool.description.length > 600)) errors.push(`${label} needs a description of 1 to 600 characters for each tool in tools.steps: it is how the model knows when to call it.`);
   }
   if (node.type === 'guardrail') {
     const checks = Array.isArray(cfg.checks) ? cfg.checks : [];
@@ -482,6 +500,30 @@ function eachBodyErrors(node, nodeMap) {
     stack.push(...referencedNodeIds(step));
   }
   if (!returns) errors.add(`${label}: no step in the loop body goes back to "${node.id}". Set the last body step's next to "${node.id}".`);
+  return [...errors];
+}
+
+// An Agent step's drawn tool is a body too: from branches[name] back to the step. It runs when the model calls it, so it
+// can't reply, ask, hold an agent of its own or run on into the step after the agent.
+function toolBodyErrors(node, name, nodeMap) {
+  const label = `Agent node "${node.id}" tool "${name}"`;
+  const seen = new Set();
+  const stack = [node.branches[name]];
+  let returns = false;
+  const errors = new Set();
+  while (stack.length) {
+    const id = stack.pop();
+    if (id === node.id) { returns = true; continue; }
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const step = nodeMap.get(id);
+    if (!step) continue;
+    if (step.type === 'output' || step.type === 'ask') errors.add(`${label}: step "${id}" is one of its steps, so it can't reply or ask. Reply after the agent step, from its next.`);
+    if (step.type === 'agent') errors.add(`${label}: step "${id}" is an agent step. To hand work to another agent, publish it and list it in tools.agents.`);
+    if (id === node.next) errors.add(`${label}: its steps reach "${id}", the step after the agent. Point the tool's last step back to "${node.id}".`);
+    stack.push(...referencedNodeIds(step));
+  }
+  if (!returns) errors.add(`${label}: none of its steps goes back to "${node.id}". Set the last step's next to "${node.id}".`);
   return [...errors];
 }
 

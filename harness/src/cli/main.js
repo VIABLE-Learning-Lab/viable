@@ -15,6 +15,7 @@ import { COMPONENT_USAGE, componentCommand } from './component.js';
 import { teacherView, viewInputs } from '../view.js';
 import { serveStdio } from '../mcp.js';
 import { SUITES, runConformance } from '../conformance.js';
+import { runScorecard, scorecardTables } from '../scorecard.js';
 import { toStatements } from '../xapi.js';
 import { suggestChanges } from '../suggest.js';
 import { GATEWAY_USAGE, gatewayCommand } from './gateway.js';
@@ -26,7 +27,7 @@ import { printReview, reviewProject } from '../builders/review.js';
 import { findGuidance } from '../components/guidance.js';
 import { DESIGN_RULES, findDesigns } from '../designs.js';
 
-export const HARNESS_COMMANDS = ['review', 'guidance', 'prepare', 'check', 'test', 'draft-tests', 'tests-from-records', 'calibrate', 'misconceptions', 'components', 'catalog', 'resources', 'component', 'view', 'suggest', 'mcp', 'gateway', 'measure', 'xapi', 'validate', 'conformance'];
+export const HARNESS_COMMANDS = ['review', 'guidance', 'prepare', 'check', 'test', 'draft-tests', 'tests-from-records', 'calibrate', 'misconceptions', 'components', 'catalog', 'resources', 'component', 'view', 'suggest', 'mcp', 'gateway', 'measure', 'xapi', 'validate', 'conformance', 'scorecard'];
 
 const USAGE = `Usage:
   viable-harness review [<folder>] [--json]
@@ -58,6 +59,7 @@ ${GATEWAY_USAGE}
   viable-harness xapi <events.json> --home-page <url> [--activity-base <url>] [--include-text]
   viable-harness validate <file> [--kind ${KINDS.join('|')}]
   viable-harness conformance [${SUITES.join('|')}]
+  viable-harness scorecard [--json]
 
 Model calls go to an OpenAI-compatible endpoint: OPENAI_BASE_URL (default https://api.openai.com/v1) and OPENAI_API_KEY.
 
@@ -83,6 +85,8 @@ resources fetches a public good into ~/.viable-harness/resources/<id>/ (or --dir
 (docs/resources.md): a test suite (test --suite), a judge (test --judge), a calibration set (calibrate --set), a knowledge
 folder (--knowledge <id>=resource:<resource>), a context lookup or a measure. It shows the license first, and needs
 --accept-license where the license limits use. test, calibrate and --knowledge fetch what they name if it isn't here yet.
+scorecard checks what the Harness guarantees on every case, and measures how its rules read learners' messages and how much
+review finds, on cases they were not written from; it calls no model, and exits 1 if a guarantee fails (docs/scorecard.md).
 mcp serves these as MCP tools over stdio (docs/mcp.md).
 gateway stands in front of an OpenAI-compatible endpoint, so any AI app gets How the AI helps, a check on each reply
 and a record by changing one URL (docs/with-your-stack.md).
@@ -229,6 +233,13 @@ export async function harnessMain(argv, host = {}) {
       for (const misconception of construct.misconceptions) console.log(`  - ${misconception.description}`);
     }
     return console.log(`\n${found.source.attribution}`);
+  }
+  if (command === 'scorecard') {
+    const scored = await runScorecard();
+    if (values.json) console.log(JSON.stringify(scored, null, 2));
+    else console.log(`${scorecardTables(scored)}\n\nNo model was called. What each number means, and what none of them shows: docs/scorecard.md.`);
+    if (scored.guarantees.some((entry) => entry.failed)) process.exitCode = 1;
+    return;
   }
   if (command === 'conformance') return printConformance(await (host.runConformance ?? runConformance)(file ? [file] : undefined));
   if (command === 'calibrate' && values.set) return calibrateOnSet(values);

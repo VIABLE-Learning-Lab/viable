@@ -37,6 +37,13 @@ test('robots.txt: the longest matching rule decides, for anyone', () => {
   assert.equal(rules.allows('/a/b.pdf'), false);
   assert.equal(rules.delayMs, 2000);
   assert.equal(robotsRules('').allows('/anything'), true);
+  const ends = robotsRules('User-agent: *\nDisallow: /*.pdf$\nDisallow: /only$\nAllow: /a*b*c');
+  assert.deepEqual(['/x.pdf', '/x.pdf?page=2', '/only', '/only/more', '/a1b2c3', '/acb'].map((path) => ends.allows(path)), [false, true, false, true, true, true]);
+  // A site's own file can't make a rule that stalls the server: twelve stars on a long address answer at once.
+  const stars = robotsRules(`User-agent: *\nDisallow: /${'*a'.repeat(12)}*b`);
+  const began = Date.now();
+  assert.equal(stars.allows(`/${'a'.repeat(4000)}`), true);
+  assert.ok(Date.now() - began < 200);
 });
 
 test('private and local addresses are refused, as they resolve', () => {

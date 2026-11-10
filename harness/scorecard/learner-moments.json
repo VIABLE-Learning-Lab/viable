@@ -1,0 +1,6662 @@
+{
+ "name": "learner-moments",
+ "version": 1,
+ "written": "2026-11-10",
+ "author": "Written by an AI model from the labels' definitions alone, without sight of the classifier it scores.",
+ "labels": [
+  "attempt",
+  "asks_answer",
+  "stuck",
+  "repeated",
+  "other"
+ ],
+ "cases": [
+  {
+   "id": "en-attempt-001",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 1/2 + 1/5?"
+    }
+   ],
+   "message": "i got 7/10",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-002",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 4,
+   "history": [],
+   "message": "3/8",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-003",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve 2x + 3 = 11."
+    }
+   ],
+   "message": "x = 4",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-004",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve 3(x - 2) = 12."
+    }
+   ],
+   "message": "3x - 6 = 12 so 3x = 18 so x = 6",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-005",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 3,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 7 x 8?"
+    }
+   ],
+   "message": "is it 56?",
+   "moment": "attempt",
+   "note": "answer phrased as a question",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-006",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Try 14 x 6."
+    }
+   ],
+   "message": "10 x 6 is 60 and 4 x 6 is 24 so 84",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-007",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 0.6 + 0.25?"
+    }
+   ],
+   "message": "0.85",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-008",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Multiply 2.5 x 0.4."
+    }
+   ],
+   "message": "i did 25 x 4 = 100 then moved the point 2 places so 1.00",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-009",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "If 3 pens cost $6, how much do 5 pens cost?"
+    }
+   ],
+   "message": "$10",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-010",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Simplify the ratio 12:18."
+    }
+   ],
+   "message": "2:3 right?",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-011",
+   "language": "en",
+   "subject": "quadratics",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Factor x^2 + 5x + 6."
+    }
+   ],
+   "message": "(x+2)(x+3)",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-012",
+   "language": "en",
+   "subject": "quadratics",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve x^2 - 9 = 0."
+    }
+   ],
+   "message": "x = 3",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-013",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the area of a rectangle 6 cm by 4 cm."
+    }
+   ],
+   "message": "24 cm2",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-014",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Two angles of a triangle are 50 and 60. Find the third."
+    }
+   ],
+   "message": "50 + 60 = 110, 180 - 110 = 70",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-015",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Area of a circle with radius 3?"
+    }
+   ],
+   "message": "28.26",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-016",
+   "language": "en",
+   "subject": "statistics",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the mean of 4, 8, 6, 10."
+    }
+   ],
+   "message": "7",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-017",
+   "language": "en",
+   "subject": "statistics",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the median of 3, 9, 1, 7, 5?"
+    }
+   ],
+   "message": "i put them in order 1 3 5 7 9 and the middle is 5",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-018",
+   "language": "en",
+   "subject": "physics",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "A car goes 150 km in 3 hours. Speed?"
+    }
+   ],
+   "message": "50 km/h",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-019",
+   "language": "en",
+   "subject": "physics",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Force on a 5 kg object accelerating at 2 m/s2?"
+    }
+   ],
+   "message": "F = ma = 5 x 2 = 10 N",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-020",
+   "language": "en",
+   "subject": "physics",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Which force pulls objects toward Earth?"
+    }
+   ],
+   "message": "gravity",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-021",
+   "language": "en",
+   "subject": "chemistry",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Balance H2 + O2 -> H2O."
+    }
+   ],
+   "message": "2H2 + O2 -> 2H2O",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-022",
+   "language": "en",
+   "subject": "chemistry",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "How many moles in 36 g of water (18 g/mol)?"
+    }
+   ],
+   "message": "2 moles",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-023",
+   "language": "en",
+   "subject": "biology",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What process do plants use to make food from sunlight?"
+    }
+   ],
+   "message": "photosynthesis",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-024",
+   "language": "en",
+   "subject": "biology",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Which organelle makes ATP?"
+    }
+   ],
+   "message": "mitochondria?",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-025",
+   "language": "en",
+   "subject": "biology",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What does DNA stand for?"
+    }
+   ],
+   "message": "deoxyribonucleic acid",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-026",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Why was Mia sad at the end of the story?"
+    }
+   ],
+   "message": "i think she was sad because her friend moved away",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-027",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the main theme of the poem?"
+    }
+   ],
+   "message": "the poet is saying that time cant be stopped, because of the line about the river",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-028",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "How does the author feel about the forest?"
+    }
+   ],
+   "message": "he loves it",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-029",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Write a thesis sentence about school uniforms."
+    }
+   ],
+   "message": "School uniforms should be optional because they limit self-expression without improving grades.",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-030",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Try an opening line for your essay."
+    }
+   ],
+   "message": "Nobody expects a small town library to change a life, but mine did.",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-031",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Give me a topic sentence for paragraph 2."
+    }
+   ],
+   "message": "Another reason recess matters is that kids focus better after it.",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-032",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Pick the right word: their / there / they're ___ going home."
+    }
+   ],
+   "message": "they're",
+   "moment": "attempt",
+   "note": "bare answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-033",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Fix: me and him goes to the park."
+    }
+   ],
+   "message": "He and I go to the park.",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-034",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Is 'quickly' an adjective or adverb?"
+    }
+   ],
+   "message": "adverb",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-035",
+   "language": "en",
+   "subject": "history",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Who was the first US president?"
+    }
+   ],
+   "message": "george washington",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-036",
+   "language": "en",
+   "subject": "history",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What caused World War 1 to start?"
+    }
+   ],
+   "message": "the assassination of franz ferdinand and the alliances",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-037",
+   "language": "en",
+   "subject": "history",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Which river did Egyptians settle along?"
+    }
+   ],
+   "message": "the nile",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-038",
+   "language": "en",
+   "subject": "programming",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Write a loop that prints 1 to 5."
+    }
+   ],
+   "message": "for i in range(1, 6): print(i)",
+   "moment": "attempt",
+   "note": "code offered as an answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-039",
+   "language": "en",
+   "subject": "programming",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Why does your loop never stop?"
+    }
+   ],
+   "message": "i think i need i += 1 inside the while",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-040",
+   "language": "en",
+   "subject": "programming",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Your code gives a TypeError. Any idea?"
+    }
+   ],
+   "message": "print('Total: ' + str(total))",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-041",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Simplify 18/24."
+    }
+   ],
+   "message": "3/4",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-042",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 3/4 of 20?"
+    }
+   ],
+   "message": "20 divided by 4 is 5 then times 3 is 15",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-043",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve 5x = 35."
+    }
+   ],
+   "message": "x=7",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-044",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What's 12 x 12?"
+    }
+   ],
+   "message": "144!!",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-045",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Which is bigger, 0.3 or 0.25?"
+    }
+   ],
+   "message": "0.3",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-046",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "A recipe uses 2 cups flour for 3 cups milk. For 9 cups milk?"
+    }
+   ],
+   "message": "flour 6 cups because 3 x 3 = 9 and 2 x 3 = 6",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-047",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the perimeter of a square with side 7?"
+    }
+   ],
+   "message": "28",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-048",
+   "language": "en",
+   "subject": "statistics",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the range of 12, 5, 9, 20?"
+    }
+   ],
+   "message": "20 - 5 = 15",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-049",
+   "language": "en",
+   "subject": "physics",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Convert 72 km/h to m/s."
+    }
+   ],
+   "message": "72 / 3.6 = 20 m/s",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-050",
+   "language": "en",
+   "subject": "chemistry",
+   "grade": 12,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Balance N2 + H2 -> NH3."
+    }
+   ],
+   "message": "N2 + 3H2 -> 2NH3",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-051",
+   "language": "en",
+   "subject": "biology",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the base pair of adenine in DNA?"
+    }
+   ],
+   "message": "thymine",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-052",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What does the word 'reluctant' mean here?"
+    }
+   ],
+   "message": "unwilling i guess",
+   "moment": "attempt",
+   "note": "hedged but offers a meaning",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-053",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Add the missing punctuation: where are you going"
+    }
+   ],
+   "message": "Where are you going?",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-054",
+   "language": "en",
+   "subject": "programming",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Print the numbers 2, 4, 6 with a loop."
+    }
+   ],
+   "message": "for i in range(2,8,2): print(i)",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-055",
+   "language": "en",
+   "subject": "quadratics",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve x^2 + 2x - 8 = 0."
+    }
+   ],
+   "message": "(x+4)(x-2) = 0 so",
+   "moment": "attempt",
+   "note": "working that stops midway is still an attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-056",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve 4x - 7 = 9."
+    }
+   ],
+   "message": "4x = 16 and then",
+   "moment": "attempt",
+   "note": "partial working that stops midway",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-057",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the area of a triangle, base 10 height 4."
+    }
+   ],
+   "message": "10 x 4 = 40",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-058",
+   "language": "en",
+   "subject": "history",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Name one cause of the French Revolution."
+    }
+   ],
+   "message": "bread prices were too high and ppl were starving",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-attempt-059",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 3,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 1.5 + 1.5?"
+    }
+   ],
+   "message": "3",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "en-attempt-060",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Write 5/4 as a mixed number."
+    }
+   ],
+   "message": "1 and 1/4",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-001",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 2/3 + 1/6?"
+    }
+   ],
+   "message": "just tell me the answer",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-002",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 6,
+   "history": [],
+   "message": "what's the answer to number 3",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-003",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve 2x + 5 = 17."
+    }
+   ],
+   "message": "can you just give me x",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-004",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve 7x - 3 = 25."
+    }
+   ],
+   "message": "my teacher said you can tell me the answer",
+   "moment": "asks_answer",
+   "note": "claims a reason",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-005",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 3,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 6 x 7?"
+    }
+   ],
+   "message": "tell me pls",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-006",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Compute 13 x 5."
+    }
+   ],
+   "message": "Could you please just tell me what 13 x 5 is? I'll learn it later.",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-007",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 4.5 - 1.75?"
+    }
+   ],
+   "message": "answer plz",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-008",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 6,
+   "history": [],
+   "message": "just this once can u give me the answer, i have soccer in 10 min",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-009",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Share 20 candies in the ratio 2:3."
+    }
+   ],
+   "message": "what is it",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-010",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Is 4:6 equal to 2:3?"
+    }
+   ],
+   "message": "so what is it then",
+   "moment": "asks_answer",
+   "note": "indirect request for the answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-011",
+   "language": "en",
+   "subject": "quadratics",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve x^2 - 5x + 6 = 0."
+    }
+   ],
+   "message": "just show me the solution",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-012",
+   "language": "en",
+   "subject": "quadratics",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the vertex of y = x^2 - 4x + 1."
+    }
+   ],
+   "message": "can you do it for me",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-013",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the area of a 9 by 3 rectangle."
+    }
+   ],
+   "message": "give me the answer",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-014",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find angle x in a triangle with angles 40 and 75."
+    }
+   ],
+   "message": "WHAT IS THE ANSWER",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-015",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 7,
+   "history": [],
+   "message": "what's the answer to question 5?? i cant see it in the book",
+   "moment": "asks_answer",
+   "note": "contains 'answer question' but asks where the question is; teacher might say asks_answer or other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-016",
+   "language": "en",
+   "subject": "statistics",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the mean of 2, 4, 9."
+    }
+   ],
+   "message": "just give me the number ok",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-017",
+   "language": "en",
+   "subject": "statistics",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Calculate the standard deviation of the set."
+    }
+   ],
+   "message": "I'd appreciate it if you could simply provide the final value.",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-018",
+   "language": "en",
+   "subject": "physics",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "How long does a 60 km trip take at 30 km/h?"
+    }
+   ],
+   "message": "tell me the answer so i can move on",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-019",
+   "language": "en",
+   "subject": "physics",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "A 2 kg ball falls. What is its weight?"
+    }
+   ],
+   "message": "can u just say it",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-020",
+   "language": "en",
+   "subject": "chemistry",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Balance C3H8 + O2 -> CO2 + H2O."
+    }
+   ],
+   "message": "can you balance it for me",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-021",
+   "language": "en",
+   "subject": "chemistry",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "How many grams in 0.5 mol of NaCl?"
+    }
+   ],
+   "message": "just give me the grams",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-022",
+   "language": "en",
+   "subject": "biology",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Which part of the cell holds the DNA?"
+    }
+   ],
+   "message": "tell me which one",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-023",
+   "language": "en",
+   "subject": "biology",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Describe the stages of mitosis."
+    }
+   ],
+   "message": "can you write it out for me, i will copy it",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-024",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Why did the fox leave the farm?"
+    }
+   ],
+   "message": "what is the answer",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-025",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the main idea of paragraph 3?"
+    }
+   ],
+   "message": "just tell me the main idea pls",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-026",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What's the author's tone?"
+    }
+   ],
+   "message": "cant you just say what it is",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-027",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What could your intro say?"
+    }
+   ],
+   "message": "write the paragraph for me",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-028",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Draft a conclusion."
+    }
+   ],
+   "message": "Please write my conclusion, I'll edit it afterwards.",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-029",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 8,
+   "history": [],
+   "message": "can u write my essay about the water cycle",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-030",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Is 'ran' past or present?"
+    }
+   ],
+   "message": "which one",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-031",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Correct this: Their going to the store."
+    }
+   ],
+   "message": "just fix the sentence for me",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-032",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Pick the verb in the sentence."
+    }
+   ],
+   "message": "tell me the verb",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-033",
+   "language": "en",
+   "subject": "history",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Why did the Roman Empire fall?"
+    }
+   ],
+   "message": "just give me the reasons so i can write them down",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-034",
+   "language": "en",
+   "subject": "history",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Who signed the Treaty of Versailles for Germany?"
+    }
+   ],
+   "message": "answer pls",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-035",
+   "language": "en",
+   "subject": "history",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What year did the Titanic sink?"
+    }
+   ],
+   "message": "what year",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-036",
+   "language": "en",
+   "subject": "programming",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Your for loop prints one number too many."
+    }
+   ],
+   "message": "fix my code",
+   "moment": "asks_answer",
+   "note": "asks for the fix, no attempt in this message",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-037",
+   "language": "en",
+   "subject": "programming",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Write a function that sums a list."
+    }
+   ],
+   "message": "can you just write the whole function",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-038",
+   "language": "en",
+   "subject": "programming",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Why does line 4 give an error?"
+    }
+   ],
+   "message": "just give me the working code, i only need it to run",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-039",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 1/4 of 12?"
+    }
+   ],
+   "message": "3?? no just tell me the real answer",
+   "moment": "asks_answer",
+   "note": "offers 3 but then asks for the real answer; a teacher acts on the request first",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-040",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve 3x + 2 = 20."
+    }
+   ],
+   "message": "ok i give up what is x",
+   "moment": "asks_answer",
+   "note": "gives up and asks for the answer; request for answer first",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-041",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 24 x 15?"
+    }
+   ],
+   "message": "can i just see the answer and then you explain",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-042",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Round 3.746 to one decimal place."
+    }
+   ],
+   "message": "what do i write",
+   "moment": "asks_answer",
+   "note": "asks what to write; leaning toward wanting the answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-043",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 6,
+   "history": [],
+   "message": "my mom says its ok if you tell me the answer",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-044",
+   "language": "en",
+   "subject": "quadratics",
+   "grade": 12,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Use the quadratic formula on 2x^2 + 3x - 5 = 0."
+    }
+   ],
+   "message": "just the roots please",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-045",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the hypotenuse for legs 6 and 8."
+    }
+   ],
+   "message": "is it ok if you just say it",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-046",
+   "language": "en",
+   "subject": "statistics",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the probability of two heads in a row?"
+    }
+   ],
+   "message": "what's the probability, just the number",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-047",
+   "language": "en",
+   "subject": "physics",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the unit of force?"
+    }
+   ],
+   "message": "idc just tell me",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-048",
+   "language": "en",
+   "subject": "chemistry",
+   "grade": 12,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the pH of 0.01 M HCl."
+    }
+   ],
+   "message": "pls just give me the ph, test is tmrw",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-049",
+   "language": "en",
+   "subject": "biology",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Name the process by which cells divide."
+    }
+   ],
+   "message": "you tell me",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-050",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What does the title mean?"
+    }
+   ],
+   "message": "can you explain and just give me an answer to write",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-051",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Revise your second sentence."
+    }
+   ],
+   "message": "rewrite it for me in a better way",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-052",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Which one is a noun?"
+    }
+   ],
+   "message": "plz tell me i dont wanna guess",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-053",
+   "language": "en",
+   "subject": "history",
+   "grade": 12,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What were the long-term effects of the Cold War?"
+    }
+   ],
+   "message": "Could you list the answers for me? It's for question 4.",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-054",
+   "language": "en",
+   "subject": "programming",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Make the sprite move 10 steps."
+    }
+   ],
+   "message": "can u make it for me",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-055",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 5/6 - 1/3?"
+    }
+   ],
+   "message": "I think you should just tell me. I will not guess.",
+   "moment": "asks_answer",
+   "note": "contains 'think'; a request for the answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-056",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 0.5 + 0.5?"
+    }
+   ],
+   "message": "answer",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-057",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the slope between (1,2) and (3,8)."
+    }
+   ],
+   "message": "what is the slope",
+   "moment": "asks_answer",
+   "note": "asks for the answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-058",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Multiply 125 x 8."
+    }
+   ],
+   "message": "tell me and then ill do the next one myself",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-asks_answer-059",
+   "language": "en",
+   "subject": "programming",
+   "grade": 12,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the bug in your recursion?"
+    }
+   ],
+   "message": "just paste the fixed version",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-asks_answer-060",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Scale a map: 1 cm = 5 km. 7 cm is how far?"
+    }
+   ],
+   "message": "so how far",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-001",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 2/3 + 1/6?"
+    }
+   ],
+   "message": "idk",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-002",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Add 3/4 and 2/5."
+    }
+   ],
+   "message": "i dont get it",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-003",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve 2x + 5 = 17."
+    }
+   ],
+   "message": "where do i start",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-004",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve 3(x+1) = 2x + 9."
+    }
+   ],
+   "message": "...",
+   "moment": "stuck",
+   "note": "silence-like, stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-005",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 3,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 6 x 7?"
+    }
+   ],
+   "message": "this is too hard",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-006",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Compute 13 x 5."
+    }
+   ],
+   "message": "i dont know how to do the big ones",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-007",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 4.5 - 1.75?"
+    }
+   ],
+   "message": "wat do i do",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-008",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Line up the decimals and add 2.3 + 0.78."
+    }
+   ],
+   "message": "i dont get why the dots have to line up",
+   "moment": "stuck",
+   "note": "confusion about a step",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-009",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Share 20 candies in the ratio 2:3."
+    }
+   ],
+   "message": "i have no idea what to do with the 2:3",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-010",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Is 4:6 equal to 2:3?"
+    }
+   ],
+   "message": "um",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-011",
+   "language": "en",
+   "subject": "quadratics",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve x^2 - 5x + 6 = 0."
+    }
+   ],
+   "message": "i dont know what to do first",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-012",
+   "language": "en",
+   "subject": "quadratics",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Complete the square for x^2 + 6x + 2."
+    }
+   ],
+   "message": "I am confused about the step where we add half of b. I do not understand where it comes from.",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-013",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the area of a 9 by 3 rectangle."
+    }
+   ],
+   "message": "idk what area even means how do i start",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-014",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find angle x."
+    }
+   ],
+   "message": "i'm stuck",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-015",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the missing angle."
+    }
+   ],
+   "message": "what do i do next",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-016",
+   "language": "en",
+   "subject": "statistics",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the mean of 2, 4, 9."
+    }
+   ],
+   "message": "dont know",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-017",
+   "language": "en",
+   "subject": "statistics",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the standard deviation."
+    }
+   ],
+   "message": "I don't know where to begin with this one.",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-018",
+   "language": "en",
+   "subject": "physics",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "How long does a 60 km trip take at 30 km/h?"
+    }
+   ],
+   "message": "no clue",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-019",
+   "language": "en",
+   "subject": "physics",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the net force on the box."
+    }
+   ],
+   "message": "i dont get forces at all",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-020",
+   "language": "en",
+   "subject": "chemistry",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Balance C3H8 + O2 -> CO2 + H2O."
+    }
+   ],
+   "message": "i cant do this",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-021",
+   "language": "en",
+   "subject": "chemistry",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "How many grams in 0.5 mol of NaCl?"
+    }
+   ],
+   "message": "what is a mole even, i dont know how to start",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-022",
+   "language": "en",
+   "subject": "biology",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Which part of the cell holds the DNA?"
+    }
+   ],
+   "message": "i forgot",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-023",
+   "language": "en",
+   "subject": "biology",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Describe the stages of mitosis."
+    }
+   ],
+   "message": "I read the chapter twice and I still don't know how to start.",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-024",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Why did the fox leave the farm?"
+    }
+   ],
+   "message": "i dont get the story",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-025",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the main idea of paragraph 3?"
+    }
+   ],
+   "message": "i read it 3 times and still dont know what its about",
+   "moment": "stuck",
+   "note": "effort but no answer or working offered",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-026",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What's the author's tone?"
+    }
+   ],
+   "message": "idk what tone is",
+   "moment": "stuck",
+   "note": "confusion about a word that blocks the task; could be other",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-027",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What could your intro say?"
+    }
+   ],
+   "message": "i dont know what to write",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-028",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Draft a conclusion."
+    }
+   ],
+   "message": "my mind is blank",
+   "moment": "stuck",
+   "note": "stuck, no attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-029",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Pick a topic and start."
+    }
+   ],
+   "message": "i dont know how to start my essay",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-030",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Is 'ran' past or present?"
+    }
+   ],
+   "message": "???",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-031",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Correct this: Their going to the store."
+    }
+   ],
+   "message": "idk whats wrong with it",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-032",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Pick the verb in the sentence."
+    }
+   ],
+   "message": "i dont know what a verb is",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-033",
+   "language": "en",
+   "subject": "history",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Why did the Roman Empire fall?"
+    }
+   ],
+   "message": "no idea",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-034",
+   "language": "en",
+   "subject": "history",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Explain how the printing press changed Europe."
+    }
+   ],
+   "message": "i dont even know where to look",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-035",
+   "language": "en",
+   "subject": "history",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What year did the Titanic sink?"
+    }
+   ],
+   "message": "i dont remember",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-036",
+   "language": "en",
+   "subject": "programming",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Your for loop prints one number too many."
+    }
+   ],
+   "message": "i dont see the problem",
+   "moment": "stuck",
+   "note": "stuck on a bug",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-037",
+   "language": "en",
+   "subject": "programming",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Write a function that sums a list."
+    }
+   ],
+   "message": "how do i even start",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-038",
+   "language": "en",
+   "subject": "programming",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Why does line 4 give an error?"
+    }
+   ],
+   "message": "i dont understand the error message",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-039",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 1/4 of 12?"
+    }
+   ],
+   "message": "3?? wait no idk",
+   "moment": "stuck",
+   "note": "offers 3 then retracts and gives up; stuck is what a teacher would act on",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-040",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve 3x + 2 = 20."
+    }
+   ],
+   "message": "ugh i hate this i give up",
+   "moment": "stuck",
+   "note": "giving up, no attempt and no request for the answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-041",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 24 x 15?"
+    }
+   ],
+   "message": "im lost",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-042",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Round 3.746 to one decimal place."
+    }
+   ],
+   "message": "i dont know which number to look at",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-043",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Write the ratio of cats to dogs: 3 cats, 5 dogs."
+    }
+   ],
+   "message": "so there are 3 cats and 5 dogs and i dont know what to do",
+   "moment": "stuck",
+   "note": "restates the problem, then stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-044",
+   "language": "en",
+   "subject": "quadratics",
+   "grade": 12,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Use the quadratic formula on 2x^2 + 3x - 5 = 0."
+    }
+   ],
+   "message": "the problem says 2x^2 + 3x - 5 = 0. i dont know how to begin",
+   "moment": "stuck",
+   "note": "restates the problem, then stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-045",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the hypotenuse for legs 6 and 8."
+    }
+   ],
+   "message": "what even is a hypotenuse im confused",
+   "moment": "stuck",
+   "note": "a word question and confusion; stuck, since it blocks the task",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-046",
+   "language": "en",
+   "subject": "statistics",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the probability of two heads in a row?"
+    }
+   ],
+   "message": "i dont get probability",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-047",
+   "language": "en",
+   "subject": "physics",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What happens to speed when friction increases?"
+    }
+   ],
+   "message": "i dont know",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-048",
+   "language": "en",
+   "subject": "chemistry",
+   "grade": 12,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the pH of 0.01 M HCl."
+    }
+   ],
+   "message": "help i dont know what to do",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-049",
+   "language": "en",
+   "subject": "biology",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Name the process by which cells divide."
+    }
+   ],
+   "message": "hmm",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-050",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What does the title mean?"
+    }
+   ],
+   "message": "i dont know. this is boring and hard",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-051",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Revise your second sentence."
+    }
+   ],
+   "message": "i dont know how to make it better",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-052",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Which one is a noun?"
+    }
+   ],
+   "message": "they all look the same to me",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-053",
+   "language": "en",
+   "subject": "history",
+   "grade": 12,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Evaluate the causes of the Great Depression."
+    }
+   ],
+   "message": "This is too big. I don't know what to say first.",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-054",
+   "language": "en",
+   "subject": "programming",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Make the sprite move 10 steps."
+    }
+   ],
+   "message": "nothing happens and idk why",
+   "moment": "stuck",
+   "note": "describes a problem without an attempt; stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-055",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 5/6 - 1/3?"
+    }
+   ],
+   "message": "dont get the different bottom numbers thing",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-056",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 0.5 + 0.5?"
+    }
+   ],
+   "message": "stuck",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-057",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the slope between (1,2) and (3,8)."
+    }
+   ],
+   "message": "what formula",
+   "moment": "stuck",
+   "note": "asks for a step, no attempt; stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-058",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Multiply 125 x 8."
+    }
+   ],
+   "message": "i dont know how to do it in my head and cant do it on paper either",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-stuck-059",
+   "language": "en",
+   "subject": "programming",
+   "grade": 12,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the bug in your recursion?"
+    }
+   ],
+   "message": "it keeps crashing and I cant figure out where to look",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "en-stuck-060",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Scale a map: 1 cm = 5 km. 7 cm is how far?"
+    }
+   ],
+   "message": "how do i set this up",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-001",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 1/2 + 1/3?"
+    },
+    {
+     "role": "user",
+     "content": "2/5"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "1/5"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "2/6",
+   "moment": "repeated",
+   "note": "another wrong try",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-002",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Add 3/4 + 1/8."
+    },
+    {
+     "role": "user",
+     "content": "4/12"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "4/8"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "7/8?"
+    },
+    {
+     "role": "assistant",
+     "content": "Check the 3/4 again."
+    }
+   ],
+   "message": "6/8 + 1/8 = 7/8 ... oh wait i did that. is it 9/8",
+   "moment": "repeated",
+   "note": "another try with working",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-003",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve 2x + 5 = 17."
+    },
+    {
+     "role": "user",
+     "content": "x = 11"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "x = 6"
+    }
+   ],
+   "message": "x = 5",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-004",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve 3x - 4 = 11."
+    },
+    {
+     "role": "user",
+     "content": "x = 7"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "x = 5/3"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "x=3"
+    },
+    {
+     "role": "assistant",
+     "content": "Try undoing -4 first."
+    }
+   ],
+   "message": "ive tried 3 times. what is x",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-005",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 8 x 7?"
+    },
+    {
+     "role": "user",
+     "content": "54"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "58"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "56?? no wait 63",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-006",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Compute 18 x 6."
+    },
+    {
+     "role": "user",
+     "content": "98"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "106"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "i still dont get it",
+   "moment": "repeated",
+   "note": "after tries, not yet there",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-007",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Add 0.7 + 0.35."
+    },
+    {
+     "role": "user",
+     "content": "0.42"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "0.1.05"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "1.05",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-008",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Multiply 1.2 x 0.3."
+    },
+    {
+     "role": "user",
+     "content": "3.6"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "0.36?"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    },
+    {
+     "role": "user",
+     "content": "0.306"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "ok just tell me",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-009",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Share 20 in the ratio 2:3."
+    },
+    {
+     "role": "user",
+     "content": "10 and 10"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "8 and 12?"
+    },
+    {
+     "role": "assistant",
+     "content": "Right idea on 8. Check the other."
+    }
+   ],
+   "message": "8 and 14",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-010",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "6 apples cost $9. Cost of 10?"
+    },
+    {
+     "role": "user",
+     "content": "$12"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "$14"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "$13"
+    },
+    {
+     "role": "assistant",
+     "content": "Find the price of one first."
+    }
+   ],
+   "message": "idk anymore i tried so many times",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-011",
+   "language": "en",
+   "subject": "quadratics",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Factor x^2 + 7x + 12."
+    },
+    {
+     "role": "user",
+     "content": "(x+2)(x+6)"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "(x+3)(x+9)"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "(x+5)(x+2)",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-012",
+   "language": "en",
+   "subject": "quadratics",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve x^2 = 49."
+    },
+    {
+     "role": "user",
+     "content": "x = 7"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    },
+    {
+     "role": "user",
+     "content": "x = 24.5"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "i give up. what is the answer",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-013",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Area of a 7 by 5 rectangle?"
+    },
+    {
+     "role": "user",
+     "content": "24"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "12"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "35 cm",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-014",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Angles 35 and 65. Third angle?"
+    },
+    {
+     "role": "user",
+     "content": "100"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "80"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "70"
+    },
+    {
+     "role": "assistant",
+     "content": "Add them then subtract from 180."
+    }
+   ],
+   "message": "i did it 3 times and i keep getting it wrong",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-015",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Circumference, r = 5?"
+    },
+    {
+     "role": "user",
+     "content": "25"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "78.5"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "31.4 ?",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-016",
+   "language": "en",
+   "subject": "statistics",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Mean of 3, 5, 10."
+    },
+    {
+     "role": "user",
+     "content": "5"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "8"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "6",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-017",
+   "language": "en",
+   "subject": "statistics",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Median of 4, 1, 9, 6."
+    },
+    {
+     "role": "user",
+     "content": "6"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "5"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    },
+    {
+     "role": "user",
+     "content": "4.5?"
+    },
+    {
+     "role": "assistant",
+     "content": "Yes, but check your reasoning for the first two."
+    }
+   ],
+   "message": "wait im confused now. so which one",
+   "moment": "repeated",
+   "note": "after several tries; more confusion than an answer, still repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-018",
+   "language": "en",
+   "subject": "physics",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Speed: 100 m in 20 s?"
+    },
+    {
+     "role": "user",
+     "content": "2000 m/s"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "0.2"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "5 m/s",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-019",
+   "language": "en",
+   "subject": "physics",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Weight of a 3 kg mass (g = 10)?"
+    },
+    {
+     "role": "user",
+     "content": "3 N"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "13 N"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "i dont know why its not 30 i mean is it 30",
+   "moment": "repeated",
+   "note": "another try phrased as a question",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-020",
+   "language": "en",
+   "subject": "chemistry",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Balance Mg + O2 -> MgO."
+    },
+    {
+     "role": "user",
+     "content": "Mg + O2 -> MgO"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "2Mg + O2 -> MgO"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "Mg + 2O2 -> 2MgO",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-021",
+   "language": "en",
+   "subject": "chemistry",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Moles in 44 g CO2 (44 g/mol)?"
+    },
+    {
+     "role": "user",
+     "content": "44"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "0.5"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "2"
+    },
+    {
+     "role": "assistant",
+     "content": "Divide mass by molar mass."
+    }
+   ],
+   "message": "this is so annoying just give me the answer",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-022",
+   "language": "en",
+   "subject": "biology",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What gas do plants take in?"
+    },
+    {
+     "role": "user",
+     "content": "oxygen"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "nitrogen"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "carbon monoxide",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-023",
+   "language": "en",
+   "subject": "biology",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the powerhouse of the cell?"
+    },
+    {
+     "role": "user",
+     "content": "nucleus"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "ribosome"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "vacuole",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-024",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Why was Sam nervous?"
+    },
+    {
+     "role": "user",
+     "content": "because he was scared"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "cause of the dog"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "because he didnt know anyone at the new school?",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-025",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the theme?"
+    },
+    {
+     "role": "user",
+     "content": "friendship"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    },
+    {
+     "role": "user",
+     "content": "loyalty and sacrifice"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    },
+    {
+     "role": "user",
+     "content": "friendship is hard"
+    },
+    {
+     "role": "assistant",
+     "content": "Look at the final paragraph."
+    }
+   ],
+   "message": "I've tried three themes now and I still can't see it. What is the theme?",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-026",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What does 'bleak' show?"
+    },
+    {
+     "role": "user",
+     "content": "its happy"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "its sad"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "empty and hopeless",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-027",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Write a thesis about homework."
+    },
+    {
+     "role": "user",
+     "content": "Homework is bad."
+    },
+    {
+     "role": "assistant",
+     "content": "Too vague. Say why."
+    },
+    {
+     "role": "user",
+     "content": "Homework is bad because it is boring."
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "Homework should be limited because it takes time from sleep and family.",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-028",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Strengthen this claim."
+    },
+    {
+     "role": "user",
+     "content": "Phones are distracting."
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "Phones are very distracting in class."
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "Phones are distracting.",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-029",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Plural of 'child'?"
+    },
+    {
+     "role": "user",
+     "content": "childs"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "childes"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "childs",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-030",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Fix: 'Me and her was late.'"
+    },
+    {
+     "role": "user",
+     "content": "She and me was late."
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "Her and I were late."
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "She and I were late.",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-031",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Pick the adjective: The tall boy ran."
+    },
+    {
+     "role": "user",
+     "content": "ran"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "boy"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "the",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-032",
+   "language": "en",
+   "subject": "history",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Who led the Americans in the Revolution?"
+    },
+    {
+     "role": "user",
+     "content": "lincoln"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "jefferson"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "george washington i think",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-033",
+   "language": "en",
+   "subject": "history",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Year the Berlin Wall fell?"
+    },
+    {
+     "role": "user",
+     "content": "1991"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "1985"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "1987"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "i dont know. 1989??",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-034",
+   "language": "en",
+   "subject": "history",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Which empire built the Colosseum?"
+    },
+    {
+     "role": "user",
+     "content": "greek"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "egyptian"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "roman",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-035",
+   "language": "en",
+   "subject": "programming",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Fix the infinite loop."
+    },
+    {
+     "role": "user",
+     "content": "i added break"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "i changed True to False"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "i put i = 0 inside the loop",
+   "moment": "repeated",
+   "note": "another code try",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-036",
+   "language": "en",
+   "subject": "programming",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Why IndexError?"
+    },
+    {
+     "role": "user",
+     "content": "the list is empty"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "i used the wrong variable"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "range(len(a)+1)"
+    },
+    {
+     "role": "assistant",
+     "content": "Getting closer."
+    }
+   ],
+   "message": "ok i changed it to range(len(a)-1) still wrong",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-037",
+   "language": "en",
+   "subject": "programming",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Make it print the sum."
+    },
+    {
+     "role": "user",
+     "content": "print(sum)"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "print(sum())"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "print(sum(nums))",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-038",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 1/2 of 8?"
+    },
+    {
+     "role": "user",
+     "content": "16"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "2"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "i keep getting it wrong!!",
+   "moment": "repeated",
+   "note": "after tries, frustrated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-039",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Slope through (0,1) and (2,5)?"
+    },
+    {
+     "role": "user",
+     "content": "4"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "1/2"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "2",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-040",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 3,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 9 x 4?"
+    },
+    {
+     "role": "user",
+     "content": "32"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    },
+    {
+     "role": "user",
+     "content": "37"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "36",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-041",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "0.9 - 0.45?"
+    },
+    {
+     "role": "user",
+     "content": "0.55"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "0.54"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "still dont get why .9 - .45 isnt .54",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-042",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Simplify 10:25."
+    },
+    {
+     "role": "user",
+     "content": "5:10"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    },
+    {
+     "role": "user",
+     "content": "1:2"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    },
+    {
+     "role": "user",
+     "content": "2:3"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "5:2",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-043",
+   "language": "en",
+   "subject": "quadratics",
+   "grade": 12,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Discriminant of x^2 + 4x + 5?"
+    },
+    {
+     "role": "user",
+     "content": "16"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "20"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "-4"
+    },
+    {
+     "role": "assistant",
+     "content": "Yes. What does that mean?"
+    }
+   ],
+   "message": "it has no real roots? i wasnt sure. is that right or not",
+   "moment": "repeated",
+   "note": "another try as a question",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-044",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Volume of a cube, side 3?"
+    },
+    {
+     "role": "user",
+     "content": "9"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "27 cm2"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "27 cm3 ?",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-045",
+   "language": "en",
+   "subject": "statistics",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Mode of 2, 3, 3, 5, 7?"
+    },
+    {
+     "role": "user",
+     "content": "5"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "3.6"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "7?",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-046",
+   "language": "en",
+   "subject": "physics",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "KE of 2 kg at 3 m/s?"
+    },
+    {
+     "role": "user",
+     "content": "6 J"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "18 J"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "9 J"
+    },
+    {
+     "role": "assistant",
+     "content": "Almost, check the 1/2."
+    }
+   ],
+   "message": "4.5?? i give up whats the answer",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-047",
+   "language": "en",
+   "subject": "chemistry",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Chemical symbol for sodium?"
+    },
+    {
+     "role": "user",
+     "content": "So"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "S"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "Sd",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-048",
+   "language": "en",
+   "subject": "biology",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Which blood type is universal donor?"
+    },
+    {
+     "role": "user",
+     "content": "AB"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "A"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "B",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-049",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Who is the narrator?"
+    },
+    {
+     "role": "user",
+     "content": "the girl"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "the mom"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "the dog",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-050",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Write a closing line."
+    },
+    {
+     "role": "user",
+     "content": "The end."
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "That is why I like dogs."
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "In conclusion dogs are good.",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-051",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Pick: affect or effect? 'The rain will ___ the game.'"
+    },
+    {
+     "role": "user",
+     "content": "effect"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "effect"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "EFFECT",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-052",
+   "language": "en",
+   "subject": "history",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Who wrote the Declaration of Independence?"
+    },
+    {
+     "role": "user",
+     "content": "benjamin franklin"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "john adams"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "is it still not jefferson no wait i already said",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-053",
+   "language": "en",
+   "subject": "programming",
+   "grade": 12,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Why does this recursion crash?"
+    },
+    {
+     "role": "user",
+     "content": "no base case"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    },
+    {
+     "role": "user",
+     "content": "i added return 0"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "return 1 at n==0"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "i still dont get it. can you just fix it",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-054",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Multiply 2/3 x 3/4."
+    },
+    {
+     "role": "user",
+     "content": "6/7"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "5/7"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "6/12"
+    },
+    {
+     "role": "assistant",
+     "content": "Can it be simplified?"
+    }
+   ],
+   "message": "1/2 ... is that right now",
+   "moment": "repeated",
+   "note": "correct-looking but history shows two prior wrong tries",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-055",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Divide 7.2 / 0.9."
+    },
+    {
+     "role": "user",
+     "content": "0.8"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "80"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "8",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-056",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve x/3 = 9."
+    },
+    {
+     "role": "user",
+     "content": "x = 3"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "x = 6"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "x = 27",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-057",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Compute 25 x 16."
+    },
+    {
+     "role": "user",
+     "content": "300"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "350"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    },
+    {
+     "role": "user",
+     "content": "410"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "420",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-058",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Which is a better deal: 3 for $4 or 5 for $6?"
+    },
+    {
+     "role": "user",
+     "content": "3 for 4"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "5 for 6 because its less money"
+    },
+    {
+     "role": "assistant",
+     "content": "Close, but not yet. Check your last step."
+    }
+   ],
+   "message": "5 for $6 since each is $1.20 and the other is 1.33",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-repeated-059",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Perimeter of a rectangle 5 by 3?"
+    },
+    {
+     "role": "user",
+     "content": "15"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "8"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "16",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "en-repeated-060",
+   "language": "en",
+   "subject": "statistics",
+   "grade": 12,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is a p-value of 0.03 telling you?"
+    },
+    {
+     "role": "user",
+     "content": "the chance the null is true"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    },
+    {
+     "role": "user",
+     "content": "the chance we are right"
+    },
+    {
+     "role": "assistant",
+     "content": "Not quite. Look at the step again."
+    }
+   ],
+   "message": "i keep saying it wrong. just tell me what it means",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-001",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 5,
+   "history": [],
+   "message": "hi",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-002",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Here is your first problem: 3/4 + 1/8."
+    }
+   ],
+   "message": "what does numerator mean",
+   "moment": "other",
+   "note": "question about a word",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-003",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve 2x + 5 = 17."
+    }
+   ],
+   "message": "do we have to answer all 10?",
+   "moment": "other",
+   "note": "contains answer but is a question about the task",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-004",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve 3x = 12."
+    },
+    {
+     "role": "user",
+     "content": "x = 4"
+    },
+    {
+     "role": "assistant",
+     "content": "Yes, correct."
+    }
+   ],
+   "message": "ok",
+   "moment": "other",
+   "note": "a correct acknowledgement after a right answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-005",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 3,
+   "history": [],
+   "message": "i got a new dog",
+   "moment": "other",
+   "note": "contains 'got' but is small talk",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-006",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Try 7 x 8."
+    }
+   ],
+   "message": "can i use a calculator",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-007",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 4.5 - 1.75?"
+    }
+   ],
+   "message": "is 4.5 a decimal or a fraction",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-008",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Nice, 2.75 is right."
+    }
+   ],
+   "message": "thanks that helped",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-009",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 7,
+   "history": [],
+   "message": "can i have a harder problem",
+   "moment": "other",
+   "note": "asks for a different kind of problem",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-010",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Share 20 in the ratio 2:3."
+    }
+   ],
+   "message": "is this going to be graded",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-011",
+   "language": "en",
+   "subject": "quadratics",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Factor x^2 + 5x + 6."
+    }
+   ],
+   "message": "what does factor mean in this context",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-012",
+   "language": "en",
+   "subject": "quadratics",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Great, (x+2)(x+3) it is."
+    }
+   ],
+   "message": "cool can we do an easier type of problem now",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-013",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the area of a 9 by 3 rectangle."
+    }
+   ],
+   "message": "is area the inside or the outside",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-014",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 8,
+   "history": [],
+   "message": "hello!!",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-015",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find angle x."
+    }
+   ],
+   "message": "my pencil broke brb",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-016",
+   "language": "en",
+   "subject": "statistics",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the mean of 2, 4, 9."
+    }
+   ],
+   "message": "what is the difference between mean and median",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-017",
+   "language": "en",
+   "subject": "statistics",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Good work, the answer is 5."
+    }
+   ],
+   "message": "got it thanks",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-018",
+   "language": "en",
+   "subject": "physics",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "How long does a 60 km trip take at 30 km/h?"
+    }
+   ],
+   "message": "we did this in class yesterday, my teacher is mr nice",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-019",
+   "language": "en",
+   "subject": "physics",
+   "grade": 10,
+   "history": [],
+   "message": "how many questions are left",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-020",
+   "language": "en",
+   "subject": "chemistry",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Balance C3H8 + O2 -> CO2 + H2O."
+    }
+   ],
+   "message": "what does the arrow mean",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-021",
+   "language": "en",
+   "subject": "chemistry",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Correct, 29.25 g."
+    }
+   ],
+   "message": "ok next",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-022",
+   "language": "en",
+   "subject": "biology",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Which part of the cell holds the DNA?"
+    }
+   ],
+   "message": "do cells have feelings",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-023",
+   "language": "en",
+   "subject": "biology",
+   "grade": 9,
+   "history": [],
+   "message": "can u give me a different kind of question, like multiple choice",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-024",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Why did the fox leave the farm?"
+    }
+   ],
+   "message": "what does 'wary' mean",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-025",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the main idea of paragraph 3?"
+    }
+   ],
+   "message": "do i need to read the whole book or just chapter 3",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-026",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Good. You found the tone."
+    }
+   ],
+   "message": "i think this story is boring lol",
+   "moment": "other",
+   "note": "contains 'think', a comment",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-027",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What could your intro say?"
+    }
+   ],
+   "message": "how long does the essay have to be",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-028",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Your draft is strong."
+    }
+   ],
+   "message": "thank you so much!",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-029",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 8,
+   "history": [],
+   "message": "is it ok to use I in an essay",
+   "moment": "other",
+   "note": "question about the task",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-030",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Is 'ran' past or present?"
+    }
+   ],
+   "message": "what is a verb",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-031",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Correct this: Their going to the store."
+    }
+   ],
+   "message": "are you a real person",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-032",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Pick the verb."
+    }
+   ],
+   "message": "i got 3 more minutes of class",
+   "moment": "other",
+   "note": "contains 'got', not an attempt",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-033",
+   "language": "en",
+   "subject": "history",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Why did the Roman Empire fall?"
+    }
+   ],
+   "message": "how do you spell 'empire'",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-034",
+   "language": "en",
+   "subject": "history",
+   "grade": 10,
+   "history": [],
+   "message": "hey can you help me with my history hw",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-035",
+   "language": "en",
+   "subject": "history",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "The Titanic sank in 1912."
+    }
+   ],
+   "message": "wow that was a long time ago",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-036",
+   "language": "en",
+   "subject": "programming",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Your for loop prints one number too many."
+    }
+   ],
+   "message": "what is a for loop",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-037",
+   "language": "en",
+   "subject": "programming",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Write a function that sums a list."
+    }
+   ],
+   "message": "which python version do i need",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-038",
+   "language": "en",
+   "subject": "programming",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Your code works now."
+    }
+   ],
+   "message": "yay it ran!! thanks",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-039",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 1/4 of 12?"
+    }
+   ],
+   "message": "what time is it",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-040",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Solve 3x + 2 = 20."
+    }
+   ],
+   "message": "do you think i should take algebra 2 next year",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-041",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 24 x 15?"
+    }
+   ],
+   "message": "my brother says 5 times 5 is 25 is that true",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-042",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Round 3.746 to one decimal place."
+    }
+   ],
+   "message": "i think this app is kind of cool",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-043",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Write the ratio of cats to dogs."
+    }
+   ],
+   "message": "the screen is too small, i cant see the picture",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-044",
+   "language": "en",
+   "subject": "quadratics",
+   "grade": 12,
+   "history": [],
+   "message": "I think I need to move seats, the room is loud. Is there a way to pause this?",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-045",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the hypotenuse for legs 6 and 8."
+    }
+   ],
+   "message": "is hypotenuse spelled with a y",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-046",
+   "language": "en",
+   "subject": "statistics",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the probability of two heads in a row?"
+    }
+   ],
+   "message": "can u explain what the word 'independent' means here",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-047",
+   "language": "en",
+   "subject": "physics",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the unit of force?"
+    }
+   ],
+   "message": "i got a 100 on my last science test",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-048",
+   "language": "en",
+   "subject": "chemistry",
+   "grade": 12,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the pH of 0.01 M HCl."
+    }
+   ],
+   "message": "when is this due",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-049",
+   "language": "en",
+   "subject": "reading comprehension",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What does the title mean?"
+    }
+   ],
+   "message": "what is a title",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-050",
+   "language": "en",
+   "subject": "essay writing",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Revise your second sentence."
+    }
+   ],
+   "message": "can u check my spelling of 'necessary' only",
+   "moment": "other",
+   "note": "asks for a narrow check, not the answer",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-051",
+   "language": "en",
+   "subject": "grammar",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Which one is a noun?"
+    }
+   ],
+   "message": "what is the answer key for? i saw it on the teacher page",
+   "moment": "other",
+   "note": "question about the tool, not a request for the answer",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-052",
+   "language": "en",
+   "subject": "history",
+   "grade": 12,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Evaluate the causes of the Great Depression."
+    }
+   ],
+   "message": "For this, do I cite my sources in MLA or APA?",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-053",
+   "language": "en",
+   "subject": "programming",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Make the sprite move 10 steps."
+    }
+   ],
+   "message": "i want to make a game one day",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-054",
+   "language": "en",
+   "subject": "fractions",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 5/6 - 1/3?"
+    }
+   ],
+   "message": "can i do it in a different order",
+   "moment": "other",
+   "note": "a question about the task",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-055",
+   "language": "en",
+   "subject": "decimals",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is 0.5 + 0.5?"
+    },
+    {
+     "role": "user",
+     "content": "1"
+    },
+    {
+     "role": "assistant",
+     "content": "Yes! Nice."
+    }
+   ],
+   "message": "i got 100 stars today",
+   "moment": "other",
+   "note": "contains 'got', small talk",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-056",
+   "language": "en",
+   "subject": "linear equations",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Find the slope."
+    }
+   ],
+   "message": "does anyone else get stuck on this? just wondering",
+   "moment": "other",
+   "note": "contains 'stuck' but is a comment",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-057",
+   "language": "en",
+   "subject": "multiplication",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Multiply 125 x 8."
+    }
+   ],
+   "message": "are we allowed to work with a partner",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-058",
+   "language": "en",
+   "subject": "programming",
+   "grade": 12,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What is the bug in your recursion?"
+    }
+   ],
+   "message": "do you think python or javascript is better to learn first",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "en-other-059",
+   "language": "en",
+   "subject": "ratios",
+   "grade": 9,
+   "history": [],
+   "message": "What's the answer format they want, a number or a sentence?",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "en-other-060",
+   "language": "en",
+   "subject": "geometry",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "What's the area of a triangle?"
+    }
+   ],
+   "message": "what does 'base' mean",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "es-attempt-001",
+   "language": "es",
+   "subject": "fractions",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "¿Cuánto es 1/2 + 1/4?"
+    }
+   ],
+   "message": "3/4",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "es-attempt-002",
+   "language": "es",
+   "subject": "linear equations",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Resuelve 2x + 6 = 14."
+    }
+   ],
+   "message": "x=4 creo",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "es-attempt-003",
+   "language": "es",
+   "subject": "biology",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "¿Qué necesitan las plantas para hacer su comida?"
+    }
+   ],
+   "message": "la luz del sol y agua",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "es-attempt-004",
+   "language": "es",
+   "subject": "multiplication",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "¿Cuánto es 9 x 6?"
+    }
+   ],
+   "message": "¿es 54?",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "es-attempt-005",
+   "language": "es",
+   "subject": "grammar",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Escribe una oración con un adjetivo."
+    }
+   ],
+   "message": "El perro grande corrió por el parque.",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "es-attempt-006",
+   "language": "es",
+   "subject": "reading comprehension",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "¿Cómo se siente el narrador?"
+    }
+   ],
+   "message": "yo pienso que se siente solo porque nadie le habla",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "es-asks_answer-001",
+   "language": "es",
+   "subject": "fractions",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "¿Cuánto es 2/3 de 12?"
+    }
+   ],
+   "message": "dime la respuesta porfa",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "es-asks_answer-002",
+   "language": "es",
+   "subject": "geometry",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Calcula el área del triángulo."
+    }
+   ],
+   "message": "¿me puedes dar el resultado? la profe dijo que sí",
+   "moment": "asks_answer",
+   "note": "claims a reason",
+   "split": "dev"
+  },
+  {
+   "id": "es-asks_answer-003",
+   "language": "es",
+   "subject": "essay writing",
+   "grade": 9,
+   "history": [],
+   "message": "escríbeme el párrafo, yo lo copio",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "es-asks_answer-004",
+   "language": "es",
+   "subject": "programming",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Tu bucle no termina."
+    }
+   ],
+   "message": "arréglalo tú, no entiendo nada de código y me da igual",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "es-asks_answer-005",
+   "language": "es",
+   "subject": "linear equations",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Resuelve 5x = 45."
+    }
+   ],
+   "message": "¿cuál es la respuesta de la 3?",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "es-asks_answer-006",
+   "language": "es",
+   "subject": "history",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "¿Quién descubrió América para Europa?"
+    }
+   ],
+   "message": "solo dime quién fue y ya",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "es-stuck-001",
+   "language": "es",
+   "subject": "fractions",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Suma 1/3 + 1/6."
+    }
+   ],
+   "message": "no sé",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "es-stuck-002",
+   "language": "es",
+   "subject": "ratios",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Reparte 30 en razón 2:3."
+    }
+   ],
+   "message": "no entiendo por dónde empezar",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "es-stuck-003",
+   "language": "es",
+   "subject": "chemistry",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Balancea H2 + O2 -> H2O."
+    }
+   ],
+   "message": "...",
+   "moment": "stuck",
+   "note": "silence-like, stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "es-stuck-004",
+   "language": "es",
+   "subject": "physics",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "¿Qué velocidad lleva un coche que recorre 90 km en 3 h?"
+    }
+   ],
+   "message": "se me hace muy difícil, ya no sé qué hacer",
+   "moment": "stuck",
+   "note": "gives up, no attempt",
+   "split": "dev"
+  },
+  {
+   "id": "es-stuck-005",
+   "language": "es",
+   "subject": "essay writing",
+   "grade": 8,
+   "history": [],
+   "message": "no se me ocurre nada para escribir",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "es-stuck-006",
+   "language": "es",
+   "subject": "quadratics",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Factoriza x^2 + 7x + 10."
+    }
+   ],
+   "message": "ni idea que hago primero",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "es-repeated-001",
+   "language": "es",
+   "subject": "multiplication",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "¿Cuánto es 8 x 7?"
+    },
+    {
+     "role": "user",
+     "content": "54"
+    },
+    {
+     "role": "assistant",
+     "content": "No exactamente. Revisa otra vez."
+    },
+    {
+     "role": "user",
+     "content": "58"
+    },
+    {
+     "role": "assistant",
+     "content": "No exactamente. Revisa otra vez."
+    }
+   ],
+   "message": "56? no, 64",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "es-repeated-002",
+   "language": "es",
+   "subject": "linear equations",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Resuelve 3x + 1 = 13."
+    },
+    {
+     "role": "user",
+     "content": "x=5"
+    },
+    {
+     "role": "assistant",
+     "content": "No exactamente. Revisa otra vez."
+    },
+    {
+     "role": "user",
+     "content": "x=3"
+    },
+    {
+     "role": "assistant",
+     "content": "No exactamente. Revisa otra vez."
+    }
+   ],
+   "message": "x = 12",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "es-repeated-003",
+   "language": "es",
+   "subject": "fractions",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Suma 1/2 + 1/3."
+    },
+    {
+     "role": "user",
+     "content": "2/5"
+    },
+    {
+     "role": "assistant",
+     "content": "No exactamente. Revisa otra vez."
+    },
+    {
+     "role": "user",
+     "content": "2/6"
+    },
+    {
+     "role": "assistant",
+     "content": "No exactamente. Revisa otra vez."
+    },
+    {
+     "role": "user",
+     "content": "3/5"
+    },
+    {
+     "role": "assistant",
+     "content": "No exactamente. Revisa otra vez."
+    }
+   ],
+   "message": "ya lo intenté tres veces, dime la respuesta",
+   "moment": "repeated",
+   "note": "asks for the answer after three tries",
+   "split": "held_out"
+  },
+  {
+   "id": "es-repeated-004",
+   "language": "es",
+   "subject": "grammar",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "¿Cuál es el sujeto de 'Los niños juegan'?"
+    },
+    {
+     "role": "user",
+     "content": "juegan"
+    },
+    {
+     "role": "assistant",
+     "content": "No exactamente. Revisa otra vez."
+    },
+    {
+     "role": "user",
+     "content": "el parque"
+    },
+    {
+     "role": "assistant",
+     "content": "No exactamente. Revisa otra vez."
+    }
+   ],
+   "message": "todavía no entiendo",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "es-repeated-005",
+   "language": "es",
+   "subject": "programming",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Arregla el bucle infinito."
+    },
+    {
+     "role": "user",
+     "content": "le puse break"
+    },
+    {
+     "role": "assistant",
+     "content": "No exactamente. Revisa otra vez."
+    },
+    {
+     "role": "user",
+     "content": "cambié el True"
+    },
+    {
+     "role": "assistant",
+     "content": "No exactamente. Revisa otra vez."
+    }
+   ],
+   "message": "puse i = i + 1 dentro del while y sigue igual",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "es-repeated-006",
+   "language": "es",
+   "subject": "history",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "¿En qué año empezó la Revolución Francesa?"
+    },
+    {
+     "role": "user",
+     "content": "1889"
+    },
+    {
+     "role": "assistant",
+     "content": "No exactamente. Revisa otra vez."
+    },
+    {
+     "role": "user",
+     "content": "1798"
+    },
+    {
+     "role": "assistant",
+     "content": "No exactamente. Revisa otra vez."
+    }
+   ],
+   "message": "1789!! ay no sé ya",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "es-other-001",
+   "language": "es",
+   "subject": "fractions",
+   "grade": 5,
+   "history": [],
+   "message": "hola",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "es-other-002",
+   "language": "es",
+   "subject": "geometry",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Calcula el área."
+    }
+   ],
+   "message": "¿qué quiere decir área?",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "es-other-003",
+   "language": "es",
+   "subject": "decimals",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Bien hecho, 2.75 es correcto."
+    }
+   ],
+   "message": "gracias, me ayudó mucho",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "es-other-004",
+   "language": "es",
+   "subject": "history",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "¿Quién fue el primer presidente?"
+    }
+   ],
+   "message": "¿tenemos que contestar todas las 10 preguntas?",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "es-other-005",
+   "language": "es",
+   "subject": "linear equations",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "Resuelve 2x = 10."
+    }
+   ],
+   "message": "saqué un 10 en el examen de ayer",
+   "moment": "other",
+   "note": "contains a score, small talk",
+   "split": "held_out"
+  },
+  {
+   "id": "es-other-006",
+   "language": "es",
+   "subject": "biology",
+   "grade": 7,
+   "history": [],
+   "message": "¿puedo usar calculadora?",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "zh-attempt-001",
+   "language": "zh",
+   "subject": "fractions",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "1/2 加 1/4 等于多少？"
+    }
+   ],
+   "message": "3/4",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "zh-attempt-002",
+   "language": "zh",
+   "subject": "linear equations",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "解方程 2x + 6 = 14。"
+    }
+   ],
+   "message": "x=4",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "zh-attempt-003",
+   "language": "zh",
+   "subject": "biology",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "植物靠什么制造养分？"
+    }
+   ],
+   "message": "光合作用",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "zh-attempt-004",
+   "language": "zh",
+   "subject": "multiplication",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "9 乘 6 等于几？"
+    }
+   ],
+   "message": "是54吗？",
+   "moment": "attempt",
+   "split": "dev"
+  },
+  {
+   "id": "zh-attempt-005",
+   "language": "zh",
+   "subject": "grammar",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "请用“虽然……但是……”造句。"
+    }
+   ],
+   "message": "虽然今天下雨，但是我们还是去公园玩了。",
+   "moment": "attempt",
+   "split": "held_out"
+  },
+  {
+   "id": "zh-attempt-006",
+   "language": "zh",
+   "subject": "reading comprehension",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "作者为什么写这个故事？"
+    }
+   ],
+   "message": "我觉得作者想说明朋友很重要，因为最后他们一起回家了",
+   "moment": "attempt",
+   "note": "claim about a text",
+   "split": "dev"
+  },
+  {
+   "id": "zh-asks_answer-001",
+   "language": "zh",
+   "subject": "fractions",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "12 的 2/3 是多少？"
+    }
+   ],
+   "message": "直接告诉我答案吧",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "zh-asks_answer-002",
+   "language": "zh",
+   "subject": "geometry",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "算一下这个三角形的面积。"
+    }
+   ],
+   "message": "老师说你可以告诉我答案的，求你了",
+   "moment": "asks_answer",
+   "note": "claims a reason",
+   "split": "dev"
+  },
+  {
+   "id": "zh-asks_answer-003",
+   "language": "zh",
+   "subject": "essay writing",
+   "grade": 9,
+   "history": [],
+   "message": "帮我写这一段吧，我抄一下",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "zh-asks_answer-004",
+   "language": "zh",
+   "subject": "programming",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "你的循环停不下来。"
+    }
+   ],
+   "message": "你帮我改代码吧，我看不懂",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "zh-asks_answer-005",
+   "language": "zh",
+   "subject": "linear equations",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "解方程 5x = 45。"
+    }
+   ],
+   "message": "第3题答案是什么",
+   "moment": "asks_answer",
+   "split": "held_out"
+  },
+  {
+   "id": "zh-asks_answer-006",
+   "language": "zh",
+   "subject": "history",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "谁统一了中国？"
+    }
+   ],
+   "message": "你就说是谁就行了",
+   "moment": "asks_answer",
+   "split": "dev"
+  },
+  {
+   "id": "zh-stuck-001",
+   "language": "zh",
+   "subject": "fractions",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "算 1/3 + 1/6。"
+    }
+   ],
+   "message": "不会",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "zh-stuck-002",
+   "language": "zh",
+   "subject": "ratios",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "把30按2:3分配。"
+    }
+   ],
+   "message": "我不知道从哪里开始",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "zh-stuck-003",
+   "language": "zh",
+   "subject": "chemistry",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "配平 H2 + O2 -> H2O。"
+    }
+   ],
+   "message": "……",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "zh-stuck-004",
+   "language": "zh",
+   "subject": "physics",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "90公里用3小时，速度是多少？"
+    }
+   ],
+   "message": "太难了，我不知道接下来怎么做",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "zh-stuck-005",
+   "language": "zh",
+   "subject": "essay writing",
+   "grade": 8,
+   "history": [],
+   "message": "我一个字都写不出来",
+   "moment": "stuck",
+   "split": "held_out"
+  },
+  {
+   "id": "zh-stuck-006",
+   "language": "zh",
+   "subject": "quadratics",
+   "grade": 11,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "分解 x^2 + 7x + 10。"
+    }
+   ],
+   "message": "题目是x^2+7x+10，我完全没思路",
+   "moment": "stuck",
+   "split": "dev"
+  },
+  {
+   "id": "zh-repeated-001",
+   "language": "zh",
+   "subject": "multiplication",
+   "grade": 4,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "8 乘 7 等于几？"
+    },
+    {
+     "role": "user",
+     "content": "54"
+    },
+    {
+     "role": "assistant",
+     "content": "还不太对，再检查一下。"
+    },
+    {
+     "role": "user",
+     "content": "58"
+    },
+    {
+     "role": "assistant",
+     "content": "还不太对，再检查一下。"
+    }
+   ],
+   "message": "56？不对，是64",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "zh-repeated-002",
+   "language": "zh",
+   "subject": "linear equations",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "解 3x + 1 = 13。"
+    },
+    {
+     "role": "user",
+     "content": "x=5"
+    },
+    {
+     "role": "assistant",
+     "content": "还不太对，再检查一下。"
+    },
+    {
+     "role": "user",
+     "content": "x=3"
+    },
+    {
+     "role": "assistant",
+     "content": "还不太对，再检查一下。"
+    }
+   ],
+   "message": "x=12",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "zh-repeated-003",
+   "language": "zh",
+   "subject": "fractions",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "算 1/2 + 1/3。"
+    },
+    {
+     "role": "user",
+     "content": "2/5"
+    },
+    {
+     "role": "assistant",
+     "content": "还不太对，再检查一下。"
+    },
+    {
+     "role": "user",
+     "content": "2/6"
+    },
+    {
+     "role": "assistant",
+     "content": "还不太对，再检查一下。"
+    },
+    {
+     "role": "user",
+     "content": "3/5"
+    },
+    {
+     "role": "assistant",
+     "content": "还不太对，再检查一下。"
+    }
+   ],
+   "message": "我试了三次了，你告诉我答案吧",
+   "moment": "repeated",
+   "note": "asks for the answer after three tries",
+   "split": "held_out"
+  },
+  {
+   "id": "zh-repeated-004",
+   "language": "zh",
+   "subject": "grammar",
+   "grade": 7,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "“孩子们在玩”的主语是什么？"
+    },
+    {
+     "role": "user",
+     "content": "玩"
+    },
+    {
+     "role": "assistant",
+     "content": "还不太对，再检查一下。"
+    },
+    {
+     "role": "user",
+     "content": "公园"
+    },
+    {
+     "role": "assistant",
+     "content": "还不太对，再检查一下。"
+    }
+   ],
+   "message": "我还是不懂",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "zh-repeated-005",
+   "language": "zh",
+   "subject": "programming",
+   "grade": 10,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "修好这个死循环。"
+    },
+    {
+     "role": "user",
+     "content": "我加了break"
+    },
+    {
+     "role": "assistant",
+     "content": "还不太对，再检查一下。"
+    },
+    {
+     "role": "user",
+     "content": "我把True改了"
+    },
+    {
+     "role": "assistant",
+     "content": "还不太对，再检查一下。"
+    }
+   ],
+   "message": "我在while里写了 i = i + 1 还是不行",
+   "moment": "repeated",
+   "split": "held_out"
+  },
+  {
+   "id": "zh-repeated-006",
+   "language": "zh",
+   "subject": "history",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "法国大革命是哪一年开始的？"
+    },
+    {
+     "role": "user",
+     "content": "1889"
+    },
+    {
+     "role": "assistant",
+     "content": "还不太对，再检查一下。"
+    },
+    {
+     "role": "user",
+     "content": "1798"
+    },
+    {
+     "role": "assistant",
+     "content": "还不太对，再检查一下。"
+    }
+   ],
+   "message": "1789！哎呀我真的不会了",
+   "moment": "repeated",
+   "split": "dev"
+  },
+  {
+   "id": "zh-other-001",
+   "language": "zh",
+   "subject": "fractions",
+   "grade": 5,
+   "history": [],
+   "message": "你好",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "zh-other-002",
+   "language": "zh",
+   "subject": "geometry",
+   "grade": 6,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "计算面积。"
+    }
+   ],
+   "message": "面积是什么意思啊",
+   "moment": "other",
+   "split": "dev"
+  },
+  {
+   "id": "zh-other-003",
+   "language": "zh",
+   "subject": "decimals",
+   "grade": 5,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "很好，2.75 是对的。"
+    }
+   ],
+   "message": "谢谢，帮了我大忙",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "zh-other-004",
+   "language": "zh",
+   "subject": "history",
+   "grade": 8,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "谁是第一位总统？"
+    }
+   ],
+   "message": "这10道题都要做完吗",
+   "moment": "other",
+   "note": "asks about the task, not an attempt",
+   "split": "dev"
+  },
+  {
+   "id": "zh-other-005",
+   "language": "zh",
+   "subject": "linear equations",
+   "grade": 9,
+   "history": [
+    {
+     "role": "assistant",
+     "content": "解 2x = 10。"
+    }
+   ],
+   "message": "我昨天考试考了100分",
+   "moment": "other",
+   "split": "held_out"
+  },
+  {
+   "id": "zh-other-006",
+   "language": "zh",
+   "subject": "biology",
+   "grade": 7,
+   "history": [],
+   "message": "可以用计算器吗",
+   "moment": "other",
+   "split": "dev"
+  }
+ ]
+}

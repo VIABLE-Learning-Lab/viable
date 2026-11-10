@@ -1,0 +1,1134 @@
+{
+ "name": "classroom-trips",
+ "version": 1,
+ "written": "2026-11-10",
+ "author": "Written by an AI model from the problems' descriptions alone, without sight of the checker it scores.",
+ "problems": [
+  "secret-in-code",
+  "model-called-from-the-page",
+  "open-database",
+  "env-can-be-committed",
+  "server-shows-its-folder",
+  "limit-by-address",
+  "sign-in-limits",
+  "prompt-in-the-page",
+  "answers-in-the-page",
+  "no-output-limit",
+  "no-budget",
+  "no-teacher-view",
+  "names-to-the-model",
+  "name-kept-in-the-browser",
+  "trackers",
+  "tables-with-no-row-rules"
+ ],
+ "projects": [
+  {
+   "id": "p01",
+   "title": "Fractions quiz with an AI hint button",
+   "stack": "plain HTML",
+   "files": {
+    "index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Fractions quiz</title></head>\n<body>\n<h1>Fractions quiz</h1>\n<p id=\"q\">What is 1/2 + 1/4?</p>\n<button id=\"hint\">Give me a hint</button>\n<p id=\"out\"></p>\n<script>\nconst KEY = \"__FAKE_MODEL_KEY__\";\nconst DAILY_HINT_BUDGET = 30;\nlet used = Number(localStorage.getItem(\"hintsUsed\") || 0);\ndocument.getElementById(\"hint\").onclick = async () => {\n  if (used >= DAILY_HINT_BUDGET) { out.textContent = \"No hints left today.\"; return; }\n  used++; localStorage.setItem(\"hintsUsed\", used);\n  const r = await fetch(\"https://api.openai.com/v1/chat/completions\", {\n    method: \"POST\",\n    headers: { \"Content-Type\": \"application/json\", Authorization: \"Bearer \" + KEY },\n    body: JSON.stringify({ model: \"gpt-4o-mini\", max_tokens: 120, messages: [\n      { role: \"system\", content: \"You are a patient maths tutor. Give one hint about fractions and never state the final result.\" },\n      { role: \"user\", content: q.textContent } ] })\n  });\n  const data = await r.json();\n  out.textContent = data.choices[0].message.content;\n};\n</script>\n</body>\n</html>\n",
+    "teacher.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Teacher page</title></head>\n<body>\n<h1>Teacher page</h1>\n<p id=\"usage\"></p>\n<script>\ndocument.getElementById(\"usage\").textContent = \"Requests used in this browser: \" + (localStorage.getItem(\"hintsUsed\") || 0);\n</script>\n</body>\n</html>\n",
+    ".gitignore": ".env\nnode_modules\ndist\n.DS_Store\n*.log\n"
+   },
+   "planted": [
+    "secret-in-code",
+    "model-called-from-the-page",
+    "prompt-in-the-page"
+   ],
+   "how": {
+    "secret-in-code": "const KEY literal in the inline script",
+    "model-called-from-the-page": "fetch to api.openai.com chat completions from the page",
+    "prompt-in-the-page": "system message written in the inline script"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p02",
+   "title": "Vocabulary explainer game",
+   "stack": "React with Vite",
+   "files": {
+    "src/App.jsx": "import { useState } from \"react\";\nimport OpenAI from \"openai\";\n\nconst client = new OpenAI({\n  apiKey: import.meta.env.VITE_OPENAI_KEY,\n  dangerouslyAllowBrowser: true,\n});\nconst SYSTEM = \"You explain vocabulary words to ten year olds in two short sentences.\";\nconst DAILY_WORD_QUOTA = 25;\n\nexport default function App() {\n  const [word, setWord] = useState(\"\");\n  const [text, setText] = useState(\"\");\n  const [count, setCount] = useState(0);\n  async function explain() {\n    if (count >= DAILY_WORD_QUOTA) return setText(\"Come back tomorrow!\");\n    setCount(count + 1);\n    const res = await client.chat.completions.create({\n      model: \"gpt-4o-mini\",\n      max_tokens: 100,\n      messages: [{ role: \"system\", content: SYSTEM }, { role: \"user\", content: word }],\n    });\n    setText(res.choices[0].message.content);\n  }\n  return (\n    <div>\n      <input value={word} onChange={(e) => setWord(e.target.value)} />\n      <button onClick={explain}>Explain</button>\n      <p>{text}</p>\n    </div>\n  );\n}\n",
+    ".env": "# local settings\nVITE_OPENAI_KEY=__FAKE_MODEL_KEY__\nVITE_APP_TITLE=Word Explorer\nVITE_MODEL=gpt-4o-mini\n# end\n",
+    ".gitignore": "node_modules\ndist\n.DS_Store\n*.log\ncoverage\n"
+   },
+   "planted": [
+    "model-called-from-the-page",
+    "prompt-in-the-page",
+    "env-can-be-committed",
+    "no-teacher-view"
+   ],
+   "how": {
+    "model-called-from-the-page": "OpenAI SDK with dangerouslyAllowBrowser and a VITE_ key",
+    "prompt-in-the-page": "SYSTEM constant in App.jsx",
+    "env-can-be-committed": ".env present, .gitignore lists only node_modules and build output",
+    "no-teacher-view": "no teacher page or route anywhere"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p03",
+   "title": "Reading tutor chat",
+   "stack": "Express",
+   "files": {
+    "index.js": "const express = require(\"express\");\nconst OpenAI = require(\"openai\");\n\nconst OPENAI_API_KEY = \"__FAKE_MODEL_KEY__\";\nconst client = new OpenAI({ apiKey: OPENAI_API_KEY });\nconst app = express();\napp.use(express.json());\napp.use(express.static(__dirname));\n\napp.post(\"/api/read\", async (req, res) => {\n  const out = await client.chat.completions.create({\n    model: \"gpt-4o-mini\",\n    max_tokens: 250,\n    messages: [\n      { role: \"system\", content: \"You help a child read a short passage aloud and ask one question about it.\" },\n      { role: \"user\", content: req.body.passage },\n    ],\n  });\n  res.json({ reply: out.choices[0].message.content });\n});\n\napp.listen(3000, () => console.log(\"Reading tutor on 3000\"));\n",
+    "public/index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Reading tutor</title></head>\n<body>\n<h1>Reading tutor</h1>\n<textarea id=\"p\" rows=\"6\" cols=\"50\"></textarea><br>\n<button onclick=\"go()\">Help me</button>\n<p id=\"r\"></p>\n<script>\nasync function go() {\n  const res = await fetch(\"/api/read\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ passage: p.value }) });\n  r.textContent = (await res.json()).reply;\n}\n</script>\n</body>\n</html>\n",
+    ".gitignore": ".env\nnode_modules\ndist\n.DS_Store\n*.log\n"
+   },
+   "planted": [
+    "secret-in-code",
+    "server-shows-its-folder",
+    "no-budget",
+    "no-teacher-view"
+   ],
+   "how": {
+    "secret-in-code": "OPENAI_API_KEY constant in index.js",
+    "server-shows-its-folder": "express.static(__dirname) at the project root",
+    "no-budget": "no spending cap or counter on the server",
+    "no-teacher-view": "only a learner page, no teacher route"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p04",
+   "title": "Essay feedback tool",
+   "stack": "Next.js pages router",
+   "files": {
+    "pages/index.js": "import { useState } from \"react\";\n\nexport default function Home() {\n  const [name, setName] = useState(\"\");\n  const [essay, setEssay] = useState(\"\");\n  const [fb, setFb] = useState(\"\");\n  async function send() {\n    localStorage.setItem(\"studentName\", name);\n    const r = await fetch(\"/api/feedback\", {\n      method: \"POST\",\n      headers: { \"Content-Type\": \"application/json\" },\n      body: JSON.stringify({ studentName: name, essay }),\n    });\n    setFb((await r.json()).text);\n  }\n  return (\n    <main>\n      <input placeholder=\"Your name\" value={name} onChange={(e) => setName(e.target.value)} />\n      <textarea value={essay} onChange={(e) => setEssay(e.target.value)} />\n      <button onClick={send}>Get feedback</button>\n      <p>{fb}</p>\n    </main>\n  );\n}\n",
+    "pages/api/feedback.js": "import OpenAI from \"openai\";\n\nconst client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });\nlet tokensToday = 0;\nconst DAILY_TOKEN_BUDGET = 300000;\n\nexport default async function handler(req, res) {\n  if (tokensToday > DAILY_TOKEN_BUDGET) return res.status(429).json({ text: \"The class budget is used up today.\" });\n  const { studentName, essay } = req.body;\n  const out = await client.chat.completions.create({\n    model: \"gpt-4o-mini\",\n    messages: [\n      { role: \"system\", content: \"Give two strengths and one suggestion for this essay.\" },\n      { role: \"user\", content: \"Student: \" + studentName + \"\\n\\n\" + essay },\n    ],\n  });\n  tokensToday += out.usage.total_tokens;\n  res.json({ text: out.choices[0].message.content });\n}\n",
+    "pages/teacher.js": "export default function Teacher() {\n  return (\n    <main>\n      <h1>Teacher page</h1>\n      <p>Open the usage report to see how much of the class budget is used.</p>\n      <a href=\"/api/usage\">Usage</a>\n    </main>\n  );\n}\n",
+    ".gitignore": "node_modules\ndist\n.env.local\n.DS_Store\n*.log\n"
+   },
+   "planted": [
+    "names-to-the-model",
+    "no-output-limit",
+    "name-kept-in-the-browser"
+   ],
+   "how": {
+    "names-to-the-model": "studentName concatenated into the user message",
+    "no-output-limit": "chat.completions.create without max_tokens",
+    "name-kept-in-the-browser": "localStorage.setItem('studentName', name)"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p05",
+   "title": "Homework helper with Claude",
+   "stack": "Next.js app router, use client",
+   "files": {
+    "app/layout.tsx": "import Script from \"next/script\";\n\nexport default function RootLayout({ children }: { children: React.ReactNode }) {\n  return (\n    <html lang=\"en\">\n      <head>\n        <Script id=\"gtm\" strategy=\"afterInteractive\" src=\"https://www.googletagmanager.com/gtm.js?id=GTM-DEMO123\" />\n      </head>\n      <body>{children}</body>\n    </html>\n  );\n}\n",
+    "app/page.tsx": "\"use client\";\nimport { useState } from \"react\";\n\nconst DAILY_ASK_BUDGET = 20;\n\nexport default function Page() {\n  const [q, setQ] = useState(\"\");\n  const [a, setA] = useState(\"\");\n  const [asked, setAsked] = useState(0);\n  async function ask() {\n    if (asked >= DAILY_ASK_BUDGET) return setA(\"That is all for today.\");\n    setAsked(asked + 1);\n    const r = await fetch(\"https://api.anthropic.com/v1/messages\", {\n      method: \"POST\",\n      headers: {\n        \"content-type\": \"application/json\",\n        \"x-api-key\": process.env.NEXT_PUBLIC_ANTHROPIC_KEY as string,\n        \"anthropic-version\": \"2023-06-01\",\n        \"anthropic-dangerous-direct-browser-access\": \"true\",\n      },\n      body: JSON.stringify({\n        model: \"claude-3-5-haiku-latest\", max_tokens: 300,\n        system: \"You are a homework helper. Explain steps, do not hand over final answers.\",\n        messages: [{ role: \"user\", content: q }],\n      }),\n    });\n    setA((await r.json()).content[0].text);\n  }\n  return <main><input value={q} onChange={(e) => setQ(e.target.value)} /><button onClick={ask}>Ask</button><p>{a}</p></main>;\n}\n",
+    "app/teacher/page.tsx": "export default function TeacherPage() {\n  return (\n    <main>\n      <h1>Teacher page</h1>\n      <p>Class homework questions are summarised here each week.</p>\n    </main>\n  );\n}\n"
+   },
+   "planted": [
+    "model-called-from-the-page",
+    "prompt-in-the-page",
+    "trackers"
+   ],
+   "how": {
+    "model-called-from-the-page": "use-client page fetches api.anthropic.com with a NEXT_PUBLIC_ key",
+    "prompt-in-the-page": "system string in the page body",
+    "trackers": "Google Tag Manager script in the root layout"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p06",
+   "title": "Science simulation with an AI explainer",
+   "stack": "Vue",
+   "files": {
+    "index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Pendulum lab</title></head>\n<body>\n<div id=\"app\"></div>\n<script type=\"module\" src=\"/src/main.js\"></script>\n</body>\n</html>\n",
+    "src/main.js": "import { createApp } from \"vue\";\nimport App from \"./App.vue\";\n\n// mount the app\n\nconst app = createApp(App);\napp.mount(\"#app\");\n",
+    "src/App.vue": "<script setup>\nimport { ref } from \"vue\";\nconst length = ref(1);\nconst note = ref(\"\");\nconst uses = ref(0);\nconst DAILY_QUOTA = 15;\nconst URL = \"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=\" + import.meta.env.VITE_GEMINI_KEY;\n\nasync function explain() {\n  if (uses.value >= DAILY_QUOTA) { note.value = \"Explainer is resting until tomorrow.\"; return; }\n  uses.value++;\n  const r = await fetch(URL, {\n    method: \"POST\",\n    headers: { \"Content-Type\": \"application/json\" },\n    body: JSON.stringify({\n      systemInstruction: { parts: [{ text: \"You explain physics to 12 year olds in plain words.\" }] },\n      contents: [{ role: \"user\", parts: [{ text: \"Why does a pendulum of length \" + length.value + \"m swing at its speed?\" }] }],\n    }),\n  });\n  note.value = (await r.json()).candidates[0].content.parts[0].text;\n}\n</script>\n<template>\n  <input type=\"range\" min=\"0.2\" max=\"3\" step=\"0.1\" v-model=\"length\" />\n  <button @click=\"explain\">Explain</button>\n  <p>{{ note }}</p>\n</template>\n",
+    ".gitignore": ".env\nnode_modules\ndist\n.DS_Store\n*.log\n"
+   },
+   "planted": [
+    "model-called-from-the-page",
+    "prompt-in-the-page",
+    "no-output-limit",
+    "no-teacher-view"
+   ],
+   "how": {
+    "model-called-from-the-page": "Gemini generateContent called from the component with a VITE_ key in the URL",
+    "prompt-in-the-page": "systemInstruction text in App.vue",
+    "no-output-limit": "no generationConfig.maxOutputTokens",
+    "no-teacher-view": "no teacher page or route"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p07",
+   "title": "Spelling bee",
+   "stack": "Svelte with Vite",
+   "files": {
+    "index.html": "<!doctype html>\n<html>\n<head>\n<meta charset=\"utf-8\"><title>Spelling bee</title>\n<script>\n  (function(h,o,t,j,a,r){\n    h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};\n    h._hjSettings={hjid:1234567,hjsv:6};\n    a=o.getElementsByTagName(\"head\")[0]; r=o.createElement(\"script\"); r.async=1;\n    r.src=\"https://static.hotjar.com/c/hotjar-\"+h._hjSettings.hjid+\".js?sv=\"+h._hjSettings.hjsv;\n    a.appendChild(r);\n  })(window,document);\n</script>\n</head>\n<body><div id=\"app\"></div><script type=\"module\" src=\"/src/main.js\"></script></body>\n</html>\n",
+    "src/App.svelte": "<script>\n  const answers = { 1: \"necessary\", 2: \"rhythm\", 3: \"separate\", 4: \"February\" };\n  let round = 1;\n  let guess = \"\";\n  let score = 0;\n  let player = localStorage.getItem(\"playerName\") || \"\";\n  function saveName() { localStorage.setItem(\"playerName\", player); }\n  function check() {\n    if (guess.toLowerCase() === answers[round].toLowerCase()) score += 1;\n    round += 1; guess = \"\";\n  }\n</script>\n\n<input placeholder=\"Your name\" bind:value={player} on:change={saveName} />\n<p>Round {round}: spell the word you hear</p>\n<input bind:value={guess} />\n<button on:click={check}>Check</button>\n<p>Score: {score}</p>\n",
+    ".gitignore": ".env\nnode_modules\ndist\n.DS_Store\n*.log\n"
+   },
+   "planted": [
+    "answers-in-the-page",
+    "name-kept-in-the-browser",
+    "trackers"
+   ],
+   "how": {
+    "answers-in-the-page": "answers object in App.svelte",
+    "name-kept-in-the-browser": "localStorage playerName",
+    "trackers": "Hotjar snippet in index.html"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p08",
+   "title": "Class poll",
+   "stack": "Firebase Realtime Database, plain HTML",
+   "files": {
+    "public/index.html": "<!doctype html>\n<html>\n<head>\n<meta charset=\"utf-8\"><title>Class poll</title>\n<script type=\"text/javascript\">\n  (function(c,l,a,r,i,t,y){\n    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};\n    t=l.createElement(r);t.async=1;t.src=\"https://www.clarity.ms/tag/\"+i;\n    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);\n  })(window,document,\"clarity\",\"script\",\"abc123xyz\");\n</script>\n<script src=\"https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js\"></script>\n<script src=\"https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js\"></script>\n</head>\n<body>\n<h1>Favourite fruit?</h1>\n<button onclick=\"vote('apple')\">Apple</button> <button onclick=\"vote('pear')\">Pear</button>\n<script>\nfirebase.initializeApp({ apiKey: \"demo-firebase-web-key\", databaseURL: \"https://class-poll-demo-default-rtdb.firebaseio.com\" });\nfunction vote(f) { firebase.database().ref(\"votes/\" + f).transaction(n => (n || 0) + 1); }\n</script>\n</body>\n</html>\n",
+    "database.rules.json": "{\n  \"rules\": {\n    \".read\": true,\n    \".write\": true\n  }\n}\n",
+    "firebase.json": "{\n  \"database\": { \"rules\": \"database.rules.json\" },\n  \"hosting\": {\n    \"public\": \"public\",\n    \"ignore\": [\"firebase.json\", \"**/.*\"]\n  }\n}\n"
+   },
+   "planted": [
+    "open-database",
+    "trackers"
+   ],
+   "how": {
+    "open-database": "Realtime Database rules with .read and .write true",
+    "trackers": "Microsoft Clarity tag in the page head"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p09",
+   "title": "Exit ticket form",
+   "stack": "Firebase Firestore, plain HTML",
+   "files": {
+    "index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Exit ticket</title></head>\n<body>\n<h1>Exit ticket</h1>\n<input id=\"name\" placeholder=\"Your name\">\n<textarea id=\"learned\" placeholder=\"One thing I learned today\"></textarea>\n<button id=\"send\">Send</button>\n<script type=\"module\">\nimport { initializeApp } from \"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js\";\nimport { getFirestore, collection, addDoc } from \"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js\";\nconst app = initializeApp({ apiKey: \"demo-firebase-web-key\", projectId: \"exit-ticket-demo\" });\nconst db = getFirestore(app);\nname.value = localStorage.getItem(\"learnerName\") || \"\";\nsend.onclick = async () => {\n  localStorage.setItem(\"learnerName\", name.value);\n  await addDoc(collection(db, \"tickets\"), { who: name.value, text: learned.value });\n};\n</script>\n</body>\n</html>\n",
+    "firestore.rules": "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if true;\n    }\n  }\n}\n"
+   },
+   "planted": [
+    "open-database",
+    "name-kept-in-the-browser"
+   ],
+   "how": {
+    "open-database": "firestore.rules allow read, write: if true on every document",
+    "name-kept-in-the-browser": "localStorage learnerName"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p10",
+   "title": "Homework tracker",
+   "stack": "Supabase JS client and SQL",
+   "files": {
+    "index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Homework tracker</title></head>\n<body>\n<h1>Homework tracker</h1>\n<ul id=\"list\"></ul>\n<script type=\"module\" src=\"/src/app.js\"></script>\n</body>\n</html>\n",
+    "src/app.js": "import { createClient } from \"https://esm.sh/@supabase/supabase-js@2\";\n\nconst supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);\n\nconst { data: session } = await supabase.auth.signInAnonymously();\nconst { data: rows } = await supabase.from(\"tasks\").select(\"*\").eq(\"user_id\", session.user.id);\ndocument.getElementById(\"list\").innerHTML = rows.map((r) => \"<li>\" + r.title + \"</li>\").join(\"\");\n",
+    "supabase/migrations/v001_init.sql": "create table classes (\n  id uuid primary key default gen_random_uuid(),\n  name text not null\n);\n\ncreate table tasks (\n  id uuid primary key default gen_random_uuid(),\n  user_id uuid not null,\n  class_id uuid references classes(id),\n  title text not null,\n  done boolean default false\n);\n"
+   },
+   "planted": [
+    "sign-in-limits",
+    "tables-with-no-row-rules"
+   ],
+   "how": {
+    "sign-in-limits": "supabase.auth.signInAnonymously() on page load",
+    "tables-with-no-row-rules": "create table statements with no enable row level security"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p11",
+   "title": "Essay feedback API",
+   "stack": "FastAPI",
+   "files": {
+    "api/main.py": "from fastapi import FastAPI, Request\nfrom openai import OpenAI\nfrom slowapi import Limiter\nfrom slowapi.util import get_remote_address\n\nclient = OpenAI(api_key=\"__FAKE_MODEL_KEY__\")\nlimiter = Limiter(key_func=get_remote_address)\napp = FastAPI()\napp.state.limiter = limiter\n\nSPENT = {\"tokens\": 0}\nDAILY_TOKEN_BUDGET = 300000\n\n\n@app.post(\"/api/feedback\")\n@limiter.limit(\"10/minute\")\nasync def feedback(request: Request):\n    body = await request.json()\n    if SPENT[\"tokens\"] > DAILY_TOKEN_BUDGET:\n        return {\"error\": \"The class budget is used up for today.\"}\n    r = client.chat.completions.create(\n        model=\"gpt-4o-mini\",\n        max_tokens=300,\n        messages=[\n            {\"role\": \"system\", \"content\": \"Give two strengths and one suggestion for this essay.\"},\n            {\"role\": \"user\", \"content\": body[\"essay\"]},\n        ],\n    )\n    SPENT[\"tokens\"] += r.usage.total_tokens\n    return {\"text\": r.choices[0].message.content}\n\n\n@app.get(\"/teacher/usage\")\ndef teacher_usage():\n    return SPENT\n",
+    "requirements.txt": "fastapi\nuvicorn\nopenai\nslowapi\npython-multipart\n",
+    ".gitignore": "__pycache__\n*.pyc\n.venv\n.DS_Store\n*.log\n"
+   },
+   "planted": [
+    "secret-in-code",
+    "limit-by-address"
+   ],
+   "how": {
+    "secret-in-code": "OpenAI(api_key=literal) in main.py",
+    "limit-by-address": "slowapi Limiter with get_remote_address"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p12",
+   "title": "Reading tutor",
+   "stack": "Flask",
+   "files": {
+    "app.py": "import os\nfrom flask import Flask, request, jsonify\nfrom flask_limiter import Limiter\nfrom flask_limiter.util import get_remote_address\nfrom openai import OpenAI\n\napp = Flask(__name__)\nlimiter = Limiter(get_remote_address, app=app, default_limits=[\"20 per minute\"])\nclient = OpenAI(api_key=os.environ[\"OPENAI_API_KEY\"])\nUSED = {\"tokens\": 0}\nDAILY_TOKEN_BUDGET = 250000\n\n\n@app.post(\"/ask\")\ndef ask():\n    if USED[\"tokens\"] > DAILY_TOKEN_BUDGET:\n        return jsonify(reply=\"Reading help is paused until tomorrow.\"), 429\n    name = request.json[\"name\"]\n    r = client.chat.completions.create(\n        model=\"gpt-4o-mini\",\n        messages=[\n            {\"role\": \"system\", \"content\": f\"You are a kind reading tutor. The student's name is {name}.\"},\n            {\"role\": \"user\", \"content\": request.json[\"text\"]},\n        ],\n    )\n    USED[\"tokens\"] += r.usage.total_tokens\n    return jsonify(reply=r.choices[0].message.content)\n\n\n@app.get(\"/teacher\")\ndef teacher():\n    return jsonify(tokens=USED[\"tokens\"])\n",
+    ".env": "# local settings\nOPENAI_API_KEY=__FAKE_MODEL_KEY__\nFLASK_DEBUG=1\nPORT=5000\n# end\n",
+    "requirements.txt": "flask\nflask_limiter\nopenai\npython-dotenv\ngunicorn\n"
+   },
+   "planted": [
+    "limit-by-address",
+    "names-to-the-model",
+    "no-output-limit",
+    "env-can-be-committed"
+   ],
+   "how": {
+    "limit-by-address": "Flask-Limiter keyed by get_remote_address",
+    "names-to-the-model": "student's name in the system prompt f-string",
+    "no-output-limit": "no max_tokens on the completion",
+    "env-can-be-committed": ".env present and the project has no .gitignore"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p13",
+   "title": "Homework helper",
+   "stack": "Django",
+   "files": {
+    "tutor/settings.py": "from pathlib import Path\n\nBASE_DIR = Path(__file__).resolve().parent.parent\nDEBUG = True\nINSTALLED_APPS = [\"django.contrib.auth\", \"django.contrib.contenttypes\", \"django.contrib.sessions\", \"tutor\"]\nROOT_URLCONF = \"tutor.urls\"\n\nANTHROPIC_API_KEY = \"__FAKE_MODEL_KEY__\"\nDAILY_TOKEN_BUDGET = 200000\n",
+    "tutor/views.py": "import anthropic\nfrom django.conf import settings\nfrom django.http import JsonResponse\n\nclient = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)\nUSED = {\"tokens\": 0}\n\n\ndef ask(request):\n    if USED[\"tokens\"] > settings.DAILY_TOKEN_BUDGET:\n        return JsonResponse({\"reply\": \"Budget used up for today.\"}, status=429)\n    msg = client.messages.create(\n        model=\"claude-3-5-haiku-latest\",\n        max_tokens=300,\n        system=\"Help with homework. Student contact: \" + request.user.email,\n        messages=[{\"role\": \"user\", \"content\": request.GET.get(\"q\", \"\")}],\n    )\n    USED[\"tokens\"] += msg.usage.input_tokens + msg.usage.output_tokens\n    return JsonResponse({\"reply\": msg.content[0].text})\n\n\ndef teacher_dashboard(request):\n    return JsonResponse({\"tokens_used\": USED[\"tokens\"]})\n",
+    "tutor/urls.py": "from django.urls import path\nfrom . import views\n\nurlpatterns = [\n    path(\"ask/\", views.ask),\n    path(\"teacher/\", views.teacher_dashboard),\n]\n"
+   },
+   "planted": [
+    "secret-in-code",
+    "names-to-the-model"
+   ],
+   "how": {
+    "secret-in-code": "ANTHROPIC_API_KEY assigned a literal in settings.py",
+    "names-to-the-model": "request.user.email put into the system prompt"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p14",
+   "title": "Writing buddy",
+   "stack": "Cloudflare Worker",
+   "files": {
+    "src/index.js": "export default {\n  async fetch(request, env) {\n    const url = new URL(request.url);\n    if (url.pathname === \"/teacher\") {\n      return new Response(\"Calls so far: \" + ((await env.KV.get(\"total\")) || 0));\n    }\n    const ip = request.headers.get(\"CF-Connecting-IP\");\n    const key = \"rl:\" + ip;\n    const n = Number((await env.KV.get(key)) || 0);\n    if (n >= 20) return new Response(\"Too many requests\", { status: 429 });\n    await env.KV.put(key, String(n + 1), { expirationTtl: 60 });\n    const total = Number((await env.KV.get(\"total\")) || 0);\n    await env.KV.put(\"total\", String(total + 1));\n    const { text } = await request.json();\n    const r = await fetch(\"https://api.openai.com/v1/chat/completions\", {\n      method: \"POST\",\n      headers: { \"Content-Type\": \"application/json\", Authorization: \"Bearer __FAKE_MODEL_KEY__\" },\n      body: JSON.stringify({\n        model: \"gpt-4o-mini\",\n        messages: [\n          { role: \"system\", content: \"Suggest one way to improve this sentence.\" },\n          { role: \"user\", content: text },\n        ],\n      }),\n    });\n    return new Response(await r.text(), { headers: { \"Content-Type\": \"application/json\" } });\n  },\n};\n",
+    "wrangler.toml": "name = \"writing-buddy\"\nmain = \"src/index.js\"\ncompatibility_date = \"2026-01-15\"\n\n[[kv_namespaces]]\nbinding = \"KV\"\nid = \"demo-namespace-id\"\n"
+   },
+   "planted": [
+    "limit-by-address",
+    "secret-in-code",
+    "no-output-limit",
+    "no-budget"
+   ],
+   "how": {
+    "limit-by-address": "KV counter keyed by CF-Connecting-IP",
+    "secret-in-code": "Bearer literal in the Worker's fetch headers",
+    "no-output-limit": "request body has no max_tokens",
+    "no-budget": "only a per-minute count, no spending cap or daily limit"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p15",
+   "title": "Spelling bee with word list",
+   "stack": "Fastify",
+   "files": {
+    "server.js": "const Fastify = require(\"fastify\");\nconst fastifyStatic = require(\"@fastify/static\");\n\nconst app = Fastify();\napp.register(fastifyStatic, { root: process.cwd(), prefix: \"/\" });\n\napp.post(\"/api/score\", async (req) => {\n  const { name, score } = req.body;\n  console.log(\"score\", name, score);\n  return { ok: true };\n});\n\napp.listen({ port: 3000 }, () => console.log(\"Spelling bee on 3000\"));\n",
+    "public/questions.json": "[\n  { \"id\": 1, \"prompt\": \"Spell: a thing you need\", \"answer\": \"necessary\" },\n  { \"id\": 2, \"prompt\": \"Spell: a beat in music\", \"answer\": \"rhythm\" },\n  { \"id\": 3, \"prompt\": \"Spell: to divide\", \"answer\": \"separate\" }\n]\n",
+    "public/index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Spelling bee</title></head>\n<body>\n<h1>Spelling bee</h1>\n<p id=\"prompt\"></p><input id=\"guess\"><button id=\"go\">Check</button><p id=\"result\"></p>\n<script>\nlet qs = [], i = 0;\nfetch(\"/public/questions.json\").then(r => r.json()).then(d => { qs = d; show(); });\nfunction show() { prompt.textContent = qs[i].prompt; }\ngo.onclick = () => { result.textContent = guess.value === qs[i].answer ? \"Correct\" : \"Try again\"; };\n</script>\n</body>\n</html>\n",
+    ".gitignore": ".env\nnode_modules\ndist\n.DS_Store\n*.log\n"
+   },
+   "planted": [
+    "server-shows-its-folder",
+    "answers-in-the-page"
+   ],
+   "how": {
+    "server-shows-its-folder": "@fastify/static with root process.cwd()",
+    "answers-in-the-page": "questions.json with an answer field served to the browser"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p16",
+   "title": "Vocabulary helper on plain Node",
+   "stack": "Node http server",
+   "files": {
+    "server.js": "const http = require(\"http\");\nconst fs = require(\"fs\");\nconst path = require(\"path\");\nprocess.loadEnvFile();\n\nlet tokens = 0;\nconst DAILY_TOKEN_BUDGET = 150000;\n\nasync function ask(req, res) {\n  let body = \"\";\n  for await (const c of req) body += c;\n  if (tokens > DAILY_TOKEN_BUDGET) { res.writeHead(429); return res.end(\"Budget used up\"); }\n  const r = await fetch(\"https://api.openai.com/v1/chat/completions\", {\n    method: \"POST\",\n    headers: { \"Content-Type\": \"application/json\", Authorization: \"Bearer \" + process.env.OPENAI_API_KEY },\n    body: JSON.stringify({ model: \"gpt-4o-mini\", max_tokens: 120, messages: [\n      { role: \"system\", content: \"Define the word simply.\" }, { role: \"user\", content: JSON.parse(body).word } ] }),\n  });\n  const data = await r.json();\n  tokens += data.usage.total_tokens;\n  res.end(JSON.stringify({ reply: data.choices[0].message.content }));\n}\n\nhttp.createServer((req, res) => {\n  if (req.url === \"/api/ask\") return ask(req, res);\n  if (req.url === \"/api/usage\") return res.end(JSON.stringify({ tokens }));\n  const file = path.join(process.cwd(), req.url === \"/\" ? \"index.html\" : req.url);\n  fs.readFile(file, (err, data) => {\n    if (err) { res.writeHead(404); return res.end(\"Not found\"); }\n    res.end(data);\n  });\n}).listen(3000);\n",
+    "index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Vocabulary helper</title></head>\n<body>\n<h1>Vocabulary helper</h1>\n<input id=\"w\"><button id=\"b\">Define</button><p id=\"o\"></p>\n<script>\nb.onclick = async () => {\n  const r = await fetch(\"/api/ask\", { method: \"POST\", body: JSON.stringify({ word: w.value }) });\n  o.textContent = (await r.json()).reply;\n};\n</script>\n</body>\n</html>\n",
+    "teacher.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Teacher dashboard</title></head>\n<body>\n<h1>Teacher dashboard</h1>\n<p id=\"usage\">Loading...</p>\n<script>\nfetch(\"/api/usage\").then(r => r.json()).then(u => {\n  document.getElementById(\"usage\").textContent = u.tokens + \" tokens used by the class\";\n});\n</script>\n</body>\n</html>\n",
+    ".env": "# local settings\nOPENAI_API_KEY=__FAKE_MODEL_KEY__\nPORT=3000\nNODE_ENV=development\n# end\n"
+   },
+   "planted": [
+    "server-shows-its-folder",
+    "env-can-be-committed"
+   ],
+   "how": {
+    "server-shows-its-folder": "raw http server reads any path under process.cwd()",
+    "env-can-be-committed": ".env present and no .gitignore"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p17",
+   "title": "Coding exercise checker",
+   "stack": "Next.js app router, use server",
+   "files": {
+    "app/actions.ts": "\"use server\";\nimport { generateText } from \"ai\";\nimport { openai } from \"@ai-sdk/openai\";\n\nlet spent = 0;\nconst DAILY_TOKEN_BUDGET = 200000;\n\nexport async function checkCode(studentName: string, code: string) {\n  if (spent > DAILY_TOKEN_BUDGET) return \"The class budget is used up today.\";\n  const { text, usage } = await generateText({\n    model: openai(\"gpt-4o-mini\"),\n    system: \"You review short Python exercises for beginners. Point at one bug at a time.\",\n    prompt: \"Student \" + studentName + \" wrote:\\n\" + code,\n  });\n  spent += usage.totalTokens ?? 0;\n  return text;\n}\n\nexport async function usageToday() {\n  return spent;\n}\n",
+    "app/page.tsx": "\"use client\";\nimport { useState } from \"react\";\nimport { checkCode } from \"./actions\";\n\nexport default function Page() {\n  const [name, setName] = useState(\"\");\n  const [code, setCode] = useState(\"\");\n  const [review, setReview] = useState(\"\");\n  return (\n    <main>\n      <input placeholder=\"Your name\" value={name} onChange={(e) => setName(e.target.value)} />\n      <textarea value={code} onChange={(e) => setCode(e.target.value)} />\n      <button onClick={async () => setReview(await checkCode(name, code))}>Check my code</button>\n      <pre>{review}</pre>\n    </main>\n  );\n}\n",
+    "app/teacher/page.tsx": "import { usageToday } from \"../actions\";\n\nexport default async function TeacherPage() {\n  const used = await usageToday();\n  return <main><h1>Teacher page</h1><p>Tokens used so far: {used}</p></main>;\n}\n"
+   },
+   "planted": [
+    "names-to-the-model",
+    "no-output-limit"
+   ],
+   "how": {
+    "names-to-the-model": "studentName concatenated into the generateText prompt",
+    "no-output-limit": "generateText with no maxOutputTokens"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p18",
+   "title": "Reading chat with streaming",
+   "stack": "Next.js app router, Vercel AI SDK",
+   "files": {
+    "app/api/chat/route.ts": "import { streamText } from \"ai\";\nimport { openai } from \"@ai-sdk/openai\";\n\nexport async function POST(req: Request) {\n  const { messages } = await req.json();\n  const result = streamText({\n    model: openai(\"gpt-4o-mini\"),\n    system: \"You are a reading buddy for year 4 children. Keep replies short and friendly.\",\n    messages,\n  });\n  return result.toDataStreamResponse();\n}\n",
+    "app/page.tsx": "\"use client\";\nimport { useChat } from \"@ai-sdk/react\";\n\nexport default function Page() {\n  const { messages, input, handleInputChange, handleSubmit } = useChat();\n  return (\n    <main>\n      {messages.map((m) => <p key={m.id}>{m.role}: {m.content}</p>)}\n      <form onSubmit={handleSubmit}>\n        <input value={input} onChange={handleInputChange} placeholder=\"Ask about the story\" />\n      </form>\n    </main>\n  );\n}\n",
+    ".gitignore": "node_modules\ndist\n.env.local\n.DS_Store\n*.log\n"
+   },
+   "planted": [
+    "no-output-limit",
+    "no-budget",
+    "no-teacher-view"
+   ],
+   "how": {
+    "no-output-limit": "streamText without maxOutputTokens",
+    "no-budget": "nothing counts usage",
+    "no-teacher-view": "only the learner chat page"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p19",
+   "title": "Maths explainer with Responses API",
+   "stack": "Express",
+   "files": {
+    "server.js": "const express = require(\"express\");\nconst OpenAI = require(\"openai\");\n\nconst client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });\nconst app = express();\napp.use(express.json());\napp.use(express.static(\".\"));\nlet tokens = 0;\nconst DAILY_TOKEN_BUDGET = 200000;\n\napp.post(\"/api/explain\", async (req, res) => {\n  if (tokens > DAILY_TOKEN_BUDGET) return res.status(429).json({ error: \"budget used\" });\n  const out = await client.responses.create({\n    model: \"gpt-4o-mini\",\n    instructions: \"Explain the maths step by step for a 13 year old.\",\n    input: \"Learner \" + req.body.email + \" asks: \" + req.body.question,\n  });\n  tokens += out.usage.total_tokens;\n  res.json({ text: out.output_text });\n});\n\napp.get(\"/teacher\", (req, res) => res.send(\"<h1>Teacher page</h1><p>Tokens used: \" + tokens + \"</p>\"));\napp.listen(3000);\n",
+    "index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Maths explainer</title></head>\n<body>\n<input id=\"email\" placeholder=\"School email\">\n<input id=\"q\" placeholder=\"Your question\">\n<button id=\"go\">Explain</button>\n<p id=\"out\"></p>\n<script>\ngo.onclick = async () => {\n  const r = await fetch(\"/api/explain\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ email: email.value, question: q.value }) });\n  out.textContent = (await r.json()).text;\n};\n</script>\n</body>\n</html>\n",
+    ".gitignore": ".env\nnode_modules\ndist\n.DS_Store\n*.log\n"
+   },
+   "planted": [
+    "no-output-limit",
+    "names-to-the-model",
+    "server-shows-its-folder"
+   ],
+   "how": {
+    "no-output-limit": "responses.create without max_output_tokens",
+    "names-to-the-model": "learner email in the input string",
+    "server-shows-its-folder": "express.static('.') serves the project root"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p20",
+   "title": "Quiz hint service",
+   "stack": "Express, Google generateContent via fetch",
+   "files": {
+    "server.js": "const express = require(\"express\");\nconst path = require(\"path\");\n\nconst app = express();\napp.use(express.json());\napp.use(express.static(path.join(__dirname, \"public\")));\nconst URL = \"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=__FAKE_MODEL_KEY__\";\n\napp.post(\"/api/hint\", async (req, res) => {\n  const r = await fetch(URL, {\n    method: \"POST\",\n    headers: { \"Content-Type\": \"application/json\" },\n    body: JSON.stringify({ contents: [{ parts: [{ text: \"Give a short hint for: \" + req.body.question }] }] }),\n  });\n  const data = await r.json();\n  res.json({ hint: data.candidates[0].content.parts[0].text });\n});\n\napp.listen(3000);\n",
+    "public/index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Quiz hints</title></head>\n<body>\n<h1>Which planet is closest to the sun?</h1>\n<button id=\"h\">Hint</button><p id=\"o\"></p>\n<script>\nh.onclick = async () => {\n  const r = await fetch(\"/api/hint\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ question: document.querySelector(\"h1\").textContent }) });\n  o.textContent = (await r.json()).hint;\n};\n</script>\n</body>\n</html>\n",
+    ".gitignore": ".env\nnode_modules\ndist\n.DS_Store\n*.log\n"
+   },
+   "planted": [
+    "secret-in-code",
+    "no-output-limit",
+    "no-budget",
+    "no-teacher-view"
+   ],
+   "how": {
+    "secret-in-code": "key=literal in the generateContent URL on the server",
+    "no-output-limit": "no generationConfig.maxOutputTokens",
+    "no-budget": "no counter or cap",
+    "no-teacher-view": "no teacher page or route"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p21",
+   "title": "Times tables practice with accounts",
+   "stack": "Supabase JS client and SQL",
+   "files": {
+    "src/auth.js": "import { supabase } from \"./supabase.js\";\n\nexport async function register(email, password) {\n  const { data, error } = await supabase.auth.signUp({ email, password });\n  if (error) throw error;\n  localStorage.setItem(\"learnerEmail\", email);\n  return data.user;\n}\n",
+    "src/supabase.js": "import { createClient } from \"@supabase/supabase-js\";\n\nexport const supabase = createClient(\n  import.meta.env.VITE_SUPABASE_URL,\n  import.meta.env.VITE_SUPABASE_ANON_KEY\n);\n",
+    "supabase/migrations/v001_init.sql": "create table profiles (\n  id uuid primary key references auth.users(id),\n  display_name text\n);\n\ncreate table attempts (\n  id bigint generated always as identity primary key,\n  user_id uuid references auth.users(id),\n  table_of int not null,\n  correct int not null\n);\n"
+   },
+   "planted": [
+    "sign-in-limits",
+    "tables-with-no-row-rules",
+    "name-kept-in-the-browser"
+   ],
+   "how": {
+    "sign-in-limits": "supabase.auth.signUp for each learner",
+    "tables-with-no-row-rules": "two tables created and RLS never enabled",
+    "name-kept-in-the-browser": "localStorage learnerEmail"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p22",
+   "title": "Book club board",
+   "stack": "Supabase with email codes",
+   "files": {
+    "src/main.js": "import { createClient } from \"@supabase/supabase-js\";\n\nconst sb = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);\n\ndocument.getElementById(\"login\").onclick = async () => {\n  const email = document.getElementById(\"email\").value;\n  const { error } = await sb.auth.signInWithOtp({ email });\n  document.getElementById(\"msg\").textContent = error ? error.message : \"Check your inbox for the code.\";\n};\n",
+    "index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Book club board</title></head>\n<body>\n<h1>Book club board</h1>\n<input id=\"email\" type=\"email\"><button id=\"login\">Email me a code</button>\n<p id=\"msg\"></p>\n<script type=\"module\" src=\"/src/main.js\"></script>\n</body>\n</html>\n",
+    "db/schema.sql": "create table books (\n  id serial primary key,\n  title text not null,\n  added_by uuid\n);\n\ncreate table comments (\n  id serial primary key,\n  book_id int references books(id),\n  body text not null,\n  author uuid\n);\n"
+   },
+   "planted": [
+    "sign-in-limits",
+    "tables-with-no-row-rules"
+   ],
+   "how": {
+    "sign-in-limits": "signInWithOtp email code for each learner",
+    "tables-with-no-row-rules": "db/schema.sql creates tables, no row level security"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p23",
+   "title": "Reading tutor with anonymous sessions",
+   "stack": "Next.js pages router, Supabase",
+   "files": {
+    "pages/index.js": "import { useEffect, useState } from \"react\";\nimport { createClient } from \"@supabase/supabase-js\";\n\nconst sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);\n\nexport default function Home() {\n  const [reply, setReply] = useState(\"\");\n  useEffect(() => {\n    sb.auth.signInAnonymously();\n  }, []);\n  async function ask() {\n    const r = await fetch(\"/api/ask\", { method: \"POST\", body: JSON.stringify({ q: \"Why did the fox run?\" }) });\n    setReply((await r.json()).reply);\n  }\n  return <main><button onClick={ask}>Ask the tutor</button><p>{reply}</p></main>;\n}\n",
+    "pages/api/ask.js": "import OpenAI from \"openai\";\n\nconst client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });\nlet tokens = 0;\nconst DAILY_TOKEN_BUDGET = 200000;\n\nexport default async function handler(req, res) {\n  if (tokens > DAILY_TOKEN_BUDGET) return res.status(429).json({ reply: \"Budget used up.\" });\n  const out = await client.chat.completions.create({\n    model: \"gpt-4o-mini\",\n    max_tokens: 200,\n    messages: [\n      { role: \"system\", content: \"You are a reading tutor for young children.\" },\n      { role: \"user\", content: JSON.parse(req.body).q },\n    ],\n  });\n  tokens += out.usage.total_tokens;\n  res.json({ reply: out.choices[0].message.content });\n}\n",
+    "pages/teacher.js": "export default function Teacher() {\n  return (\n    <main>\n      <h1>Teacher page</h1>\n      <p>Reading sessions and class usage will appear here.</p>\n    </main>\n  );\n}\n",
+    "supabase/migrations/tables_20260101.sql": "create table sessions (\n  id uuid primary key default gen_random_uuid(),\n  learner uuid not null,\n  started_at timestamptz default now()\n);\n\ncreate table messages (\n  id bigint generated always as identity primary key,\n  session_id uuid references sessions(id),\n  body text\n);\n"
+   },
+   "planted": [
+    "sign-in-limits",
+    "tables-with-no-row-rules"
+   ],
+   "how": {
+    "sign-in-limits": "signInAnonymously inside a useEffect",
+    "tables-with-no-row-rules": "migration with two tables and no enable row level security"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p24",
+   "title": "Exit ticket with analytics",
+   "stack": "React with Vite, Firebase",
+   "files": {
+    "src/main.jsx": "import React from \"react\";\nimport ReactDOM from \"react-dom/client\";\nimport posthog from \"posthog-js\";\nimport App from \"./App.jsx\";\n\nposthog.init(\"phc_demo_project_token\", { api_host: \"https://us.i.posthog.com\" });\n\nReactDOM.createRoot(document.getElementById(\"root\")).render(<App />);\n",
+    "src/App.jsx": "import { useState } from \"react\";\nimport { addDoc, collection } from \"firebase/firestore\";\nimport { db } from \"./firebase.js\";\n\nexport default function App() {\n  const [text, setText] = useState(\"\");\n  return (\n    <div>\n      <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder=\"One thing I learned\" />\n      <button onClick={() => addDoc(collection(db, \"tickets\"), { text })}>Send</button>\n    </div>\n  );\n}\n",
+    "src/firebase.js": "import { initializeApp } from \"firebase/app\";\nimport { getFirestore } from \"firebase/firestore\";\n\nconst app = initializeApp({ apiKey: \"demo-firebase-web-key\", projectId: \"exit-ticket-demo\" });\nexport const db = getFirestore(app);\n",
+    "firestore.rules": "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.time < timestamp.date(2026, 12, 31);\n    }\n  }\n}\n"
+   },
+   "planted": [
+    "open-database",
+    "trackers"
+   ],
+   "how": {
+    "open-database": "Firestore rules that allow everyone until an expiry date",
+    "trackers": "posthog.init in main.jsx"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p25",
+   "title": "Science quiz with live scores",
+   "stack": "Firebase Realtime Database, plain HTML",
+   "files": {
+    "index.html": "<!doctype html>\n<html>\n<head>\n<meta charset=\"utf-8\"><title>Science quiz</title>\n<script>\n  !function(){var analytics=window.analytics=window.analytics||[];\n  analytics.load=function(k){var s=document.createElement(\"script\");s.async=true;\n  s.src=\"https://cdn.segment.com/analytics.js/v1/\"+k+\"/analytics.min.js\";\n  document.head.appendChild(s);};\n  analytics.load(\"DEMO_WRITE_KEY\");}();\n</script>\n<script src=\"https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js\"></script>\n<script src=\"https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js\"></script>\n</head>\n<body>\n<h1>Which gas do plants take in?</h1>\n<button onclick=\"pick(0)\">Oxygen</button> <button onclick=\"pick(1)\">Carbon dioxide</button>\n<script>\nconst answers = [1, 0, 2];\nfirebase.initializeApp({ apiKey: \"demo-firebase-web-key\", databaseURL: \"https://sci-quiz-demo-default-rtdb.firebaseio.com\" });\nfunction pick(i) {\n  const ok = i === answers[0];\n  firebase.database().ref(\"scores\").push({ ok });\n}\n</script>\n</body>\n</html>\n",
+    "database.rules.json": "{\n  \"rules\": {\n    \".read\": \"now < 1798675200000\",\n    \".write\": \"now < 1798675200000\"\n  }\n}\n"
+   },
+   "planted": [
+    "open-database",
+    "trackers",
+    "answers-in-the-page"
+   ],
+   "how": {
+    "open-database": "RTDB rules open until a timestamp",
+    "trackers": "Segment analytics.load snippet",
+    "answers-in-the-page": "answers array in the inline script"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p26",
+   "title": "Class poll server",
+   "stack": "Express",
+   "files": {
+    "server.js": "const express = require(\"express\");\nconst rateLimit = require(\"express-rate-limit\");\nrequire(\"dotenv\").config();\n\nconst app = express();\nconst votes = { yes: 0, no: 0 };\napp.use(express.json());\napp.use(express.static(\"public\"));\napp.use(\"/api\", rateLimit({ windowMs: 60 * 1000, max: 30, keyGenerator: (req) => req.ip }));\n\napp.post(\"/api/vote\", (req, res) => {\n  const choice = req.body.choice === \"yes\" ? \"yes\" : \"no\";\n  votes[choice] += 1;\n  res.json(votes);\n});\n\napp.get(\"/api/results\", (req, res) => res.json(votes));\napp.listen(process.env.PORT || 3000);\n",
+    "public/index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Class poll</title></head>\n<body>\n<h1>Should we have a longer break?</h1>\n<button onclick=\"v('yes')\">Yes</button> <button onclick=\"v('no')\">No</button>\n<pre id=\"r\"></pre>\n<script>\nasync function v(c) {\n  const res = await fetch(\"/api/vote\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ choice: c }) });\n  r.textContent = JSON.stringify(await res.json());\n}\n</script>\n</body>\n</html>\n",
+    ".env": "# local settings\nPORT=3000\nSESSION_NAME=poll\nNODE_ENV=development\n# end\n",
+    ".gitignore": "node_modules\ndist\n.env.local\n.DS_Store\n*.log\n"
+   },
+   "planted": [
+    "limit-by-address",
+    "env-can-be-committed"
+   ],
+   "how": {
+    "limit-by-address": "express-rate-limit with keyGenerator req.ip",
+    "env-can-be-committed": ".env present, .gitignore only ignores .env.local"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p27",
+   "title": "Quick question box",
+   "stack": "Next.js app router, Anthropic SDK",
+   "files": {
+    "app/api/ask/route.ts": "import Anthropic from \"@anthropic-ai/sdk\";\n\nconst client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });\nconst hits = new Map<string, { n: number; at: number }>();\n\nexport async function POST(req: Request) {\n  const ip = req.headers.get(\"x-forwarded-for\") ?? \"unknown\";\n  const now = Date.now();\n  const h = hits.get(ip);\n  if (h && now - h.at < 60000 && h.n >= 5) return new Response(\"Too many questions\", { status: 429 });\n  hits.set(ip, h && now - h.at < 60000 ? { n: h.n + 1, at: h.at } : { n: 1, at: now });\n  const { question } = await req.json();\n  const msg = await client.messages.create({\n    model: \"claude-3-5-haiku-latest\",\n    max_tokens: 250,\n    system: \"Answer school questions briefly and kindly.\",\n    messages: [{ role: \"user\", content: question }],\n  });\n  return Response.json({ reply: msg.content[0].type === \"text\" ? msg.content[0].text : \"\" });\n}\n",
+    "app/page.tsx": "\"use client\";\nimport { useState } from \"react\";\n\nexport default function Page() {\n  const [q, setQ] = useState(\"\");\n  const [reply, setReply] = useState(\"\");\n  async function send() {\n    const r = await fetch(\"/api/ask\", { method: \"POST\", body: JSON.stringify({ question: q }) });\n    setReply((await r.json()).reply);\n  }\n  return <main><input value={q} onChange={(e) => setQ(e.target.value)} /><button onClick={send}>Ask</button><p>{reply}</p></main>;\n}\n",
+    ".gitignore": "node_modules\ndist\n.env.local\n.DS_Store\n*.log\n"
+   },
+   "planted": [
+    "limit-by-address",
+    "no-budget",
+    "no-teacher-view"
+   ],
+   "how": {
+    "limit-by-address": "Map keyed by x-forwarded-for",
+    "no-budget": "only a per-minute counter, nothing tracks spending",
+    "no-teacher-view": "no teacher page or route"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p28",
+   "title": "Coding exercise checker with solutions",
+   "stack": "Svelte with Vite",
+   "files": {
+    "src/lib/exercises.js": "export const exercises = [\n  { id: 1, prompt: \"Write a function double(x) that returns x times two.\" },\n  { id: 2, prompt: \"Write a function isEven(n).\" },\n];\n\nexport const solutions = {\n  1: \"function double(x) { return x * 2; }\",\n  2: \"function isEven(n) { return n % 2 === 0; }\",\n};\n",
+    "src/App.svelte": "<script>\n  import { exercises, solutions } from \"./lib/exercises.js\";\n  let code = \"\";\n  let feedback = \"\";\n  let uses = 0;\n  const DAILY_CHECK_QUOTA = 20;\n  const SYSTEM = \"You compare a learner's code to the reference solution and give a gentle hint, not the code.\";\n\n  async function check(id) {\n    if (uses++ >= DAILY_CHECK_QUOTA) { feedback = \"No more checks today.\"; return; }\n    const r = await fetch(\"https://api.openai.com/v1/chat/completions\", {\n      method: \"POST\",\n      headers: { \"Content-Type\": \"application/json\", Authorization: \"Bearer \" + import.meta.env.VITE_OPENAI_KEY },\n      body: JSON.stringify({ model: \"gpt-4o-mini\", messages: [\n        { role: \"system\", content: SYSTEM },\n        { role: \"user\", content: \"Reference: \" + solutions[id] + \"\\nLearner: \" + code } ] }),\n    });\n    feedback = (await r.json()).choices[0].message.content;\n  }\n</script>\n\n{#each exercises as ex}\n  <h3>{ex.prompt}</h3>\n  <button on:click={() => check(ex.id)}>Check</button>\n{/each}\n<textarea bind:value={code}></textarea>\n<p>{feedback}</p>\n",
+    "src/Teacher.svelte": "<h1>Teacher page</h1>\n<p>Class checks are summarised here once learners sign in.</p>\n<a href=\"/\">Back to the exercises</a>\n<p>Reference solutions are in the exercise set.</p>\n<footer>Exercise checker</footer>\n"
+   },
+   "planted": [
+    "answers-in-the-page",
+    "model-called-from-the-page",
+    "prompt-in-the-page",
+    "no-output-limit"
+   ],
+   "how": {
+    "answers-in-the-page": "solutions object shipped in src/lib/exercises.js",
+    "model-called-from-the-page": "fetch to OpenAI with a VITE_ key from the component",
+    "prompt-in-the-page": "SYSTEM constant in the component",
+    "no-output-limit": "no max_tokens in the request body"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p29",
+   "title": "Homework helper with sign-in name",
+   "stack": "Vue with Express",
+   "files": {
+    "index.html": "<!doctype html>\n<html>\n<head>\n<meta charset=\"utf-8\"><title>Homework helper</title>\n<script async src=\"https://www.googletagmanager.com/gtag/js?id=G-DEMO12345\"></script>\n<script>\n  window.dataLayer = window.dataLayer || [];\n  function gtag(){dataLayer.push(arguments);}\n  gtag(\"js\", new Date()); gtag(\"config\", \"G-DEMO12345\");\n</script>\n</head>\n<body><div id=\"app\"></div><script type=\"module\" src=\"/src/main.js\"></script></body>\n</html>\n",
+    "src/App.vue": "<script setup>\nimport { ref } from \"vue\";\nconst name = ref(\"\");\nconst email = ref(\"\");\nconst q = ref(\"\");\nconst reply = ref(\"\");\n\nasync function ask() {\n  localStorage.setItem(\"learner\", JSON.stringify({ name: name.value, email: email.value }));\n  const r = await fetch(\"/api/ask\", {\n    method: \"POST\",\n    headers: { \"Content-Type\": \"application/json\" },\n    body: JSON.stringify({ name: name.value, q: q.value }),\n  });\n  reply.value = (await r.json()).reply;\n}\n</script>\n<template>\n  <input v-model=\"name\" placeholder=\"Name\" />\n  <input v-model=\"email\" placeholder=\"Email\" />\n  <input v-model=\"q\" placeholder=\"Question\" />\n  <button @click=\"ask\">Ask</button>\n  <p>{{ reply }}</p>\n</template>\n",
+    "server/index.js": "const express = require(\"express\");\nconst OpenAI = require(\"openai\");\n\nconst client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });\nconst app = express();\napp.use(express.json());\nlet tokens = 0;\nconst DAILY_TOKEN_BUDGET = 200000;\n\napp.post(\"/api/ask\", async (req, res) => {\n  if (tokens > DAILY_TOKEN_BUDGET) return res.status(429).json({ reply: \"Budget used up.\" });\n  const out = await client.chat.completions.create({\n    model: \"gpt-4o-mini\",\n    max_tokens: 250,\n    messages: [\n      { role: \"system\", content: \"You help with homework. The learner is called \" + req.body.name + \".\" },\n      { role: \"user\", content: req.body.q },\n    ],\n  });\n  tokens += out.usage.total_tokens;\n  res.json({ reply: out.choices[0].message.content });\n});\n\napp.get(\"/teacher\", (req, res) => res.send(\"Teacher page. Tokens used: \" + tokens));\napp.listen(3000);\n"
+   },
+   "planted": [
+    "name-kept-in-the-browser",
+    "names-to-the-model",
+    "trackers"
+   ],
+   "how": {
+    "name-kept-in-the-browser": "localStorage 'learner' with name and email",
+    "names-to-the-model": "req.body.name placed in the system prompt on the server",
+    "trackers": "Google Analytics gtag in index.html"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p30",
+   "title": "Essay feedback with prompt library",
+   "stack": "React with Vite and Express",
+   "files": {
+    "src/prompts.js": "export const SYSTEM_PROMPT =\n  \"You are a writing coach. Praise one thing, name one improvement, and never rewrite the essay for the student.\";\n\nexport const TONES = {\n  gentle: \"Use a warm tone.\",\n  direct: \"Be brief and direct.\",\n};\n",
+    "src/App.jsx": "import { useState } from \"react\";\nimport { SYSTEM_PROMPT } from \"./prompts.js\";\n\nexport default function App() {\n  const [essay, setEssay] = useState(\"\");\n  const [fb, setFb] = useState(\"\");\n  async function send() {\n    const r = await fetch(\"/api/feedback\", {\n      method: \"POST\",\n      headers: { \"Content-Type\": \"application/json\" },\n      body: JSON.stringify({ system: SYSTEM_PROMPT, essay }),\n    });\n    setFb((await r.json()).text);\n  }\n  return <div><textarea value={essay} onChange={(e) => setEssay(e.target.value)} /><button onClick={send}>Feedback</button><p>{fb}</p></div>;\n}\n",
+    "server/index.js": "const express = require(\"express\");\nconst path = require(\"path\");\nconst OpenAI = require(\"openai\");\n\nconst client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });\nconst app = express();\napp.use(express.json());\napp.use(express.static(path.join(__dirname, \"..\")));\nlet tokens = 0;\nconst DAILY_TOKEN_BUDGET = 250000;\n\napp.post(\"/api/feedback\", async (req, res) => {\n  if (tokens > DAILY_TOKEN_BUDGET) return res.status(429).json({ text: \"Budget used up.\" });\n  const out = await client.chat.completions.create({\n    model: \"gpt-4o-mini\",\n    max_tokens: 300,\n    messages: [{ role: \"system\", content: req.body.system }, { role: \"user\", content: req.body.essay }],\n  });\n  tokens += out.usage.total_tokens;\n  res.json({ text: out.choices[0].message.content });\n});\n\napp.get(\"/teacher\", (req, res) => res.send(\"Teacher page. Tokens used: \" + tokens));\napp.listen(3000);\n"
+   },
+   "planted": [
+    "prompt-in-the-page",
+    "server-shows-its-folder"
+   ],
+   "how": {
+    "prompt-in-the-page": "SYSTEM_PROMPT in src/prompts.js sent from the browser",
+    "server-shows-its-folder": "express.static of the parent folder, the whole project"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p31",
+   "title": "Geography quiz with leaderboard",
+   "stack": "plain HTML with Firestore",
+   "files": {
+    "index.html": "<!doctype html>\n<html>\n<head>\n<meta charset=\"utf-8\"><title>Geography quiz</title>\n<script src=\"https://us-assets.i.posthog.com/static/array.js\"></script>\n<script>posthog.init(\"phc_demo_project_token\", { api_host: \"https://us.i.posthog.com\" });</script>\n</head>\n<body>\n<h1>Capital of France?</h1>\n<input id=\"player\" placeholder=\"Your name\">\n<button onclick=\"pick('Paris')\">Paris</button> <button onclick=\"pick('Rome')\">Rome</button>\n<script type=\"module\">\nimport { initializeApp } from \"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js\";\nimport { getFirestore, addDoc, collection } from \"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js\";\nconst db = getFirestore(initializeApp({ apiKey: \"demo-firebase-web-key\", projectId: \"geo-quiz-demo\" }));\nconst answers = { q1: \"Paris\", q2: \"Madrid\", q3: \"Oslo\" };\nplayer.value = localStorage.getItem(\"playerName\") || \"\";\nwindow.pick = async (c) => {\n  localStorage.setItem(\"playerName\", player.value);\n  await addDoc(collection(db, \"scores\"), { who: player.value, right: c === answers.q1 });\n};\n</script>\n</body>\n</html>\n",
+    "firestore.rules": "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /scores/{id} {\n      allow read: if true;\n      allow write: if true;\n    }\n  }\n}\n"
+   },
+   "planted": [
+    "answers-in-the-page",
+    "trackers",
+    "name-kept-in-the-browser",
+    "open-database"
+   ],
+   "how": {
+    "answers-in-the-page": "answers object in the module script",
+    "trackers": "PostHog array.js and posthog.init",
+    "name-kept-in-the-browser": "localStorage playerName",
+    "open-database": "scores collection with allow read: if true and allow write: if true"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p32",
+   "title": "Maths quiz with server hints",
+   "stack": "Next.js pages router",
+   "files": {
+    "public/questions.json": "{\n  \"questions\": [\n    { \"id\": 1, \"text\": \"3/4 - 1/4 = ?\", \"choices\": [\"1/4\", \"1/2\", \"2/4\"], \"answer\": 1 },\n    { \"id\": 2, \"text\": \"2/3 of 9 = ?\", \"choices\": [\"3\", \"6\", \"7\"], \"answer\": 1 },\n    { \"id\": 3, \"text\": \"1/5 + 2/5 = ?\", \"choices\": [\"3/5\", \"3/10\", \"2/5\"], \"answer\": 0 }\n  ]\n}\n",
+    "pages/index.js": "import { useEffect, useState } from \"react\";\n\nexport default function Quiz() {\n  const [qs, setQs] = useState([]);\n  const [msg, setMsg] = useState(\"\");\n  useEffect(() => { fetch(\"/questions.json\").then((r) => r.json()).then((d) => setQs(d.questions)); }, []);\n  return (\n    <main>\n      {qs.map((q) => (\n        <div key={q.id}>\n          <p>{q.text}</p>\n          {q.choices.map((c, i) => <button key={i} onClick={() => setMsg(i === q.answer ? \"Right!\" : \"Not yet\")}>{c}</button>)}\n        </div>\n      ))}\n      <p>{msg}</p>\n    </main>\n  );\n}\n",
+    "pages/api/hint.js": "import OpenAI from \"openai\";\n\nconst client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });\n\nexport default async function handler(req, res) {\n  const out = await client.chat.completions.create({\n    model: \"gpt-4o-mini\",\n    max_tokens: 100,\n    messages: [\n      { role: \"system\", content: \"Give a one sentence hint, no final result.\" },\n      { role: \"user\", content: req.body.text },\n    ],\n  });\n  res.json({ hint: out.choices[0].message.content });\n}\n"
+   },
+   "planted": [
+    "answers-in-the-page",
+    "no-budget",
+    "no-teacher-view"
+   ],
+   "how": {
+    "answers-in-the-page": "public/questions.json with an answer index per question",
+    "no-budget": "hint route has no spending counter",
+    "no-teacher-view": "no teacher page or route"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p33",
+   "title": "Vocabulary quiz",
+   "stack": "Flask",
+   "files": {
+    "app.py": "import os\nfrom flask import Flask, render_template\n\napp = Flask(__name__)\napp.secret_key = os.environ.get(\"FLASK_SECRET\", \"dev\")\n\n\n@app.route(\"/\")\ndef quiz():\n    return render_template(\"quiz.html\")\n\n\nif __name__ == \"__main__\":\n    app.run(debug=True)\n",
+    "static/questions.json": "[\n  {\"word\": \"benevolent\", \"choices\": [\"kind\", \"angry\", \"tired\"], \"answer\": \"kind\"},\n  {\"word\": \"scarce\", \"choices\": [\"rare\", \"loud\", \"cold\"], \"answer\": \"rare\"},\n  {\"word\": \"ancient\", \"choices\": [\"new\", \"old\", \"small\"], \"answer\": \"old\"}\n]\n",
+    "templates/quiz.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Vocabulary quiz</title></head>\n<body>\n<h1>Vocabulary quiz</h1>\n<div id=\"box\"></div>\n<script>\nfetch(\"/static/questions.json\").then(r => r.json()).then(qs => {\n  box.innerHTML = qs.map(q => \"<p>\" + q.word + \"</p>\" + q.choices.map(c => \"<button onclick=\\\"alert('\" + (c === q.answer) + \"')\\\">\" + c + \"</button>\").join(\"\")).join(\"\");\n});\n</script>\n</body>\n</html>\n",
+    ".env": "# local settings\nFLASK_SECRET=change-me\nFLASK_DEBUG=1\nPORT=5000\n# end\n",
+    ".gitignore": "__pycache__\n*.pyc\n.venv\n.DS_Store\ninstance\n"
+   },
+   "planted": [
+    "answers-in-the-page",
+    "env-can-be-committed"
+   ],
+   "how": {
+    "answers-in-the-page": "static/questions.json holds the answers and the page checks them",
+    "env-can-be-committed": ".env present, .gitignore does not list it"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p34",
+   "title": "Lunch choice poll",
+   "stack": "Firebase Firestore, plain HTML",
+   "files": {
+    "index.html": "<!doctype html>\n<html>\n<head>\n<meta charset=\"utf-8\"><title>Lunch poll</title>\n<script>\n  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?\n  n.callMethod.apply(n,arguments):n.queue.push(arguments)};\n  n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;\n  s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,\"script\",\"https://connect.facebook.net/en_US/fbevents.js\");\n  fbq(\"init\", \"123456789012345\"); fbq(\"track\", \"PageView\");\n</script>\n</head>\n<body>\n<h1>Lunch choice</h1>\n<button id=\"a\">Pasta</button> <button id=\"b\">Wrap</button>\n<script type=\"module\" src=\"app.js\"></script>\n</body>\n</html>\n",
+    "app.js": "import { initializeApp } from \"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js\";\nimport { getFirestore, doc, setDoc, increment } from \"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js\";\n\nconst db = getFirestore(initializeApp({ apiKey: \"demo-firebase-web-key\", projectId: \"lunch-poll-demo\" }));\nfor (const id of [\"a\", \"b\"]) {\n  document.getElementById(id).onclick = () =>\n    setDoc(doc(db, \"polls\", id), { votes: increment(1) }, { merge: true });\n}\n",
+    "firestore.rules": "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /polls/{pollId} {\n      allow read, write: if true;\n    }\n  }\n}\n"
+   },
+   "planted": [
+    "trackers",
+    "open-database"
+   ],
+   "how": {
+    "trackers": "Meta pixel fbq in the page head",
+    "open-database": "polls collection allow read, write: if true"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p35",
+   "title": "Science explainer service",
+   "stack": "Express",
+   "files": {
+    "config.js": "module.exports = {\n  openaiKey: \"__FAKE_MODEL_KEY__\",\n  model: \"gpt-4o-mini\",\n  dailyTokenBudget: 200000,\n  port: 3000,\n};\n",
+    "server.js": "const express = require(\"express\");\nconst path = require(\"path\");\nconst OpenAI = require(\"openai\");\nconst config = require(\"./config\");\n\nconst client = new OpenAI({ apiKey: config.openaiKey });\nconst app = express();\napp.use(express.json());\napp.use(express.static(path.resolve(\".\")));\nlet tokens = 0;\n\napp.post(\"/api/explain\", async (req, res) => {\n  if (tokens > config.dailyTokenBudget) return res.status(429).json({ text: \"Budget used up.\" });\n  const out = await client.chat.completions.create({\n    model: config.model,\n    max_tokens: 250,\n    messages: [{ role: \"system\", content: \"Explain science ideas to 11 year olds.\" }, { role: \"user\", content: req.body.topic }],\n  });\n  tokens += out.usage.total_tokens;\n  res.json({ text: out.choices[0].message.content });\n});\n\napp.get(\"/teacher\", (req, res) => res.send(\"Teacher page. Tokens used: \" + tokens));\napp.listen(config.port);\n",
+    "index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Science explainer</title></head>\n<body>\n<input id=\"t\" placeholder=\"Topic\"><button id=\"g\">Explain</button><p id=\"o\"></p>\n<script>\ng.onclick = async () => {\n  const r = await fetch(\"/api/explain\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ topic: t.value }) });\n  o.textContent = (await r.json()).text;\n};\n</script>\n</body>\n</html>\n",
+    ".gitignore": ".env\nnode_modules\ndist\n.DS_Store\n*.log\n"
+   },
+   "planted": [
+    "secret-in-code",
+    "server-shows-its-folder"
+   ],
+   "how": {
+    "secret-in-code": "openaiKey literal in config.js",
+    "server-shows-its-folder": "express.static(path.resolve('.')) serves config.js too"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p36",
+   "title": "Python exercise checker",
+   "stack": "Flask",
+   "files": {
+    "config.py": "ANTHROPIC_API_KEY = \"__FAKE_MODEL_KEY__\"\nMODEL = \"claude-3-5-haiku-latest\"\nMAX_REPLY_TOKENS = 300\nSECRET_KEY = \"change-me\"\nDEBUG = False\n",
+    "app.py": "import anthropic\nfrom flask import Flask, request, session, jsonify\nimport config\n\napp = Flask(__name__)\napp.secret_key = config.SECRET_KEY\nclient = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)\n\n\n@app.post(\"/check\")\ndef check():\n    msg = client.messages.create(\n        model=config.MODEL,\n        max_tokens=config.MAX_REPLY_TOKENS,\n        system=\"Review a beginner's Python exercise. Student email: \" + session.get(\"student_email\", \"\"),\n        messages=[{\"role\": \"user\", \"content\": request.json[\"code\"]}],\n    )\n    return jsonify(review=msg.content[0].text)\n",
+    ".gitignore": "__pycache__\n*.pyc\n.venv\n.DS_Store\ninstance\n"
+   },
+   "planted": [
+    "secret-in-code",
+    "names-to-the-model",
+    "no-budget",
+    "no-teacher-view"
+   ],
+   "how": {
+    "secret-in-code": "ANTHROPIC_API_KEY literal in config.py",
+    "names-to-the-model": "session student_email placed in the system prompt",
+    "no-budget": "nothing counts or caps usage",
+    "no-teacher-view": "only the learner route /check"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p37",
+   "title": "Class poll on a Worker",
+   "stack": "Cloudflare Worker",
+   "files": {
+    "src/worker.js": "export default {\n  async fetch(request, env) {\n    const ip = request.headers.get(\"x-real-ip\") || \"anon\";\n    const k = \"votes:\" + ip;\n    if (request.method === \"POST\") {\n      const used = Number((await env.POLL.get(k)) || 0);\n      if (used >= 3) return new Response(\"Vote limit reached\", { status: 429 });\n      await env.POLL.put(k, String(used + 1), { expirationTtl: 300 });\n      const { choice } = await request.json();\n      const n = Number((await env.POLL.get(\"choice:\" + choice)) || 0);\n      await env.POLL.put(\"choice:\" + choice, String(n + 1));\n    }\n    return new Response(\"ok\");\n  },\n};\n",
+    "public/index.html": "<!doctype html>\n<html>\n<head>\n<meta charset=\"utf-8\"><title>Class poll</title>\n<script src=\"https://cdn.mxpnl.com/libs/mixpanel-2-latest.min.js\"></script>\n<script>mixpanel.init(\"demo-project-token\", { track_pageview: true });</script>\n</head>\n<body>\n<h1>Best school trip?</h1>\n<button onclick=\"send('museum')\">Museum</button> <button onclick=\"send('farm')\">Farm</button>\n<script>\nfunction send(c) { fetch(\"/vote\", { method: \"POST\", body: JSON.stringify({ choice: c }) }); }\n</script>\n</body>\n</html>\n",
+    "wrangler.toml": "name = \"class-poll\"\nmain = \"src/worker.js\"\ncompatibility_date = \"2026-01-15\"\n\n[[kv_namespaces]]\nbinding = \"POLL\"\nid = \"demo-namespace-id\"\n"
+   },
+   "planted": [
+    "limit-by-address",
+    "trackers"
+   ],
+   "how": {
+    "limit-by-address": "vote count in KV keyed by x-real-ip",
+    "trackers": "Mixpanel library and mixpanel.init on the poll page"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p38",
+   "title": "Group chat rooms for study",
+   "stack": "React with Vite, Supabase",
+   "files": {
+    "src/supabaseClient.js": "import { createClient } from \"@supabase/supabase-js\";\n\nexport const sb = createClient(\n  import.meta.env.VITE_SUPABASE_URL,\n  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY\n);\n",
+    "src/App.jsx": "import { useEffect, useState } from \"react\";\nimport { sb } from \"./supabaseClient.js\";\n\nexport default function App() {\n  const [name, setName] = useState(localStorage.getItem(\"displayName\") || \"\");\n  const [rooms, setRooms] = useState([]);\n  useEffect(() => {\n    (async () => {\n      const { data } = await sb.auth.signInAnonymously();\n      const res = await sb.from(\"rooms\").select(\"*\");\n      setRooms(res.data || []);\n    })();\n  }, []);\n  return (\n    <div>\n      <input value={name} onChange={(e) => { setName(e.target.value); localStorage.setItem(\"displayName\", e.target.value); }} />\n      <ul>{rooms.map((r) => <li key={r.id}>{r.title}</li>)}</ul>\n    </div>\n  );\n}\n",
+    "supabase/migrations/v001_rooms.sql": "create table rooms (\n  id bigint generated always as identity primary key,\n  title text not null,\n  created_by uuid\n);\n\ncreate table room_messages (\n  id bigint generated always as identity primary key,\n  room_id bigint references rooms(id),\n  author uuid,\n  body text not null\n);\n"
+   },
+   "planted": [
+    "sign-in-limits",
+    "name-kept-in-the-browser",
+    "tables-with-no-row-rules"
+   ],
+   "how": {
+    "sign-in-limits": "await sb.auth.signInAnonymously() on mount",
+    "name-kept-in-the-browser": "displayName stored in localStorage",
+    "tables-with-no-row-rules": "rooms and room_messages created without row level security"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p39",
+   "title": "Reading tutor in one page",
+   "stack": "plain HTML",
+   "files": {
+    "index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Reading tutor</title></head>\n<body>\n<h1>Reading tutor</h1>\n<textarea id=\"t\" rows=\"5\" cols=\"40\" placeholder=\"Paste a short passage\"></textarea><br>\n<button id=\"go\">Ask me a question</button>\n<p id=\"out\"></p>\n<script>\nconst URL = \"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=__FAKE_MODEL_KEY__\";\nconst DAILY_QUOTA = 20;\nlet n = Number(localStorage.getItem(\"hintsUsed\") || 0);\ngo.onclick = async () => {\n  if (n >= DAILY_QUOTA) { out.textContent = \"That is all for today.\"; return; }\n  localStorage.setItem(\"hintsUsed\", ++n);\n  const r = await fetch(URL, { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({\n    systemInstruction: { parts: [{ text: \"You are a reading tutor. Ask one question about the passage.\" }] },\n    contents: [{ role: \"user\", parts: [{ text: t.value }] }],\n    generationConfig: { maxOutputTokens: 150 } }) });\n  out.textContent = (await r.json()).candidates[0].content.parts[0].text;\n};\n</script>\n</body>\n</html>\n",
+    "teacher.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Teacher page</title></head>\n<body>\n<h1>Teacher page</h1>\n<p id=\"usage\"></p>\n<script>\ndocument.getElementById(\"usage\").textContent = \"Requests used in this browser: \" + (localStorage.getItem(\"hintsUsed\") || 0);\n</script>\n</body>\n</html>\n"
+   },
+   "planted": [
+    "secret-in-code",
+    "model-called-from-the-page",
+    "prompt-in-the-page"
+   ],
+   "how": {
+    "secret-in-code": "key= literal in the generateContent URL in the page",
+    "model-called-from-the-page": "fetch to the Gemini endpoint from the browser",
+    "prompt-in-the-page": "systemInstruction text in the inline script"
+   },
+   "split": "held_out"
+  },
+  {
+   "id": "p40",
+   "title": "Spelling practice accounts",
+   "stack": "React with Vite, Supabase",
+   "files": {
+    "src/Reset.jsx": "import { useState } from \"react\";\nimport { supabase } from \"./supabase.js\";\n\nexport default function Reset() {\n  const [email, setEmail] = useState(\"\");\n  const [sent, setSent] = useState(false);\n  async function reset() {\n    await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + \"/new-password\" });\n    setSent(true);\n  }\n  return (\n    <div>\n      <input value={email} onChange={(e) => setEmail(e.target.value)} />\n      <button onClick={reset}>Forgot my password</button>\n      {sent && <p>Check your email.</p>}\n    </div>\n  );\n}\n",
+    "src/supabase.js": "import { createClient } from \"@supabase/supabase-js\";\n\nexport const supabase = createClient(\n  import.meta.env.VITE_SUPABASE_URL,\n  import.meta.env.VITE_SUPABASE_ANON_KEY\n);\n",
+    "supabase/migrations/v001_init.sql": "create table word_lists (\n  id bigint generated always as identity primary key,\n  owner uuid references auth.users(id),\n  title text not null\n);\n\ncreate table results (\n  id bigint generated always as identity primary key,\n  list_id bigint references word_lists(id),\n  score int not null\n);\n",
+    ".env": "# local settings\nVITE_SUPABASE_URL=http://localhost:54321\nVITE_SUPABASE_ANON_KEY=local-dev-anon-key\n# public client settings\n# end\n"
+   },
+   "planted": [
+    "sign-in-limits",
+    "tables-with-no-row-rules",
+    "env-can-be-committed"
+   ],
+   "how": {
+    "sign-in-limits": "resetPasswordForEmail from a forgot-password button",
+    "tables-with-no-row-rules": "word_lists and results created, no RLS",
+    "env-can-be-committed": ".env present and the project has no .gitignore"
+   },
+   "split": "dev"
+  },
+  {
+   "id": "p41",
+   "title": "Reading tutor chat",
+   "stack": "Express",
+   "files": {
+    "server/index.js": "const express = require(\"express\");\nconst path = require(\"path\");\nconst OpenAI = require(\"openai\");\n\nconst client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });\nconst app = express();\napp.use(express.json());\napp.use(express.static(path.join(__dirname, \"../public\")));\n\nconst perLearner = new Map();\nsetInterval(() => perLearner.clear(), 60 * 1000);\nlet tokensToday = 0;\nconst DAILY_TOKEN_BUDGET = 250000;\n\napp.post(\"/api/read\", async (req, res) => {\n  const { learnerId, passage } = req.body;\n  const hits = (perLearner.get(learnerId) || 0) + 1;\n  perLearner.set(learnerId, hits);\n  if (hits > 12) return res.status(429).json({ error: \"Please wait a moment.\" });\n  if (tokensToday > DAILY_TOKEN_BUDGET) return res.status(429).json({ error: \"Class budget used up today.\" });\n  const out = await client.chat.completions.create({\n    model: \"gpt-4o-mini\",\n    max_tokens: 250,\n    messages: [\n      { role: \"system\", content: \"You help a child read a short passage and ask one question about it.\" },\n      { role: \"user\", content: passage },\n    ],\n  });\n  tokensToday += out.usage.total_tokens;\n  res.json({ reply: out.choices[0].message.content });\n});\n\napp.get(\"/api/usage\", (req, res) => res.json({ tokens: tokensToday }));\napp.listen(3000);\n",
+    "public/index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Reading tutor</title></head>\n<body>\n<h1>Reading tutor</h1>\n<textarea id=\"p\" rows=\"6\" cols=\"50\"></textarea><br>\n<button id=\"go\">Help me</button>\n<p id=\"r\"></p>\n<script>\nconst learnerId = new URLSearchParams(location.search).get(\"l\") || \"guest\";\ngo.onclick = async () => {\n  const res = await fetch(\"/api/read\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ learnerId, passage: p.value }) });\n  r.textContent = (await res.json()).reply;\n};\n</script>\n</body>\n</html>\n",
+    "public/teacher.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Teacher dashboard</title></head>\n<body>\n<h1>Teacher dashboard</h1>\n<p id=\"usage\">Loading...</p>\n<script>\nfetch(\"/api/usage\").then(r => r.json()).then(u => {\n  document.getElementById(\"usage\").textContent = u.tokens + \" tokens used by the class\";\n});\n</script>\n</body>\n</html>\n",
+    ".env.example": "# copy to .env and fill in\nOPENAI_API_KEY=\nPORT=3000\n# never commit the real .env\n# end\n",
+    ".gitignore": ".env\nnode_modules\ndist\n.DS_Store\n*.log\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "held_out"
+  },
+  {
+   "id": "p42",
+   "title": "Homework helper with class codes",
+   "stack": "Next.js app router",
+   "files": {
+    "app/api/ask/route.ts": "import Anthropic from \"@anthropic-ai/sdk\";\nimport { spendToday, addSpend, DAILY_CLASS_BUDGET } from \"@/lib/budget\";\n\nconst client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });\n\nexport async function POST(req: Request) {\n  const { classCode, question } = await req.json();\n  if ((await spendToday(classCode)) > DAILY_CLASS_BUDGET) {\n    return Response.json({ reply: \"This class has used its budget for today.\" }, { status: 429 });\n  }\n  const msg = await client.messages.create({\n    model: \"claude-3-5-haiku-latest\",\n    max_tokens: 300,\n    system: \"You are a homework helper. Explain the steps and do not hand over final results.\",\n    messages: [{ role: \"user\", content: question }],\n  });\n  await addSpend(classCode, msg.usage.input_tokens + msg.usage.output_tokens);\n  return Response.json({ reply: msg.content[0].type === \"text\" ? msg.content[0].text : \"\" });\n}\n",
+    "lib/budget.ts": "const spend = new Map<string, number>();\nexport const DAILY_CLASS_BUDGET = 400000;\n\nexport async function spendToday(classCode: string) {\n  return spend.get(classCode) ?? 0;\n}\n\nexport async function addSpend(classCode: string, tokens: number) {\n  spend.set(classCode, (spend.get(classCode) ?? 0) + tokens);\n}\n",
+    "app/teacher/page.tsx": "import { spendToday, DAILY_CLASS_BUDGET } from \"@/lib/budget\";\n\nexport default async function TeacherPage({ searchParams }: { searchParams: { code?: string } }) {\n  const used = await spendToday(searchParams.code ?? \"\");\n  return <main><h1>Teacher page</h1><p>{used} of {DAILY_CLASS_BUDGET} tokens used today.</p></main>;\n}\n",
+    "app/page.tsx": "\"use client\";\nimport { useState } from \"react\";\n\nexport default function Page() {\n  const [code, setCode] = useState(\"\");\n  const [q, setQ] = useState(\"\");\n  const [reply, setReply] = useState(\"\");\n  async function send() {\n    const r = await fetch(\"/api/ask\", { method: \"POST\", body: JSON.stringify({ classCode: code, question: q }) });\n    setReply((await r.json()).reply);\n  }\n  return <main><input placeholder=\"Class code\" value={code} onChange={(e) => setCode(e.target.value)} /><input value={q} onChange={(e) => setQ(e.target.value)} /><button onClick={send}>Ask</button><p>{reply}</p></main>;\n}\n",
+    ".gitignore": "node_modules\ndist\n.env.local\n.DS_Store\n*.log\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "dev"
+  },
+  {
+   "id": "p43",
+   "title": "Essay feedback API",
+   "stack": "FastAPI",
+   "files": {
+    "api/main.py": "import os\nfrom collections import defaultdict\nfrom fastapi import FastAPI, Header, HTTPException\nfrom openai import OpenAI\n\n# Keys are long random strings from the provider. Read them from the environment, never type one here.\nclient = OpenAI(api_key=os.environ[\"OPENAI_API_KEY\"])\napp = FastAPI()\n\nCLASS_SPEND = defaultdict(int)\nDAILY_CLASS_BUDGET = 300000\nLEARNER_CALLS = defaultdict(int)\n\n\n@app.post(\"/api/feedback\")\nasync def feedback(body: dict, x_class_code: str = Header(), x_learner_id: str = Header()):\n    LEARNER_CALLS[x_learner_id] += 1\n    if LEARNER_CALLS[x_learner_id] > 15:\n        raise HTTPException(429, \"Please slow down.\")\n    if CLASS_SPEND[x_class_code] > DAILY_CLASS_BUDGET:\n        raise HTTPException(429, \"Class budget used up today.\")\n    r = client.chat.completions.create(\n        model=\"gpt-4o-mini\",\n        max_tokens=300,\n        messages=[\n            {\"role\": \"system\", \"content\": \"Give two strengths and one suggestion for this essay.\"},\n            {\"role\": \"user\", \"content\": body[\"essay\"]},\n        ],\n    )\n    CLASS_SPEND[x_class_code] += r.usage.total_tokens\n    return {\"text\": r.choices[0].message.content}\n\n\n@app.get(\"/teacher/summary\")\ndef teacher_summary():\n    return dict(CLASS_SPEND)\n",
+    "requirements.txt": "fastapi\nuvicorn\nopenai\npython-multipart\nhttpx\n",
+    ".gitignore": ".env\n__pycache__\n*.pyc\n.venv\n.DS_Store\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "held_out"
+  },
+  {
+   "id": "p44",
+   "title": "Vocabulary coach",
+   "stack": "Flask",
+   "files": {
+    "app.py": "import os\nfrom flask import Flask, request, jsonify, render_template\nfrom flask_limiter import Limiter\nfrom openai import OpenAI\n\napp = Flask(__name__)\nlimiter = Limiter(lambda: request.headers.get(\"X-Learner-Id\", \"guest\"), app=app, default_limits=[\"15 per minute\"])\nclient = OpenAI(api_key=os.environ[\"OPENAI_API_KEY\"])\nUSED = {\"tokens\": 0}\nDAILY_TOKEN_BUDGET = 200000\n\n\n@app.route(\"/\")\ndef home():\n    return render_template(\"index.html\")\n\n\n@app.post(\"/ask\")\ndef ask():\n    if USED[\"tokens\"] > DAILY_TOKEN_BUDGET:\n        return jsonify(reply=\"The class budget is used up for today.\"), 429\n    r = client.chat.completions.create(\n        model=\"gpt-4o-mini\",\n        max_tokens=150,\n        messages=[\n            {\"role\": \"system\", \"content\": \"Explain the word in two short sentences.\"},\n            {\"role\": \"user\", \"content\": request.json[\"word\"]},\n        ],\n    )\n    USED[\"tokens\"] += r.usage.total_tokens\n    return jsonify(reply=r.choices[0].message.content)\n\n\n@app.get(\"/teacher\")\ndef teacher():\n    return jsonify(tokens=USED[\"tokens\"])\n",
+    "templates/index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Vocabulary coach</title></head>\n<body>\n<h1>Vocabulary coach</h1>\n<label for=\"w\">Word</label>\n<input id=\"w\"><button id=\"b\">Explain</button>\n<p id=\"o\"></p>\n<script>\nb.onclick = async () => {\n  const r = await fetch(\"/ask\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\", \"X-Learner-Id\": \"L-\" + (document.cookie || \"guest\") }, body: JSON.stringify({ word: w.value }) });\n  o.textContent = (await r.json()).reply;\n};\n</script>\n</body>\n</html>\n",
+    ".gitignore": ".env\n__pycache__\n*.pyc\n.venv\n.DS_Store\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "dev"
+  },
+  {
+   "id": "p45",
+   "title": "Writing buddy",
+   "stack": "Cloudflare Worker",
+   "files": {
+    "src/index.js": "// Provider keys look like long random strings; keep them in wrangler secrets, never in this file.\nconst DAILY_CLASS_BUDGET = 300000;\n\nexport default {\n  async fetch(request, env) {\n    const url = new URL(request.url);\n    const day = new Date().toISOString().slice(0, 10);\n    if (url.pathname === \"/teacher\") {\n      const code = url.searchParams.get(\"code\");\n      return new Response(\"Tokens used today: \" + ((await env.KV.get(\"class:\" + code + \":\" + day)) || 0));\n    }\n    const { learnerId, classCode, text } = await request.json();\n    const lk = \"learner:\" + learnerId;\n    const n = Number((await env.KV.get(lk)) || 0);\n    if (n >= 10) return new Response(\"Please wait a minute\", { status: 429 });\n    await env.KV.put(lk, String(n + 1), { expirationTtl: 60 });\n    const ck = \"class:\" + classCode + \":\" + day;\n    const spent = Number((await env.KV.get(ck)) || 0);\n    if (spent > DAILY_CLASS_BUDGET) return new Response(\"Class budget used up\", { status: 429 });\n    const r = await fetch(\"https://api.openai.com/v1/chat/completions\", {\n      method: \"POST\",\n      headers: { \"Content-Type\": \"application/json\", Authorization: \"Bearer \" + env.OPENAI_API_KEY },\n      body: JSON.stringify({ model: \"gpt-4o-mini\", max_tokens: 150, messages: [\n        { role: \"system\", content: \"Suggest one way to improve this sentence.\" }, { role: \"user\", content: text } ] }),\n    });\n    const data = await r.json();\n    await env.KV.put(ck, String(spent + data.usage.total_tokens));\n    return Response.json({ text: data.choices[0].message.content });\n  },\n};\n",
+    "wrangler.toml": "name = \"writing-buddy\"\nmain = \"src/index.js\"\ncompatibility_date = \"2026-01-15\"\n\n[[kv_namespaces]]\nbinding = \"KV\"\nid = \"demo-namespace-id\"\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "held_out"
+  },
+  {
+   "id": "p46",
+   "title": "Exit ticket",
+   "stack": "React with Vite, Firebase",
+   "files": {
+    "src/firebase.js": "import { initializeApp } from \"firebase/app\";\nimport { getAuth } from \"firebase/auth\";\nimport { getFirestore } from \"firebase/firestore\";\n\n// The web config is public by design; the rules protect the data.\nconst app = initializeApp({\n  apiKey: \"demo-firebase-web-key\",\n  authDomain: \"exit-ticket-demo.firebaseapp.com\",\n  projectId: \"exit-ticket-demo\",\n});\nexport const auth = getAuth(app);\nexport const db = getFirestore(app);\n",
+    "src/App.jsx": "import { useState } from \"react\";\nimport { addDoc, collection } from \"firebase/firestore\";\nimport { auth, db } from \"./firebase.js\";\n\nexport default function App() {\n  const [text, setText] = useState(\"\");\n  return (\n    <div>\n      <label>Your answer to today's question</label>\n      <textarea value={text} onChange={(e) => setText(e.target.value)} />\n      <button onClick={() => addDoc(collection(db, \"tickets\"), { uid: auth.currentUser.uid, text })}>Send</button>\n    </div>\n  );\n}\n",
+    "firestore.rules": "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /tickets/{id} {\n      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;\n      allow read: if request.auth != null && resource.data.uid == request.auth.uid;\n    }\n  }\n}\n",
+    ".gitignore": ".env\nnode_modules\ndist\n.DS_Store\n*.log\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "dev"
+  },
+  {
+   "id": "p47",
+   "title": "Class poll with accounts",
+   "stack": "React with Vite, Supabase",
+   "files": {
+    "src/supabase.js": "import { createClient } from \"@supabase/supabase-js\";\n\n// The publishable key is meant to be public; row level security protects the data.\nexport const supabase = createClient(\n  import.meta.env.VITE_SUPABASE_URL,\n  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY\n);\n",
+    "src/App.jsx": "import { useEffect, useState } from \"react\";\nimport { supabase } from \"./supabase.js\";\n\nexport default function App() {\n  const [polls, setPolls] = useState([]);\n  useEffect(() => {\n    supabase.from(\"polls\").select(\"*\").then((r) => setPolls(r.data || []));\n  }, []);\n  return <ul>{polls.map((p) => <li key={p.id}>{p.question}</li>)}</ul>;\n}\n",
+    "supabase/migrations/v001_init.sql": "create table polls (\n  id bigint generated always as identity primary key,\n  class_id uuid not null,\n  question text not null\n);\nalter table polls enable row level security;\n\ncreate policy \"members read their class polls\" on polls\n  for select using (class_id in (select class_id from memberships where user_id = auth.uid()));\n\ncreate table memberships (\n  user_id uuid references auth.users(id),\n  class_id uuid not null\n);\nalter table memberships enable row level security;\ncreate policy \"own memberships\" on memberships for select using (user_id = auth.uid());\n",
+    ".env.example": "VITE_SUPABASE_URL=http://localhost:54321\nVITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key\n# public client settings\n# copy to .env\n# end\n",
+    ".gitignore": ".env\nnode_modules\ndist\n.DS_Store\n*.log\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "held_out"
+  },
+  {
+   "id": "p48",
+   "title": "Reading tutor with class data",
+   "stack": "Next.js pages router, Supabase",
+   "files": {
+    "lib/supabase.js": "import { createClient } from \"@supabase/supabase-js\";\n\n// NEXT_PUBLIC_ anon key is public by design; policies decide what a user can read.\nexport const supabase = createClient(\n  process.env.NEXT_PUBLIC_SUPABASE_URL,\n  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY\n);\n",
+    "pages/api/ask.js": "import OpenAI from \"openai\";\nimport { createClient } from \"@supabase/supabase-js\";\n\nconst client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });\nconst admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);\nconst DAILY_CLASS_BUDGET = 300000;\n\nexport default async function handler(req, res) {\n  const { classId, q } = JSON.parse(req.body);\n  const { data } = await admin.rpc(\"class_tokens_today\", { cid: classId });\n  if ((data || 0) > DAILY_CLASS_BUDGET) return res.status(429).json({ reply: \"Class budget used up.\" });\n  const out = await client.chat.completions.create({\n    model: \"gpt-4o-mini\",\n    max_tokens: 200,\n    messages: [{ role: \"system\", content: \"You are a reading tutor.\" }, { role: \"user\", content: q }],\n  });\n  await admin.from(\"usage\").insert({ class_id: classId, tokens: out.usage.total_tokens });\n  res.json({ reply: out.choices[0].message.content });\n}\n",
+    "pages/teacher.js": "export default function Teacher() {\n  return (\n    <main>\n      <h1>Teacher page</h1>\n      <p>Daily class usage and the budget remaining are shown here.</p>\n    </main>\n  );\n}\n",
+    "supabase/migrations/v001_init.sql": "create table usage (\n  id bigint generated always as identity primary key,\n  class_id uuid not null,\n  tokens int not null,\n  at timestamptz default now()\n);\nalter table usage enable row level security;\ncreate policy \"teachers read usage\" on usage for select\n  using (exists (select 1 from teachers t where t.user_id = auth.uid() and t.class_id = usage.class_id));\n\ncreate table teachers (user_id uuid references auth.users(id), class_id uuid not null);\nalter table teachers enable row level security;\ncreate policy \"own row\" on teachers for select using (user_id = auth.uid());\n",
+    ".gitignore": "node_modules\ndist\n.env.local\n.DS_Store\n*.log\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "dev"
+  },
+  {
+   "id": "p49",
+   "title": "Fractions quiz with hints",
+   "stack": "Vue with Express",
+   "files": {
+    "src/App.vue": "<script setup>\nimport { ref } from \"vue\";\nconst classCode = ref(\"\");\nconst reply = ref(\"\");\nconst verdict = ref(\"\");\n\nasync function check(choice) {\n  const r = await fetch(\"/api/check\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ id: 1, choice }) });\n  verdict.value = (await r.json()).correct ? \"Right!\" : \"Not yet\";\n}\nasync function hint() {\n  const r = await fetch(\"/api/hint\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ classCode: classCode.value, id: 1 }) });\n  reply.value = (await r.json()).hint;\n}\n</script>\n<template>\n  <input v-model=\"classCode\" placeholder=\"Class code\" />\n  <p>1/2 + 1/4 = ?</p>\n  <button @click=\"check(0)\">1/6</button> <button @click=\"check(1)\">3/4</button>\n  <button @click=\"hint\">Hint</button>\n  <p>{{ verdict }} {{ reply }}</p>\n</template>\n",
+    "server/answers.js": "// Answers stay on the server.\nmodule.exports = {\n  1: { text: \"1/2 + 1/4\", correct: 1 },\n  2: { text: \"2/3 of 9\", correct: 1 },\n};\n",
+    "server/index.js": "const express = require(\"express\");\nconst OpenAI = require(\"openai\");\nconst answers = require(\"./answers\");\n\nconst client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });\nconst app = express();\napp.use(express.json());\nconst spent = {};\nconst DAILY_CLASS_BUDGET = 200000;\n\napp.post(\"/api/check\", (req, res) => res.json({ correct: answers[req.body.id].correct === req.body.choice }));\n\napp.post(\"/api/hint\", async (req, res) => {\n  const code = req.body.classCode;\n  if ((spent[code] || 0) > DAILY_CLASS_BUDGET) return res.status(429).json({ hint: \"Class budget used up.\" });\n  const out = await client.chat.completions.create({\n    model: \"gpt-4o-mini\",\n    max_tokens: 100,\n    messages: [{ role: \"system\", content: \"Give a one sentence hint without the result.\" }, { role: \"user\", content: answers[req.body.id].text }],\n  });\n  spent[code] = (spent[code] || 0) + out.usage.total_tokens;\n  res.json({ hint: out.choices[0].message.content });\n});\n\napp.get(\"/teacher\", (req, res) => res.json(spent));\napp.listen(3000);\n",
+    ".gitignore": ".env\nnode_modules\ndist\n.DS_Store\n*.log\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "held_out"
+  },
+  {
+   "id": "p50",
+   "title": "Spelling bee checked on the server",
+   "stack": "Svelte with Fastify",
+   "files": {
+    "src/App.svelte": "<script>\n  let round = 1;\n  let guess = \"\";\n  let result = \"\";\n  async function check() {\n    const r = await fetch(\"/api/check\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ round, guess }) });\n    result = (await r.json()).ok ? \"Correct\" : \"Try again\";\n  }\n</script>\n\n<label>Your answer</label>\n<input bind:value={guess} />\n<button on:click={check}>Check</button>\n<p>Round {round}: {result}</p>\n",
+    "server.js": "const path = require(\"path\");\nconst Fastify = require(\"fastify\");\nconst words = require(\"./words\");\n\nconst app = Fastify();\napp.register(require(\"@fastify/static\"), { root: path.join(__dirname, \"public\") });\n\napp.post(\"/api/check\", async (req) => {\n  const { round, guess } = req.body;\n  return { ok: words[round] && words[round].toLowerCase() === String(guess).toLowerCase() };\n});\n\napp.listen({ port: 3000 });\n",
+    "words.js": "module.exports = {\n  1: \"necessary\",\n  2: \"rhythm\",\n  3: \"separate\",\n  4: \"February\",\n};\n",
+    ".gitignore": ".env\nnode_modules\ndist\n.DS_Store\n*.log\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "dev"
+  },
+  {
+   "id": "p51",
+   "title": "Homework helper",
+   "stack": "Django",
+   "files": {
+    "tutor/models.py": "from django.db import models\n\n\nclass ClassUsage(models.Model):\n    class_code = models.CharField(max_length=20)\n    day = models.DateField()\n    tokens = models.IntegerField(default=0)\n\n    class Meta:\n        unique_together = (\"class_code\", \"day\")\n",
+    "tutor/views.py": "import datetime\nimport os\n\nimport anthropic\nfrom django.http import JsonResponse\nfrom django.shortcuts import render\n\nfrom .models import ClassUsage\n\nclient = anthropic.Anthropic(api_key=os.environ[\"ANTHROPIC_API_KEY\"])\nDAILY_CLASS_BUDGET = 300000\n\n\ndef ask(request):\n    code = request.GET.get(\"code\", \"\")\n    usage, _ = ClassUsage.objects.get_or_create(class_code=code, day=datetime.date.today())\n    if usage.tokens > DAILY_CLASS_BUDGET:\n        return JsonResponse({\"reply\": \"Class budget used up today.\"}, status=429)\n    msg = client.messages.create(\n        model=\"claude-3-5-haiku-latest\",\n        max_tokens=300,\n        system=\"Help with homework. Explain steps, do not give final results.\",\n        messages=[{\"role\": \"user\", \"content\": request.GET.get(\"q\", \"\")}],\n    )\n    usage.tokens += msg.usage.input_tokens + msg.usage.output_tokens\n    usage.save()\n    return JsonResponse({\"reply\": msg.content[0].text})\n\n\ndef teacher_dashboard(request):\n    return render(request, \"teacher.html\", {\"rows\": ClassUsage.objects.order_by(\"-day\")[:30]})\n",
+    "tutor/urls.py": "from django.urls import path\nfrom . import views\n\nurlpatterns = [\n    path(\"ask/\", views.ask),\n    path(\"teacher/\", views.teacher_dashboard),\n]\n",
+    ".gitignore": ".env\n__pycache__\n*.pyc\n.venv\n.DS_Store\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "held_out"
+  },
+  {
+   "id": "p52",
+   "title": "Coding exercise checker with streaming",
+   "stack": "Next.js app router, Vercel AI SDK",
+   "files": {
+    "app/api/chat/route.ts": "import { streamText } from \"ai\";\nimport { openai } from \"@ai-sdk/openai\";\nimport { checkAndCount } from \"@/lib/budget\";\n\nexport async function POST(req: Request) {\n  const { messages, classCode } = await req.json();\n  if (!(await checkAndCount(classCode))) return new Response(\"Class budget used up today.\", { status: 429 });\n  const result = streamText({\n    model: openai(\"gpt-4o-mini\"),\n    system: \"You review short Python exercises. Point at one bug at a time and never write the fix.\",\n    messages,\n    maxOutputTokens: 300,\n  });\n  return result.toDataStreamResponse();\n}\n",
+    "lib/budget.ts": "const used = new Map<string, number>();\nexport const DAILY_CLASS_BUDGET = 150;\n\nexport async function checkAndCount(classCode: string) {\n  const n = used.get(classCode) ?? 0;\n  if (n >= DAILY_CLASS_BUDGET) return false;\n  used.set(classCode, n + 1);\n  return true;\n}\n\nexport const usage = () => Object.fromEntries(used);\n",
+    "app/teacher/page.tsx": "import { usage, DAILY_CLASS_BUDGET } from \"@/lib/budget\";\n\nexport default function TeacherPage() {\n  return <main><h1>Teacher page</h1><pre>{JSON.stringify(usage())}</pre><p>Daily limit per class: {DAILY_CLASS_BUDGET} requests</p></main>;\n}\n",
+    "app/page.tsx": "\"use client\";\nimport { useChat } from \"@ai-sdk/react\";\n\nexport default function Page() {\n  const { messages, input, handleInputChange, handleSubmit } = useChat({ body: { classCode: \"7B\" } });\n  return (\n    <main>\n      {messages.map((m) => <p key={m.id}>{m.content}</p>)}\n      <form onSubmit={handleSubmit}><input value={input} onChange={handleInputChange} /></form>\n    </main>\n  );\n}\n",
+    ".gitignore": "node_modules\ndist\n.env.local\n.DS_Store\n*.log\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "dev"
+  },
+  {
+   "id": "p53",
+   "title": "Maths explainer with Gemini",
+   "stack": "Express, Google generateContent",
+   "files": {
+    "server.js": "const express = require(\"express\");\nconst path = require(\"path\");\n\nconst app = express();\napp.use(express.json());\napp.use(express.static(path.join(__dirname, \"public\")));\nconst URL = \"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent\";\nlet tokens = 0;\nconst DAILY_TOKEN_BUDGET = 200000;\n\napp.post(\"/api/explain\", async (req, res) => {\n  if (tokens > DAILY_TOKEN_BUDGET) return res.status(429).json({ text: \"Class budget used up.\" });\n  const r = await fetch(URL, {\n    method: \"POST\",\n    headers: { \"Content-Type\": \"application/json\", \"x-goog-api-key\": process.env.GEMINI_API_KEY },\n    body: JSON.stringify({\n      systemInstruction: { parts: [{ text: \"Explain the maths step by step for a 13 year old.\" }] },\n      contents: [{ role: \"user\", parts: [{ text: req.body.question }] }],\n      generationConfig: { maxOutputTokens: 300 },\n    }),\n  });\n  const data = await r.json();\n  tokens += data.usageMetadata.totalTokenCount;\n  res.json({ text: data.candidates[0].content.parts[0].text });\n});\n\napp.get(\"/teacher\", (req, res) => res.send(\"<h1>Teacher page</h1><p>Tokens used: \" + tokens + \"</p>\"));\napp.listen(3000);\n",
+    "public/index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Maths explainer</title></head>\n<body>\n<input id=\"q\" placeholder=\"Your question\">\n<button id=\"go\">Explain</button>\n<p id=\"out\"></p>\n<script>\ngo.onclick = async () => {\n  const r = await fetch(\"/api/explain\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ question: q.value }) });\n  out.textContent = (await r.json()).text;\n};\n</script>\n</body>\n</html>\n",
+    ".gitignore": ".env\nnode_modules\ndist\n.DS_Store\n*.log\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "held_out"
+  },
+  {
+   "id": "p54",
+   "title": "Quiz hints with the Responses API",
+   "stack": "Fastify, plain HTML",
+   "files": {
+    "server.js": "const path = require(\"path\");\nconst Fastify = require(\"fastify\");\nconst OpenAI = require(\"openai\");\n\nconst client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });\nconst app = Fastify();\napp.register(require(\"@fastify/static\"), { root: path.join(__dirname, \"public\") });\nconst perLearner = {};\nconst classTokens = {};\nconst DAILY_CLASS_BUDGET = 200000;\n\napp.post(\"/api/hint\", async (req, reply) => {\n  const { learnerId, classCode, question } = req.body;\n  perLearner[learnerId] = (perLearner[learnerId] || 0) + 1;\n  if (perLearner[learnerId] > 10) return reply.code(429).send({ hint: \"Try thinking about it first.\" });\n  if ((classTokens[classCode] || 0) > DAILY_CLASS_BUDGET) return reply.code(429).send({ hint: \"Class budget used up.\" });\n  const out = await client.responses.create({\n    model: \"gpt-4o-mini\",\n    instructions: \"Give a one sentence hint, not the final result.\",\n    input: question,\n    max_output_tokens: 100,\n  });\n  classTokens[classCode] = (classTokens[classCode] || 0) + out.usage.total_tokens;\n  return { hint: out.output_text };\n});\n\napp.get(\"/api/usage\", async () => classTokens);\napp.listen({ port: 3000 });\n",
+    "public/index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Quiz hints</title></head>\n<body>\n<h1>Which planet is closest to the sun?</h1>\n<button id=\"h\">Hint</button><p id=\"o\"></p>\n<script>\nh.onclick = async () => {\n  const r = await fetch(\"/api/hint\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ learnerId: \"L1\", classCode: \"7B\", question: document.querySelector(\"h1\").textContent }) });\n  o.textContent = (await r.json()).hint;\n};\n</script>\n</body>\n</html>\n",
+    "public/teacher.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Teacher dashboard</title></head>\n<body>\n<h1>Teacher dashboard</h1>\n<p id=\"usage\">Loading...</p>\n<script>\nfetch(\"/api/usage\").then(r => r.json()).then(u => {\n  document.getElementById(\"usage\").textContent = u.tokens + \" tokens used by the class\";\n});\n</script>\n</body>\n</html>\n",
+    ".env.example": "# copy to .env\nOPENAI_API_KEY=\nPORT=3000\n# practice values only\n# end\n",
+    ".gitignore": ".env\nnode_modules\ndist\n.DS_Store\n*.log\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "dev"
+  },
+  {
+   "id": "p55",
+   "title": "Class poll with sign-in",
+   "stack": "Firebase Realtime Database, plain HTML",
+   "files": {
+    "public/index.html": "<!doctype html>\n<html>\n<head>\n<meta charset=\"utf-8\"><title>Class poll</title>\n<script src=\"https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js\"></script>\n<script src=\"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js\"></script>\n<script src=\"https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js\"></script>\n</head>\n<body>\n<h1>Favourite fruit?</h1>\n<label>Your answer</label>\n<button onclick=\"vote('apple')\">Apple</button> <button onclick=\"vote('pear')\">Pear</button>\n<script>\n// Web config is public by design; the database rules protect the data.\nfirebase.initializeApp({ apiKey: \"demo-firebase-web-key\", authDomain: \"class-poll-demo.firebaseapp.com\", databaseURL: \"https://class-poll-demo-default-rtdb.firebaseio.com\" });\nfunction vote(f) { firebase.database().ref(\"votes/\" + firebase.auth().currentUser.uid).set(f); }\n</script>\n</body>\n</html>\n",
+    "database.rules.json": "{\n  \"rules\": {\n    \"votes\": {\n      \".read\": false,\n      \"$uid\": {\n        \".read\": \"auth != null && auth.uid === $uid\",\n        \".write\": \"auth != null && auth.uid === $uid\"\n      }\n    }\n  }\n}\n",
+    "firebase.json": "{\n  \"database\": { \"rules\": \"database.rules.json\" },\n  \"hosting\": {\n    \"public\": \"public\",\n    \"ignore\": [\"firebase.json\", \"**/.*\"]\n  }\n}\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "held_out"
+  },
+  {
+   "id": "p56",
+   "title": "Study buddy with class tables",
+   "stack": "FastAPI, Supabase",
+   "files": {
+    "api/chat.py": "import os\nfrom collections import defaultdict\nimport anthropic\nfrom fastapi import FastAPI, HTTPException\n\nclient = anthropic.Anthropic(api_key=os.environ[\"ANTHROPIC_API_KEY\"])\napp = FastAPI()\nCALLS = defaultdict(int)\nCLASS_TOKENS = defaultdict(int)\nDAILY_CLASS_BUDGET = 300000\n\n\n@app.post(\"/api/chat\")\nasync def chat(body: dict):\n    learner, cls = body[\"learner_id\"], body[\"class_id\"]\n    CALLS[learner] += 1\n    if CALLS[learner] > 12:\n        raise HTTPException(429, \"Please wait a moment.\")\n    if CLASS_TOKENS[cls] > DAILY_CLASS_BUDGET:\n        raise HTTPException(429, \"Class budget used up today.\")\n    msg = client.messages.create(\n        model=\"claude-3-5-haiku-latest\",\n        max_tokens=300,\n        system=\"You are a patient study buddy. Ask guiding questions.\",\n        messages=[{\"role\": \"user\", \"content\": body[\"text\"]}],\n    )\n    CLASS_TOKENS[cls] += msg.usage.input_tokens + msg.usage.output_tokens\n    return {\"reply\": msg.content[0].text}\n\n\n@app.get(\"/teacher/usage\")\ndef teacher_usage():\n    return dict(CLASS_TOKENS)\n",
+    "supabase/migrations/v001_init.sql": "create table chats (\n  id bigint generated always as identity primary key,\n  learner_id uuid not null,\n  class_id uuid not null,\n  body text not null\n);\nalter table chats enable row level security;\ncreate policy \"learner reads own chats\" on chats for select using (learner_id = auth.uid());\ncreate policy \"learner writes own chats\" on chats for insert with check (learner_id = auth.uid());\n",
+    ".gitignore": ".env\n__pycache__\n*.pyc\n.venv\n.DS_Store\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "dev"
+  },
+  {
+   "id": "p57",
+   "title": "Science helper on a Worker",
+   "stack": "Cloudflare Worker, Anthropic fetch",
+   "files": {
+    "src/index.js": "const DAILY_CLASS_BUDGET = 250000;\n\nexport default {\n  async fetch(request, env) {\n    const url = new URL(request.url);\n    const day = new Date().toISOString().slice(0, 10);\n    if (url.pathname === \"/teacher\") {\n      return new Response(\"Tokens used: \" + ((await env.KV.get(\"class:\" + url.searchParams.get(\"code\") + \":\" + day)) || 0));\n    }\n    const { learnerId, classCode, question } = await request.json();\n    const lk = \"l:\" + learnerId;\n    const n = Number((await env.KV.get(lk)) || 0);\n    if (n >= 8) return new Response(\"Slow down\", { status: 429 });\n    await env.KV.put(lk, String(n + 1), { expirationTtl: 60 });\n    const ck = \"class:\" + classCode + \":\" + day;\n    const spent = Number((await env.KV.get(ck)) || 0);\n    if (spent > DAILY_CLASS_BUDGET) return new Response(\"Class budget used up\", { status: 429 });\n    const r = await fetch(\"https://api.anthropic.com/v1/messages\", {\n      method: \"POST\",\n      headers: { \"content-type\": \"application/json\", \"x-api-key\": env.ANTHROPIC_API_KEY, \"anthropic-version\": \"2023-06-01\" },\n      body: JSON.stringify({ model: \"claude-3-5-haiku-latest\", max_tokens: 250,\n        system: \"Explain science to 11 year olds.\", messages: [{ role: \"user\", content: question }] }),\n    });\n    const data = await r.json();\n    await env.KV.put(ck, String(spent + data.usage.input_tokens + data.usage.output_tokens));\n    return Response.json({ reply: data.content[0].text });\n  },\n};\n",
+    "wrangler.toml": "name = \"science-helper\"\nmain = \"src/index.js\"\ncompatibility_date = \"2026-01-15\"\n\n[[kv_namespaces]]\nbinding = \"KV\"\nid = \"demo-namespace-id\"\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "held_out"
+  },
+  {
+   "id": "p58",
+   "title": "Pendulum simulation with an explainer",
+   "stack": "Express, plain HTML",
+   "files": {
+    "server.js": "require(\"dotenv\").config();\nconst express = require(\"express\");\nconst path = require(\"path\");\nconst OpenAI = require(\"openai\");\n\nconst client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });\nconst app = express();\napp.use(express.json());\napp.use(express.static(path.join(__dirname, \"public\")));\nlet tokens = 0;\nconst DAILY_TOKEN_BUDGET = 200000;\n\napp.post(\"/api/explain\", async (req, res) => {\n  if (tokens > DAILY_TOKEN_BUDGET) return res.status(429).json({ text: \"Budget used up for today.\" });\n  const out = await client.chat.completions.create({\n    model: \"gpt-4o-mini\",\n    max_tokens: 200,\n    messages: [{ role: \"system\", content: \"Explain pendulums to 12 year olds.\" }, { role: \"user\", content: \"Length \" + req.body.length + \" metres. Why this swing time?\" }],\n  });\n  tokens += out.usage.total_tokens;\n  res.json({ text: out.choices[0].message.content });\n});\n\napp.get(\"/api/usage\", (req, res) => res.json({ tokens }));\napp.listen(3000);\n",
+    "public/index.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Pendulum lab</title></head>\n<body>\n<input id=\"len\" type=\"range\" min=\"0.2\" max=\"3\" step=\"0.1\" value=\"1\">\n<button id=\"why\">Why?</button>\n<p id=\"out\"></p>\n<script>\nwhy.onclick = async () => {\n  const r = await fetch(\"/api/explain\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ length: len.value }) });\n  out.textContent = (await r.json()).text;\n};\n</script>\n</body>\n</html>\n",
+    "public/teacher.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Teacher dashboard</title></head>\n<body>\n<h1>Teacher dashboard</h1>\n<p id=\"usage\">Loading...</p>\n<script>\nfetch(\"/api/usage\").then(r => r.json()).then(u => {\n  document.getElementById(\"usage\").textContent = u.tokens + \" tokens used by the class\";\n});\n</script>\n</body>\n</html>\n",
+    ".env": "# local settings\nOPENAI_API_KEY=__FAKE_MODEL_KEY__\nPORT=3000\nNODE_ENV=development\n# end\n",
+    ".gitignore": ".env\nnode_modules\ndist\n.DS_Store\n*.log\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "dev"
+  },
+  {
+   "id": "p59",
+   "title": "Homework explainer",
+   "stack": "Next.js app router, use client",
+   "files": {
+    "app/page.tsx": "\"use client\";\nimport { useState } from \"react\";\n\nexport default function Page() {\n  const [q, setQ] = useState(\"\");\n  const [a, setA] = useState(\"\");\n  async function ask() {\n    const r = await fetch(\"/api/explain\", { method: \"POST\", body: JSON.stringify({ classCode: \"7B\", question: q }) });\n    setA((await r.json()).text);\n  }\n  return <main><input value={q} onChange={(e) => setQ(e.target.value)} /><button onClick={ask}>Explain</button><p>{a}</p></main>;\n}\n",
+    "app/api/explain/route.ts": "import OpenAI from \"openai\";\nimport { withinBudget, record } from \"@/lib/usage\";\n\nconst client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });\n\nexport async function POST(req: Request) {\n  const { classCode, question } = await req.json();\n  if (!withinBudget(classCode)) return Response.json({ text: \"Class budget used up today.\" }, { status: 429 });\n  const out = await client.chat.completions.create({\n    model: \"gpt-4o-mini\",\n    max_completion_tokens: 250,\n    messages: [{ role: \"system\", content: \"Explain homework questions step by step.\" }, { role: \"user\", content: question }],\n  });\n  record(classCode, out.usage?.total_tokens ?? 0);\n  return Response.json({ text: out.choices[0].message.content });\n}\n",
+    "lib/usage.ts": "const used = new Map<string, number>();\nexport const DAILY_CLASS_BUDGET = 300000;\n\nexport const withinBudget = (code: string) => (used.get(code) ?? 0) < DAILY_CLASS_BUDGET;\nexport const record = (code: string, n: number) => used.set(code, (used.get(code) ?? 0) + n);\nexport const report = () => Object.fromEntries(used);\n",
+    "app/teacher/page.tsx": "import { report } from \"@/lib/usage\";\n\nexport default function TeacherPage() {\n  return <main><h1>Teacher page</h1><pre>{JSON.stringify(report())}</pre></main>;\n}\n",
+    ".gitignore": "node_modules\ndist\n.env.local\n.DS_Store\n*.log\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "held_out"
+  },
+  {
+   "id": "p60",
+   "title": "Vocabulary quiz marked on the server",
+   "stack": "Flask",
+   "files": {
+    "app.py": "from flask import Flask, request, jsonify, render_template\n\napp = Flask(__name__)\nANSWERS = {1: \"kind\", 2: \"rare\", 3: \"old\"}\nWORDS = {1: \"benevolent\", 2: \"scarce\", 3: \"ancient\"}\n\n\n@app.route(\"/\")\ndef quiz():\n    return render_template(\"quiz.html\", words=WORDS)\n\n\n@app.post(\"/check\")\ndef check():\n    q = int(request.json[\"id\"])\n    return jsonify(correct=request.json[\"choice\"] == ANSWERS.get(q))\n",
+    "templates/quiz.html": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>Vocabulary quiz</title></head>\n<body>\n<h1>Vocabulary quiz</h1>\n{% for id, w in words.items() %}\n<p>{{ w }}</p>\n<label>Your answer</label>\n<input id=\"a{{ id }}\"><button onclick=\"send({{ id }})\">Check</button>\n{% endfor %}\n<script>\nasync function send(id) {\n  const r = await fetch(\"/check\", { method: \"POST\", headers: { \"Content-Type\": \"application/json\" }, body: JSON.stringify({ id, choice: document.getElementById(\"a\" + id).value }) });\n  alert((await r.json()).correct ? \"Right\" : \"Try again\");\n}\n</script>\n</body>\n</html>\n",
+    ".gitignore": ".env\n__pycache__\n*.pyc\n.venv\n.DS_Store\n"
+   },
+   "planted": [],
+   "how": {},
+   "split": "dev"
+  }
+ ]
+}

@@ -102,6 +102,15 @@ which isn't yet clear of chance on that set, and is clear on not giving the answ
 the right misconception for a message worked on only 4 of 19 turns. Rated by a model, on replies, not learning
 ([what was done](docs/evidence.md)).
 
+What needs no model is checked on every commit, and anyone can run it: six guarantees on 4,122 checks, such as a learner's
+words never entering what the model is told and an answer key reaching only the reviewer; the rules reading 84% of 150 held-out
+messages as labelled; and `review` finding 87% of the problems planted in 30 held-out projects, with no false alarm
+([the scorecard](docs/scorecard.md), and what it doesn't show).
+
+<p align="center">
+  <img src="../docs/images/scorecard.svg" width="100%" alt="The scorecard at a glance. Six guarantees hold on 4,122 checks, among them that a learner's words never enter what the model is told and that an answer key reaches only the reviewer. On held-out cases, the rules read 84 percent of 150 English messages as labelled, from 51 percent before, and review finds 87 percent of 53 planted problems, from 79 percent, with no false alarm.">
+</p>
+
 ## It doesn't compete with where its knowledge comes from
 
 [Learning Commons](https://learningcommons.org) and [Eedi](https://www.eedi.com) keep the shelves: standards, learning components,
@@ -111,7 +120,7 @@ take from them, credits them, and measures whether it helped. It carries their o
 
 ## Reference
 
-[How it works](docs/how-it-works.md) · [With your stack](docs/with-your-stack.md) · [MCP](docs/mcp.md) · [Skills](skills/) · [Agent tests](docs/agent-tests.md) ·
+[How it works](docs/how-it-works.md) · [With your stack](docs/with-your-stack.md) · [MCP](docs/mcp.md) · [Skills](skills/) · [Agent tests](docs/agent-tests.md) · [Scorecard](docs/scorecard.md) ·
 [Ways to arrange an activity](docs/designs.md) · [Add your research](docs/add-your-research.md) · [Components](docs/components.md) · [Open resources](docs/resources.md) · [Catalog](docs/catalog.md) · [xAPI](docs/xapi.md) ·
 [Conformance](conformance/README.md)
 

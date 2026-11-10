@@ -2,7 +2,7 @@ name = "{{name}}"
 main = "index.js"
 compatibility_date = "2026-09-01"
 # So that a run stops, and stops spending model calls, when the caller leaves.
-compatibility_flags = ["enable_request_signal"]
+compatibility_flags = ["global_fetch_strictly_public", "enable_request_signal"]
 
 # The package: not served to anyone, read only by index.js through this binding.
 [assets]

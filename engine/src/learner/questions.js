@@ -57,7 +57,12 @@ export function normalizeItem(input, index, used = new Set()) {
       item.answer = { choices: correct };
     } else {
       const order = Array.isArray(answer.order) && answer.order.length === choices.length && answer.order.every((value) => ids.has(value)) && new Set(answer.order).size === choices.length ? answer.order : choices.map((choice) => choice.id);
-      item.answer = { order };
+      // The page gets an order item's choices with their ids, so the ids must say nothing of the order: a, b, c in the order
+      // they were written would be the answer. Each choice gets an id drawn at random, kept from then on.
+      const inOrder = order.map((id) => choices.find((choice) => choice.id === id));
+      const drawn = inOrder.every((choice) => DRAWN_ID.test(choice.id)) ? inOrder.map((choice) => choice.id) : drawIds(inOrder.length);
+      item.choices = inOrder.map((choice, i) => ({ id: drawn[i], text: choice.text }));
+      item.answer = { order: drawn };
     }
   } else if (input.type === 'fill') {
     const accept = list(answer.accept, QUESTION_LIMITS.choice).slice(0, QUESTION_LIMITS.accept);
@@ -105,9 +110,19 @@ export function normalizeItems(items) {
   return list.map((item, i) => normalizeItem(item, i, used));
 }
 
-// An order item's choices are stored in the correct order; pages get them shuffled (the same way for
-// everyone, from the item's id), never as stored.
+// Ids for an order item's choices: z and three characters, drawn at random, so neither they nor the order they sort into
+// (which is the order pages show) say anything of the answer.
+const DRAWN_ID = /^z[a-z0-9]{3}$/;
+function drawIds(count) {
+  const ids = new Set();
+  while (ids.size < count) ids.add(`z${[...crypto.getRandomValues(new Uint8Array(3))].map((byte) => (byte % 36).toString(36)).join('')}`);
+  return [...ids];
+}
+
+// An order item's choices are stored in the correct order; pages get them in another, the same for everyone, never as
+// stored: by their drawn ids, or for an item saved before ids were drawn, shuffled from the item's id.
 function shuffled(item) {
+  if (item.choices.every((choice) => DRAWN_ID.test(choice.id))) return [...item.choices].sort((a, b) => (a.id < b.id ? -1 : 1));
   let seed = [...item.id].reduce((hash, ch) => Math.imul(hash ^ ch.charCodeAt(0), 16777619) >>> 0, 2166136261);
   const random = () => { seed = (seed + 0x6d2b79f5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const list = [...item.choices];

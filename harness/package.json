@@ -21,6 +21,7 @@
     "src",
     "schemas",
     "conformance",
+    "scorecard",
     "examples",
     "integrations",
     "skills",

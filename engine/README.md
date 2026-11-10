@@ -43,7 +43,7 @@ What you change reaches learners on their next message. There is nothing to rest
 | Writes replies | `/chat/completions` | Replies, word by word. Photos and PDFs from learners, if you say this model reads them |
 | Reviews replies | `/chat/completions` | A second model in an agent's check step |
 | Sets up classes *(optional)* | `/chat/completions`, with tools | Ask. Otherwise it uses whichever writes replies |
-| Reads the moment *(optional)* | `/chat/completions` | A small model picks what each turn needs. Otherwise rules do, in English |
+| Reads the moment *(optional)* | `/chat/completions` | A small model picks what each turn needs, in any language. Otherwise rules do, best in English |
 | Hears learners | `/audio/transcriptions` | The microphone: a voice message, dictation, a conversation by voice |
 | Reads aloud | `/audio/speech` | Replies read aloud, and an agent's Speech step |
 | Draws pictures | `/images/generations` | An agent's Image step |
@@ -85,6 +85,21 @@ npx github:VIABLE-Learning-Lab/viable start course.viable.zip
 A workflow built on the visual editor runs here as it is: you can't redraw it in the console, and you can change its look and page.
 The other way works too: **Settings → Download**, then import it on the VIABLE Developer Platform, where models it doesn't have become
 its default, and it says so.
+
+## From fixed to free, step by step
+
+An agent is steps you connect, and how much each leaves to the model is yours to set:
+
+| When it should | Use | The model decides |
+| --- | --- | --- |
+| Do the same every time: search, then answer, then check | Steps in a row | The words |
+| Take one of a few paths | A Router step, or a Branch on what an earlier step found | Which path |
+| Do whatever a question needs, from what you allow | An **Agent step**: it searches and reads your knowledge, remembers, reads a web page, hands off to another agent, and calls tools you draw from other steps, such as a picture, an API or a research component | Which tools, in what order, and when it has enough |
+| Repeat for every item of a list | A For each step | Nothing: the list decides |
+
+What has to hold every time stays a step, whatever else is free. How the teacher wants the AI to help goes to the steps that write
+the reply and to the review. A tool a teacher switched off is removed, not only forbidden. A VETTING step after an Agent step
+reviews what it wrote before a learner sees it. Every run keeps each step and tool call, so a study can say what a version did.
 
 ## Where it runs
 

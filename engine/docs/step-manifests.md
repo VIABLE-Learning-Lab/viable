@@ -26,7 +26,7 @@ export default {
   docs: '/docs/build/steps#image',
   research: { title, summary, url },   // only for research-based steps (VETTING)
   cannot_run_alone: '…',      // why Run step refuses this type (Input, Loop, For each, Parallel, Ask, Note)
-  flow: { kind: 'next' },     // next | terminal | none | branches (keys, labels) | routes | paths | cases
+  flow: { kind: 'next' },     // next | terminal | none | branches (keys, labels) | routes | paths | cases | tools (an Agent step's drawn tools, then next)
   sentence: [ … ],            // the plain-language line at the top of the panel and on the card
   settings: [ … ],            // in panel order
   parts: [ … ],               // built-in editors placed among the settings

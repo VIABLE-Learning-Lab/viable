@@ -12,6 +12,25 @@ const USER_AGENT = 'viable-harness-knowledge-refresh/1.0 (+https://github.com/VI
 export const REFRESH_LIMITS = Object.freeze({ crawlPages: 1000, sitemapPages: 20000, crawlDefault: 50, sitemapDefault: 5000, sitemaps: 60, bytes: 24 * 1024 * 1024, delayMs: 1000, longestDelayMs: 30000, pageBytes: 1024 * 1024 });
 const FILE_LINK = /\.(png|jpe?g|gif|webp|svg|pdf|zip|mp4|mp3|css|js|ico|xml|docx?|pptx?|xlsx?)$/i;
 
+
+// A rule as robots.txt writes it: * stands for anything, and a $ at the end for the end of the address. It is matched
+// piece by piece and never as a regular expression, which a site's own file could shape to take minutes on one address.
+function ruleTest(rule) {
+  const toEnd = rule.endsWith('$');
+  const parts = (toEnd ? rule.slice(0, -1) : rule).split('*');
+  return (path) => {
+    if (!path.startsWith(parts[0])) return false;
+    let at = parts[0].length;
+    for (let i = 1; i < parts.length; i += 1) {
+      if (toEnd && i === parts.length - 1) return path.length - at >= parts[i].length && path.endsWith(parts[i]);
+      at = path.indexOf(parts[i], at);
+      if (at < 0) return false;
+      at += parts[i].length;
+    }
+    return !toEnd || at === path.length;
+  };
+}
+
 /**
  * What a site's robots.txt asks of anyone (User-agent: *): { allows(path), delayMs }. The longest rule
  * that matches a path decides, Allow winning a tie; * and $ work as they do for search engines.
@@ -34,14 +53,13 @@ export function robotsRules(text) {
     if (!applies) continue;
     if (field === 'crawl-delay' && Number(line[2]) > 0) delayMs = Number(line[2]) * 1000;
     if ((field === 'allow' || field === 'disallow') && line[2]) {
-      const pattern = line[2].replace(/[.+?^{}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
-      rules.push({ allow: field === 'allow', length: line[2].length, test: new RegExp(`^${pattern.endsWith('$') ? pattern : `${pattern}`}`) });
+      rules.push({ allow: field === 'allow', length: line[2].length, test: ruleTest(line[2]) });
     }
   }
   return {
     delayMs,
     allows(path) {
-      const matched = rules.filter((rule) => rule.test.test(path)).sort((a, b) => b.length - a.length || Number(b.allow) - Number(a.allow));
+      const matched = rules.filter((rule) => rule.test(path)).sort((a, b) => b.length - a.length || Number(b.allow) - Number(a.allow));
       return matched.length ? matched[0].allow : true;
     }
   };

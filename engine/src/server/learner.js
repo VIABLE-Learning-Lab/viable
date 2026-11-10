@@ -29,7 +29,7 @@ import { TEACHER_PAGE_HEADERS, teacherView } from '../../../harness/src/view.js'
 import { keptTurnEvents, settingsShown, turnRecord, watchHooks, watchSlot } from '../learner/watch.js';
 import { SPEAK_UP, speakUpInput, speakUpMove, speakUpNote, speaksUpOf, speaksUpOnPage } from '../../../harness/src/speakUp.js';
 import { HELP_LEVELS, teachingAtLevel } from '../../../harness/src/utils/teaching.js';
-import { isLocalRequest } from '../../../harness/src/net/local.js';
+import { isLocalRequest, isPlainRemote } from '../../../harness/src/net/local.js';
 import { applyModels } from './models.js';
 import { graphOf, hearRecording, readReply } from './runtime.js';
 import { packageFileBytes, packageFilesPath } from './search.js';
@@ -1277,6 +1277,9 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
       return html(doc, status, signInHeaders(nonce));
     };
 
+    // From another device over plain HTTP, the token would cross the network for anyone on it to read: the form isn't offered or taken.
+    const inTheClear = () => unavailable('Sign in on the computer that runs this server', 'This address isn’t protected, so a token typed here could be read by anyone on the same network. Open this page on the computer that runs the server, or reach the server over HTTPS.', 403);
+
     // What only a signed-in teacher's page says: how to stop, and where the panel is.
     const signedInBar = (doc, links = []) => doc.replace('<body>', () => `<body><form method="post" action="/teacher/signout" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:flex-end;padding:8px 16px;font:14px system-ui,sans-serif">${links.map((link) => `<a href="${escapeHtml(link.href)}">${escapeHtml(link.title)}</a>`).join('')}<span>Signed in as the teacher.</span><button type="submit">Sign out</button></form>`);
     const panelLinks = (course) => (panel && traces === 'token' ? [...course.activities.values()].filter((activity) => activity.agent).slice(0, 8).map((activity) => ({ title: `${activity.title}, with what the AI did`, href: `/course/${course.code}/${activity.key}?panel=1` })) : []);
@@ -1292,6 +1295,7 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
       if (request.method === 'POST' && !rest) {
         if (!sameOrigin(request, url)) return refused();
         if (!secret()) return Response.redirect(new URL(back, url), 303);
+        if (isPlainRemote(request, url, context)) return inTheClear();
         const tooMany = (context.address && !withinMinute(`teacher:a:${context.address}`, SIGN_IN.address)) || !withinMinute('teacher:all', SIGN_IN.ceiling);
         if (tooMany) return signIn('Too many tries. Wait a minute and try again.', 429, next);
         let form;
@@ -1302,7 +1306,7 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
       if (rest.startsWith('turns/')) return traceRoute(rest, request, url, context);
       if (request.method !== 'GET') return null;
       if (!secret() && !localGrant(request, url, context)) return unavailable('The teacher’s page needs a token', 'Give this server a token to open its teacher’s page.', 403);
-      if (!await teacherAllowed(request, url, context)) return signIn(null, request.headers.get('accept')?.includes('text/html') ? 200 : 401);
+      if (!await teacherAllowed(request, url, context)) return isPlainRemote(request, url, context) ? inTheClear() : signIn(null, request.headers.get('accept')?.includes('text/html') ? 200 : 401);
       if (url.searchParams.has('token')) return answer({ error: { message: 'A token doesn’t go in an address, where it would be logged and kept in a browser’s history.', code: 'token_in_url' } }, 400);
       // What there is to read: each activity with How the AI helps, or the course, and each chat page.
       const targets = [...[...courses.values()].flatMap((course) => {

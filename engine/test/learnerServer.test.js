@@ -379,6 +379,13 @@ test('the teacher’s page is behind the token, which is never taken from an add
   assert.equal(open.headers.get('referrer-policy'), 'same-origin', 'so its form’s post says where it comes from: with no referrer a browser sends the origin null');
   assert.equal((await call('/teacher', { method: 'POST', body: 'token=teacher-token', origin: 'null', headers: { 'content-type': 'application/x-www-form-urlencoded' } })).status, 403);
   assert.equal((await call('/teacher', { method: 'POST', body: 'token=teacher-token', origin: 'https://school.example', headers: { 'content-type': 'application/x-www-form-urlencoded' } })).status, 303);
+  // From another device over plain HTTP the token would cross the network in the clear: no form is offered, and none is taken.
+  const lan = (init = {}, headers = {}) => handle(new Request('http://192.168.1.20:8080/teacher', { ...init, headers: { origin: 'http://192.168.1.20:8080', ...headers } }), { address: '192.168.1.7' });
+  const plain = await lan();
+  assert.equal(plain.status, 403);
+  assert.match(await plain.text(), /Sign in on the computer that runs this server/);
+  assert.equal((await lan({ method: 'POST', body: 'token=teacher-token' }, { 'content-type': 'application/x-www-form-urlencoded' })).status, 403);
+  assert.match(await (await lan({}, { 'x-forwarded-for': '203.0.113.9', 'x-forwarded-proto': 'https' })).text(), /Enter this server’s token/, 'behind a proxy that says it is HTTPS, as before');
   const signed = await call('/teacher', { method: 'POST', body: 'token=teacher-token', headers: { 'content-type': 'application/x-www-form-urlencoded' } });
   assert.equal(signed.status, 303);
   const cookie = signed.headers.get('set-cookie');

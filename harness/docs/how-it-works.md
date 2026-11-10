@@ -51,7 +51,9 @@ record can say exactly what the AI was given.
 
 ## How a turn chooses
 
-**By rules, with no model call and no cost.** Patterns read the moment, in English. A list item is taken when it shares at
+**By rules, with no model call and no cost.** Patterns read the moment: in English, and the commonest ways of asking and of
+being stuck in Spanish and Chinese. Whatever a learner says back to a tutor who left them something to do is an answer, unless
+it is a question, a plea, being stuck or small talk. A list item is taken when it shares at
 least two words with what was just said, the closest first; a learner's everyday words count as the formal ones a misconception
 uses ("tops and bottoms" as numerators and denominators, "times" as multiplies). Guidance can name its moments, and then those for the moment take
 turns as the conversation goes on, so a learner doesn't hear the same two every time.
@@ -59,7 +61,8 @@ turns as the conversation goes on, so a learner doesn't hear the same two every 
 **By a small model, for one more call a turn** (`pickerModel`). It reads the conversation and the numbered list, and answers
 which to take. It reads any language, and more of the moments. If it fails or takes too long, rules decide.
 
-How well this works so far: of 30 moments a small model read 29 and rules read 23, but finding the right misconception for a
+How well this works so far: of 30 fractions moments a small model read 29 and rules read 23, and on 150 held-out messages
+across subjects the rules read 84% as labelled ([the scorecard](scorecard.md)). Finding the right misconception for a
 message worked on only 4 of 19 turns ([what was measured](evidence.md)). So nothing is looked up from what a learner says: a turn
 chooses only among the activity's misconceptions, the teacher's or those chosen for them from the goal, and once a learner has
 tried something and no word points to one, it passes the first two on, to be used only if they fit. A turn's record marks what

@@ -16,6 +16,9 @@ export const isLocalName = (name) => LOCAL_NAMES.has(name) || name.endsWith('.lo
 /** Whether a request's name and socket are this computer's, and no proxy says it passed it on. */
 export const isLocalRequest = (request, url, context = {}) => LOCAL_NAMES.has(url.hostname) && (!context.address || LOOPBACK.test(context.address)) && !FORWARDED.some((name) => request.headers.has(name));
 
+/** Whether a request came straight from another machine over plain HTTP, with no proxy between: what it carries can be read on the way. */
+export const isPlainRemote = (request, url, context = {}) => url.protocol === 'http:' && Boolean(context.address) && !LOOPBACK.test(context.address) && !FORWARDED.some((name) => request.headers.has(name));
+
 /** Why a server with no token refuses this request, or null. allowedOrigin: the one other origin the operator named. */
 export function refusedWithoutToken(request, url, context = {}, allowedOrigin = null) {
   if (!isLocalRequest(request, url, context)) return 'This server has no token, so it answers only on the computer it runs on. Give it a token to reach it from anywhere else.';
