@@ -112,8 +112,23 @@ well: a connector nobody would use is worse than none.
 
 ## Releases
 
-Maintainers cut releases from `main`: the version in `package.json`, a CHANGELOG entry, a `vX.Y.Z`
-tag and a GitHub release with the changelog's notes.
+Maintainers cut releases from `main`. The Harness and the Engine always carry the same version.
+
+1. Set it in `package.json`, `harness/package.json` and the two lines of `package-lock.json` that
+   name the root package, and turn the CHANGELOG's entries into a `## X.Y.Z (date)` section.
+2. Once that is on `main`, publish a GitHub release with the tag `vX.Y.Z` and that section as its
+   notes: `gh release create vX.Y.Z --target main --title X.Y.Z --notes-file notes.md`.
+3. The release workflow (`.github/workflows/release.yml`) runs the tests, checks that the tag names
+   both packages' version, and publishes `@viable-lab/harness` and then `@viable-lab/engine` to npm,
+   with provenance. Check with `npm view @viable-lab/engine version`.
+
+npm accepts the workflow by trusted publishing, with no token: each package is linked on npm to this
+repository and to the file name `release.yml`, and each `package.json` keeps `repository` pointing
+here. Renaming either stops publishing. If the publish step fails with a 404 or an authentication
+error, a maintainer who owns the packages on npm runs `npm trust list @viable-lab/engine` (and the
+same for the Harness) and, if the link is gone,
+`npm trust github @viable-lab/engine --repo VIABLE-Learning-Lab/viable --file release.yml --allow-publish`,
+then re-runs the workflow for the tag. A version already on npm is skipped, so re-running is safe.
 
 ## Conduct and security
 

@@ -174,7 +174,7 @@ ${cards.map((card, i) => `<li><article class="card v-field ${FIELDS[i % FIELDS.l
 <div>
 <h3>With two commands</h3>
 <p>Your course, on a server you control. <code>inspect</code> says what a package needs and what won’t run where.</p>
-${exported ? `<pre class="v-code">npx github:VIABLE-Learning-Lab/viable</pre><p class="after-code">Or, with the Engine installed:</p>` : ''}
+${exported ? `<pre class="v-code">npx @viable-lab/engine</pre><p class="after-code">Or, with the Engine installed:</p>` : ''}
 <pre class="v-code">viable-engine inspect my-course.json
 viable-engine deploy cloudflare my-course.json --out site</pre>
 <p class="after-code">It also runs on ${esc(others)}: put that name in place of cloudflare.</p>

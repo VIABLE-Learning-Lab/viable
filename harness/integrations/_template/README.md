@@ -17,7 +17,7 @@ From this folder, or from the copy `viable-harness component new <owner/name> --
 
 ```sh
 node server.mjs     # http://127.0.0.1:8787/detect
-npx github:VIABLE-Learning-Lab/viable component manifest.json --input fixtures/input.json
+npx @viable-lab/harness component manifest.json --input fixtures/input.json
 ```
 
 `test/componentCalls.test.js` runs the same through `callComponent` on 127.0.0.1.

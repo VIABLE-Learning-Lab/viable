@@ -1,0 +1,59 @@
+name: release
+# A GitHub release vX.Y.Z publishes the Harness and the Engine at that version to npm. npm accepts
+# this job by trusted publishing, with no token: each package is linked on npm to this repository and
+# this file's name (CONTRIBUTING.md, Releases). A version already on npm is skipped, so re-running a
+# release is safe.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release's tag, vX.Y.Z
+        required: true
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: npm install --global npm@11
+      - run: npm ci
+      - name: Tests, the boundary test and the conformance fixtures
+        run: npm test
+      - name: The tag names both packages' version
+        run: |
+          engine=$(node -p "require('./package.json').version")
+          harness=$(node -p "require('./harness/package.json').version")
+          if [ "$TAG" != "v$engine" ] || [ "$TAG" != "v$harness" ]; then
+            echo "The tag $TAG doesn't match the Engine ($engine) and the Harness ($harness)."
+            exit 1
+          fi
+      - name: Publish the Harness, then the Engine
+        run: |
+          publish() {
+            name=$(node -p "require('./package.json').name")
+            version=$(node -p "require('./package.json').version")
+            if [ -n "$(npm view "$name@$version" version 2>/dev/null)" ]; then
+              echo "$name@$version is already on npm."
+            else
+              npm publish
+            fi
+          }
+          (cd harness && publish)
+          publish

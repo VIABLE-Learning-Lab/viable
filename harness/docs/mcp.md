@@ -1,6 +1,6 @@
 # The MCP server
 
-> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+> Commands here say `viable-harness`, from `npm i -g @viable-lab/harness`; or put `npx @viable-lab/harness` in its place.
 
 The Harness's parts are [MCP](https://modelcontextprotocol.io) tools, for an assistant, a harness of your own or an
 app on another agent SDK. With them it can prepare what a moment of teaching needs, check replies with VETTING, find

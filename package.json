@@ -1,10 +1,9 @@
 {
   "name": "@viable-lab/engine",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Run VIABLE yourself: AI tutors, courses, class lists and chat pages on your own server, on any model, with the VIABLE Harness inside.",
   "license": "MIT",
   "author": "Hongming (Chip) Li",
-  "private": true,
   "type": "module",
   "main": "./engine/src/index.js",
   "exports": {
@@ -49,6 +48,9 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/VIABLE-Learning-Lab/viable.git"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "entities": "^9.0.0",

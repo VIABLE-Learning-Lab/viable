@@ -1,6 +1,6 @@
 # The xAPI profile for learning events
 
-> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+> Commands here say `viable-harness`, from `npm i -g @viable-lab/harness`; or put `npx @viable-lab/harness` in its place.
 
 Schools' learning record stores (LRSs) read xAPI. `toStatements(record, { homePage, activityBase,
 includeText })` in `src/xapi.js`, and `viable-harness xapi`, turn one learner's record
@@ -12,7 +12,7 @@ viable-harness xapi record.json --home-page https://school.example.org [--activi
 ```
 
 ```js
-import { toStatements } from '@viable-lab/engine/harness/xapi.js'; // npm i github:VIABLE-Learning-Lab/viable
+import { toStatements } from '@viable-lab/harness/xapi.js'; // npm i @viable-lab/harness
 const statements = toStatements(record, { homePage: 'https://school.example.org' });
 ```
 

@@ -9,7 +9,7 @@ You know how to write the code. What you can't see from here is the room: thirty
 address, a shared Chromebook, a quiz whose answers are one View Source away, a tutor that does the homework, a key the class can
 spend. Hold to this, in order, and say it in plain words: the person you are helping may never have read code.
 
-> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place.
+> Commands here say `viable-harness`, from `npm i -g @viable-lab/harness`; or put `npx @viable-lab/harness` in its place.
 
 ## 1. Ask before you build
 

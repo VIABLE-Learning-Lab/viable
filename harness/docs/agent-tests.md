@@ -1,6 +1,6 @@
 # Agent tests
 
-> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+> Commands here say `viable-harness`, from `npm i -g @viable-lab/harness`; or put `npx @viable-lab/harness` in its place.
 
 An agent test is a case written from what a teacher or builder wants: a learner's message, what a good reply does,
 and what it must not do. The message can be a short conversation. Each case runs through the agent, and a judge

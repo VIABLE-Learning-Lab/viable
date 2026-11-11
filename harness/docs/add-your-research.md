@@ -90,9 +90,9 @@ One file, in plain sentences. Each piece says which moments it is for: `attempt`
 If you have Node installed, the first line makes the folder, the second writes an activity's settings to try it on (any teacher's settings will do), and the third shows what a model is told with your file and without it:
 
 ```sh
-npx github:VIABLE-Learning-Lab/viable component new your-lab/your-framework
+npx @viable-lab/harness component new your-lab/your-framework
 echo '{ "goal": "Add fractions with unlike denominators.", "help": "hint" }' > activity.json
-npx github:VIABLE-Learning-Lab/viable component try your-framework/manifest.json --teaching activity.json --message "i got 2/5"
+npx @viable-lab/harness component try your-framework/manifest.json --teaching activity.json --message "i got 2/5"
 ```
 
 ```text

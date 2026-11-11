@@ -5,7 +5,7 @@ deploy it. `try` opens real learner pages with six example courses and a panel t
 replied, using scripted replies or your own model.
 
 ```sh
-npx github:VIABLE-Learning-Lab/viable
+npx @viable-lab/engine
 ```
 
 Or, in a clone, `viable-engine try`, with a package or an agent file if you have one. It opens a page on

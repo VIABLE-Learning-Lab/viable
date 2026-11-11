@@ -51,7 +51,7 @@ viable-harness conformance [suite]
 viable-harness mcp
 ```
 
-Run any command with `npx github:VIABLE-Learning-Lab/viable <command>` in place of `viable-harness` or `viable-engine`, or from a clone
+Run any command with `npx @viable-lab/engine <command>` in place of `viable-harness` or `viable-engine`, or from a clone
 with `node engine/bin/viable-engine.mjs <command>`.
 
 - **run**: a `.viable.zip` (a course downloaded with its files) runs as it is: its files are read from
@@ -124,7 +124,7 @@ and `suggest` what the server kept, and `viable-engine forget <code> --data-dir 
 ## From code
 
 ```js
-import { runAgent, validateDocument, measureLearner, teachingContext, SKILLS } from '@viable-lab/engine'; // npm i github:VIABLE-Learning-Lab/viable
+import { runAgent, validateDocument, measureLearner, teachingContext, SKILLS } from '@viable-lab/engine'; // npm i @viable-lab/engine
 
 const result = await runAgent(agentFile, { input: 'Help me start', teaching, model: 'llama3.1', baseUrl: 'http://localhost:11434/v1' });
 result.output.text;   // the reply

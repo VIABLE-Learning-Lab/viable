@@ -5,7 +5,7 @@ description: Compute one learner's measures from VIABLE learning events and turn
 
 # Reading learning evidence
 
-> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+> Commands here say `viable-harness`, from `npm i -g @viable-lab/harness`; or put `npx @viable-lab/harness` in its place.
 
 The harness computes the research export's learner measures from one learner's learning events and
 turns (`schemas/learning-events.schema.json`): messages, sessions, think time, revision, pasting,

@@ -23,7 +23,7 @@ intelligence. It doesn't know the goal, how much help is right today, or what th
 | A class to teach | To say what you're teaching and use it today, with nothing to install | **[VIABLE Learning Platform](https://www.viablelearning.org)** | Hosted, and not in this repository |
 | An AI agent or an education product | It to know how to teach, whatever it's built on | **[VIABLE Harness](harness/README.md)** | `npx skills add VIABLE-Learning-Lab/viable --skill teaching-with-viable` |
 | A coding agent, and an idea for something learners will use | It to know what a classroom needs while it builds | **[VIABLE Harness, for builders](harness/docs/for-builders.md)** | `npx skills add VIABLE-Learning-Lab/viable --skill building-for-learners` |
-| A school, a library or a lab, and your own server | AI tutors, courses and class lists you run yourself, on any model | **[VIABLE Engine](engine/README.md)** | `npx github:VIABLE-Learning-Lab/viable start` |
+| A school, a library or a lab, and your own server | AI tutors, courses and class lists you run yourself, on any model | **[VIABLE Engine](engine/README.md)** | `npx @viable-lab/engine start` |
 | A course or an agent on the Developer Platform | To move it to your own server | **[VIABLE Engine](engine/README.md#from-the-viable-developer-platform)** | Download it as a package, then add it |
 | A study to run, or a workflow to build by drawing it | A visual editor, consent, a research export, with nothing to host | **[VIABLE Developer Platform](https://developers.viablelab.org)** | Hosted |
 | A research method: guidance, a way to check or rate replies, a detector | Teachers' AIs to use it, with your citation | **[A component](harness/docs/components.md)** | [Add your research](harness/docs/add-your-research.md) |
@@ -35,12 +35,12 @@ Engine in it. Both are in this repository, and each installs on its own.
 ## See it work
 
 ```sh
-npx github:VIABLE-Learning-Lab/viable
+npx @viable-lab/engine
 ```
 
 No key, nothing to set up. It opens a real course on your computer with a panel beside it, showing what the AI was given
 before it wrote a word. Without a key the model's words are scripted, and it says so
-([more](engine/docs/try.md)). It keeps nothing. `npx github:VIABLE-Learning-Lab/viable start` is the real thing: your own server,
+([more](engine/docs/try.md)). It keeps nothing. `npx @viable-lab/engine start` is the real thing: your own server,
 set up in the browser.
 
 <p align="center">
@@ -87,9 +87,9 @@ The same documents, easier to read, with [how it works](https://developers.viabl
 
 ## Status
 
-Version 0.3, a preview. What each README describes is built and tested. Not yet: the packages on npm (until then, clone this
-repository and use `harness/bin/viable-harness.mjs` and `engine/bin/viable-engine.mjs`), a real deploy to each cloud, and an
-LTI 1.3 connection for school learning management systems. The formats, the command lines and the functions follow semantic
+Version 0.4, a preview, on npm as [`@viable-lab/harness`](https://www.npmjs.com/package/@viable-lab/harness) and
+[`@viable-lab/engine`](https://www.npmjs.com/package/@viable-lab/engine). What each README describes is built and tested. Not
+yet: a real deploy to each cloud, and an LTI 1.3 connection for school learning management systems. The formats, the command lines and the functions follow semantic
 versioning ([CHANGELOG](CHANGELOG.md)).
 
 ## Contributing

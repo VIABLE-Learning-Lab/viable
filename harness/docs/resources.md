@@ -1,6 +1,6 @@
 # Resources: from a public good to your agent
 
-> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+> Commands here say `viable-harness`, from `npm i -g @viable-lab/harness`; or put `npx @viable-lab/harness` in its place.
 
 How a public dataset or benchmark becomes something the Harness runs. A connector, a
 small file of code, downloads a pinned version from its makers and turns it into test cases, a judge, a

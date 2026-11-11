@@ -1,6 +1,6 @@
 # Edu-ConvoKit
 
-> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+> Commands here say `viable-harness`, from `npm i -g @viable-lab/harness`; or put `npx @viable-lab/harness` in its place.
 
 [Edu-ConvoKit](https://github.com/EduNLP/edu-convokit), from Rose E. Wang and Dorottya Demszky at Stanford, annotates
 conversations in education: who talks how much, how much math is in the talk, where students reason, where teachers ask

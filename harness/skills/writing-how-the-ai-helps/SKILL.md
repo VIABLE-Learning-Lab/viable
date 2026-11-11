@@ -5,7 +5,7 @@ description: Turn a teacher's intent for one activity into VIABLE teaching setti
 
 # Writing How the AI helps
 
-> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+> Commands here say `viable-harness`, from `npm i -g @viable-lab/harness`; or put `npx @viable-lab/harness` in its place.
 
 Teaching settings are one activity's instructions from its teacher. The harness adds them to every
 step that writes a reply, and to VETTING's reviewer; `watch_for` stays with the teacher and never
@@ -77,7 +77,7 @@ show what the agent does.
      learners work toward, and build the standard as VIABLE does:
 
      ```js
-     import { SKILLS } from '@viable-lab/engine/harness'; // npm i github:VIABLE-Learning-Lab/viable
+     import { SKILLS } from '@viable-lab/harness'; // npm i @viable-lab/harness
 
      // code: an indicator's code, such as CT.2.2; level: 1 to 4 (SKILLS.levels).
      function skillStandard(code, level) {

@@ -1,6 +1,6 @@
 # Guidance template
 
-> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+> Commands here say `viable-harness`, from `npm i -g @viable-lab/harness`; or put `npx @viable-lab/harness` in its place.
 
 What your research says a tutor should do, as a file. There is nothing to host and nothing to run, and no
 learner's data reaches you. Anyone can add it to what a teacher decided for an activity, and from then on

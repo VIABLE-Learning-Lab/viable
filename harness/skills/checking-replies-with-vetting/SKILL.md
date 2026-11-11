@@ -5,7 +5,7 @@ description: Check an AI reply with VETTING before a learner sees it, with the c
 
 # Checking replies with VETTING
 
-> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+> Commands here say `viable-harness`, from `npm i -g @viable-lab/harness`; or put `npx @viable-lab/harness` in its place.
 
 VETTING (Li, Zhang & Botelho, 2026) has a second model review each reply with rules the reply model
 never sees, so a learner can't talk the reviewer out of them. It reads the reply and nothing the

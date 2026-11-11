@@ -4,7 +4,7 @@ What the Harness guarantees, checked on every case, and how well its rules read,
 from. It calls no model and reaches no network, so anyone gets the same numbers in under a second:
 
 ```sh
-npx github:VIABLE-Learning-Lab/viable scorecard
+npx @viable-lab/harness scorecard
 ```
 
 <p align="center">

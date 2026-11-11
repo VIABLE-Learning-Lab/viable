@@ -1,6 +1,6 @@
 # Building for learners
 
-> Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
+> Commands here say `viable-harness`, from `npm i -g @viable-lab/harness`; or put `npx @viable-lab/harness` in its place.
 
 Teachers and researchers now build classroom tools by describing them to a coding agent, which writes the code without seeing
 the room. The room is thirty children opening this at 9:05 from one school address, a shared Chromebook, a quiz whose
@@ -53,7 +53,7 @@ never tell me it is safe or that it complies with a law.
 **On a project you already have**, a coding agent's or your own:
 
 ```sh
-npx github:VIABLE-Learning-Lab/viable review ./my-app
+npx @viable-lab/harness review ./my-app
 ```
 
 ## What `review` looks for

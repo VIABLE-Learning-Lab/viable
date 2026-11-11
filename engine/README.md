@@ -14,7 +14,7 @@ service. Adding a model turns on the features it supports.
 ## Ten minutes, from nothing to a class
 
 ```sh
-npx github:VIABLE-Learning-Lab/viable start
+npx @viable-lab/engine start
 ```
 
 It keeps everything in `~/.viable-engine`, and opens its console, signed in.
@@ -74,7 +74,7 @@ On the VIABLE Developer Platform, download the course or agent as a package with
 **Courses → From a file**. Or start with it:
 
 ```sh
-npx github:VIABLE-Learning-Lab/viable start course.viable.zip
+npx @viable-lab/engine start course.viable.zip
 ```
 
 | Travels | Stays behind |
