@@ -61,7 +61,7 @@ const FORM = 'activity';
 // How much the AI does, as one scale from the least to the most (HELP_LADDER): each level does what the one before does, and one thing more,
 // named for that thing, with when to use it and what it sounds like. Not set is offered only where it is the choice now.
 const forWhom = (level) => `Use it for ${level.for.charAt(0).toLowerCase()}${level.for.slice(1)} It sounds like “${level.sounds}”`;
-function ladderPart(current) {
+function ladderPart(current, ladder = null) {
   const set = current || '';
   const stop = (level) => `<label class="stop"><input type="radio" name="teaching.help" value="${level.id}" form="${FORM}"${level.id === set ? ' checked' : ''}><span class="dot" aria-hidden="true"></span><span class="name">${esc(level.name)}</span></label>`;
   const says = (level) => `<div class="ladder-says" data-show-when="teaching.help=${level.id}" data-form="${FORM}"${level.id === set ? '' : ' hidden'}><p><strong>${esc(level.name)}.</strong> ${esc(level.adds)}</p><p class="v-note">${esc(forWhom(level))}</p></div>`;
@@ -69,6 +69,9 @@ function ladderPart(current) {
 <div class="ladder-scale"><span class="end" aria-hidden="true">Less</span><div class="stops">${HELP_LADDER.map(stop).join('')}</div><span class="end" aria-hidden="true">More</span></div>
 ${set ? '' : `<label class="unset"><input type="radio" name="teaching.help" value="" form="${FORM}" checked><span>Not set: the AI’s own instructions decide</span></label>`}
 ${HELP_LADDER.map(says).join('')}
+<div class="ladder-steps" data-show-when="teaching.help=step_up" data-form="${FORM}"${set === 'step_up' ? '' : ' hidden'}>
+<label class="toggle"><input type="checkbox" name="teaching.ladder" form="${FORM}"${ladder ? ' checked' : ''}><span><strong>Hold each step by counting tries</strong><small>A question before any try, a hint after one try, a worked example after two. Code counts the tries and decides each turn’s step before the AI writes, so the AI only words it. With a question open, a try is an answer the page has checked. Off, the AI judges for itself when each step has come.</small></span></label>
+</div>
 <p class="v-note">At every level it says so when a learner has it, and with a question open, an AI with a reviewer never gives that question’s answer.</p>
 <p class="v-note ladder-changes">What this changes: one paragraph of what the AI is told with every message (it lights up beside these settings) and what its reviewer holds a reply to. Not the AI, and not its steps.</p>
 </fieldset>`;
@@ -455,7 +458,7 @@ ${flowBlock({ doc, code, activity, api, locked, version: meta.version, hasAi: Bo
 <h2 id="help-title" class="sr">How the AI helps</h2>
 ${agent ? `<div class="fields">
 ${text('teaching.goal', 'Goal', activity.teaching?.goal, { rows: 2, maxlength: 1000, form: FORM, placeholder: 'e.g. Explain each step of a two-step word problem in their own words.', hint: 'What learners should be able to do by the end.' })}
-${ladderPart(activity.teaching?.help)}
+${ladderPart(activity.teaching?.help, activity.teaching?.ladder ?? null)}
 ${speaksUpPart(activity, flowOf(doc, activity))}
 ${text('teaching.role', 'Who the AI is here', activity.teaching?.role, { rows: 2, maxlength: 600, form: FORM, placeholder: 'e.g. A friendly skeptic who asks for evidence', hint: 'Optional. A role gives a conversation a reason: a skeptic, a beginner to teach, someone in a scene.' })}
 </div>` : ''}
@@ -654,6 +657,7 @@ const ACTIVITY_CSS = `.act-tabs{display:flex;gap:4px;margin:18px 0 6px;border-bo
 .unset{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.875rem}
 .ladder-says{padding:12px 14px;border-radius:var(--radius-sm);background:var(--field-mist)}
 .ladder-says[hidden]{display:none}
+.ladder-steps{margin-top:12px}
 .ladder-says p{margin:0;color:var(--public-text);line-height:1.5}
 .ladder-says p+p{margin-top:4px}
 .ladder-says strong{color:var(--public-ink);font-weight:600}
@@ -902,7 +906,7 @@ function applyForm(activity, body, doc) {
     return [id, { help: entry.help, note: entry.note, ...(speaks ? { speaks_up: speaks } : {}) }];
   }));
   const reviewer = teaching.reviewer_reads === undefined ? activity.teaching?.reviewer_reads : teaching.reviewer_reads;
-  withTeaching(activity, { ...(teaching.role !== undefined ? { role: teaching.role } : {}), ...(teaching.goal !== undefined ? { goal: teaching.goal } : {}), help: teaching.help === undefined ? activity.teaching?.help ?? null : teaching.help || null, ...(teaching.watch_for !== undefined ? { watch_for: teaching.watch_for } : {}), tools_off: teaching.tools_off ?? activity.teaching?.tools_off ?? [], turn_brief: teaching.turn_brief === false ? false : undefined, defaults: teaching.defaults === false ? false : undefined, ...(sections ? { sections } : {}), speaks_up: speaksUp || null, reviewer_reads: reviewer || null });
+  withTeaching(activity, { ...(teaching.role !== undefined ? { role: teaching.role } : {}), ...(teaching.goal !== undefined ? { goal: teaching.goal } : {}), help: teaching.help === undefined ? activity.teaching?.help ?? null : teaching.help || null, ...(teaching.watch_for !== undefined ? { watch_for: teaching.watch_for } : {}), tools_off: teaching.tools_off ?? activity.teaching?.tools_off ?? [], turn_brief: teaching.turn_brief === false ? false : undefined, defaults: teaching.defaults === false ? false : undefined, ...(teaching.ladder === undefined ? {} : { ladder: teaching.ladder ? (activity.teaching?.ladder && activity.teaching.ladder !== true ? activity.teaching.ladder : true) : false }), ...(sections ? { sections } : {}), speaks_up: speaksUp || null, reviewer_reads: reviewer || null });
   if (body.voice_on !== undefined) activity.voice = { ...activity.voice, input: body.voice_on };
   if (body.images_on !== undefined || body.files_on !== undefined) activity.attachments = { ...activity.attachments, ...(body.images_on !== undefined ? { images: body.images_on } : {}), ...(body.files_on !== undefined ? { files: body.files_on } : {}) };
   const opens = body.release === 'scheduled' ? body.opens_at : null;

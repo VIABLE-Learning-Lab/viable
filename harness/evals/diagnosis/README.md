@@ -20,7 +20,8 @@ No learner is involved in any of them. They measure whether a name or a predicti
 | 3. On MalruleLib's own task | Its 12,706 pairs, of which 779 are in scope. 200 of them put to models | `gemma-4-31b-it`, `gpt-oss-120b` |
 
 Every answer a model gave is in [`runs/`](runs/), by case and by pair, so the commands below print the tables again
-without a model. Set `OPENAI_BASE_URL` and `OPENAI_API_KEY` and leave out `--out` to ask again.
+without a model: with no key set, they only read the kept answers. Set `OPENAI_BASE_URL` and `OPENAI_API_KEY` to have a
+model answered again, and the new answers are added to the file `--kept` names.
 
 ## 1. Code against a model asked the same question
 
@@ -29,7 +30,7 @@ procedures to choose from, the same labels. Code computes. Each model is shown t
 the list, and told to work a procedure through before choosing it, or to answer "none".
 
 ```sh
-node evals/diagnosis/ask-a-model.mjs --models gpt-6-luna,gpt-oss-120b,gemma-4-31b-it --out evals/diagnosis/runs/asked.jsonl
+node evals/diagnosis/ask-a-model.mjs --models gpt-6-luna,gpt-oss-120b,gemma-4-31b-it --kept evals/diagnosis/runs/asked.jsonl
 ```
 
 | | Names the labelled procedure | Names another | Gives a slip a procedure |
@@ -104,7 +105,7 @@ A procedure that is code can do this directly: name the procedure behind the fir
 problem ([`applyProcedure`](../../src/diagnose.js)). Of their 12,706 pairs, 779 have both problems in scope.
 
 ```sh
-node evals/diagnosis/predict-next.mjs malrulelib/data/experiment_pairs.csv --models gemma-4-31b-it,gpt-oss-120b --sample 200 --out evals/diagnosis/runs/predicted.jsonl
+node evals/diagnosis/predict-next.mjs malrulelib/data/experiment_pairs.csv --models gemma-4-31b-it,gpt-oss-120b --sample 200 --kept evals/diagnosis/runs/predicted.jsonl
 ```
 
 On every pair in scope, code predicts the next answer exactly on 62.5% of the 504 same-template pairs and 40.0% of the

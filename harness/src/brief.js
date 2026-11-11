@@ -12,7 +12,7 @@ import { searchTerms } from './utils/terms.js';
 import { SPEAK_UP, speakUpMove, speaksUpOf } from './speakUp.js';
 import { answerReached, learnerWords } from './checks/answerReached.js';
 import { similarProblem } from './examples.js';
-import { turnAct } from './policy.js';
+import { ACT_LINE, turnAct } from './policy.js';
 import { diagnose } from './diagnose.js';
 
 export const BRIEF_LIMITS = { misconceptions: 2, components: 2, prior: 1, guidance: 2, candidates: 40, turns: 4, turnChars: 500, messageChars: 1000, learnerTurns: 30, learnerChars: 200, pickMs: 15000 };
@@ -79,10 +79,13 @@ const saidBefore = (history, index, task = false) => { for (let i = index - 1; i
 /** How many times the learner has tried, in the conversation so far. task: the activity has a problem on the page. */
 export const triesIn = (history = [], task = false) => history.filter((turn, index) => turn?.role === 'user' && isAttempt(String(turn.content || ''), saidBefore(history, index, task))).length;
 
-/** The moment as the learner's words show it: attempt, asks_answer, stuck, repeated or other. task as triesIn takes it. */
-export function readMoment(message, history = [], task = false) {
+/**
+ * The moment as the learner's words show it: attempt, asks_answer, stuck, repeated or other. task as triesIn takes it.
+ * counted: the tries a host counted itself (a page that checks answers), in place of those in the conversation.
+ */
+export function readMoment(message, history = [], task = false, counted = null) {
   const text = String(message || '');
-  const tries = triesIn(history, task);
+  const tries = Number.isInteger(counted) ? counted : triesIn(history, task);
   const stuck = STUCK.test(text);
   const asks = ASKS_ANSWER.test(text) || (!stuck && PLEA.test(text) && !(/\d/.test(text) && WORKED.test(text)));
   const attempt = !asks && !stuck && isAttempt(text, saidBefore(history, history.length, task));
@@ -136,10 +139,10 @@ const PLAIN_WORDS = [[/\btops?\b/, 'numerator'], [/\bbottoms?\b/, 'denominator']
   [/\b(minus|take ?away)\b/, 'subtract subtraction'], [/\bshar(e|es|ed|ing)\b/, 'divide division'], [/\bbigg(er|est)\b/, 'greater larger']];
 const withFormal = (said) => PLAIN_WORDS.reduce((text, [plain, formal]) => (plain.test(text) ? `${text} ${formal}` : text), String(said).toLowerCase());
 
-function pickByWords(candidates, message, history, goal, task = false) {
+function pickByWords(candidates, message, history, goal, task = false, counted = null) {
   const last = [...history].reverse().find((turn) => turn?.role === 'assistant')?.content;
   const terms = new Set(searchTerms(`${withFormal(message)} ${typeof last === 'string' ? last : ''}`));
-  const moment = readMoment(message, history, task);
+  const moment = readMoment(message, history, task, counted);
   return {
     moment,
     // Once they have tried something (an answer, or again), what the teacher listed and no word points at still goes, a few at a
@@ -161,7 +164,7 @@ The word for each learner message is one of: attempt (it offers an answer or wor
 const numbered = (items) => items.map((item, index) => `${index + 1}. ${item.description}`).join('\n') || '(none)';
 const chosenFrom = (items, numbers, limit) => unique((Array.isArray(numbers) ? numbers : []).filter((n) => Number.isInteger(n) && n >= 1 && n <= items.length).map((n) => items[n - 1])).slice(0, limit);
 
-async function pickByModel(candidates, message, history, { call, model }, task = '') {
+async function pickByModel(candidates, message, history, { call, model }, task = '', counted = null) {
   const said = history.slice(-BRIEF_LIMITS.turns).map((turn) => `${turn.role === 'user' ? 'Learner' : 'Tutor'}: ${String(turn.content ?? '').slice(0, BRIEF_LIMITS.turnChars)}`);
   // Every learner message, short, so the model can say of each whether it was a try: counting them is then code's.
   const theirs = [...history.filter((turn) => turn?.role === 'user').map((turn) => String(turn.content ?? '')), String(message)].slice(-BRIEF_LIMITS.learnerTurns);
@@ -183,8 +186,8 @@ async function pickByModel(candidates, message, history, { call, model }, task =
     if (!picked) throw new Error('The picker gave no JSON.');
     // The model says what each message was and code counts: tries are the earlier attempts, and two of them make this one "repeated".
     const labels = Array.isArray(picked.learner) && picked.learner.length === theirs.length && picked.learner.every((label) => LABELS.includes(label)) ? picked.learner : null;
-    const tries = labels ? labels.slice(0, -1).filter((label) => label === 'attempt').length : triesIn(history, Boolean(task));
-    const now = labels ? labels.at(-1) : Object.hasOwn(MOVES, picked.moment) || picked.moment === 'other' ? picked.moment : readMoment(message, history, Boolean(task));
+    const tries = Number.isInteger(counted) ? counted : labels ? labels.slice(0, -1).filter((label) => label === 'attempt').length : triesIn(history, Boolean(task));
+    const now = labels ? labels.at(-1) : Object.hasOwn(MOVES, picked.moment) || picked.moment === 'other' ? picked.moment : readMoment(message, history, Boolean(task), counted);
     return {
       moment: tries >= 2 && ['attempt', 'asks_answer', 'stuck', 'repeated'].includes(now) ? 'repeated' : now === 'repeated' ? 'attempt' : now,
       tries,
@@ -211,14 +214,19 @@ async function pickByModel(candidates, message, history, { call, model }, task =
  * question and answer: the problem the learner is on and its key, where the activity has them. They never go into the
  * text. With them code works out whether the learner has the answer (reached), which faulty procedure gives their wrong
  * answer (diagnosis), and, for a level with a ladder, the act this turn gets (act).
+ * tries and reached: what a host knows from its own record, where it has one (a page that checks answers knows how many
+ * were checked for this problem, and whether the last was right). They take the place of what code reads from the
+ * conversation, which may hold tries at an earlier problem.
  */
-export async function turnBrief(teaching, { message = '', history = [], section = null, picker = null, extra = [], event = null, question = '', answer = '' } = {}) {
+export async function turnBrief(teaching, { message = '', history = [], section = null, picker = null, extra = [], event = null, question = '', answer = '', tries: counted = null, reached: known = null } = {}) {
   const taught = teachingContext(teaching, section);
   if (!taught) return null;
   const settings = taught.context;
   const said = typeof message === 'string' ? message : '';
   const turns = Array.isArray(history) ? history : [];
   const candidates = candidatesOf(settings, said, extra);
+  // A host's own count of tries at this problem, where it gave one.
+  const given = Number.isInteger(counted) && counted >= 0 ? counted : null;
   // The page set a problem when the activity has a question, so a first message can be an answer to it.
   const task = Boolean(String(question || '').trim());
   let picked;
@@ -228,15 +236,15 @@ export async function turnBrief(teaching, { message = '', history = [], section 
   const first = event && Object.hasOwn(SPEAK_UP, event) ? event : null;
   if (picker?.call && picker.model && !first) {
     try {
-      picked = await pickByModel(candidates, said, turns, picker, String(question || '').trim());
+      picked = await pickByModel(candidates, said, turns, picker, String(question || '').trim(), given);
       by = 'model';
     } catch (error) {
       pickerError = String(error?.message || error).slice(0, 300);
     }
   }
-  picked ||= pickByWords(candidates, said, turns, settings.goal, task);
+  picked ||= pickByWords(candidates, said, turns, settings.goal, task, given);
   if (first) picked = { ...picked, moment: first, guidance: [] };
-  const tries = picked.tries ?? triesIn(turns, task);
+  const tries = given ?? picked.tries ?? triesIn(turns, task);
   // The teacher's sentence for the goal, standard, limit and note, without the lists a turn chooses from.
   const standard = settings.standard ? { ...settings.standard, learning_components: [], prior: [] } : null;
   const base = teachingContext({ role: settings.role, goal: settings.goal, help: settings.help, standard, tools_off: settings.tools_off, sections: settings.note && section ? { [section]: { note: settings.note } } : undefined }, section);
@@ -245,12 +253,12 @@ export async function turnBrief(teaching, { message = '', history = [], section 
   // What code can know that the model would otherwise guess: whether they have the answer, and what this turn gets.
   const keyed = Boolean(String(answer || '').trim());
   const has = keyed && !first ? answerReached({ answer, question, said: learnerWords([...turns, { role: 'user', content: said }]) }) : null;
-  const act = first ? null : turnAct({ help: settings.help, ladder: teachingSettings(teaching)?.ladder ?? null, moment: picked.moment, tries, reached: Boolean(has?.now), stuck: picked.stuck ?? (STUCK.test(said) && !ASKS_ANSWER.test(said)), sure: Boolean(has?.checkable), example: task ? similarProblem(question)?.text ?? null : null });
+  const act = first ? null : turnAct({ help: settings.help, ladder: teachingSettings(teaching)?.ladder ?? null, moment: picked.moment, tries, reached: known === true || Boolean(has?.now), stuck: picked.stuck ?? (STUCK.test(said) && !ASKS_ANSWER.test(said)), sure: typeof known === 'boolean' || Boolean(has?.checkable), example: task ? similarProblem(question)?.text ?? null : null });
   // A wrong answer that a known faulty procedure gives exactly: said as what their answer shows, not as a guess.
-  const found = keyed && !first && !has?.reached && ['attempt', 'repeated'].includes(picked.moment) ? diagnose({ question, said }) : null;
+  const found = keyed && !first && known !== true && !has?.reached && ['attempt', 'repeated'].includes(picked.moment) ? diagnose({ question, said }) : null;
   const lines = [
     ...(move ? [`Right now: ${move}${flag ? ' Tell them it is normal to find this hard, and that their teacher can help too.' : ''}`] : []),
-    ...(act ? [`For this turn, decided from what they have done so far (it isn’t yours to change): ${act.text}`] : []),
+    ...(act ? [`${ACT_LINE}${act.text}`] : []),
     ...(found ? [`What their answer shows: it is what you get if you ${found.does}${found.also ? `, or if you ${found.also[0].does}` : ''}. Don’t tell them so: help them see it.`] : []),
     ...(picked.misconceptions.length ? [`What may be behind it, only if it fits what they did:\n${picked.misconceptions.map((item) => `- ${item.description}`).join('\n')}`] : []),
     ...(picked.components.length ? [`The part of the skill in play:\n${picked.components.map((item) => `- ${item.description}`).join('\n')}`] : []),
@@ -267,7 +275,7 @@ export async function turnBrief(teaching, { message = '', history = [], section 
     tries,
     flag,
     ...(act ? { act: { act: act.act, tries: act.tries, ...(act.example ? { example: act.example } : {}) } } : {}),
-    ...(has?.checkable ? { reached: has.reached } : {}),
+    ...(typeof known === 'boolean' || has?.checkable ? { reached: known === true || Boolean(has?.reached) } : {}),
     ...(found ? { diagnosis: { id: found.id, does: found.does, ...(found.also ? { also: found.also.map((item) => item.id) } : {}) } } : {}),
     misconceptions: picked.misconceptions,
     components: picked.components,

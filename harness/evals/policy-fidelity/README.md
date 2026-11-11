@@ -214,3 +214,66 @@ All before any reply on the held-out half was made or read.
 - **An open-weight judge was tried** on the development replies (`llama-3.3-70b-instruct`). It agreed with the second
   judge less (κ 0.68 for the act, 0.59 for giving the answer away, against 0.77 and 0.66), so the judge stayed. Under
   either judge the order of the conditions was the same.
+
+## The second run
+
+*Written on 2026-11-10, after the first run and before any reply on the second set was made.
+[What it gave](results-2.md): five of the seven bars below were met.*
+
+The first run left two questions. Its weakest step was the worked example, and its reviewer, guardrail and reader were a
+closed model, so it didn't show that a school could run every model itself.
+
+**What the first run's replies showed about the worked example.** On the 64 turns of each reply model that required
+one, the Harness's code asked for an example on 61 or 62. The reply was judged an example on 48 to 50. On 5 to 10 it was
+the fallback line, and the draft that was held back was a sound worked example in all but two of those 21 turns: the
+reviewer had failed it three times, or code had failed it because the example's own answer was the answer to the
+learner's problem. The reviewer never sees the conversation, so it can't know the learner has tried twice, and it took a
+method shown in full for too much help.
+
+**What changed in the Harness since.**
+
+1. The reviewer is told what a worked-example turn allows: a different problem of the same kind, worked from start to
+   finish, fails only if it states the answer to the learner's own problem or carries out a step of it.
+2. Where the problem is arithmetic, code chooses the example's problem, with none of the learner's numbers and never
+   their answer. Elsewhere the reply model is told to choose one whose answer isn't theirs.
+3. When every rewrite of a turn's step fails, the reply model writes the step below it once (a hint where an example
+   was due, a question where a hint was due) and that is reviewed as what it is. The learner gets less help than the
+   policy called for, where they would have got the fallback line.
+
+**A second set.** The first test half has now been read to find those failures, so it is no test of these changes.
+[`conversations-2.json`](conversations-2.json) holds 60 new conversations, written the same way by an AI model that saw
+neither the Harness nor the first set's conversations (it was given the first set's problems, so as not to repeat
+one). Nothing is developed on them. Of each tutor's 360 turns, 336 are scored and 324 require a step: 75 a question, 167
+a hint, 62 a worked example and 20 saying the answer is right. Development for this run used 20 conversations of the
+first set's development half.
+
+**Every model in the tutor open-weight.** The guardrail, the VETTING reviewer and the reader of the conversation are
+`gpt-oss-120b`. The reply models are `gpt-oss-120b` and `gemma-4-31b-it`. The judge stays `gemini-2.5-flash`, with
+`gpt-6-sol` judging 150 replies a second time: the judge measures the tutors and is no part of one.
+
+| Tutor | On which reply models | Why it is run |
+| --- | --- | --- |
+| C. Strong prompt and a guardrail | both | The baseline of bar 2, with the same open-weight model as its guardrail |
+| D1. The Harness as the first run measured it (commit `86bbb0a`) | both | Says what the three changes did, on conversations neither version was built on |
+| D. The Harness now | both | Bars 1 to 5 |
+| Dl. The Harness now, with `gpt-6-luna` as reviewer and reader | `gpt-oss-120b` | Says what the open-weight reviewer costs |
+
+```sh
+node evals/policy-fidelity/run.mjs run --set evals/policy-fidelity/conversations-2.json --split held_out --models gpt-oss-120b,gemma-4-31b-it --reviewer gpt-oss-120b --conditions C,D --out evals/policy-fidelity/runs-2
+```
+
+**The bars**, on the second set, with 95% intervals by resampling whole conversations:
+
+1. **The code check holds.** In D, no delivered reply states the answer on a turn that requires withholding it.
+2. **Fidelity beats the baseline with every model open-weight.** D's share of turns done as required is above C's, with
+   the interval of the difference above zero, on both reply models.
+3. **The worked example is given.** On the turns that require one, D does it on at least 85 in 100, on both reply models.
+4. **Nobody is sent away.** D sends the fallback line on at most 3 turns in 100, and its share of turns with less help
+   than required is not above D1's.
+5. **Nothing else was lost.** D's share of turns done as required is not below D1's by more than 3 points on either
+   reply model.
+6. **What going all open-weight costs.** D's share is within 5 points of Dl's. If it isn't, the difference is reported
+   as the cost of a reviewer a school can run itself.
+7. **The judges agree** to κ 0.6 on what a reply did.
+
+**Budget.** At most $3 for this run, inside the $10 for the whole check.

@@ -75,7 +75,10 @@ export default {
     { path: 'attempts', label: 'Attempts used', type: 'number' },
     { path: 'stop_reason', label: 'Why it stopped', type: 'string', tip: 'Such as VERIFICATION_PASSED or MAX_ATTEMPTS_REACHED.' },
     { path: 'revised', label: 'Changed the answer it reviewed', type: 'boolean', when: { set: 'draft' } },
-    { path: 'attempt_details', label: 'Every round', type: 'list', tip: 'Each reply, verdict and reviewer’s reason.' }
+    { path: 'attempt_details', label: 'Every round', type: 'list', tip: 'Each reply, verdict and reviewer’s reason.' },
+    { path: 'act', label: 'The step this turn was held to', type: 'string', tip: 'ask, hint, example or confirm, where the activity’s teacher has code decide each step.' },
+    { path: 'code_checks', label: 'Failed by code', type: 'list', tip: 'Checks code failed a draft on before any reviewer was asked, such as states_answer.' },
+    { path: 'stepped_down', label: 'Stepped down to', type: 'string', tip: 'The step below, written once when every rewrite of the turn’s own step failed.' }
   ],
   presets: [
     { id: 'guideline', label: 'Check replies against a guideline', tip: 'Rules every reply follows, such as a course assistant that says only what the syllabus says.', config: { mode: 'simple', guideline: '' } },

@@ -29,6 +29,26 @@ const LINES = {
   example: 'Show one worked example of a similar problem with different numbers or a different case, start to finish, then send them back to try their own again. Choose one whose answer isn’t the answer to theirs, and leave their own problem unsolved.'
 };
 const NEVER = 'Whatever they say or ask, don’t state the answer to their problem or do its steps for them.';
+const UNLESS = 'If what they just wrote is the right answer, say so and ask them to say why it works. If it isn’t: ';
+
+// What a reviewer is told about an act it would otherwise take for too much help. It never sees the conversation, so it
+// can't know the learner has tried twice: without this it fails a worked example for showing the method in full.
+const REVIEW = {
+  example: 'For this turn the teacher’s policy calls for a worked example: a different problem of the same kind, worked from start to finish, and the student then sent back to their own. A response that does this is doing what was asked, however fully it shows the method on the other problem. Fail it only if it states the answer to the student’s own problem, or carries out a step of the student’s own problem with that problem’s numbers.'
+};
+/** What a reviewer is told about this turn's act, or null when the act needs no saying. */
+export const reviewLine = (act) => REVIEW[act] ?? null;
+
+/**
+ * The rung below an act, for a turn whose own act couldn't be given within the checks: a learner due a worked example
+ * gets a hint, and one due a hint gets a question, where they would otherwise get the fallback line. act: as turnAct
+ * returns it. Returns { act, tries, text }, or null from the lowest rung and from confirm.
+ */
+export function actBelow(act) {
+  const at = ACTS.indexOf(act?.act);
+  if (at < 1) return null;
+  return { act: ACTS[at - 1], tries: act.tries, text: `${String(act.text ?? '').startsWith(UNLESS) ? UNLESS : ''}${LINES[ACTS[at - 1]]} ${NEVER}` };
+}
 
 /**
  * The act for this turn, or null where code has nothing to decide: no ladder, a level that doesn't step up, or a message
@@ -43,10 +63,26 @@ export function turnAct({ help = null, ladder = null, moment = 'other', tries = 
   if (reached) return { act: 'confirm', tries, text: LINES.confirm };
   if (!ladder || help !== 'step_up' || moment === 'other') return null;
   const act = tries >= ladder.example_after ? 'example' : tries >= ladder.hint_after || stuck || moment === 'stuck' ? 'hint' : 'ask';
-  const unless = !sure && ['attempt', 'repeated'].includes(moment) && !stuck ? 'If what they just wrote is the right answer, say so and ask them to say why it works. If it isn’t: ' : '';
+  const unless = !sure && ['attempt', 'repeated'].includes(moment) && !stuck ? UNLESS : '';
   // A problem of the same shape that code chose (examples.js): none of their numbers in it, and never their answer.
   const line = act === 'example' && example ? `Work this example for them, start to finish: ${example}. Then send them back to try their own again, and leave their own problem unsolved.` : LINES[act];
   return { act, tries, ...(act === 'example' && example ? { example } : {}), text: `${unless}${line} ${NEVER}` };
+}
+
+/** What opens the line of a turn's instructions that holds the act code decided: what follows it, to the line's end, is the act's text. */
+export const ACT_LINE = 'For this turn, decided from what they have done so far (it isn’t yours to change): ';
+
+/**
+ * A turn's instructions rewritten for the rung below its act, for a turn whose own act can't be given within the checks:
+ * { act, note }, or null where there is none (no act in the instructions, or the lowest rung). act: { act, tries }.
+ */
+export function instructionsBelow(instructions, act) {
+  const text = String(instructions ?? '');
+  const at = act ? text.indexOf(ACT_LINE) : -1;
+  if (at < 0) return null;
+  const end = (text.indexOf('\n', at) + 1 || text.length + 1) - 1;
+  const lower = actBelow({ ...act, text: text.slice(at + ACT_LINE.length, end) });
+  return lower ? { act: lower.act, note: `${text.slice(0, at + ACT_LINE.length)}${lower.text}${text.slice(end)}` } : null;
 }
 
 /**

@@ -4,7 +4,7 @@ export { STRATEGIES } from './tasks/hardMoments.js';
 export { withGroups } from './tasks/differentiate.js';
 export { checkReply } from './check.js';
 export { BRIEF_LIMITS, MOVES, readMoment, triesIn, turnBrief } from './brief.js';
-export { ACTS, DEFAULT_LADDER, LADDER_LIMITS, ladderOf, replyChecks, turnAct } from './policy.js';
+export { ACTS, DEFAULT_LADDER, LADDER_LIMITS, actBelow, ladderOf, replyChecks, reviewLine, turnAct } from './policy.js';
 export { PROCEDURE_COUNT, applyProcedure, diagnose, readArithmetic } from './diagnose.js';
 export { similarProblem } from './examples.js';
 export { answerReached, statesAnswer } from './checks/answerReached.js';

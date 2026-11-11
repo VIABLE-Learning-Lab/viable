@@ -214,6 +214,15 @@ export function keyText(item) {
   return parts.join('\n');
 }
 
+/**
+ * The answers code can look for, bare, for a turn whose step is decided by code (the Harness's policy): a fill-in or short
+ * answer's accepted ones, a single choice's text. Empty where the key is several parts or a model answer, which code can't check.
+ */
+export function keyAnswers(item) {
+  if (item.type === 'single') return [item.choices?.find((entry) => entry.id === item.answer.choice)?.text].filter(Boolean);
+  return ['fill', 'short'].includes(item.type) && Array.isArray(item.answer?.accept) ? item.answer.accept.slice(0, 8) : [];
+}
+
 /** The question in words, as the learner sees it (no key), for what the AI is shown. */
 export function questionText(item) {
   const lines = [item.prompt];

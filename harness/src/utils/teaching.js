@@ -147,24 +147,26 @@ function sectionsOf(value) {
 }
 
 /**
- * A way the AI helps, laid over an activity's own: how much it does (help) and when it writes first (speaks_up, or 'off'
- * for never), each only where set. A section's own settings are one; a study's ways are others (a condition's rule names
+ * A way the AI helps, laid over an activity's own: how much it does (help), whether each step is held by counting tries
+ * (ladder, or 'off' to leave the steps to the AI) and when it writes first (speaks_up, or 'off' for never), each only where set. A section's own settings are one; a study's ways are others (a condition's rule names
  * one). Null when it changes nothing.
  */
 export function wayOf(value) {
   if (!value || typeof value !== 'object') return null;
   const help = Object.hasOwn(HELP_LEVELS, value.help) ? value.help : null;
   const speaks = value.speaks_up === 'off' ? 'off' : speaksUpOf(value.speaks_up);
-  return help || speaks ? { help, speaks_up: speaks } : null;
+  const ladder = value.ladder === 'off' ? 'off' : ladderOf(value.ladder);
+  return help || speaks || ladder ? { help, speaks_up: speaks, ...(ladder ? { ladder } : {}) } : null;
 }
 
 /** An activity's settings with a way over them (wayOf): its help level and moments in place of the activity's. */
 export function teachingWith(teaching, way) {
   const over = wayOf(way);
   if (!over) return teachingSettings(teaching);
-  const { speaks_up: _speaks, ...own } = teachingSettings(teaching) || {};
+  const { speaks_up: _speaks, ladder: held, ...own } = teachingSettings(teaching) || {};
   const speaks = over.speaks_up === 'off' ? null : over.speaks_up || teachingSettings(teaching)?.speaks_up || null;
-  return teachingSettings({ ...own, ...(over.help ? { help: over.help } : {}), ...(speaks ? { speaks_up: speaks } : {}) });
+  const ladder = over.ladder === 'off' ? null : over.ladder || held || null;
+  return teachingSettings({ ...own, ...(over.help ? { help: over.help } : {}), ...(ladder ? { ladder } : {}), ...(speaks ? { speaks_up: speaks } : {}) });
 }
 
 /** The settings a learner in a section gets: the section's own moments (and help level) over the activity's. */

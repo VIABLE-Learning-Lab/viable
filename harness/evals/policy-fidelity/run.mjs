@@ -8,6 +8,8 @@
  *   node evals/policy-fidelity/run.mjs judge --judge a-stronger-model --second --sample 150
  *   node evals/policy-fidelity/run.mjs report --split dev
  *
+ * --set evals/policy-fidelity/conversations-2.json runs, judges and reports the second set (with --split held_out and its own --out).
+ *
  * --effort none keeps a judge that reasons out of sight from doing so (it gives a short reason in its answer instead).
  * Everything is kept as lines of JSON under --out (default evals/policy-fidelity/runs), so a run that stops picks up
  * where it was, and anyone can read every reply and every judgment. OPENAI_API_KEY_FILE names a file holding the key.
@@ -19,6 +21,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_FALLBACK, check, checkReply, openAICompatible, prepare, statesAnswer } from '../../src/index.js';
 import { requiredActs } from '../../src/scorecard.js';
+import * as HARNESS from '../../src/index.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(3);
@@ -66,7 +69,11 @@ async function inParallel(items, limit, work) {
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => { while (next < items.length) { const item = items[next]; next += 1; await work(item); } }));
 }
 
-const { conversations } = JSON.parse(readFileSync(join(here, '../../scorecard/tutoring-conversations.json'), 'utf8'));
+// --set names another file of conversations (conversations-2.json, written after the first run): every one of them is a test
+// conversation, since none was there to develop on.
+const conversations = flag('set')
+  ? JSON.parse(readFileSync(flag('set'), 'utf8')).conversations.map((c) => ({ ...c, split: 'held_out' }))
+  : JSON.parse(readFileSync(join(here, '../../scorecard/tutoring-conversations.json'), 'utf8')).conversations;
 
 // The policy, the same words wherever a condition gets one.
 const POLICY = `Count the learner's earlier attempts at this problem (answers or working they offered before their latest message).
@@ -134,11 +141,16 @@ const CONDITIONS = {
   // The Harness with the policy in code: the act for the turn decided from the tries, a reply checked by code and then a reviewer.
   // In D the reviewer's model also says what each learner message was (an answer, a plea, being stuck) and code counts; in Dr rules do.
   D: (given) => CONDITIONS.Dr({ ...given, reads: given.reviewer }),
+  // For the second run. D1 is the Harness as the first run measured it: the same call, made from a checkout of that commit
+  // (README), so it refuses to run on any later code. Dl is D with another reviewer, named on the command line, kept apart
+  // so that the two can be told from each other in one set of runs.
+  D1: (given) => { if ('actBelow' in HARNESS) throw new Error('D1 is run from a checkout of the first run\u2019s commit, 86bbb0a: see the README.'); return CONDITIONS.D(given); },
+  Dl: (given) => CONDITIONS.D(given),
   Dr: async ({ c, model, reviewer, turns, reads = null }) => {
     const turn = await prepare({ teaching: { help: 'step_up', ladder: true }, message: turns.at(-1).content, history: turns.slice(0, -1), question: c.problem, answer: c.answer, ...(reads ? { picker: { call: (_env, request) => ask(request), model: reads } } : {}) });
     const draft = await write(model, `${OWN(c)}\n\n${turn.instructions}`, turns);
     const result = await check({ turn, reply: draft || '(nothing)', model, reviewer, rewrite: REWRITES, services: { callChatModel: (_env, request) => ask(request) } });
-    return { reply: result.passed ? result.reply : DEFAULT_FALLBACK, rewrites: Math.max(0, result.rounds.length - 1), ...(result.passed ? {} : { fallback: true, draft: result.reply || draft }), harness: { moment: turn.moment, by: turn.by, tries: turn.tries, act: turn.act?.act ?? null, diagnosis: turn.diagnosis?.id ?? null, code_checks: result.code_checks ?? [] } };
+    return { reply: result.passed ? result.reply : DEFAULT_FALLBACK, rewrites: Math.max(0, result.rounds.length - 1), ...(result.passed ? {} : { fallback: true, draft: result.reply || draft }), harness: { moment: turn.moment, by: turn.by, tries: turn.tries, act: turn.act?.act ?? null, diagnosis: turn.diagnosis?.id ?? null, code_checks: result.code_checks ?? [], ...(result.stepped_down ? { stepped_down: result.stepped_down } : {}), reasons: result.rounds.filter((round) => !round.passed).map((round) => String(round.feedback ?? '').slice(0, 240)) } };
   }
 };
 
@@ -291,8 +303,10 @@ const COMMANDS = {
     const exactOf = (set) => share(set.filter((row) => row.need.act && row.judged), (row) => fidelity(row.need, row.judged) === 'exact');
     const result = { split, unjudged, models: {} };
     console.log(`# ${split === 'held_out' ? 'Held-out' : 'Development'} half${unjudged ? ` (${unjudged} replies not judged yet)` : ''}\n`);
+    // The tutors by the letters the tables use (the README says what each is).
+    console.log('A plain tutor · B strong prompt · C strong prompt and a guardrail · D0 the Harness as it was · Dr policy in code, read by rules · D policy in code · D1 the Harness as the first run measured it · Dl policy in code, another reviewer\n');
     for (const model of models) {
-      console.log(`## ${model}\n\n| | Conversations | Exact | Too much | Too little | Wrong "right" | States the answer (code) | Gives it away (judge) | Fallback | Model calls a turn |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |`);
+      console.log(`## ${model}\n\n| | Conversations | Exact | Too much | Too little | Wrong "right" | States the answer (code) | Gives it away (judge) | Fallback | Stepped down | Model calls a turn |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |`);
       const by = {};
       for (const condition of conditions) {
         const set = rows.filter((row) => row.run.model === model && row.run.condition === condition);
@@ -301,10 +315,10 @@ const COMMANDS = {
         const hold = set.filter((row) => row.need.withhold);
         const checkable = hold.filter((row) => stated(row).checkable);
         const calls = set.reduce((sum, row) => sum + (row.calls ?? 0), 0) / (set.length || 1);
-        by[condition] = { conversations: new Set(set.map((row) => row.c.id)).size, turns: set.length, exact: exactOf(set), too_much: share(acts, (row) => fidelity(row.need, row.judged) === 'too_much'), too_little: share(acts, (row) => fidelity(row.need, row.judged) === 'too_little'), wrong: share(acts, (row) => fidelity(row.need, row.judged) === 'wrong'), states: share(checkable, (row) => stated(row).stated), states_of: checkable.length, gives_away: share(hold.filter((row) => row.judged), (row) => row.judged.gives_away), fallback: share(set, (row) => Boolean(row.fallback)), calls };
+        by[condition] = { conversations: new Set(set.map((row) => row.c.id)).size, turns: set.length, exact: exactOf(set), too_much: share(acts, (row) => fidelity(row.need, row.judged) === 'too_much'), too_little: share(acts, (row) => fidelity(row.need, row.judged) === 'too_little'), wrong: share(acts, (row) => fidelity(row.need, row.judged) === 'wrong'), states: share(checkable, (row) => stated(row).stated), states_of: checkable.length, gives_away: share(hold.filter((row) => row.judged), (row) => row.judged.gives_away), fallback: share(set, (row) => Boolean(row.fallback)), stepped_down: share(set, (row) => Boolean(row.harness?.stepped_down)), calls };
         const v = by[condition];
         v.by_act = Object.fromEntries(['ask', 'hint', 'example', 'confirm'].map((act) => { const of = acts.filter((row) => row.need.act === act); return [act, { exact: exactOf(of), of: of.length }]; }));
-        console.log(`| ${condition} | ${v.conversations} | ${percent(v.exact)} | ${percent(v.too_much)} | ${percent(v.too_little)} | ${percent(v.wrong)} | ${percent(v.states)} of ${v.states_of} | ${percent(v.gives_away)} | ${percent(v.fallback)} | ${calls.toFixed(2)} |`);
+        console.log(`| ${condition} | ${v.conversations} | ${percent(v.exact)} | ${percent(v.too_much)} | ${percent(v.too_little)} | ${percent(v.wrong)} | ${percent(v.states)} of ${v.states_of} | ${percent(v.gives_away)} | ${percent(v.fallback)} | ${percent(v.stepped_down)} | ${calls.toFixed(2)} |`);
         if (v.fallback) {
           const open = sent.filter((row) => row.run.model === model && row.run.condition === condition);
           const openHold = open.filter((row) => row.need.withhold && row.judged);
@@ -327,7 +341,7 @@ const COMMANDS = {
         const [low, high] = interval(ids, (drawn) => { const a = of(rows, 'D', drawn); const b = of(sent, 'C', drawn); return a == null || b == null ? null : a - b; });
         return { points: by.D.exact - (by.C.sent?.exact ?? by.C.exact), low, high };
       };
-      const beats = { 'D-C': difference('D', 'C'), 'D-C had it sent its last draft': sentDifference(), 'D-D0': difference('D', 'D0'), 'D-B': difference('D', 'B'), 'Dr-C': difference('Dr', 'C'), 'D-Dr': difference('D', 'Dr') };
+      const beats = { 'D-C': difference('D', 'C'), 'D-C had it sent its last draft': sentDifference(), 'D-D0': difference('D', 'D0'), 'D-B': difference('D', 'B'), 'Dr-C': difference('Dr', 'C'), 'D-Dr': difference('D', 'Dr'), 'D-D1': difference('D', 'D1'), 'D-Dl': difference('D', 'Dl') };
       for (const [name, d] of Object.entries(beats)) if (d) console.log(`\nExact, ${name.replace('-', ' minus ')}: ${(d.points * 100).toFixed(1)} points (95% interval ${(d.low * 100).toFixed(1)} to ${(d.high * 100).toFixed(1)})`);
       // Where each condition holds the policy and where it doesn't: the exact share for each act a turn can require.
       console.log(`\n| Exact, by what the turn required | ${['ask', 'hint', 'example', 'confirm'].join(' | ')} |\n| --- | ---: | ---: | ---: | ---: |`);

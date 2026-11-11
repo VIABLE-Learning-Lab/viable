@@ -4,7 +4,10 @@
  * and sees which fits (src/diagnose.js). The model is shown the problem, the learner's answer and the same list of
  * procedures, and picks one or none. Both are scored against the scorecard's labels (scorecard/wrong-answers.json).
  *
- *   OPENAI_BASE_URL=... OPENAI_API_KEY=... node evals/diagnosis/ask-a-model.mjs --models a-model,another [--split held_out] [--out file.jsonl]
+ *   OPENAI_BASE_URL=... OPENAI_API_KEY=... node evals/diagnosis/ask-a-model.mjs --models a-model,another [--split held_out] [--kept file.jsonl]
+ *
+ * --kept names the file of answers already given: they are read from it, and new ones are added to it. With no key set, nothing
+ * is asked and the table is printed from that file alone (--out is the same flag, under its first name).
  */
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { diagnose } from '../../src/diagnose.js';
@@ -15,7 +18,7 @@ const args = process.argv.slice(2);
 const flag = (name, otherwise = null) => { const at = args.indexOf(`--${name}`); return at < 0 ? otherwise : args[at + 1]; };
 const split = flag('split', 'held_out');
 const models = String(flag('models', '')).split(',').filter(Boolean);
-const out = flag('out');
+const out = flag('kept') ?? flag('out');
 const apiKey = process.env.OPENAI_API_KEY_FILE ? readFileSync(process.env.OPENAI_API_KEY_FILE, 'utf8').trim() : process.env.OPENAI_API_KEY;
 const call = openAICompatible({ apiKey });
 
@@ -57,6 +60,7 @@ function paired(named, test) {
   return `${mean(gaps).toFixed(1)} (${drawn[100].toFixed(1)} to ${drawn[3899].toFixed(1)})`;
 }
 const differences = [];
+const notes = [];
 const kept = out && existsSync(out) ? readFileSync(out, 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line)) : [];
 for (const model of models) {
   const named = new Map(kept.filter((item) => item.model === model && item.split === split).map((item) => [item.id, item.named]));
@@ -82,8 +86,10 @@ for (const model of models) {
     }
   }));
   const answered = cases.filter((item) => named.has(item.id)).length;
-  console.log(`${row(`${model}, asked`, score(named))}${answered < cases.length ? ` (${cases.length - answered} unanswered, counted as no name)` : ''}`);
+  console.log(row(`${model}, asked`, score(named)));
+  if (answered < cases.length) notes.push(`${model}: ${cases.length - answered} unanswered, counted as no name.`);
   differences.push(`| Code against ${model} | ${paired(named, labelled)} | ${paired(named, (item, name) => Boolean(name) && !labelled(item, name))} |`);
   if (tokens) console.error(`${model}: ${tokens} tokens`);
 }
+if (notes.length) console.log(`\n${notes.join('\n')}`);
 if (differences.length) console.log(`\n| Points of difference on the same answers (95% interval) | Named as labelled | Named as something else |\n| --- | --- | --- |\n${differences.join('\n')}`);

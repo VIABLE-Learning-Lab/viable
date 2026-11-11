@@ -9,7 +9,7 @@ text{font-family:"Atkinson Hyperlegible Next",ui-sans-serif,system-ui,-apple-sys
 <rect x="40" y="36" width="1120" height="738" rx="16" fill="var(--paper)"/>
 <text x="72" y="80" font-size="20" font-weight="600" class="ink">Where the difference comes from</text>
 <text x="72" y="106" font-size="13" font-weight="400">The share of turns done as required, by the step the policy called for. The test half, as above.</text>
-<circle cx="80" cy="146" r="6" fill="var(--paper)" stroke="var(--muted)" stroke-width="2"/><text x="96" y="151" font-size="13" font-weight="400" class="ink">Strong prompt and a guardrail</text><circle cx="322" cy="146" r="7" fill="var(--right)"/><text x="338" y="151" font-size="13" font-weight="400" class="ink">Harness, policy in code</text>
+<circle cx="80" cy="146" r="6" fill="var(--paper)" stroke="var(--muted)" stroke-width="2"/><text x="96" y="151" font-size="13" font-weight="400" class="ink">Strong prompt and a guardrail</text><circle cx="320.8" cy="146" r="7" fill="var(--right)"/><text x="336.8" y="151" font-size="13" font-weight="400" class="ink">Harness, policy in code</text>
 <text x="400" y="176" font-size="12" font-weight="400" class="muted" text-anchor="middle">0%</text>
 <text x="550" y="176" font-size="12" font-weight="400" class="muted" text-anchor="middle">25%</text>
 <text x="700" y="176" font-size="12" font-weight="400" class="muted" text-anchor="middle">50%</text>

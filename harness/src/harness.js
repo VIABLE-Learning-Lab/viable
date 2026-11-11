@@ -9,6 +9,7 @@
  * No Node built-ins, so it runs wherever fetch does.
  */
 import { checkReply } from './check.js';
+import { instructionsBelow } from './policy.js';
 import { openAICompatible } from './models.js';
 import { readJsonAnswer } from './agentTests.js';
 import { TASKS } from './tasks/index.js';
@@ -62,7 +63,9 @@ export async function prepare({ task = 'tutoring', picker = null, pickerModel = 
 export function check({ turn = null, ...options } = {}) {
   if (!turn) return checkReply(options);
   // The turn's problem and key, and the act code decided for it, so the check holds a reply to them.
-  return checkReply({ message: turn.message ?? '', history: turn.history ?? [], teaching: turn.teaching ?? null, section: turn.section ?? null, ...(turn.answer ? { question: turn.question ?? '', answerKey: turn.answer } : {}), ...(turn.act ? { act: turn.act.act } : {}), ...(turn.instructions ? { note: turn.instructions } : {}), ...options });
+  // The rung below it, in the same instructions, for a turn whose own act can't be given within the checks.
+  const below = instructionsBelow(turn.instructions, turn.act);
+  return checkReply({ message: turn.message ?? '', history: turn.history ?? [], teaching: turn.teaching ?? null, section: turn.section ?? null, ...(turn.answer ? { question: turn.question ?? '', answerKey: turn.answer } : {}), ...(turn.act ? { act: turn.act.act } : {}), ...(turn.instructions ? { note: turn.instructions } : {}), ...(below ? { below } : {}), ...options });
 }
 
 /**
@@ -84,6 +87,7 @@ export async function record({ turn = null, reply = null, result = null, learner
     ...(turn?.diagnosis ? { diagnosis: turn.diagnosis.id } : {}),
     ...(result?.outcome ? { vetting: result.outcome } : {}),
     ...(result?.code_checks?.length ? { code_checks: result.code_checks } : {}),
+    ...(result?.stepped_down ? { stepped_down: result.stepped_down } : {}),
     ...(keepText ? { ...(turn?.message ? { message: turn.message } : {}), ...(reply ?? result?.reply ? { reply: reply ?? result.reply } : {}) } : {})
   };
   const doc = { ...(learner ? { user: learner } : {}), ...(activity ? { activity } : {}), ...(turn?.section ? { learner_group: turn.section } : {}), events: [], turns: [entry] };

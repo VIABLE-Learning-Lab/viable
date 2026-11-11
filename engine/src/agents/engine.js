@@ -25,6 +25,7 @@ import { learnerWords, reachedAmong } from '../../../harness/src/checks/answerRe
 import { readReview, redraftTurns, replyText, reviewMessages, reviewRounds, vettingPromptSet, withLearnerMessage, withTeacher } from '../../../harness/src/checks/vetting.js';
 import { agentVettingControls, reasoningBudget, REVIEW_TOKENS, thinkingBudget, vettingModelOptions } from '../../../harness/src/utils/vettingControls.js';
 import { teacherNote } from '../../../harness/src/utils/teaching.js';
+import { instructionsBelow, replyChecks, reviewLine } from '../../../harness/src/policy.js';
 import { answerStream, citationOf, finalizeCitations, normalizeCitationMarks, SOURCE_STYLES, stripModelSourceList } from './citations.js';
 import { describePictures, loadPictureMemory, pictureScope, rememberPictures, resolvePictureSource } from './pictures.js';
 
@@ -1226,7 +1227,30 @@ const HANDLERS = {
     const readsMessage = !ctx.scope().context?.speaks_first && (cfg.reviewer_reads || (ctx.scope().context?.workspace?.teaching?.reviewer_reads === 'message' ? 'message' : 'reply')) === 'message';
     const said = readsMessage ? learnerWords([{ role: 'user', content: ctx.inputContent }]).join(' ') || null : null;
     const traceSaid = readsMessage ? learnerWords([{ role: 'user', content: ctx.traceInputContent }]).join(' ') || null : null;
-    const [live, trace] = (await Promise.all([prompts(ctx.scope()), prompts(ctx.traceScope())])).map((set) => withTeacher(readsMessage ? withLearnerMessage(set) : set, teaching));
+    // The Harness's policy, where the host's brief decided this turn's step (context.turn_act: the activity has a ladder). Code checks
+    // a draft before the reviewer is asked, the reviewer hears what the step allows, and a step that can't be given within the
+    // checks is written once more as the step below it, in place of an unverified reply. Without turn_act nothing here changes.
+    const act = !ctx.scope().context?.speaks_first && typeof ctx.scope().context?.turn_act?.act === 'string' ? ctx.scope().context.turn_act : null;
+    const accepted = act && full && Array.isArray(ctx.scope().context?.answer_accepts) ? ctx.scope().context.answer_accepts.map(String).filter(Boolean) : [];
+    const asked = act && full ? String(vettingItems(cfg, ctx.scope())[0]?.question?.text ?? '') : '';
+    const failedByCode = [];
+    let drafts = 0;
+    // which: the step the draft is held to. last: the draft after which a soft check no longer holds a reply back.
+    const byCode = (reply, which, last) => {
+      if (!act) return null;
+      drafts += 1;
+      const found = [...new Map((accepted.length ? accepted : ['']).flatMap((answer) => replyChecks({ reply, act: which, question: asked, answer, reached: Boolean(reached?.items?.length) })).filter((item) => !item.passed).map((item) => [item.id, item])).values()];
+      failedByCode.push(...found.map((item) => item.id));
+      const failed = found.filter((item) => !(item.soft && drafts >= last));
+      return failed.length ? { passed: false, verificationOutput: `FAIL (checked by code): ${failed.map((item) => item.tell).join(' ')}`, reason: failed.map((item) => item.tell).join(' ') } : null;
+    };
+    const base = await Promise.all([prompts(ctx.scope()), prompts(ctx.traceScope())]);
+    // The two prompt sets (as run, and as traced) for a teacher's note and the step it holds.
+    const told = (words, which) => base.map((set) => {
+      const made = withTeacher(readsMessage ? withLearnerMessage(set) : set, words);
+      return reviewLine(which) ? { ...made, verify: `${made.verify}\n\n${reviewLine(which)}` } : made;
+    });
+    const [live, trace] = told(teaching, act?.act);
     // An earlier step's answer (e.g. {{answer.content}}) is reviewed as written: it is the first
     // attempt, and the reply model only revises it after a failed review. Empty: the reply model writes.
     const draft = cfg.draft != null ? String(renderTemplate(cfg.draft, ctx.scope()) ?? '').trim() : '';
@@ -1250,22 +1274,40 @@ const HANDLERS = {
       cost += Number(result.cost) || 0;
       return result;
     };
-    const { response, outcome, requiresAttention, stopReason, attempts } = await reviewRounds({
+    // The conversation as the learner left it, before any failed draft joins it.
+    const asLeft = [[...history], [...traceHistory]];
+    const write = ([set, traced], [messages, tracedMessages]) => async () => replyText(await call(cfg.model,
+      { messages: [{ role: 'system', content: set.chat }, ...messages], ...chatOptions },
+      { messages: [{ role: 'system', content: traced.chat }, ...tracedMessages], ...chatOptions }, 0));
+    const review = ([set, traced], which, last) => async (reply) => {
+      const coded = byCode(reply, which, last);
+      if (coded) return coded;
+      const check = (prompt, words) => ({ messages: reviewMessages(full, prompt, reply, words), ...verificationOptions });
+      return readReview(full, (await call(verifier, check(set.verify, said), check(traced.verify, traceSaid), 0)).content);
+    };
+    const watch = { onRound: (item) => hooks.onVettingRound?.(node, item), onDraft: (item) => hooks.onVettingDraft?.(node, item) };
+    let rounds = await reviewRounds({
       maxAttempts,
       draft,
-      write: async () => replyText(await call(cfg.model,
-        { messages: [{ role: 'system', content: live.chat }, ...history], ...chatOptions },
-        { messages: [{ role: 'system', content: trace.chat }, ...traceHistory], ...chatOptions }, 0)),
-      review: async (reply) => {
-        const check = (prompt, words) => ({ messages: reviewMessages(full, prompt, reply, words), ...verificationOptions });
-        return readReview(full, (await call(verifier, check(live.verify, said), check(trace.verify, traceSaid), 0)).content);
-      },
+      write: write([live, trace], [history, traceHistory]),
+      review: review([live, trace], act?.act ?? null, maxAttempts),
       redraft: (reply, verdict) => {
         for (const list of [history, traceHistory]) list.push(...redraftTurns(reply, live.feedback(verdict.verificationOutput)));
       },
-      onRound: (item) => hooks.onVettingRound?.(node, item),
-      onDraft: (item) => hooks.onVettingDraft?.(node, item)
+      ...watch
     });
+    // Every rewrite of this turn's step failed: the step below it is written once and reviewed as that step. The learner gets less
+    // help than the policy called for, where the run would have taken its unverified branch.
+    let steppedDown = null;
+    const below = act && maxAttempts > 1 && rounds.outcome === 'unverified' && rounds.stopReason === 'MAX_ATTEMPTS_REACHED' ? instructionsBelow(teaching, act) : null;
+    if (below) {
+      const lower = told(below.note, below.act);
+      const again = await reviewRounds({ maxAttempts: 1, write: write(lower, asLeft), review: review(lower, below.act, drafts + 1), redraft: () => {}, ...watch });
+      const all = [...rounds.attempts, ...again.attempts.map((item) => ({ ...item, attempt: rounds.attempts.length + item.attempt, stepped_down: below.act }))];
+      if (again.outcome === 'passed') steppedDown = below.act;
+      rounds = again.outcome === 'passed' || again.outcome === 'attention' ? { ...again, attempts: all } : { ...rounds, attempts: all };
+    }
+    const { response, outcome, requiresAttention, stopReason, attempts } = rounds;
     const branches = node.branches || {};
     // A rewrite that failed to generate is a round of its own, but not an attempt anyone reviewed.
     const reviewed = attempts.filter((item) => item.reply !== null);
@@ -1276,7 +1318,10 @@ const HANDLERS = {
         ...(draft ? { revised: response !== draft } : {}),
         model: cfg.model, verification_model: verifier, usage, cost,
         ...(readsMessage ? { reviewer_read: 'message' } : {}),
-        ...(reached?.items?.length ? { answer_reached: true } : {})
+        ...(reached?.items?.length ? { answer_reached: true } : {}),
+        ...(act ? { act: act.act } : {}),
+        ...(failedByCode.length ? { code_checks: [...new Set(failedByCode)] } : {}),
+        ...(steppedDown ? { stepped_down: steppedDown } : {})
       },
       next: branches[outcome] ?? node.next ?? null
     };

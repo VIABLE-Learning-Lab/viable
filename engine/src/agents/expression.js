@@ -394,7 +394,7 @@ export function expressionPaths(expr) {
 // Context fields a step reads only by naming them, as a VETTING step names a question's answer key
 // ({{context.answer_key}}): left out wherever the whole context is written out ({{context}}, a step's
 // "include context"), so a step that talks to the learner can't be handed the key by accident.
-export const SEALED_CONTEXT = ['answer_key'];
+export const SEALED_CONTEXT = ['answer_key', 'answer_accepts'];
 export function openContext(context) {
   if (!context || typeof context !== 'object' || Array.isArray(context)) return context;
   const out = { ...context };

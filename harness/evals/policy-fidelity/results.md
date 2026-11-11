@@ -8,17 +8,17 @@ evals/policy-fidelity/run.mjs report --split held_out` prints these tables from 
 
 ## What was run
 
-Six tutors answered the same scripted learners: 60 conversations of six learner turns, across mathematics, science and
+Six tutors answered the same scripted learners (the letters are how the report names them): 60 conversations of six learner turns, across mathematics, science and
 language for grades 4 to 10, each with a problem and its answer key.
 
 | Tutor | The reply model gets | A check on each reply |
 | --- | --- | --- |
-| Plain tutor | "You are a helpful tutor." and the problem | None |
-| Strong prompt | A carefully written tutoring prompt with the policy, the problem and its answer | None |
-| Strong prompt and a guardrail | The same | A second model that knows the policy and the answer. Two rewrites, then a fallback line |
-| Harness as it was | The policy in words, then the Harness's brief for the turn | VETTING with the answer key. Two rewrites, then the fallback |
-| Harness, policy in code, read by rules | The brief, with the step for this turn decided by code. Never the answer key | Code first, then VETTING. Two rewrites, then the fallback |
-| Harness, policy in code | The same, with a small model saying what each learner message was and code counting the tries | The same |
+| A. Plain tutor | "You are a helpful tutor." and the problem | None |
+| B. Strong prompt | A carefully written tutoring prompt with the policy, the problem and its answer | None |
+| C. Strong prompt and a guardrail | The same | A second model that knows the policy and the answer. Two rewrites, then a fallback line |
+| D0. Harness as it was | The policy in words, then the Harness's brief for the turn | VETTING with the answer key. Two rewrites, then the fallback |
+| Dr. Harness, policy in code, read by rules | The brief, with the step for this turn decided by code. Never the answer key | Code first, then VETTING. Two rewrites, then the fallback |
+| D. Harness, policy in code | The same, with a small model saying what each learner message was and code counting the tries | The same |
 
 | Model | What it did | Calls |
 | --- | --- | ---: |

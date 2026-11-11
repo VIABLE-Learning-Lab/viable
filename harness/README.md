@@ -105,7 +105,9 @@ the right misconception for a message worked on only 4 of 19 turns. Rated by a m
 A teacher's policy holds better when code decides its steps. On 60 scripted conversations with three models, a tutor with a
 carefully written prompt and a guardrail that knows the policy did the step the policy required on 57 to 73 turns in 100. With
 the Harness deciding the step in code it was 83 to 89, and the gap was widest on the two open-weight models, at 25 and 31
-points ([what was run and what it gave](evals/policy-fidelity/results.md); judged by a model, on replies). Where a
+points ([what was run and what it gave](evals/policy-fidelity/results.md); judged by a model, on replies). With every model
+in the tutor open-weight, on a second set of conversations, it was 74 and 75 against 48 and 45
+([the second run](evals/policy-fidelity/results-2.md)). Where a
 problem is arithmetic, code also names the faulty procedure behind a wrong answer, as often as a model asked the same
 question and with half as many wrong names ([three checks](evals/diagnosis/README.md)).
 [What has been measured](docs/evidence.md) has every check on one page.

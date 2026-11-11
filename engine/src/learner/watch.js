@@ -37,6 +37,13 @@ export function settingsShown(teaching, section = null) {
   };
 }
 
+const STEP_WORDS = { ask: 'A question', hint: 'A hint', example: 'A worked example', confirm: 'Saying their answer is right' };
+/** What code decided for the turn (the Harness's policy), as things that went in: the step, and what a wrong answer shows. Never the answer. */
+const decided = (brief) => [
+  ...(brief?.act ? [{ kind: 'step', what: 'This turn’s step, decided by code', text: `${STEP_WORDS[brief.act.act] || brief.act.act}${brief.act.act === 'confirm' ? '' : brief.act.tries ? `, after ${brief.act.tries} ${brief.act.tries === 1 ? 'try' : 'tries'}` : ', before any try'}`, source: 'The teacher’s steps' }] : []),
+  ...(brief?.diagnosis ? [{ kind: 'diagnosis', what: 'What their answer shows', text: `It is what you get if you ${brief.diagnosis.does}`, source: 'Worked out from their answer' }] : [])
+];
+
 /**
  * What a run keeps for its record (context.turn_record), so What the AI did can be drawn again from what the host stored: the step the
  * learner was on, and what the Harness read of the moment, with where each thing came from. Never the learner's words.
@@ -44,11 +51,13 @@ export function settingsShown(teaching, section = null) {
 export function turnRecord(brief, step = null) {
   return {
     ...(step ? { step: { title: step.title, brief: step.brief || null } } : {}),
-    ...(brief ? { brief: { moment: brief.moment, move: brief.move || null, move_source: brief.move_source || null, by: brief.by || 'rules', flag: brief.flag || null, went_in: [
+    ...(brief ? { brief: { moment: brief.moment, move: brief.move || null, move_source: brief.move_source || null, by: brief.by || 'rules', flag: brief.flag || null, ...(brief.act ? { act: brief.act.act, tries: brief.act.tries } : {}), ...(typeof brief.reached === 'boolean' ? { reached: brief.reached } : {}), ...(brief.diagnosis ? { diagnosis: brief.diagnosis.id } : {}), went_in: [
+      ...decided(brief),
       ...(brief.misconceptions || []).map((item) => ({ kind: 'misconception', what: 'A misconception that may be behind it', text: item.description, source: sourceName(item.source) })),
       ...(brief.components || []).map((item) => ({ kind: 'skill', what: 'The part of the skill in play', text: item.description, source: sourceName(item.source) })),
       ...(brief.prior || []).map((item) => ({ kind: 'prior', what: 'What to go back to', text: item.description, source: sourceName(item.source) })),
-      ...(brief.guidance || []).map((item) => ({ kind: 'guidance', what: 'From research', text: item.text, source: item.source || null }))
+      // component: which packaged work a piece came from, with its version, so a paper can name it.
+      ...(brief.guidance || []).map((item) => ({ kind: 'guidance', what: 'From research', text: item.text, source: item.source || null, ...(item.component ? { component: item.component } : {}) }))
     ] } } : {})
   };
 }
@@ -145,6 +154,7 @@ export function watchHooks(emit, base = {}) {
     // Each thing that went in, with where it came from, so whoever reads this can see what the Harness added and whose work it is.
     onBrief: (brief) => {
       say({ kind: 'brief', moment: brief.moment, move: brief.move, move_source: brief.move_source || null, by: brief.by, flag: brief.flag, went_in: [
+        ...decided(brief).map(({ what, text, source }) => ({ what, text, source })),
         ...brief.misconceptions.map((item) => ({ what: 'A misconception that may be behind it', text: item.description, source: sourceName(item.source) })),
         ...brief.components.map((item) => ({ what: 'The part of the skill in play', text: item.description, source: sourceName(item.source) })),
         ...brief.prior.map((item) => ({ what: 'What to go back to', text: item.description, source: sourceName(item.source) })),

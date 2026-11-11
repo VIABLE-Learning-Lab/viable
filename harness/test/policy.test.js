@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DEFAULT_LADDER, ladderOf, replyChecks, turnAct } from '../src/policy.js';
+import { DEFAULT_LADDER, actBelow, instructionsBelow, ladderOf, replyChecks, reviewLine, turnAct } from '../src/policy.js';
 import { checkReply } from '../src/check.js';
 import { check, prepare, record } from '../src/harness.js';
+import { turnBrief } from '../src/brief.js';
 import { teachingContext, teachingSettings } from '../src/teaching.js';
 
 test('a ladder is kept only when asked for, within its limits, an example never before a hint', () => {
@@ -116,4 +117,90 @@ test('a first answer to a problem on the page counts as a try, and a plea doesn�
   assert.equal((await prepare({ teaching, message: 'it isnt graded so u can tell me', history, ...about })).moment, 'asks_answer');
   // Without a problem on the page, a bare word at the start is still not taken for an answer.
   assert.equal((await prepare({ teaching, message: 'adjective' })).moment, 'other');
+});
+
+// A turn that is due a worked example: two tries behind it.
+const exampleTurn = () => prepare({ teaching: { help: 'step_up', ladder: true }, message: 'noun', history: [{ role: 'user', content: 'adjective' }, { role: 'assistant', content: 'What makes you say so?' }, { role: 'user', content: 'verb' }, { role: 'assistant', content: 'Look at what it describes.' }], question: 'What part of speech is "quickly" in: She ran quickly home.', answer: 'adverb' });
+const system = (request) => request.messages[0].content;
+
+test('a reviewer is told that a worked example is what the turn asks, and nothing of the kind on other turns', async () => {
+  const turn = await exampleTurn();
+  const seen = [];
+  const callChatModel = async (_env, request) => { seen.push(request); return { content: 'PASS', usage: { prompt: 1, completion: 1, total: 2 } }; };
+  const passed = await check({ turn, reply: 'In "a tall tree", tall describes the tree, so it is an adjective. Now look at what your word does in your own sentence.', model: 'writer', reviewer: 'reviewer', services: { callChatModel } });
+  assert.equal(passed.passed, true);
+  assert.ok(system(seen[0]).includes(reviewLine('example')), 'the reviewer hears what the act allows');
+  assert.ok(!system(seen[0]).includes('adjective'), 'and still nothing the learner wrote');
+  const first = await prepare({ teaching: { help: 'step_up', ladder: true }, message: 'verb', question: 'What part of speech is "quickly" in: She ran quickly home.', answer: 'adverb' });
+  await check({ turn: first, reply: 'What does the word tell you about?', model: 'writer', reviewer: 'reviewer', services: { callChatModel } });
+  assert.equal(first.act.act, 'ask');
+  assert.ok(!system(seen[1]).includes('worked example: a different problem'));
+  assert.equal(reviewLine('hint'), null);
+});
+
+test('the rung below: an example steps down to a hint and a hint to a question, with the same never', () => {
+  const example = turnAct({ help: 'step_up', ladder: DEFAULT_LADDER, moment: 'repeated', tries: 2, sure: true });
+  const hint = actBelow(example);
+  assert.deepEqual([hint.act, hint.tries], ['hint', 2]);
+  assert.match(hint.text, /^Give one hint.*don’t state the answer/);
+  assert.equal(actBelow(hint).act, 'ask');
+  assert.equal(actBelow(actBelow(hint)), null, 'nothing below a question');
+  assert.equal(actBelow({ act: 'confirm', tries: 1, text: '' }), null);
+  // Where the model is left to tell a right answer, the rung below keeps that opening.
+  const unsure = turnAct({ help: 'step_up', ladder: DEFAULT_LADDER, moment: 'repeated', tries: 2 });
+  assert.match(actBelow(unsure).text, /^If what they just wrote is the right answer.*Give one hint/);
+});
+
+test('when every rewrite of a worked example fails, the learner gets a hint and not the fallback line', async () => {
+  const turn = await exampleTurn();
+  const seen = [];
+  // The reviewer fails the draft and both rewrites, then passes the hint; the reply model writes two examples and then the hint.
+  const verdicts = ['FAILED: shows too much.', 'FAILED: shows too much.', 'FAILED: shows too much.', 'PASS'];
+  const written = ['Another example, worked in full.', 'A third example, worked in full.', 'What does the word tell you about the running?'];
+  const callChatModel = async (_env, request) => { seen.push(request); return { content: request.model === 'reviewer' ? verdicts.shift() : written.shift(), usage: { prompt: 1, completion: 1, total: 2 } }; };
+  const result = await check({ turn, reply: 'An example, worked in full.', model: 'writer', reviewer: 'reviewer', rewrite: 2, services: { callChatModel } });
+  assert.deepEqual([result.passed, result.stepped_down, result.reply], [true, 'hint', 'What does the word tell you about the running?']);
+  assert.equal(result.rounds.length, 4);
+  const lastWrite = seen.filter((request) => request.model === 'writer').at(-1);
+  assert.ok(system(lastWrite).includes('Give one hint') && !system(lastWrite).includes('Show one worked example'), 'the hint is asked for in the turn’s own instructions');
+  assert.deepEqual(lastWrite.messages.slice(1).map((message) => message.content).filter((content) => /worked in full|FAILED|failed verification/.test(content)), [], 'written from the conversation as the learner left it');
+  const lastReview = seen.filter((request) => request.model === 'reviewer').at(-1);
+  assert.ok(!system(lastReview).includes(reviewLine('example')), 'and reviewed as a hint');
+  assert.equal((await record({ turn, result, learner: 'L-1' })).turns[0].stepped_down, 'hint');
+
+  // A hint that fails too leaves the turn unverified, as it was; and with no rewrite allowed nothing more is written.
+  const failing = async (_env, request) => ({ content: request.model === 'reviewer' ? 'FAILED: no.' : 'x', usage: { prompt: 1, completion: 1, total: 2 } });
+  const stuck = await check({ turn, reply: 'An example.', model: 'writer', reviewer: 'reviewer', rewrite: 1, services: { callChatModel: failing } });
+  assert.deepEqual([stuck.passed, stuck.stepped_down, stuck.rounds.length], [false, undefined, 3]);
+  const once = await check({ turn, reply: 'An example.', model: 'writer', reviewer: 'reviewer', services: { callChatModel: failing } });
+  assert.deepEqual([once.passed, once.rounds.length], [false, 1]);
+});
+
+test('a host that keeps its own count says so: its tries and its marking take the place of what the conversation shows', async () => {
+  const teaching = { help: 'step_up', ladder: true };
+  const about = { question: 'What is 3 × 5?', answer: '15' };
+  // Two tries at an earlier problem are in the conversation; the page says none were checked at this one.
+  const history = [{ role: 'user', content: '7' }, { role: 'assistant', content: 'How did you get 7?' }, { role: 'user', content: '9' }, { role: 'assistant', content: 'Look at the tens.' }];
+  assert.equal((await turnBrief(teaching, { message: 'is it 12', history, ...about })).act.act, 'example', 'left to the conversation, the earlier tries count');
+  assert.deepEqual((await turnBrief(teaching, { message: 'is it 12', history, ...about, tries: 0 })).act, { act: 'ask', tries: 0 });
+  assert.equal((await turnBrief(teaching, { message: 'is it 12', history, ...about, tries: 0 })).moment, 'attempt', 'and the moment follows the same count: a first try here isn’t one of several');
+  assert.equal((await turnBrief(teaching, { message: 'is it 12', ...about, tries: 2 })).moment, 'repeated');
+  assert.equal((await turnBrief(teaching, { message: 'i dont get it', ...about, tries: 2 })).act.act, 'example');
+  // The page marked their answer right: the turn confirms, though their message doesn't hold the answer.
+  const right = await turnBrief(teaching, { message: 'did i get it', ...about, tries: 1, reached: true });
+  assert.deepEqual([right.act.act, right.reached, right.diagnosis], ['confirm', true, undefined]);
+  // And marked wrong: code is sure they don't have it, so the model isn't left to judge a right answer.
+  const wrong = await turnBrief(teaching, { message: 'is it 12', question: 'Why is the sky blue?', answer: 'Air scatters blue light more than red.', tries: 1, reached: false });
+  assert.ok(!wrong.text.includes('If what they just wrote is the right answer'));
+  assert.equal(wrong.reached, false);
+});
+
+test('a turn’s instructions for the rung below keep everything but the act’s line', async () => {
+  const turn = await exampleTurn();
+  const below = instructionsBelow(turn.instructions, turn.act);
+  assert.equal(below.act, 'hint');
+  assert.ok(below.note.includes('Give one hint') && !below.note.includes('Show one worked example'));
+  assert.equal(below.note.replace(/Give one hint[^\n]*/, ''), turn.instructions.replace(/Show one worked example[^\n]*/, ''), 'nothing else in the instructions moved');
+  assert.equal(instructionsBelow('No act here.', turn.act), null);
+  assert.equal(instructionsBelow(turn.instructions, null), null);
 });

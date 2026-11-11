@@ -22,7 +22,7 @@
  * the agent's steps read; where it enters the prompt and which steps it reaches are the agent's own
  * (settings.js profileSettings). Answer keys are never part of what the AI is shown.
  */
-import { gradeResponse, keyText, publicItem, questionText } from './questions.js';
+import { gradeResponse, keyAnswers, keyText, publicItem, questionText } from './questions.js';
 import { teachingContext } from '../../../harness/src/utils/teaching.js';
 
 const agentError = (message, status = 400, code = 'agent_error') => Object.assign(new Error(message), { status, code });
@@ -539,9 +539,11 @@ export function workspaceRunContext(workspace, state, sets = new Map(), { versio
     // pressing Check would tell them anyway. It says yes or no and nothing else, and the server works it out from the key.
     const holdsIt = (panel.feedback ?? 'each') === 'each' && state?.response != null && state.response !== '' && gradeResponse(item, state.response)?.correct === true;
     // The key, for a step that checks replies against it (VETTING's answer_key): never in the view.
-    const key = { answer_key: keyText(item), ...(lastCorrect === true || holdsIt ? { answer_reached: true } : {}), ...(holdsIt ? { answer_holds: true } : {}) };
     const given = responseText(item, state?.response);
     const tries = Number.isInteger(state?.tries) ? state.tries : 0;
+    // answer_accepts and question_tries are for code alone (a turn whose step code decides counts tries and looks for the answer in a draft): never in the view.
+    const accepts = keyAnswers(item);
+    const key = { answer_key: keyText(item), ...(accepts.length ? { answer_accepts: accepts } : {}), question_tries: tries, ...(lastCorrect === true || holdsIt ? { answer_reached: true } : {}), ...(holdsIt ? { answer_holds: true } : {}) };
     const opened = panel.hints ? Math.min(hintsOpened, item.hints?.length || 0) : 0;
     const question = { id: item.id, number: index + 1, of: items.length, type: item.type, skill: item.skill || null };
     const lines = [`The learner is on question ${index + 1} of ${items.length} in “${panel.title}” (${item.type}${item.skill ? `, practising ${item.skill}` : ''}).`];
@@ -598,18 +600,30 @@ function stepWords(workspace, at, opening) {
 // teaching_view, which the engine gives the same steps as instructions rather than as data. section:
 // the learner's, when it has its own help level or note (teaching.sections).
 // at: the step they have reached, { index, step }, whose own instructions go with the teacher's. opening: what the AI said first where there are no steps, so what comes next follows from it.
+/**
+ * What a turn's brief needs of the question the learner has open, from a run's context (the Harness's policy, brief.js): the
+ * question where the AI is shown it, an answer code can look for, how many answers the page has checked for this question,
+ * and whether the host's own marking says they have it. Nothing where no question is open, so a chat counts tries itself.
+ */
+export const keyedTurn = (context) => (context?.answer_key ? {
+  question: typeof context.question === 'string' ? context.question : '',
+  answer: context.answer_accepts?.[0] ?? '',
+  ...(Number.isInteger(context.question_tries) ? { tries: context.question_tries } : {}),
+  ...(context.answer_reached === true ? { reached: true } : {})
+} : {});
+
 export const workspaceContext = (workspace, state, sets, versions = {}, open = {}, teaching = null, section = null, at = null, opening = null) => {
   const run = workspace ? workspaceRunContext(workspace, state, sets, versions) : null;
   const taught = teachingContext(teaching, section);
   const told_step = stepWords(workspace, at, opening);
   if (!run && !taught && !told_step) return null;
-  const { answer_key: key, answer_reached: reached, answer_holds: holds, question_text: question, ...view } = run?.context || {};
+  const { answer_key: key, answer_accepts: accepts, question_tries: tries, answer_reached: reached, answer_holds: holds, question_text: question, ...view } = run?.context || {};
   const place = open.place || 'message';
   const told = Boolean(run?.view) && place !== 'variables';
   const instructed = Boolean(taught) && place !== 'variables';
   return {
     workspace: { ...view, ...(taught ? { teaching: taught.context } : {}) },
-    ...(key ? { answer_key: key } : {}), ...(reached ? { answer_reached: true } : {}), ...(holds ? { answer_holds: true } : {}), ...(question ? { question } : {}),
+    ...(key ? { answer_key: key } : {}), ...(accepts ? { answer_accepts: accepts } : {}), ...(key ? { question_tries: tries ?? 0 } : {}), ...(reached ? { answer_reached: true } : {}), ...(holds ? { answer_holds: true } : {}), ...(question ? { question } : {}),
     ...(told ? { workspace_view: run.view, workspace_place: place } : {}),
     ...(instructed ? { teaching_view: taught.text } : {}),
     ...(told_step && place !== 'variables' ? { step_view: told_step } : {}),

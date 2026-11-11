@@ -12,10 +12,29 @@ where a model makes those calls.
 | Question | Run on | Result |
 | --- | --- | --- |
 | [Does a tutor do what a teacher's policy says, turn after turn?](#a-teaching-policy-turn-after-turn) | Six tutors and three reply models, on 60 conversations kept for testing: 5,040 tutor turns and 19,034 model calls | The required step on 83 to 89 turns in 100 with the policy decided by code, and on 57 to 73 with a carefully written prompt and a guardrail |
+| [Does that hold when a school runs every model itself?](#with-every-model-open-weight) | Four tutors and two open-weight reply models, on 60 conversations written after the first run: 2,520 tutor turns and 11,644 model calls | The required step on 74 and 75 turns in 100 with the Harness, and on 48 and 45 with a prompt and a guardrail run by the same open-weight model |
 | [Can code work out the mistake behind a wrong answer?](#a-mistake-worked-out-by-code) | Code and three models, on 80 wrong answers kept for testing | Code names the right procedure on 70 in 100 and a wrong one on 10. The best model: 71 and 21 |
 | [Does that hold on cases another team made?](#a-mistake-worked-out-by-code) | Code and two open-weight models, on MalruleLib: 547 problems and 779 pairs for code, 200 of the pairs for the models | A small open-weight model predicts a learner's next answer on 33 pairs in 100, and on 60 with code first |
 | [What holds with no model at all?](#what-holds-with-no-model) | 4,439 checks and five measures, on every commit | Eight guarantees, none failed |
 | [Is the part before the reply worth building?](#the-first-check) | Four conditions and two models, on 50 learner messages | First-draft pass from 8% with a plain prompt to 80% with a brief for the turn |
+
+## Print these numbers yourself
+
+Every reply, judgment and model answer behind the checks is kept in the repository, so their tables print again with
+no model and no key:
+
+```sh
+git clone https://github.com/VIABLE-Learning-Lab/viable && cd viable/harness
+node bin/viable-harness.mjs scorecard
+node evals/policy-fidelity/run.mjs report --split held_out
+node evals/policy-fidelity/run.mjs report --set evals/policy-fidelity/conversations-2.json --split held_out --out evals/policy-fidelity/runs-2
+node evals/diagnosis/ask-a-model.mjs --models gpt-6-luna,gpt-oss-120b,gemma-4-31b-it --kept evals/diagnosis/runs/asked.jsonl
+```
+
+The report names each tutor by a letter and lists them in its first line: C is the prompt with a guardrail, and D the
+Harness with the policy in code. Scoring MalruleLib's task also needs a clone of MalruleLib, which its license keeps
+out of this repository ([the three checks](../evals/diagnosis/README.md) say how). The first check's replies were not
+kept, so its table is the one on this page that can't be printed again.
 
 ## A teaching policy, turn after turn
 
@@ -54,8 +73,32 @@ and less on whether a reply gives the answer away (κ 0.51, under the bar of 0.6
 | Size | 840 conversations run, 5,040 tutor turns, 4,973 judgments, 19,034 model calls |
 
 [The results in full](../evals/policy-fidelity/results.md) ·
-[The design and the six bars, written before any run](../evals/policy-fidelity/README.md) ·
+[The design and the bars, written before each run](../evals/policy-fidelity/README.md) ·
 [What the policy layer does](policy.md)
+
+### With every model open-weight
+
+The first run's reviewer was a closed model, so it didn't show that a school could run every model itself. A second
+run put an open-weight model in every place of the tutor (writing, reviewing, reading the conversation), on 60
+conversations written after the first run. It also compared the Harness as the first run measured it with the Harness
+after three changes to how it handles a worked example.
+
+<p align="center">
+  <img src="../../docs/images/policy-check-2.svg" width="100%" alt="The second run of the policy check, with every model in the tutor open-weight, on 60 new conversations. Share of turns done as the policy requires on the two reply models: a carefully written prompt with a guardrail 45 and 48 in 100, the Harness as the first run measured it 72 and 73, the Harness now 74 and 75.">
+</p>
+
+The Harness did the required step on 74 and 75 turns in 100, against 48 and 45 for the prompt with a guardrail: 26
+points more with `gpt-oss-120b` (95% interval 19 to 34) and 30 with `gemma-4-31b-it` (22 to 37). Five of seven bars
+were met. The two missed say where it is weakest:
+
+- The worked example was given on 71 and 50 turns in 100 that required one, against a bar of 85. The changes ended the
+  first run's fault, a reviewer failing sound examples. What is left is a reply model that writes a hint where an
+  example is due, which nothing checks for, and one that explains the learner's own problem, which the open-weight
+  reviewer lets through.
+- The open-weight reviewer cost 7 of 100 turns against the closed one (74 against 81), by passing more replies that go
+  further than the turn allows.
+
+[The second run in full](../evals/policy-fidelity/results-2.md)
 
 ## A mistake worked out by code
 

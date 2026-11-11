@@ -37,6 +37,10 @@ test('from an address, only a manifest that is data is taken', async () => {
     writeFileSync(teaching, JSON.stringify({ goal: 'Add fractions.', help: 'hint' }));
     const add = (fetch) => quiet(() => componentCommand(['add', 'https://example.org/manifest.json', '--teaching', teaching], { fetch }));
     await assert.rejects(add(served({ ...theirs, runs: { kind: 'http', entry: 'https://example.org/run' } })), /runs out of process/);
+    // Whatever slot it fills, one that runs code hears that first; an address that redirects, and a template nobody filled in, are refused too.
+    await assert.rejects(add(served({ ...theirs, slot: 'detector', runs: { kind: 'mcp', entry: 'server.js' } })), /runs out of process/);
+    await assert.rejects(add(async () => { throw new TypeError('fetch failed', { cause: new Error('unexpected redirect') }); }), /raw\.githubusercontent\.com/);
+    await assert.rejects(add(served(template)), /still has the template’s placeholder|still has the template's placeholder/);
     await assert.rejects(add(served('<html>a page</html>')), /isn't JSON/);
     await assert.rejects(add(served('x', 404)), /answered 404/);
     await assert.rejects(add(served(JSON.stringify({ ...theirs, pad: 'x'.repeat(200_001) }))), /larger than a manifest/);

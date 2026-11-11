@@ -17,7 +17,7 @@ import { parseCsv } from '../../src/resources/csv.js';
 
 const args = process.argv.slice(2);
 const flag = (name, otherwise = null) => { const at = args.indexOf(`--${name}`); return at < 0 ? otherwise : args[at + 1]; };
-if (!args[0]) { console.error('Give the path to MalruleLib\'s data/experiment_pairs.csv.'); process.exit(2); }
+if (!args[0] || !existsSync(args[0])) { console.error(`${args[0] ? `There is no file at ${args[0]}. ` : ''}Give the path to MalruleLib's data/experiment_pairs.csv: its license keeps it out of this repository, so clone it first (git clone https://github.com/sonkar-lab/malrulelib). The models' kept answers alone can't be scored without it.`); process.exit(2); }
 
 // A number as they or a model write it: 13, -4, 1.40, 7/9, 2 1/3, "(13, 30)" for 13/30. places: how far a decimal was carried.
 function numberOf(text) {
@@ -56,7 +56,7 @@ const models = String(flag('models', '')).split(',').filter(Boolean);
 if (models.length) {
   const apiKey = process.env.OPENAI_API_KEY_FILE ? readFileSync(process.env.OPENAI_API_KEY_FILE, 'utf8').trim() : process.env.OPENAI_API_KEY;
   const call = openAICompatible({ apiKey });
-  const out = flag('out');
+  const out = flag('kept') ?? flag('out');
   const size = Number(flag('sample', 200));
   // The same pairs each time: every k-th of each kind, in the file's order.
   const sample = kinds.flatMap((kind) => { const of = pairs.filter((pair) => pair.experiment_type === kind); const step = Math.max(1, Math.floor(of.length / (size / kinds.length))); return of.filter((_, index) => index % step === 0).slice(0, size / kinds.length); });

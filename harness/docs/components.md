@@ -43,6 +43,7 @@ That makes a folder from [the template](../integrations/_template-context/). Wri
 sentence or two each, saying which moments each is for. Then see what it changes:
 
 ```sh
+echo '{ "goal": "Add fractions with unlike denominators.", "help": "hint" }' > activity.json
 viable-harness component try your-framework/manifest.json --teaching activity.json --message "i got 2/5"
 ```
 
@@ -53,8 +54,8 @@ Without your-lab/your-framework:
   ...what the teacher decided, and the teaching move...
 
 With it, this is added, 2 of its 4 items:
-  - Before correcting a wrong answer, ask the learner to say how they got it. (Your framework)
-  - With unlike denominators, ask what the two fractions need to have in common. (Your framework)
+  - Before correcting a wrong answer, ask the learner to say how they got it: the mistake is often in a step they can find themselves. (Feedback moves (template))
+  - With unlike denominators, ask what the two fractions need to have in common before asking them to add. (Feedback moves (template))
 ```
 
 A teacher or a builder takes the pieces that fit one activity:

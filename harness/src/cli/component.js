@@ -45,14 +45,16 @@ const MANIFEST_BYTES = 200_000;
 // Another team's manifest, read from where they publish it. Only one that is data: nothing of theirs runs here, and nothing is
 // sent to them. Who wrote it and under what license is printed, since its sentences will go to a model under your name.
 async function published(address, fetch) {
-  const response = await fetch(address, { redirect: 'error' });
+  // An address that redirects is refused, so the file read is the one named. On GitHub that means the raw.githubusercontent.com address.
+  const response = await fetch(address, { redirect: 'error' }).catch((error) => { throw new Error(`Couldn't read ${address}: ${String(error?.cause?.message || error?.message || error).slice(0, 160)}. If it redirects, give the address the file itself is served from (on GitHub, the one that starts https://raw.githubusercontent.com/).`); });
   if (!response.ok) throw new Error(`${address} answered ${response.status}.`);
   const text = await response.text();
   if (text.length > MANIFEST_BYTES) throw new Error(`${address} is larger than a manifest should be.`);
   let manifest;
   try { manifest = JSON.parse(text); } catch { throw new Error(`${address} isn't JSON. Give the address of the manifest.json itself (on GitHub, the "Raw" address).`); }
+  // What runs is said first: a component that runs code is never taken from an address, whatever slot it fills.
+  if (manifest?.runs?.kind && manifest.runs.kind !== 'data') throw new Error(`${manifest.id ?? 'That component'} runs out of process. Download it and read it first, then give the file: only a component that is data is taken from an address.`);
   checkManifest(manifest, 'context');
-  if (manifest.runs?.kind !== 'data') throw new Error(`${manifest.id} runs out of process. Download it and read it first, then give the file: only a component that is data is taken from an address.`);
   console.log(`From ${address}:\n  ${manifest.id}@${manifest.version}, by ${(manifest.authors ?? []).join(', ') || 'no author named'}. License: ${manifest.license?.data ?? manifest.license?.code ?? 'none stated'}.\n  Cite: ${manifest.cite ?? 'no citation given'}\n  What its authors say is shown: ${manifest.evidence?.original ?? 'nothing stated'}\n  Read its items before you add them: they go to a model as guidance.\n`);
   return manifest;
 }
@@ -79,6 +81,8 @@ async function addIt(file, values, fetch) {
   if (!values.teaching) throw new Error(`Give --teaching teaching.json.\n\nUsage:\n${COMPONENT_USAGE}`);
   const manifest = await manifestOf(file, fetch);
   const teaching = readJson(values.teaching);
+  // A template nobody filled in would put "Your name" in an activity as the source of what the AI is told.
+  if (/\bYour (?:name|paper)\b/i.test(`${manifest.cite ?? ''} ${(manifest.authors ?? []).join(' ')}`)) throw new Error(`${manifest.id} still has the template's placeholder for who wrote it or how to cite it. Fill in "authors" and "cite" in its manifest first.`);
   const taken = await guidanceIn(manifest, teaching, numbersOf(values.items), join(file, '..'));
   const guidance = [...(teaching.guidance ?? []), ...taken];
   if (guidance.length > TEACHING_LIMITS.guidance) throw new Error(`An activity keeps at most ${TEACHING_LIMITS.guidance} pieces of guidance, and this would make ${guidance.length}. Choose fewer with --items.`);

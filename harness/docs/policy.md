@@ -65,6 +65,14 @@ this turn. Whatever they say or ask, don’t state the answer to their problem o
 What their answer shows: it is what you get if you add the tops and add the bottoms. Don’t tell them so: help them see it.
 ```
 
+A reviewer never sees the conversation, so it can't know the learner has tried twice, and would take a worked example
+for too much help. On a turn that gets one, it is told what the turn allows: a different problem worked from start to
+finish, which fails only if it states the answer to the learner's own problem or carries out one of its steps.
+
+When every rewrite of a turn's step fails its checks, the reply model writes the step below it once: a hint where a
+worked example was due, a question where a hint was due. That reply is reviewed as what it is, and `result.stepped_down`
+names it. The learner gets less help than the policy called for, where they would have got the fallback line.
+
 When two procedures give the same wrong answer, the instructions name both. For -4 + 9, an answer of -5 could be the
 first number's sign kept, or the size right and the sign wrong, and the tutor's next question can find out which.
 
@@ -100,6 +108,11 @@ less. On the 60 conversations kept for testing, the prompt with a guardrail did 
 100 across three models, and the Harness with the policy in code on 83 to 89
 ([the tables, the six bars and the two that weren't met](../evals/policy-fidelity/results.md)).
 
+A second run put an open-weight model in every place of the tutor, on 60 conversations written after the first. The
+Harness did the required step on 74 and 75 turns in 100, and the prompt with a guardrail, run by the same open-weight
+model, on 48 and 45. The worked example is its weakest step there, given on 71 and 50 turns in 100 that required one
+([the second run](../evals/policy-fidelity/results-2.md)).
+
 <p align="center">
   <img src="../../docs/images/policy-check.svg" width="100%" alt="Share of turns on which each tutor did the step the teacher's policy requires, on 60 held-out conversations and three reply models. A carefully written prompt with a guardrail: 57 to 73 turns in 100. The Harness with the policy decided by code: 83 to 89 in 100. The prompt alone: 44 to 68. The Harness as it was: 46 to 56.">
 </p>
@@ -117,8 +130,21 @@ and a tutor that holds the policy is what makes such a study a study of that pol
 The ladder works wherever there is a problem and a learner trying it. Seeing a right answer needs a key that is a
 number or a few words. Naming a procedure needs a problem that is two numbers and an operation.
 
-The Engine and the VIABLE Developer Platform don't pass a problem and its key to a turn yet and have no control for the
-ladder on a screen, so today this runs through `prepare`, `check` and the gateway.
+It runs in three places:
+
+| Where | How it is turned on | Where the tries and the key come from |
+| --- | --- | --- |
+| Your own code | `"ladder": true` in the teaching settings you give `prepare`, or an activity of the [gateway](with-your-stack.md) | The conversation, and the `question` and `answer` you pass |
+| The VIABLE Engine, and the teacher's pages of the VIABLE Learning Platform | **Hold each step by counting tries**, under the level **Shows an example** in an activity's settings | The question the learner has open: a try is an answer the page has checked, and the key is the question's own |
+| The VIABLE Developer Platform | The same switch in an activity's **How the AI helps** | The same |
+
+With a question open, the page's own marking says whether the learner has the answer, so a right answer chosen from a
+list counts as much as one typed. An agent's VETTING step holds a reply to the turn's step: code looks for each accepted
+answer in a draft before the reviewer is asked, and what was decided is kept with the turn (`act`, `code_checks`,
+`stepped_down` on the step, and the step in the turn's record of what went in).
+
+In a conversation with no question open, the tries are counted from the conversation, and nothing is checked against a
+key.
 
 ## Earlier work
 

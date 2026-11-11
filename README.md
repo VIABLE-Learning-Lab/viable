@@ -98,7 +98,11 @@ Issues, discussions and pull requests are welcome, from a typo to a new componen
 
 ## Citing and license
 
-If you use this in research, cite it with [CITATION.cff](CITATION.cff). Code under [MIT](LICENSE). The data it carries stays under
+If you use this in research, cite it with [CITATION.cff](CITATION.cff), and name the commit or version you ran: the
+[changelog](CHANGELOG.md) says what each version holds, and a format changes only with a minor version and a note on how to
+move existing files. The test sets and the kept runs under `harness/scorecard` and `harness/evals` are part of this
+repository and under its license: cite the repository at the commit you used. A component you used is cited as its
+manifest's `cite` says. Code under [MIT](LICENSE). The data it carries stays under
 its own licenses, with the attribution to keep, in [NOTICE](NOTICE). The names VIABLE and VETTING:
 [TRADEMARKS.md](TRADEMARKS.md).
 

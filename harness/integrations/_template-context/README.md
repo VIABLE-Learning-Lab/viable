@@ -11,8 +11,9 @@ each turn takes the pieces that fit that moment, with your name beside them.
 From the Harness's folder:
 
 ```sh
+echo '{ "goal": "Add fractions with unlike denominators.", "help": "hint" }' > activity.json
 viable-harness component try integrations/_template-context/manifest.json \
-  --teaching examples/teaching.json --message "i got 2/5"
+  --teaching activity.json --message "i got 2/5"
 ```
 
 It prints what the model is told for that message without your component and with it, so you see at once what

@@ -12,6 +12,7 @@ import { openAICompatible, reach } from '../../../harness/src/models.js';
 import { toMarkdown } from '../markdown.js';
 import { teachingRunContext } from '../../../harness/src/teaching.js';
 import { readZip } from '../../../harness/src/utils/zip.js';
+import { keyedTurn } from '../learner/workspace.js';
 import { applyModels } from './models.js';
 import { searchPackage } from './search.js';
 
@@ -389,9 +390,12 @@ export async function runWithServices(doc, { input = '', inputContent = undefine
   const asked = using?.roles.picker ? { model: using.plan.picker } : brief;
   const reading = settings ?? (context?.teaching_view ? briefing : null);
   // event: a turn the AI writes first (speakUp.js), whose moment the page said.
-  const made = asked && reading && reading.turn_brief !== false ? await (await import('../../../harness/src/brief.js')).turnBrief(reading, { message: event ? '' : input, history, section, event, picker: asked.model ? { call: own.callChatModel, model: asked.model } : null }) : null;
+  // A ladder is decided in the brief, so an activity with one is read whether or not its brief was switched off.
+  const made = asked && reading && (reading.turn_brief !== false || reading.ladder) ? await (await import('../../../harness/src/brief.js')).turnBrief(reading, { message: event ? '' : input, history, section, event, picker: asked.model ? { call: own.callChatModel, model: asked.model } : null, ...keyedTurn(context) }) : null;
   if (made) hooks.onBrief?.(made);
-  const runContext = teachingRunContext(settings, context, section, made);
+  // turn_act: the step code decided for this turn, where the activity has a ladder: a VETTING step holds the reply to it.
+  const taught = teachingRunContext(settings, context, section, made);
+  const runContext = made?.act && taught ? { ...taught, turn_act: made.act } : taught;
   try {
     const result = await runAgentGraph({}, graph, {
       input,

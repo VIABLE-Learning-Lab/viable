@@ -87,10 +87,11 @@ One file, in plain sentences. Each piece says which moments it is for: `attempt`
 
 ### See what it changes
 
-If you have Node installed, this makes the folder, and the second line shows what a model is told with your file and without it:
+If you have Node installed, the first line makes the folder, the second writes an activity's settings to try it on (any teacher's settings will do), and the third shows what a model is told with your file and without it:
 
 ```sh
 npx github:VIABLE-Learning-Lab/viable component new your-lab/your-framework
+echo '{ "goal": "Add fractions with unlike denominators.", "help": "hint" }' > activity.json
 npx github:VIABLE-Learning-Lab/viable component try your-framework/manifest.json --teaching activity.json --message "i got 2/5"
 ```
 
@@ -101,8 +102,8 @@ Without your-lab/your-framework:
   ...what the teacher decided, and the teaching move...
 
 With it, this is added, 2 of its 4 items:
-  - Before correcting a wrong answer, ask the learner to say how they got it. (Your name 2024)
-  - With unlike denominators, ask what the two fractions need to have in common. (Your name 2024)
+  - Before correcting a wrong answer, ask the learner to say how they got it: the mistake is often in a step they can find themselves. (Feedback moves (template))
+  - With unlike denominators, ask what the two fractions need to have in common before asking them to add. (Feedback moves (template))
 ```
 
 No model is called and nothing is sent anywhere. [Components](components.md) has the details.

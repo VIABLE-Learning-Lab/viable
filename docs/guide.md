@@ -60,7 +60,9 @@ From a clone, `node engine/bin/viable-engine.mjs`.)
   the first activity that uses it. `--teaching` replaces them with a file
   (`schemas/teaching.schema.json`), `--section` applies a section's own help level and note,
   `--no-teaching` runs without any. With `--context` holding `{ "question": "...", "answer_key": "..." }`,
-  VETTING reviews against the answer key. Speech and Image steps save their audio and pictures in
+  VETTING reviews against the answer key. With `answer_accepts` (the answers code can look for, bare) and `question_tries`
+  (how many answers were checked) beside them, teaching settings with a ladder decide each turn's step from them
+  ([a teaching policy in code](../harness/docs/policy.md)). Speech and Image steps save their audio and pictures in
   `--media-dir` (`--audio-dir` still works; default: a new folder in the system's temp folder), and
   the steps list prints each file's path. `--speech-model` and `--image-model` replace every speech
   and image model, and `--no-speech` lets Speech steps pass on without reading aloud. With
