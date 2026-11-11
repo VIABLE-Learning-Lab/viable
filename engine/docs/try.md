@@ -1,5 +1,9 @@
 # Try it
 
+This page is for educators, IT staff and developers who want to see the Engine work on their own computer before deciding to
+deploy it. `try` opens real learner pages with six example courses and a panel that shows what the AI was told and how it
+replied, using scripted replies or your own model.
+
 ```sh
 npx github:VIABLE-Learning-Lab/viable
 ```
@@ -16,8 +20,8 @@ the AI may help, ask again, and the reply changes.
 
 With no key it runs in **demo mode**: the model's words are scripted, and everything around them is the real
 harness. No model is called, and what you type stays on your computer. With `OPENAI_API_KEY` or
-`OPENAI_BASE_URL` set, it runs on your model, and says so. `--demo` keeps it scripted anyway. The examples
-name VIABLE's models, so add `--model <id>` if your endpoint doesn't have them.
+`OPENAI_BASE_URL` set, it runs on your model, and says so. `--demo` keeps it scripted anyway. The example courses
+name the chat model they were written for (`gpt-oss-120b`), so add `--model <id>` with one your endpoint serves.
 
 On your own model, a package with misconceptions to listen for costs one more call per message: it
 asks the model which of them the message shows. Learners' names and identifiers are never sent.
@@ -69,7 +73,7 @@ notes are left out. A course with a real quiz doesn't belong in one: use `viable
 **Give it its own path or subdomain, and not an origin with accounts.** A static page can't have a fresh
 nonce per request, so its pages carry a fixed one and allow scripts from their own origin
 (`script-src 'self'`). On an origin where people sign in, those pages are a weaker neighbor than the site
-deserves. The tour there clears only the copy's own storage (`viable-chat:` and `viable-try:`).
+deserves. In a static copy, `--demo --tour` clears only the browser storage that copy created (`viable-chat:` and `viable-try:`).
 
 ## The panel on your own server
 

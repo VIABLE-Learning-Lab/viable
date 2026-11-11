@@ -24,7 +24,7 @@ The model still writes every word a learner reads. Code decides what kind of rep
 may go out. A reviewing model ([VETTING](../skills/checking-replies-with-vetting/SKILL.md)) judges what code can't see,
 such as a hint that does the whole problem in words.
 
-Where code can't tell, it decides nothing and the turn is the model's and the reviewer's, as before. That is the case
+Where code can't tell, it decides nothing, and the model and the reviewer handle the turn on their own. That is the case
 for a key that is a sentence, a problem with letters in it, and a wrong answer that none of the listed procedures gives.
 
 ## Turning it on
@@ -71,7 +71,8 @@ finish, which fails only if it states the answer to the learner's own problem or
 
 When every rewrite of a turn's step fails its checks, the reply model writes the step below it once: a hint where a
 worked example was due, a question where a hint was due. That reply is reviewed as what it is, and `result.stepped_down`
-names it. The learner gets less help than the policy called for, where they would have got the fallback line.
+names it. The learner gets less help than the policy called for, in place of the fallback line, the fixed message a learner is
+sent when no draft passes its checks.
 
 When two procedures give the same wrong answer, the instructions name both. For -4 + 9, an answer of -5 could be the
 first number's sign kept, or the size right and the sign wrong, and the tutor's next question can find out which.
@@ -99,31 +100,31 @@ be called a third.
 is the one a turn requires, how often it sees a right answer, how often it names the procedure behind a wrong answer,
 and that a draft stating the key never reaches a reviewer.
 
-What a model then does with the act takes models to measure. In
-[a check whose bars were written before it ran](../evals/policy-fidelity/README.md), the same scripted learners meet
-five tutors: a plain one, a carefully written prompt, that prompt with a guardrail that knows the policy and the
-answer, the Harness with the policy in words, and the Harness with the policy in code. A judge that doesn't know which
-is which says what each reply did, and each turn is scored as the act the policy requires, more help than it allows, or
-less. On the 60 conversations kept for testing, the prompt with a guardrail did the required step on 57 to 73 turns in
-100 across three models, and the Harness with the policy in code on 83 to 89
-([the tables, the six bars and the two that weren't met](../evals/policy-fidelity/results.md)).
+What a model then does with the act takes models to measure. In [the policy check](../evals/policy-fidelity/README.md),
+the same scripted learners meet five tutors: a plain one, a carefully written prompt, that prompt with a guardrail that
+knows the policy and the answer, the Harness with the policy in words, and the Harness with the policy in code. A judge
+that isn't told which tutor wrote a reply says what each reply did, and each turn is scored as the act the policy
+requires, more help than it allows, or less. On 60 test conversations and three reply models, the prompt with a
+guardrail did the required step on 57 to 73 turns in 100, and the Harness with the policy in code on 83 to 89. The
+criteria for success were written before the test replies were made
+([the method](../evals/policy-fidelity/method.md#the-criteria-as-written)).
 
-A second run put an open-weight model in every place of the tutor, on 60 conversations written after the first. The
-Harness did the required step on 74 and 75 turns in 100, and the prompt with a guardrail, run by the same open-weight
-model, on 48 and 45. The worked example is its weakest step there, given on 71 and 50 turns in 100 that required one
-([the second run](../evals/policy-fidelity/results-2.md)).
+A second experiment put an open-weight model in every place of the tutor, on 60 new conversations. The Harness did the
+required step on 74 and 75 turns in 100, and the prompt with an open-weight guardrail on 48 and
+45. The worked example is the weakest step, given on 71 and 50 turns in 100 that required one
+([why, and what comes next](../evals/policy-fidelity/README.md#the-worked-example-with-and-without-the-three-changes)).
 
 <p align="center">
-  <img src="../../docs/images/policy-check.svg" width="100%" alt="Share of turns on which each tutor did the step the teacher's policy requires, on 60 held-out conversations and three reply models. A carefully written prompt with a guardrail: 57 to 73 turns in 100. The Harness with the policy decided by code: 83 to 89 in 100. The prompt alone: 44 to 68. The Harness as it was: 46 to 56.">
+  <img src="../../docs/images/policy-check.svg" width="100%" alt="Experiment 1. Share of turns on which each tutor did the step the teacher's policy requires, on 60 test conversations and three reply models. A carefully written prompt with a guardrail: 57 to 73 turns in 100. The Harness with the policy decided by code: 83 to 89 in 100. The prompt alone: 44 to 68. The Harness with the policy in words: 46 to 56.">
 </p>
 
-The 66 procedures are also checked three ways outside this project's own cases
-([how, and what each gave](../evals/diagnosis/README.md)): against a model asked the same question, on wrong answers
-generated by someone else's library (MalruleLib), and on that library's own task of predicting a learner's next answer.
+The 66 procedures are also tested three ways ([computed diagnosis: three tests](../evals/diagnosis/README.md)):
+against a model asked the same question, on wrong answers generated by another team's library (MalruleLib), and on
+that library's own task of predicting a learner's next answer.
 
 These numbers are about whether replies follow a policy. Whether a policy helps learners takes a study with learners,
-and a tutor that holds the policy is what makes such a study a study of that policy.
-[What has been measured](evidence.md) puts every check on one page.
+and a tutor that holds the policy is what makes such a study a test of that policy.
+[What has been measured](evidence.md) has every test on one page.
 
 ## Where it applies
 

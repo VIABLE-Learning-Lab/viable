@@ -2,6 +2,8 @@
 
 <!-- Written from the manifest in src/components/ by npm run components:build; don’t edit by hand. -->
 
+A component the VIABLE Harness carries: what it does, what learner data it receives, its license and the evidence behind it. [Components](../components.md) says what a component is.
+
 How much help to give and when to withdraw it: help fitted to what the learner just did, the least that keeps them moving, and less of it as they improve.
 
 | | |
@@ -30,7 +32,7 @@ Wording by VIABLE Lab, CC BY 4.0. The findings belong to the researchers each pi
 
 **What its authors showed.** The idea comes from a descriptive study of an adult tutoring children aged 3 to 5 on a block-building task (Wood et al., 1976), not a trial. A review of a decade of classroom research named fitting help to the learner, fading it and handing over responsibility as the core, and found few effectiveness studies (van de Pol et al., 2010). A meta-analysis of 144 experiments on computer-based scaffolding in STEM, primary to adult, found g = 0.46 on cognitive outcomes, with no detectable difference from fading or adding support (Belland et al., 2017). In one classroom experiment with 768 students aged 12-15, better fitted help won only when groups also had long stretches of independent work (van de Pol et al., 2015). Help that suits beginners can lose its value or backfire as they gain expertise (Kalyuga et al., 2003). How much to give and withhold is an open problem (Koedinger & Aleven, 2007). Gaming hints went with lower test scores in one classroom study (Baker et al., 2004), and teaching better help use changed the behavior but not learning (Aleven et al., 2016). Concreteness fading rests on a review of math and science work that argues mainly from theory (Fyfe et al., 2014).
 
-**What comparisons in the harness showed.** Not yet compared in VIABLE.
+**What comparisons in the harness showed.** Not yet compared with and without it in this harness.
 
 **What nobody has shown yet.** Almost all of this is about human tutors, teachers and rule-based tutoring software, not language models. No study has tested these moves given to a model one or two at a time. Whether fading adds anything over steady, well-fitted support is unsettled, and how to judge from a short chat what a learner can do alone is unknown.
 

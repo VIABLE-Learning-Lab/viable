@@ -1,5 +1,8 @@
 # How the Harness works
 
+What the Harness does with each learner message, where the teaching knowledge it draws on is kept, and why it needs no
+search index.
+
 The Harness is about 10,000 lines of JavaScript with no dependencies, and two compact data files. It has no server, no
 index and no model of its own, and it keeps nothing unless you ask. It can be that small because it doesn't search
 everything on every turn: a person narrows things down first, and each turn only chooses from what is left.
@@ -68,13 +71,14 @@ which to take and what each learner message was (an answer, a request for the an
 counts the tries from that, so a count never rests on a model's arithmetic. It reads any language, and more of the moments.
 If it fails or takes too long, rules decide.
 
-How well this works so far: of 30 fractions moments a small model read 29 and rules read 23, and on the 150 messages kept for testing
-across subjects the rules read 83% as labelled ([the scorecard](scorecard.md)). Finding the right misconception for a
-message worked on only 4 of 19 turns ([what was measured](evidence.md#the-first-check)). So nothing is looked up from what a learner says: a turn
+Measured: of 30 fractions moments, a small model read 29 as labelled and rules read 23, and on 150 test messages across
+subjects the rules read 83% as labelled ([the scorecard](scorecard.md)). Matching a learner's words to a misconception
+found the labelled one on 4 of 19 turns ([what was measured](evidence.md#what-the-settings-add-to-a-reply)), so
+nothing is looked up from what a learner says: a turn
 chooses only among the activity's misconceptions, the teacher's or those chosen for them from the goal, and once a learner has
 tried something and no word points to one, it passes the first two on, to be used only if they fit. A turn's record marks what
-was chosen for the teacher (`by: default`). `defaults: false` in the settings gives the AI only what the teacher chose; a host
-whose settings belong to studies leaves choosing off unless an activity says `defaults: true`.
+was chosen for the teacher (`by: default`). `defaults: false` in the settings gives the AI only what the teacher chose. A host
+where settings are a study's conditions leaves this choosing off unless an activity says `defaults: true`.
 
 ## Keywords, embeddings and RAG
 
@@ -101,7 +105,7 @@ conversations when they mention one. A person's few hundred sentences need no in
 came up.
 
 Giving the misconceptions vectors too is possible, at about 32 MB and an embedding model on every turn. It isn't built, and
-whether it would beat a small picker model is for the evaluation to say.
+it hasn't been compared with a small picker model.
 
 ## Skills, MCP and the gateway
 
@@ -123,7 +127,7 @@ Neither has a copy: they import these same files, so a change here reaches all t
 | Part of the Harness | The Engine | The VIABLE Developer Platform |
 | --- | --- | --- |
 | Teaching settings, in `How the AI helps` | Yes | Yes |
-| The turn's brief | On by default | A choice in How the AI helps, off by default, read by rules |
+| The turn's brief, the instructions chosen for each turn | On by default | A choice in How the AI helps, off by default, read by rules |
 | VETTING's prompts and rounds | Its VETTING step | Its VETTING step and `/v1/vetting/*` |
 | Misconceptions and durable skills | Choosing them for an activity | Choosing them for an activity |
 | Measures | Records | The research export |

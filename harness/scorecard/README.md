@@ -14,7 +14,7 @@ Each was written by an AI model from definitions alone, without sight of the cod
 `expect` field was added by a second AI model, which saw each label and the list of procedures and never what the code
 names; where it and the author's words can be read two ways, `note` says so. `split` was set before any
 result was read: odd-numbered cases are `held_out`, the test half, and even-numbered are `dev`, the development half.
-Change the code from `dev` only, and quote `held_out`. Where a project would hold a secret key, the file says `__FAKE_MODEL_KEY__`, and the runner puts a harmless
+Anyone tuning the code should look only at the `dev` half, and report results on `held_out`. Where a project would hold a secret key, the file says `__FAKE_MODEL_KEY__`, and the runner puts a harmless
 stand-in there.
 
 `tutoring-conversations.json` is also what [the policy check](../evals/policy-fidelity/README.md) runs models on.

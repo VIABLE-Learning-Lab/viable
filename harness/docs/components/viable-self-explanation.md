@@ -2,6 +2,8 @@
 
 <!-- Written from the manifest in src/components/ by npm run components:build; don’t edit by hand. -->
 
+A component the VIABLE Harness carries: what it does, what learner data it receives, its license and the evidence behind it. [Components](../components.md) says what a component is.
+
 Getting the learner to do the mental work: asking why, in their own words; having them produce rather than only read or agree; and what to do when this feels harder than being told.
 
 | | |
@@ -30,7 +32,7 @@ Wording by VIABLE Lab, CC BY 4.0. The findings belong to the researchers each pi
 
 **What its authors showed.** Prompting learners to explain works on average: g = 0.55 across 64 reports and a range of tasks, subjects and levels (Bisra et al., 2018). The founding study was small: 14 prompted and 10 control eighth graders reading about the circulatory system (Chi et al., 1994). A major review rates self-explanation and elaborative questioning as moderate, since they were little tested in real classrooms (Dunlosky et al., 2013). ICAP, in which constructive and interactive work beats active and passive, is a framework with review-level support (Chi & Wylie, 2014); when teachers tried it they seldom managed interactive activities, though students learned more in constructive than active ones (Chi et al., 2018). Fiorella & Mayer (2016) review eight ways of having learners generate, with their limits. Students learned as well from tutors who only prompted as from tutors who explained (Chi et al., 2001). Contested: in math, adding prompts to explain to worked examples did worse (Barbieri et al., 2023). Preparing to teach and teaching: 28 studies, g = 0.35 and 0.56 (Kobayashi, 2019), though peer tutors tend to tell rather than build knowledge (Roscoe & Chi, 2007). Students in an active college class learned more and felt they learned less (Deslauriers et al., 2019), and people often misjudge how they learn (Bjork et al., 2013). Reciprocal teaching began with seventh graders who struggled with comprehension; median effects are 0.32 on standardized tests and 0.88 on researcher-made ones (Palincsar & Brown, 1984; Rosenshine & Meister, 1994).
 
-**What comparisons in the harness showed.** Not yet compared in VIABLE.
+**What comparisons in the harness showed.** Not yet compared with and without it in this harness.
 
 **What nobody has shown yet.** The prompts studied were written by instructors and researchers; Bisra et al. recommend testing generated ones, and whether a model's prompts work as well is not known. Whether learners explain to an AI with the effort they give a person, and how much prompting they tolerate before they leave, is untested. Explaining costs time and attention for beginners, and the balance is not settled.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Does a tutor do what the teacher's policy says, turn after turn? (README.md beside this file says what is tested and
- * the bars it has to clear.) Scripted learners, five ways to build the tutor, any OpenAI-compatible endpoint:
+ * Does a tutor do what the teacher's policy says, turn after turn? (README.md beside this file is the report, and
+ * method.md has the tutors and the criteria.) Scripted learners, five ways to build the tutor, any OpenAI-compatible endpoint:
  *
  *   OPENAI_BASE_URL=... OPENAI_API_KEY=... node evals/policy-fidelity/run.mjs run --split dev --models a-model --reviewer a-model
  *   node evals/policy-fidelity/run.mjs judge --judge a-model            # blind to how each reply was made
@@ -128,7 +128,7 @@ const CONDITIONS = {
       reply = await write(model, STRONG(c), said);
     }
   },
-  // The Harness as it was: the policy in words in the developer's own prompt, the Harness's brief at the level that steps up
+  // The Harness without the policy layer: the policy in words in the developer's own prompt, the Harness's brief at the level that steps up
   // after it, a reviewer with the key, and nothing decided or checked by code.
   D0: async ({ c, model, reviewer, turns }) => {
     const teaching = { help: 'step_up' };
@@ -141,10 +141,10 @@ const CONDITIONS = {
   // The Harness with the policy in code: the act for the turn decided from the tries, a reply checked by code and then a reviewer.
   // In D the reviewer's model also says what each learner message was (an answer, a plea, being stuck) and code counts; in Dr rules do.
   D: (given) => CONDITIONS.Dr({ ...given, reads: given.reviewer }),
-  // For the second run. D1 is the Harness as the first run measured it: the same call, made from a checkout of that commit
-  // (README), so it refuses to run on any later code. Dl is D with another reviewer, named on the command line, kept apart
+  // For the second experiment. D1 is the Harness as the first experiment measured it: the same call, made from a checkout of
+  // that code (method.md), so it refuses to run on any later code. Dl is D with another reviewer, named on the command line, kept apart
   // so that the two can be told from each other in one set of runs.
-  D1: (given) => { if ('actBelow' in HARNESS) throw new Error('D1 is run from a checkout of the first run\u2019s commit, 86bbb0a: see the README.'); return CONDITIONS.D(given); },
+  D1: (given) => { if ('actBelow' in HARNESS) throw new Error('D1 is the Harness before the three changes to the worked example, and can\u2019t be run on this code: see method.md.'); return CONDITIONS.D(given); },
   Dl: (given) => CONDITIONS.D(given),
   Dr: async ({ c, model, reviewer, turns, reads = null }) => {
     const turn = await prepare({ teaching: { help: 'step_up', ladder: true }, message: turns.at(-1).content, history: turns.slice(0, -1), question: c.problem, answer: c.answer, ...(reads ? { picker: { call: (_env, request) => ask(request), model: reads } } : {}) });
@@ -303,8 +303,8 @@ const COMMANDS = {
     const exactOf = (set) => share(set.filter((row) => row.need.act && row.judged), (row) => fidelity(row.need, row.judged) === 'exact');
     const result = { split, unjudged, models: {} };
     console.log(`# ${split === 'held_out' ? 'Held-out' : 'Development'} half${unjudged ? ` (${unjudged} replies not judged yet)` : ''}\n`);
-    // The tutors by the letters the tables use (the README says what each is).
-    console.log('A plain tutor · B strong prompt · C strong prompt and a guardrail · D0 the Harness as it was · Dr policy in code, read by rules · D policy in code · D1 the Harness as the first run measured it · Dl policy in code, another reviewer\n');
+    // The tutors by the letters the tables use (method.md says what each is).
+    console.log('A plain tutor · B strong prompt · C strong prompt and a guardrail · D0 Harness, policy in words · Dr Harness, policy in code, read by rules · D Harness, policy in code · D1 Harness, without the three changes to the worked example · Dl Harness, policy in code, with another reviewer\n');
     for (const model of models) {
       console.log(`## ${model}\n\n| | Conversations | Exact | Too much | Too little | Wrong "right" | States the answer (code) | Gives it away (judge) | Fallback | Stepped down | Model calls a turn |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |`);
       const by = {};

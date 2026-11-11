@@ -4,7 +4,7 @@
 
 What a whole activity can be, from research. [Guidance](components.md) says what an AI should do at a moment in a conversation; a design says what learners do from start to end, so a conversation has a reason to happen. Most of these studies are on classrooms and human tutors, and each design says what isn't known.
 
-Ask on the VIABLE Learning Platform chooses from these. So can your agent, with the MCP tool `find_designs`, `viable-harness designs` or `findDesigns`. `reviewActivity` reads an activity against the rules below, with no model.
+Ask, where a teacher sets up a class in conversation with an agent on the VIABLE Learning Platform or the VIABLE Engine, chooses from these. So can your agent, with the MCP tool `find_designs`, `viable-harness designs` or `findDesigns`. `reviewActivity` reads an activity against the rules below, with no model.
 
 ## What holds for any of them
 

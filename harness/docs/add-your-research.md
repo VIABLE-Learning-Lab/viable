@@ -1,4 +1,4 @@
-# Add your work
+# Add your research
 
 Guidance from research, a dataset, a tool that reads conversations, open material or a resource to list: each has its own way into the [library](catalog.md).
 

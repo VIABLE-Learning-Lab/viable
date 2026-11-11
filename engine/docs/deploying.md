@@ -1,7 +1,7 @@
 # Putting this in front of learners
 
-This guide is for anyone who puts the Engine or the Harness in front of learners: a school or district, a
-researcher, or a developer building a learning app on them. It says what the code itself
+For anyone who puts the Engine or the Harness in front of learners: a school or district, a
+researcher, or a developer building a learning app. It says what the code itself
 guarantees, and what it leaves to you. To run agents and courses built on VIABLE on your own server,
 behind the same calls your apps make to VIABLE, see [self-hosting.md](self-hosting.md).
 
@@ -13,7 +13,8 @@ what you send to which model, and what you keep decide that.
 ## What the code guarantees
 
 Each guarantee is about this repository's own code (the engine, VETTING, the teaching layer, the
-measures, the formats and the CLI), with its limits.
+measures, the formats and the CLI), with its limits. VETTING is a review step in which a second model checks a
+reply against the teacher's rules before the learner sees it.
 
 - **No learner's name or identifier is added to what is sent to a model.** A name on a class list stays in your store, and is shown only behind the token and to that learner. A local run's learner
   ID (`--learner`, for memory) and a section's ID choose what is kept and which teaching settings
@@ -41,9 +42,9 @@ measures, the formats and the CLI), with its limits.
 - **Components declare what they receive.** Each component's manifest lists the learner data it
   receives (`receives`), every other host it contacts (`sends_to`), and whether it calls models (in
   the Harness's process, through the host's model service; out of process, on its own, with that
-  model's host in `sends_to`) ([components.md](../../harness/docs/components.md)). The 14 components the
-  Harness carries today run in its own process, or are data that nothing runs, and contact no other host
-  (`viable-harness components`). A component reaching data or hosts its manifest doesn't list is a
+  model's host in `sends_to`) ([components.md](../../harness/docs/components.md)). The components the
+  Harness carries run in its own process, or are data that nothing runs, and contact no other host
+  (`viable-harness components` lists them). A component reaching data or hosts its manifest doesn't list is a
   security issue ([SECURITY.md](../../SECURITY.md)). One in a package you were sent starts no program
   unless you name it ([components.md](../../harness/docs/components.md#a-component-in-a-document)).
 - **A local run keeps its trace on the machine.** `viable-engine run` and `runAgent` return the
@@ -152,7 +153,7 @@ written from them. Before learners use it:
 
 ### Unverified and needs-attention replies
 
-- Decide what a learner sees when a reply is `unverified`: the fractions example sends a short message
+- Decide what a learner sees when a reply is `unverified`: the bundled fractions practice course (`examples/fractions-practice.json`) sends a short message
   that asks the learner to rephrase or ask their teacher, instead of the reply the reviewer didn't
   approve. Don't send an unverified reply as if it had passed.
 - An `attention` outcome means the reply model saw something that may need a person, such as a

@@ -2,6 +2,8 @@
 
 <!-- Written from the manifest in src/components/ by npm run components:build; don’t edit by hand. -->
 
+A component the VIABLE Harness carries: what it does, what learner data it receives, its license and the evidence behind it. [Components](../components.md) says what a component is.
+
 For beginners, how to show a method without doing their work: a worked example of a similar problem, fewer steps shown as they improve, and replies that hold one idea at a time.
 
 | | |
@@ -30,7 +32,7 @@ Wording by VIABLE Lab, CC BY 4.0. The findings belong to the researchers each pi
 
 **What its authors showed.** For beginners, studying worked examples beats solving problems alone: a meta-analysis of 55 math studies, elementary to postsecondary, found g = 0.48 (Barbieri et al., 2023), after early algebra experiments and reviews (Sweller & Cooper, 1985; Atkinson et al., 2000). Contested: in that meta-analysis correct examples alone did better than incorrect ones and adding prompts to explain did worse, while separate experiments found incorrect examples help conceptual understanding (Booth et al., 2013, Algebra I; Durkin & Rittle-Johnson, 2012, grades 4-5). Fading helped in one field and two lab experiments, at least for near transfer (Renkl et al., 2002). The advantage falls or reverses as expertise grows (Kalyuga et al., 2003). Comparing cases: 57 experiments, d = 0.50 (Alfieri et al., 2013); grade 7 algebra (Rittle-Johnson & Star, 2007). Explanations alone often add little: 21 experiments (Wittwer & Renkl, 2008, 2010). Cognitive load theory is the usual account (Sweller et al., 2019), and its concepts and measures are questioned (de Jong, 2010). Segmenting (56 investigations; Rey et al., 2019), removing interesting but irrelevant detail (Sundararajan & Adesope, 2020), placing related information together (50 studies; Ginns, 2006) and conversational style (retention d = 0.30, transfer d = 0.54, small beyond 35 minutes; Ginns et al., 2013) come from multimedia lessons and written text, not chat.
 
-**What comparisons in the harness showed.** Not yet compared in VIABLE.
+**What comparisons in the harness showed.** Not yet compared with and without it in this harness.
 
 **What nobody has shown yet.** None of it tested a language model's replies. Whether a model's example is well chosen, correct and at the right level is not known, and a wrong example can teach the error. Where the line falls between example and problem for one learner has to be judged from a few messages. Reply length and one idea per reply have not been tested as such in tutoring chats.
 

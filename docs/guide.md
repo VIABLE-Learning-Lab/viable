@@ -1,7 +1,7 @@
 # Using the command lines
 
-The reference for the command line, what a local run does, the services a host passes in, the open
-formats and the measures. The [README](../README.md) is the overview; [components.md](../harness/docs/components.md),
+This reference is for developers and IT staff using the VIABLE Harness and Engine command lines, and for researchers reading
+the measures. It covers the command line, what a local run does, the services a host passes in, the open formats and the measures. The [README](../README.md) is the overview; [components.md](../harness/docs/components.md),
 [mcp.md](../harness/docs/mcp.md), [xapi.md](../harness/docs/xapi.md) and [step-manifests.md](../engine/docs/step-manifests.md) go deeper.
 
 ## The command line
@@ -51,8 +51,8 @@ viable-harness conformance [suite]
 viable-harness mcp
 ```
 
-(Until the packages are on npm, use `npx github:VIABLE-Learning-Lab/viable` in place of `viable-harness` or `viable-engine`: it takes every command.
-From a clone, `node engine/bin/viable-engine.mjs`.)
+Run any command with `npx github:VIABLE-Learning-Lab/viable <command>` in place of `viable-harness` or `viable-engine`, or from a clone
+with `node engine/bin/viable-engine.mjs <command>`.
 
 - **run**: a `.viable.zip` (a course downloaded with its files) runs as it is: its files are read from
   the archive, which is never unpacked. `--knowledge <id>=<folder>` searches a folder's text files as
@@ -78,7 +78,7 @@ From a clone, `node engine/bin/viable-engine.mjs`.)
 - **validate**: the open formats' schemas, then the engine's own graph checks and that a package's
   refs resolve. Model names aren't checked: a local run sends them to your endpoint.
 - **measure**: the research export's learner measures from a list of learning events and turns.
-- **misconceptions** and **components**: Eedi's misconceptions for a goal or a standard's text, with
+- **misconceptions** and **components**: misconceptions from the Eedi dataset for a goal or a standard's text, with
   their attribution; the component manifests.
 - **serve**: answers apps over HTTP as VIABLE answers their agent runs: `POST /v1/agents/<slug>/runs`
   with the same fields, reading a run back, `GET /v1/agents` and `GET /health`. An agent file answers
@@ -201,8 +201,7 @@ written from the step manifests in `src/agents/steps/` by `npm run steps:build`,
 `measureLearner({ events, turns })` returns the research export's learner metrics (messages,
 sessions, think time, revision, pasting, accuracy, mastery, wheel-spinning, ...), mastery per skill,
 and how the learner wrote in each writing panel. Each metric's definition, computation, rationale,
-caveats and sources are exported as `METRICS`, `WRITING`, `PANELS` and `CITATIONS`, from the same
-file VIABLE's export and dashboard use (`src/utils/researchMetrics.js`).
+caveats and sources are exported as `METRICS`, `WRITING`, `PANELS` and `CITATIONS`, from `src/utils/researchMetrics.js`.
 
 ## The teacher view
 
@@ -221,8 +220,7 @@ every section open.
 node engine/bin/viable-engine.mjs view learner-*.json run-*.json examples/fractions-practice.json --out class.html
 ```
 
-What the page shares with the MCP views is written once in `src/ui/`. `theme.js` holds the tokens, under the names
-and light values of VIABLE's portal's stylesheet, with the fonts, the mark and the base components. `parts.js` holds a VETTING
+What the page shares with the MCP views is written once in `src/ui/`. `theme.js` holds the design tokens, with the fonts, the mark and the base components. `parts.js` holds a VETTING
 round, a test case and a suggestion as pure functions returning a tree, which `treeHtml` writes on a server and
 `treeDom` builds in a browser. A served page uses `themeCss({ fonts: 'url' })` and adds `fontRoutes()` to the
 server's routes.
@@ -244,8 +242,8 @@ A run's `label`, when it has one, names it in the evidence (a host that keeps it
 its own way); otherwise it is "Run 1", "Run 2" in the order given. `applySuggestion(teaching,
 suggestion)` gives the settings with one accepted; on VIABLE, accepted settings become the
 activity's next version. A suggestion describes what the records show and what
-to try; it never says what learners learned, and the thresholds are first values to revisit with
-teachers (`SUGGESTION_THRESHOLDS`).
+to try; it does not say what learners learned. The thresholds are defaults in `SUGGESTION_THRESHOLDS`, and `suggestChanges` takes
+a second argument that overrides them.
 
 ## Components
 

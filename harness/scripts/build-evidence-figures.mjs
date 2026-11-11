@@ -1,6 +1,6 @@
 // Draws the figures of docs/evidence.md in the other figures' style: docs/images/policy-check.svg and policy-check-steps.svg
-// from the kept replies and judgments (evals/policy-fidelity/runs), policy-check-2.svg and policy-check-2-steps.svg from the
-// second run's (runs-2), and docs/images/diagnosis-checks.svg from the counts that
+// from the kept replies and judgments of the policy check's first experiment (evals/policy-fidelity/runs), policy-check-2.svg and
+// policy-check-2-steps.svg from its second (runs-2), and docs/images/diagnosis-checks.svg from the counts that
 // evals/diagnosis prints. node harness/scripts/build-evidence-figures.mjs, after a change to either; with --check it
 // writes nothing and fails when a figure is not what the data gives.
 import assert from 'node:assert/strict';
@@ -60,7 +60,7 @@ function parts({ title, lines, legend, groups, foot, number }) {
 const reportOf = (...more) => JSON.parse(execFileSync(process.execPath, [fileURLToPath(new URL('../evals/policy-fidelity/run.mjs', import.meta.url)), 'report', '--split', 'held_out', '--json', ...more], { encoding: 'utf8', maxBuffer: 64e6 }).trim().split('\n').pop());
 const report = reportOf();
 assert.equal(report.unjudged, 0, 'every reply on the test half has a judgment');
-const TUTORS = { A: 'Plain tutor', B: 'Strong prompt', C: 'Strong prompt and a guardrail', D0: 'Harness as it was', Dr: 'Harness, policy in code, read by rules', D: 'Harness, policy in code' };
+const TUTORS = { A: 'Plain tutor', B: 'Strong prompt', C: 'Strong prompt and a guardrail', D0: 'Harness, policy in words', Dr: 'Harness, policy in code, read by rules', D: 'Harness, policy in code' };
 const LEGEND = [{ name: 'The required step', short: 'Required', fill: 'var(--right)' }, { name: 'More help than the policy allows', short: 'More', fill: 'var(--over)' }, { name: 'Less help than it requires', short: 'Less', fill: 'var(--under)' }];
 const MODELS = [['gpt-oss-120b', 'open weights'], ['gemma-4-31b-it', 'open weights'], ['gpt-6-luna', '']];
 const one = (value) => `${(100 * value).toFixed(1)}%`;
@@ -69,21 +69,21 @@ const required = (model, tutor) => report.models[model].by[tutor].exact;
 const range = (tutor) => { const values = MODELS.map(([model]) => 100 * required(model, tutor)); return `${Math.round(Math.min(...values))} to ${Math.round(Math.max(...values))}`; };
 
 const policy = parts({
-  title: 'Turns on which the tutor did the step the teacher’s policy requires',
-  lines: ['The test half: 60 scripted conversations of six turns for each tutor and reply model, 324 turns that require a step.', 'A judge that isn’t told which tutor wrote a reply says what the reply did.'],
+  title: 'Experiment 1: turns on which the tutor did the step the teacher’s policy requires',
+  lines: ['60 test conversations of six learner turns for each tutor and reply model. 324 turns require a step.', 'A judge that isn’t told which tutor wrote a reply says what the reply did.'],
   legend: LEGEND,
   groups: MODELS.map(([model, note]) => ({ name: model, note, rows: Object.keys(TUTORS).filter((tutor) => report.models[model].by[tutor]).map((tutor) => { const v = report.models[model].by[tutor]; return { name: TUTORS[tutor], strong: tutor === 'D', parts: [v.exact, v.too_much, v.too_little] }; }) })),
-  foot: ['The plain tutor and the Harness read by rules were run on one model. The policy: a question before any try, a hint after one, a worked example after two, never the answer.'],
+  foot: ['The plain tutor and the Harness read by rules were run on one reply model. The policy: a question before any try, a hint after one, a worked example after two, never the answer.'],
   number: one
 });
-put('policy-check.svg', frame(policy.height, `Share of turns on which each tutor did the step the teacher's policy requires, on 60 held-out conversations and three reply models. A carefully written prompt with a guardrail: ${range('C')} turns in 100. The Harness with the policy decided by code: ${range('D')} in 100. The prompt alone: ${range('B')}. The Harness as it was: ${range('D0')}.`, policy.inside));
+put('policy-check.svg', frame(policy.height, `Experiment 1. Share of turns on which each tutor did the step the teacher's policy requires, on 60 test conversations and three reply models. A carefully written prompt with a guardrail: ${range('C')} turns in 100. The Harness with the policy decided by code: ${range('D')} in 100. The prompt alone: ${range('B')}. The Harness with the policy in words: ${range('D0')}.`, policy.inside));
 
 // Where the difference comes from: for each step the policy can require, the guardrail and the Harness on one scale.
 const STEPS = [['ask', 'a question'], ['hint', 'a hint'], ['example', 'a worked example'], ['confirm', 'saying the answer is right']];
 const SCALE = { x: 400, width: 600 };
 const TICKS = [0, 0.25, 0.5, 0.75, 1];
 const at = (value) => SCALE.x + value * SCALE.width;
-function steps(data = report, models = MODELS, [from, fromName] = ['C', 'Strong prompt and a guardrail'], [to, toName] = ['D', 'Harness, policy in code'], title = 'Where the difference comes from', line = 'The share of turns done as required, by the step the policy called for. The test half, as above.') {
+function steps(data = report, models = MODELS, [from, fromName] = ['C', 'Strong prompt and a guardrail'], [to, toName] = ['D', 'Harness, policy in code'], title = 'Experiment 1: where the difference comes from', line = 'The share of turns done as required, by the step the policy called for, on three reply models.') {
   const out = [head(title, [line])];
   let y = 150;
   out.push(`<circle cx="80" cy="${y - 4}" r="6" fill="var(--paper)" stroke="var(--muted)" stroke-width="2"/>${text(96, y + 1, 13, 400, fromName, 'ink')}<circle cx="${112 + fromName.length * 7.2}" cy="${y - 4}" r="7" fill="var(--right)"/>${text(128 + fromName.length * 7.2, y + 1, 13, 400, toName, 'ink')}`);
@@ -116,30 +116,30 @@ function steps(data = report, models = MODELS, [from, fromName] = ['C', 'Strong 
 }
 const byStep = steps();
 const gain = (act) => MODELS.map(([model]) => `${whole(report.models[model].by.C.by_act[act].exact)} to ${whole(report.models[model].by.D.by_act[act].exact)}`).join(', ');
-put('policy-check-steps.svg', frame(byStep.height, `The share of turns done as required by the step the policy called for, the prompt with a guardrail against the Harness with the policy in code, on three reply models. A question: ${gain('ask')} in 100. A hint: ${gain('hint')}. A worked example: ${gain('example')}, where the guardrail does better. Saying the answer is right: ${gain('confirm')}.`, byStep.inside));
+put('policy-check-steps.svg', frame(byStep.height, `Experiment 1 by the step the policy called for, the prompt with a guardrail against the Harness with the policy in code, on three reply models. A question: ${gain('ask')} turns in 100. A hint: ${gain('hint')}. A worked example: ${gain('example')}, where the guardrail does better. Saying the answer is right: ${gain('confirm')}.`, byStep.inside));
 
-// --- The second run: every model in the tutor open-weight, on the second set ----------------------------
+// --- Experiment 2: every model in the tutor open-weight, on the second set of conversations ----------------
 
 const second = new URL('../evals/policy-fidelity/runs-2/', import.meta.url);
 let secondSaid = '';
 if (existsSync(new URL('replies.jsonl', second))) {
   const run2 = reportOf('--set', fileURLToPath(new URL('../evals/policy-fidelity/conversations-2.json', import.meta.url)), '--out', fileURLToPath(second));
-  assert.equal(run2.unjudged, 0, 'every reply of the second run has a judgment');
+  assert.equal(run2.unjudged, 0, 'every reply of the second experiment has a judgment');
   const OPEN = [['gpt-oss-120b', 'open weights'], ['gemma-4-31b-it', 'open weights']];
-  const NAMES = { C: 'Strong prompt and a guardrail', D1: 'Harness, as the first run measured it', D: 'Harness, now', Dl: 'Harness, now, with a closed reviewer' };
-  const of = (tutor) => { const values = OPEN.map(([model]) => 100 * run2.models[model].by[tutor].exact); return `${Math.round(Math.min(...values))} and ${Math.round(Math.max(...values))}`; };
+  const NAMES = { C: 'Strong prompt and a guardrail', D: 'Harness, policy in code', Dl: 'The same, with a closed-model reviewer' };
+  const of = (tutor) => OPEN.map(([model]) => Math.round(100 * run2.models[model].by[tutor].exact)).join(' and ');
   const again = parts({
-    title: 'The second run: every model in the tutor open-weight',
-    lines: ['60 new conversations, 324 turns that require a step for each tutor and reply model.', 'The guardrail, the reviewer and the reader of the conversation are gpt-oss-120b, except in the last row.'],
+    title: 'Experiment 2: every model in the tutor open-weight',
+    lines: ['60 new conversations of six learner turns for each tutor and reply model. 324 turns require a step.', 'The guardrail, the reviewer and the reader of the conversation are gpt-oss-120b.'],
     legend: LEGEND,
     groups: OPEN.map(([model, note]) => ({ name: model, note, rows: Object.keys(NAMES).filter((tutor) => run2.models[model].by[tutor]).map((tutor) => { const v = run2.models[model].by[tutor]; return { name: NAMES[tutor], strong: tutor === 'D', parts: [v.exact, v.too_much, v.too_little] }; }) })),
-    foot: ['The Harness as the first run measured it is the code at commit 86bbb0a. The closed reviewer is gpt-6-luna, run on one reply model.'],
+    foot: ['In the row with a closed-model reviewer, gpt-6-luna reviews and reads the conversation. It was run on one reply model.'],
     number: one
   });
-  put('policy-check-2.svg', frame(again.height, `The second run of the policy check, with every model in the tutor open-weight, on 60 new conversations. Share of turns done as the policy requires on the two reply models: a carefully written prompt with a guardrail ${of('C')} in 100, the Harness as the first run measured it ${of('D1')}, the Harness now ${of('D')}.`, again.inside));
-  const byStep2 = steps(run2, OPEN, ['D1', 'Harness, as the first run measured it'], ['D', 'Harness, now'], 'What the changes did, step by step', 'The share of turns done as required, by the step the policy called for. The second run, as above.');
+  put('policy-check-2.svg', frame(again.height, `Experiment 2, with every model in the tutor open-weight, on 60 new conversations. Share of turns done as the policy requires on the two reply models: a carefully written prompt with a guardrail ${of('C')} in 100, the Harness with the policy in code ${of('D')}. With a closed model as reviewer, on one reply model, the Harness did it on ${Math.round(100 * run2.models['gpt-oss-120b'].by.Dl.exact)}.`, again.inside));
+  const byStep2 = steps(run2, OPEN, ['D1', 'Harness, without the three changes'], ['D', 'Harness, policy in code'], 'Experiment 2: what three changes to the worked example did', 'The share of turns done as required, by the step the policy called for, on two open-weight reply models.');
   const moved = (act) => OPEN.map(([model]) => `${whole(run2.models[model].by.D1.by_act[act].exact)} to ${whole(run2.models[model].by.D.by_act[act].exact)}`).join(' and ');
-  put('policy-check-2-steps.svg', frame(byStep2.height, `The second run by the step the policy called for, the Harness as the first run measured it against the Harness now, on two open-weight reply models. A question: ${moved('ask')} in 100. A hint: ${moved('hint')}. A worked example: ${moved('example')}. Saying the answer is right: ${moved('confirm')}.`, byStep2.inside));
+  put('policy-check-2-steps.svg', frame(byStep2.height, `Experiment 2 by the step the policy called for, the Harness without three changes to the worked example against the Harness with them, on two open-weight reply models. A question: ${moved('ask')} turns in 100. A hint: ${moved('hint')}. A worked example: ${moved('example')}. Saying the answer is right: ${moved('confirm')}.`, byStep2.inside));
   secondSaid = `, policy-check-2.svg (${of('C')} against ${of('D')}) and policy-check-2-steps.svg`;
 }
 

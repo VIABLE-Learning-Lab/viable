@@ -2,8 +2,8 @@
 
 > Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
 
-The Harness's parts are [MCP](https://modelcontextprotocol.io) tools, so an assistant, a harness of your own or an
-app on another agent SDK can prepare what a moment of teaching needs, check replies with VETTING, find
+The Harness's parts are [MCP](https://modelcontextprotocol.io) tools, for an assistant, a harness of your own or an
+app on another agent SDK. With them it can prepare what a moment of teaching needs, check replies with VETTING, find
 misconceptions, compute the measures and test agents without adopting anything else. A tool is advice an assistant may
 ignore; the [gateway](with-your-stack.md) or your own calls make it run. There are two ways to reach them.
 
@@ -43,7 +43,7 @@ assistant](https://developers.viablelab.org/docs/connect/assistants) has the set
 | Project | a VIABLE API key | the open tier, plus `check_reply`, `list_published_agents` and `run_published_agent`, billed to the key's project | the same per address, and the key's own: requests per minute, allowed models, daily tokens, monthly cost, account credit; 1 MB of arguments a call |
 
 - **A key that is sent must be good.** A wrong, revoked or expired key is a `401`, never the open tier.
-- **A key needs a scope per tool:** `model:request` for `check_reply`, `agents:execute` for the agent tools. Without it the tool answers with `isError` and says what to add. No scope is new.
+- **A key needs a scope per tool:** `model:request` for `check_reply`, `agents:execute` for the agent tools. Without it the tool answers with `isError` and says what to add.
 - **`check_reply`** runs the same plan as here (`src/checkPlan.js`) on the platform's model services. The reviewer is VETTING's default on VIABLE unless `reviewer` or `model` names another. It is billed and logged like `/v1/vetting`, in the project's request logs, without its text.
 - **`run_published_agent`** runs one turn through the same admission and execution as `POST /v1/agents/{slug}/runs`, and takes `agent`, `message`, `conversation_id` and `context`. It takes no learner ID.
 
@@ -111,11 +111,8 @@ command, not an address. Tools that call a model reach the endpoint in the serve
 finding misconceptions, the measures, the catalog, the components) needs no key and nothing from
 the network.
 
-Tried for real on 2026-11-03 in Codex CLI 0.165, installed from the repository as described here:
-its agent called `find_misconceptions`, `validate_document`, `teaching_instructions`,
-`compute_measures`, `list_components` and `check_reply` and followed three of the Skills; every
-tool answered, and `check_reply`, without a key, said so. Claude Code 2.1 started the server and
-listed its eleven tools and four Skills.
+`viable-harness mcp` serves 13 of [the tools](#the-tools). `viable-engine mcp` serves all 15, adding
+`run_agent` and `run_agent_tests`.
 
 ## Configuring a client for the local server
 
@@ -192,7 +189,7 @@ The server offers them only to a client that says in `initialize` that it render
 capabilities, gives the three tools `_meta.ui.resourceUri` (and the older `_meta["ui/resourceUri"]`),
 and serves the pages through `resources/list` and `resources/read`.
 
-**Every other client** sees the server as before: the same capabilities and tools, no resources, and
+**Every other client** sees the server without views: the same capabilities and tools, no resources, and
 each result as text and `structuredContent`. Results don't change with views either: a view reads
 the same `structuredContent`, and the text still reaches the model.
 

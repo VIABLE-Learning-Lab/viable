@@ -96,36 +96,40 @@ A model only ever hears a class's numbers: learners stay on your side, and the c
 
 ## How much does it help?
 
-Early results: on 50 learner messages and two models, a one-line tutor prompt got 8% of first drafts past review, and a teacher's
-settings given before the reply got 68 to 74%. Choosing what goes in for each turn added about 10 more points and a quarter fewer tokens,
-which isn't yet clear of chance on that set, and is clear on not giving the answer away (18 to 20 points on an open-weight model). Finding
-the right misconception for a message worked on only 4 of 19 turns. Rated by a model, on replies, not learning
-([what was done](docs/evidence.md#the-first-check)).
-
-A teacher's policy holds better when code decides its steps. On 60 scripted conversations with three models, a tutor with a
-carefully written prompt and a guardrail that knows the policy did the step the policy required on 57 to 73 turns in 100. With
-the Harness deciding the step in code it was 83 to 89, and the gap was widest on the two open-weight models, at 25 and 31
-points ([what was run and what it gave](evals/policy-fidelity/results.md); judged by a model, on replies). With every model
-in the tutor open-weight, on a second set of conversations, it was 74 and 75 against 48 and 45
-([the second run](evals/policy-fidelity/results-2.md)). Where a
-problem is arithmetic, code also names the faulty procedure behind a wrong answer, as often as a model asked the same
-question and with half as many wrong names ([three checks](evals/diagnosis/README.md)).
-[What has been measured](docs/evidence.md) has every check on one page.
+A teacher's policy holds better when code decides its steps. On 60 test conversations with three reply models, a tutor
+built from a carefully written prompt and a guardrail that knows the policy did the step the policy required on 57 to
+73 turns in 100. With the Harness deciding the step in code it was 83 to 89, and no reply it delivered stated the
+answer. With every model in the tutor open-weight, as in a school that runs its own servers, it was 74 and 75 against
+48 and 45 on 60 new conversations ([the policy check](evals/policy-fidelity/README.md)).
 
 <p align="center">
-  <img src="../docs/images/policy-check.svg" width="100%" alt="Share of turns on which each tutor did the step the teacher's policy requires, on 60 held-out conversations and three reply models. A carefully written prompt with a guardrail: 57 to 73 turns in 100. The Harness with the policy decided by code: 83 to 89 in 100. The prompt alone: 44 to 68. The Harness as it was: 46 to 56.">
+  <img src="../docs/images/policy-check.svg" width="100%" alt="Experiment 1. Share of turns on which each tutor did the step the teacher's policy requires, on 60 test conversations and three reply models. A carefully written prompt with a guardrail: 57 to 73 turns in 100. The Harness with the policy decided by code: 83 to 89 in 100. The prompt alone: 44 to 68. The Harness with the policy in words: 46 to 56.">
 </p>
 
-What needs no model is checked on every commit, and anyone can run it: eight guarantees on 4,439 checks, such as a learner's
-words never entering what the model is told and an answer key reaching only the reviewer. On the half of each set kept for
-testing, the rules read 83% of 150 messages as labelled, `review` finds 87% of the problems planted in 30 projects with no
-false alarm, and code names the faulty procedure behind 70% of 80 wrong answers ([the scorecard](docs/scorecard.md)).
+Where a problem is arithmetic, code names the faulty procedure behind a wrong answer as often as the best of three
+models asked the same question, and names a wrong one half as often
+([computed diagnosis: three tests](evals/diagnosis/README.md)).
+
+What needs no model is checked on every commit, and anyone can run it: eight guarantees on 4,439 checks, such as a
+learner's words never entering what the model is told and an answer key reaching only the reviewer. On the half of each
+set kept for testing, the rules read 83% of 150 messages as labelled, `review` finds 87% of the problems planted in 30
+projects with no false alarm, and code names the faulty procedure behind 70% of 80 wrong answers
+([the scorecard](docs/scorecard.md)).
 
 <p align="center">
-  <img src="../docs/images/scorecard.svg" width="100%" alt="The scorecard at a glance. Eight guarantees hold on 4,439 checks, among them that a learner's words never enter what the model is told, that an answer key reaches only the reviewer, and that a reply stating the key is stopped by code. On the test half of each set, the rules read 83 percent of 150 English messages as labelled, from 51 percent before, and review finds 87 percent of 53 planted problems, from 79 percent, with no false alarm.">
+  <img src="../docs/images/scorecard.svg" width="100%" alt="The scorecard at a glance. Eight guarantees hold on 4,439 checks, among them that a learner's words never enter what the model is told, that an answer key reaches only the reviewer, and that a reply stating the key is stopped by code. On the test half of each set, the rules read 83 percent of 150 English messages as labelled, review finds 87 percent of 53 planted problems with no false alarm, code names the procedure behind 70 percent of 80 wrong answers, and rules decide the step a turn requires on 90 percent of 345 turns.">
 </p>
 
-## It doesn't compete with where its knowledge comes from
+The largest single gain comes from telling a model what the teacher decided before it replies. On 50 learner messages
+and two models, a one-line tutor prompt got 8% of first drafts past review, and the teacher's settings got 68 to 74%. Giving
+the model only what each turn needs, in place of the settings whole, kept the answer back on 18 to 20 more replies in
+100, with a quarter fewer tokens ([what the settings add to a reply](docs/evidence.md#what-the-settings-add-to-a-reply)).
+
+Each of these measures replies or code, on invented cases judged by a model, and none measures learning.
+[What has been measured](docs/evidence.md) has every test, where it falls short, and the commands that print its
+numbers again.
+
+## Where its knowledge comes from
 
 [Learning Commons](https://learningcommons.org) and [Eedi](https://www.eedi.com) keep the shelves: standards, learning components,
 misconceptions, evaluators. If you want lookups in your assistant, use their MCP server. The Harness decides at each moment what to

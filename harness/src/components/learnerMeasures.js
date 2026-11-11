@@ -10,10 +10,10 @@ export default {
   uses_models: false,
   license: { code: 'MIT' },
   authors: ['VIABLE Lab'],
-  cite: 'VIABLE, src/utils/researchMetrics.js; each measure cites its own sources (CITATIONS).',
+  cite: 'VIABLE Lab (2026). Learner measures, VIABLE Harness. Each measure cites its own sources.',
   evidence: {
     original: 'Each measure follows the published work its entry in METRICS cites (for example, mastery after a streak of correct answers; wheel-spinning after many attempts without mastery).',
-    integration: 'The same code computes VIABLE’s research export and dashboard.',
+    integration: 'Not yet compared with other measures in this harness. The same code computes the VIABLE Developer Platform’s research export.',
     unknown: 'How each measure relates to learning in a given course: they are descriptive, never learning gains.'
   },
   risk: 'low',

@@ -2,6 +2,8 @@
 
 <!-- Written from catalog/*.json by npm run catalog:build; don’t edit by hand. -->
 
+Open datasets, benchmarks, standards, evaluators and tools for K-12 AI, each with its license and how far the VIABLE Harness can use it. It is for builders and researchers choosing what to test or ground an AI tutor with.
+
 16 of these 65 public goods are one command from having an effect on your agent, and 3 are built in. 6 only come down, and 40 are listed, each saying why it goes no further. [resources.md](resources.md) says what connected means.
 
 ## Connected
@@ -66,7 +68,7 @@ and use, commercially too, under every license listed; an entry’s note can sti
 `--connected` keeps what has an effect on an agent. To add an entry or correct one, see
 [CONTRIBUTING.md](../../CONTRIBUTING.md#catalog-entries).
 
-65 entries: 4 built into the harness, 6 not yet released.
+65 entries: 4 carried by the harness as components, 6 not yet released.
 
 ### Knowledge graphs
 

@@ -47,6 +47,8 @@ export function componentPage(manifest) {
     '',
     '<!-- Written from the manifest in src/components/ by npm run components:build; don’t edit by hand. -->',
     '',
+    'A component the VIABLE Harness carries: what it does, what learner data it receives, its license and the evidence behind it. [Components](../components.md) says what a component is.',
+    '',
     manifest.summary,
     '',
     '| | |',

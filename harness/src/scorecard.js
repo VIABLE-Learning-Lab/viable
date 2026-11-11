@@ -232,7 +232,7 @@ export function scorecardTables({ guarantees: held, moments, review, diagnosis, 
     '| The procedure behind a wrong answer, by code | Wrong answers | Named as labelled | Named as something else | Slips named |', '| --- | ---: | --- | --- | ---: |',
     ...diagnosis.map((row) => `| ${half(row.split)} | ${row.read} of ${row.cases} read as arithmetic | ${interval(row.right)} | ${interval(row.other)} | ${row.slips_named} of ${row.slips} |`),
     '',
-    '| A policy in code, by rules | Conversations | The act decided is the one the turn requires | A right answer is seen | Seen where there is none |', '| --- | ---: | --- | --- | ---: |',
+    '| A policy in code, by rules | Conversations | The step decided is the one the turn requires | A right answer is seen | Seen where the learner gave none |', '| --- | ---: | --- | --- | ---: |',
     ...policy.map((row) => `| ${half(row.split)} | ${row.conversations} | ${interval(row.act)} | ${interval(row.seen)} | ${row.mistaken} of ${row.others} turns |`)
   ].join('\n');
 }

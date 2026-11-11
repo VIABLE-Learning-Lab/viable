@@ -2,8 +2,8 @@
 
 **AI tutors, courses and class lists on your own server, set up in the browser.**
 
-For a school, a library or a lab that wants this running on its own machines, on any model. Nothing here needs VIABLE's hosted
-service, and nothing is held back because it is open: add a model and what it makes possible turns on.
+For a school, a library or a lab that wants to run this on its own machines, with any model. Nothing here needs VIABLE's hosted
+service. Adding a model turns on the features it supports.
 
 <p align="center">
   <img src="../docs/images/console.gif" width="100%" alt="The Engine's console. A teacher writes the goal of an activity and how much the AI does, types what a learner might say, and sees what the AI would be told at that moment. Then a learner's page opens with that activity, and the AI replies by asking how they got their answer.">
@@ -51,8 +51,7 @@ What you change reaches learners on their next message. There is nothing to rest
 
 The console shows each one on or off, and why. Keys are encrypted where they are kept, and never come back to a browser.
 
-**Care or speed is yours to weigh.** A check holds a reply back until it passes, so a learner waits for each try: on our first run with a strict
-reviewer, 12 to 31 seconds a reply. An agent's page sets how many tries, Models sets how fast a reviewer, and Progress says how long learners
+**Care or speed is yours to weigh.** A check holds a reply back until it passes, so a learner waits for each try, and a strict reviewer adds seconds to every reply. An agent's page sets how many tries, Models sets how fast a reviewer, and Progress says how long learners
 have been waiting.
 
 ## A chat button on your website
@@ -80,9 +79,9 @@ npx github:VIABLE-Learning-Lab/viable start course.viable.zip
 
 | Travels | Stays behind |
 | --- | --- |
-| Activities, question sets, How the AI helps, agents and their look, chat page settings, knowledge files, website snapshots | Learners and their work, class lists, keys, study data |
+| Activities, question sets, How the AI helps (the setting for how much help the AI gives), agents and their look, chat page settings, knowledge files, website snapshots | Learners and their work, class lists, keys, study data |
 
-A workflow built on the visual editor runs here as it is: you can't redraw it in the console, and you can change its look and page.
+A workflow built in the Developer Platform's visual editor runs here as it is: you can't redraw it in the console, and you can change its look and page.
 The other way works too: **Settings → Download**, then import it on the VIABLE Developer Platform, where models it doesn't have become
 its default, and it says so.
 
@@ -98,8 +97,8 @@ An agent is steps you connect, and how much each leaves to the model is yours to
 | Repeat for every item of a list | A For each step | Nothing: the list decides |
 
 What has to hold every time stays a step, whatever else is free. How the teacher wants the AI to help goes to the steps that write
-the reply and to the review. A tool a teacher switched off is removed, not only forbidden. A VETTING step after an Agent step
-reviews what it wrote before a learner sees it. Every run keeps each step and tool call, so a study can say what a version did.
+the reply and to the review. A tool a teacher switched off is removed, not only forbidden. VETTING is a review step: a second model checks a reply against the teacher's rules before the learner sees it. Put one
+after an Agent step to review what the Agent wrote. Every run keeps each step and tool call, so a study can say what a version did.
 
 ## Where it runs
 

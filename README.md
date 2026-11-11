@@ -9,9 +9,12 @@
   <img alt="Node 22 or later" src="https://img.shields.io/badge/node-22%2B-2e6f4c">
 </p>
 
-**The VIABLE Open Kit: tools for AI that teaches the way a teacher wants.** Left alone, a model replies generally: it gives the
-answer, explains too much, and answers everyone alike. What it lacks isn't intelligence. It doesn't know the goal, how much
-help is right today, or what this learner's mistake suggests.
+**The VIABLE Open Kit: tools for AI that teaches the way a teacher wants.** This repository holds its two parts: the VIABLE
+Harness, which puts a teacher's settings around any AI agent, for anyone who builds or runs one for learners; and the VIABLE
+Engine, for a school, a library or a lab that runs AI tutors, courses and class lists on its own server.
+
+Left alone, a model replies generally: it gives the answer, explains too much, and answers everyone alike. What it lacks isn't
+intelligence. It doesn't know the goal, how much help is right today, or what this learner's mistake suggests.
 
 ## Which part is yours?
 
@@ -27,7 +30,7 @@ help is right today, or what this learner's mistake suggests.
 | A dataset or a benchmark | AI tutors tested on it, with your citation | **[A catalog entry](harness/docs/resources.md#add-a-dataset-or-a-benchmark)** | [A catalog issue](https://github.com/VIABLE-Learning-Lab/viable/issues/new?template=catalog.yml) |
 
 You take only what you need. A Skill is a few text files; the Harness is a package with no dependencies and nothing of the
-Engine in it. They live in one repository because one small team looks after both.
+Engine in it. Both are in this repository, and each installs on its own.
 
 ## See it work
 
@@ -66,13 +69,13 @@ This is used with minors, so its defaults protect them wherever it runs:
 
 - No learner's name or identifier is sent to a model. What the AI is told is set per activity or group, never per learner.
 - What is hidden from learners never reaches their browser: answer keys, instructions, a teacher's notes.
-- A brief holds the teacher's words and the resources' own text, never the learner's, so a learner can change what is chosen but
-  can't write instructions into it.
+- The instructions the Harness writes for each turn hold the teacher's words and the resources' own text, never the learner's,
+  so a learner can change what is chosen but can't write instructions into them.
 - A component receives only the learner data its manifest lists. A package can't start a program on your machine unless you name it.
 - A reply that wasn't checked says so. It is never shown as checked.
 - A server of your own answers only your own machine until you set a token, and its logs hold no learner's words.
 
-The ones code can hold are checked on every case of [the scorecard](harness/docs/scorecard.md), which anyone can run.
+Of these, the ones code enforces are tested on every case of [the scorecard](harness/docs/scorecard.md), which anyone can run.
 
 Running this doesn't make a deployment compliant with COPPA, FERPA or any other law by itself:
 [deploying.md](engine/docs/deploying.md) lists what you still have to do. Report vulnerabilities privately
@@ -103,7 +106,7 @@ If you use this in research, cite it with [CITATION.cff](CITATION.cff), and name
 move existing files. The test sets and the kept runs under `harness/scorecard` and `harness/evals` are part of this
 repository and under its license: cite the repository at the commit you used. A component you used is cited as its
 manifest's `cite` says. Code under [MIT](LICENSE). The data it carries stays under
-its own licenses, with the attribution to keep, in [NOTICE](NOTICE). The names VIABLE and VETTING:
+its own licenses, with the attribution to keep, in [NOTICE](NOTICE). The names VIABLE and VETTING (the reply check the Harness uses):
 [TRADEMARKS.md](TRADEMARKS.md).
 
 Made by [VIABLE Lab](https://viablelab.org).

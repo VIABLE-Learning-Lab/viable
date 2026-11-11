@@ -2,6 +2,8 @@
 
 <!-- Written from the manifest in src/components/ by npm run components:build; don’t edit by hand. -->
 
+A component the VIABLE Harness carries: what it does, what learner data it receives, its license and the evidence behind it. [Components](../components.md) says what a component is.
+
 What to say about a learner's work: what is right or wrong and why, one next step, about the work and not the person, and criticism that shows the standard and your confidence they can meet it.
 
 | | |
@@ -30,7 +32,7 @@ Wording by VIABLE Lab, CC BY 4.0. The findings belong to the researchers each pi
 
 **What its authors showed.** Feedback helps on average and varies a lot. A meta-analysis of 435 studies found d = 0.48 with very high heterogeneity and signs of publication bias: high-information feedback d = 0.99, corrective d = 0.46, rewards or punishment d = 0.24 (Wisniewski et al., 2020). An older meta-analysis found d = 0.41, with over a third of interventions lowering performance and weaker effects as attention moved to the self (Kluger & DeNisi, 1996). On computers, explanation beat right-or-wrong alone (0.49 against 0.05 in 40 studies; Van der Kleij et al., 2015; also Mertens et al., 2022). Hattie & Timperley (2007) and Shute (2008) are reviews: their advice on focus and amount is reasoned from the evidence, and findings on timing are mixed. Comments beat grades on achievement and motivation in elementary and secondary school (Koenka et al., 2021). Formative assessment is disputed: Black & Wiliam (1998) report substantial gains; a later meta-analysis found a mean of 0.20 in the 13 usable studies (Kingston & Nash, 2011) and a critical review calls the larger figures suspect (Bennett, 2011), while others fault that meta-analysis's methods (Briggs et al., 2012; McMillan et al., 2013). Saying the standard and your confidence comes from three double-blind US field experiments in grade 7 and a low-income high school, strongest for African American students who mistrusted school (Yeager et al., 2014; Cohen et al., 1999). Inflated praise lowered challenge seeking in children with low self-esteem and raised it in those with high self-esteem (Brummelman et al., 2014). Correcting confident errors rests mostly on laboratory work (Metcalfe, 2017). Feedback on writing, grades 1-8: adults 0.87, computers 0.38 (Graham et al., 2015).
 
-**What comparisons in the harness showed.** Not yet compared in VIABLE.
+**What comparisons in the harness showed.** Not yet compared with and without it in this harness.
 
 **What nobody has shown yet.** These are teachers, software and laboratory tasks, not language models. A statement of high standards and belief from an AI may not be read as it is from a teacher a learner knows; that has not been tested, and it could ring hollow. Whether feedback worded by a model changes what learners do next, or their later work, is not known.
 

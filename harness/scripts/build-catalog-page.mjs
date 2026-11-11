@@ -55,6 +55,8 @@ export function catalogPage(entries) {
     '',
     '<!-- Written from catalog/*.json by npm run catalog:build; don’t edit by hand. -->',
     '',
+    'Open datasets, benchmarks, standards, evaluators and tools for K-12 AI, each with its license and how far the VIABLE Harness can use it. It is for builders and researchers choosing what to test or ground an AI tutor with.',
+    '',
     `${count((entry) => entry.connect.level === 2)} of these ${entries.length} public goods are one command from having an effect on your agent, and ${count((entry) => entry.connect.level === 3)} are built in. ${count((entry) => entry.connect.level === 1)} only come down, and ${count((entry) => entry.connect.level === 0)} are listed, each saying why it goes no further. [resources.md](resources.md) says what connected means.`,
     '',
     ...[[2, 'Connected', 'The first time, each command fetches its source to `~/.viable-harness/resources/<id>/` from its makers, shows its license, and asks you to accept it where it limits use.'], [3, 'Built in', 'In the core, with no download.'], [1, 'Fetchable', '`viable-harness resources get <id>` brings down the files and records what came; nothing is made from them yet.']].flatMap(([level, heading, line]) => [
@@ -83,7 +85,7 @@ export function catalogPage(entries) {
     '`--connected` keeps what has an effect on an agent. To add an entry or correct one, see',
     '[CONTRIBUTING.md](../../CONTRIBUTING.md#catalog-entries).',
     '',
-    `${entries.length} entries: ${count((entry) => entry.in_harness)} built into the harness, ${count((entry) => entry.status === 'expected')} not yet released.`,
+    `${entries.length} entries: ${count((entry) => entry.in_harness)} carried by the harness as components, ${count((entry) => entry.status === 'expected')} not yet released.`,
     '',
     ...KINDS.filter((kind) => entries.some((entry) => entry.kind === kind)).flatMap((kind) => [
       `### ${HEADINGS[kind]}`,

@@ -3,7 +3,7 @@
 > Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
 
 Teachers and researchers now build classroom tools by describing them to a coding agent, which writes the code without seeing
-the room: thirty children opening this at 9:05 from one school address, a shared Chromebook, a quiz whose
+the room. The room is thirty children opening this at 9:05 from one school address, a shared Chromebook, a quiz whose
 answers are one View Source away, a tutor that does the homework, a key the class can spend.
 
 The rest of the Harness goes around **the AI that teaches**, at each reply. This part goes around **the AI that builds**, while a
@@ -120,18 +120,16 @@ None of this needs an account with us. The Skill points to what fits, with what 
 - It shapes what gets written and nothing after. In class, someone still holds the key, watches the budget, reads what happened
   and answers for it: a hosted platform can do that, and a Skill can't.
 - It isn't legal advice, and it can't say a tool complies with anything. [The notes on learners' data](../skills/building-for-learners/references/learner-data.md) link to the sources and list what a school will ask.
-- We haven't measured whether it helps. The patterns in `review` come from what we've seen in classrooms and from services'
-  documented defaults, and the tests have run on our own tutors. We found no evidence that any builder's guidance changes what
-  learners get.
+- Whether it improves the tools people build has not been measured. The patterns in `review` come from classroom experience and
+  services' documented defaults.
 - An agent may skip a Skill even with the reminder in `AGENTS.md`, so `review` is a command you can run yourself.
-- It doesn't make a tool small. An AI that children chat with, with a budget, a page for the teacher and an alarm that reaches
-  someone, came to about a thousand lines when a fresh agent followed this to build one. The Skill says so before it starts, and
-  points to what's already built.
+- It doesn't make a tool small. An AI that children chat with needs a budget, a page for the teacher and an alarm that reaches
+  someone, and with them a server and a database. The Skill says so before it starts, and points to what's already built.
 - The rules on models and schools are mostly American, and rules change. Each says when it was checked.
 
 ## How it differs from other Skills for teachers
 
 Most Skills for education help with a teacher's own work: lesson plans, rubrics, differentiation. This one does none of that.
 Standards and misconception data are well served already, by [Learning Commons](https://learningcommons.org) among others, and this
-points to them. When we looked in November 2026, we found nothing else that treats a class as the unit of load and budget, says what
-not to build, and gives tests of a tutor you can run on a small tool.
+points to them. This one treats a class as the unit of load and budget, says what not to build, and gives tests you can run on a
+small tool's tutor.

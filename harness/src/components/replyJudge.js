@@ -10,7 +10,7 @@ export default {
   uses_models: true,
   license: { code: 'MIT' },
   authors: ['VIABLE Lab'],
-  cite: 'VIABLE, src/agentTests.js.',
+  cite: 'VIABLE Lab (2026). Agent test judge, VIABLE Harness.',
   evidence: {
     original: 'A rubric judge written for VIABLE’s agent tests; no published validation.',
     integration: 'Measured with calibrateJudge (viable-harness calibrate): a person labels each case pass or fail without the judge’s verdict in view, and the judge’s verdicts are compared with theirs (agreement, Cohen’s kappa, every disagreement), from 10 labelled cases. Not measured yet; until it is, read its verdicts as a first pass.',

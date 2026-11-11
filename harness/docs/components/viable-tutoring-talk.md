@@ -2,6 +2,8 @@
 
 <!-- Written from the manifest in src/components/ by npm run components:build; don’t edit by hand. -->
 
+A component the VIABLE Harness carries: what it does, what learner data it receives, its license and the evidence behind it. [Components](../components.md) says what a component is.
+
 What skilled tutors and good discussions do: find out what the learner thinks, build on their words, ask for reasons, draw out missing ideas, and go from open questions to specific ones.
 
 | | |
@@ -30,7 +32,7 @@ Wording by VIABLE Lab, CC BY 4.0. The findings belong to the researchers each pi
 
 **What its authors showed.** Tutoring works: human tutoring d = 0.79 and step-based computer tutors d = 0.76 against no tutoring, well below the often-quoted 2 sigma (VanLehn, 2011); pre-K to 12 field experiments pool at 0.288 SD (Nickow et al., 2024). Which talk causes this is less clear. With tutors barred from explaining, students learned as well from prompts (Chi et al., 2001). Dialogue beat reading only when novices studied material written for intermediates, in qualitative physics (VanLehn et al., 2007). Expectation and misconception tailored dialogue comes from AutoTutor, modeled on human tutors, with gains near 0.8 sigma in its authors' own evaluations (Graesser et al., 2005; Graesser, Chipman et al., 2005; Nye et al., 2014). The expert-tutor account is observational, from experienced primary and secondary math tutors (Lepper & Woolverton, 2002). Talk moves come from whole-class teaching, not one-on-one, and taking them up at scale is hard (Michaels et al., 2008; Michaels & O'Connor, 2012; O'Connor & Michaels, 2019). In 72 classrooms, ages 10-11, elaborating and querying went with higher mastery where students participated widely, a correlation (Howe et al., 2019). A school trial of dialogic teaching, 76 schools, found about 2 months' gain (EEF, 2017). Automated feedback raised instructors' uptake of student ideas by 13% in a trial of 1,136 instructors, with only suggestive effects on students (Demszky et al., 2024). How large formative assessment's effect is remains disputed (Black & Wiliam, 1998; Kingston & Nash, 2011; Briggs et al., 2012).
 
-**What comparisons in the harness showed.** Not yet compared in VIABLE.
+**What comparisons in the harness showed.** Not yet compared with and without it in this harness.
 
 **What nobody has shown yet.** Talk moves were built for teachers with whole classes, and tutoring studies measure human tutors or scripted systems. Nobody has shown that a language model told to revoice, press for reasons or tailor to misconceptions teaches better for it. Whether learners take a model's questions as genuine interest or as withholding is open. Reading how someone feels from a few typed lines is unreliable.
 

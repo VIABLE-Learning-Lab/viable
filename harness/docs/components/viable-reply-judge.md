@@ -2,6 +2,8 @@
 
 <!-- Written from the manifest in src/components/ by npm run components:build; don’t edit by hand. -->
 
+A component the VIABLE Harness carries: what it does, what learner data it receives, its license and the evidence behind it. [Components](../components.md) says what a component is.
+
 Rates an agent’s reply to a test case pass or fail, with a reason, against what the case says a good reply does and must not do.
 
 | | |
@@ -21,7 +23,7 @@ Rates an agent’s reply to a test case pass or fail, with a reason, against wha
 
 ## How to cite
 
-VIABLE, src/agentTests.js.
+VIABLE Lab (2026). Agent test judge, VIABLE Harness.
 
 ## Evidence
 

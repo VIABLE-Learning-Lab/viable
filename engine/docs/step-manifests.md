@@ -1,14 +1,12 @@
 # Step manifests
 
-Each step type an agent graph can use has one manifest in `src/agents/steps/<type>.js`. It is
+This page is for contributors who add or change a step type in the Engine. Each step type an agent graph can use has one manifest in `src/agents/steps/<type>.js`. It is
 plain data (a default export with no functions), so it serializes to JSON unchanged. One manifest
-drives the step settings panel and canvas card on the VIABLE Developer Platform, the step library, the AI
-builder's notes, `GET /v1/developer/agents/graph-schema` (and so `viable developer agents schema`),
-this harness's `schemas/steps.json` and the step docs. Runtime validation stays in
+drives the settings panel and step card in the visual editor, the step library, the AI
+builder's notes, `schemas/steps.json` and the step docs. Runtime validation stays in
 `src/agents/graph.js`; `test/stepManifests.test.js` keeps the two in agreement.
 
-`npm run steps:build` writes `schemas/steps.json`; VIABLE's API writes the portal's copy from the
-same manifests. Never edit either copy by hand.
+`npm run steps:build` writes `schemas/steps.json`. Never edit it by hand.
 
 ## A manifest
 
@@ -76,8 +74,8 @@ hidden only because it is unset.
 
 **Tips** say what the setting does, give an example where it helps, and end with the default:
 "Items after this many are left out. 1 to 6. Default: 4." At most 160 characters. Labels use the
-author's words, never config keys (`Pictures per prompt`, not `n`). Every sentence must be true of
-the code.
+author's words, never config keys (`Pictures per prompt`, not `n`). Tips and labels must describe what
+the code does.
 
 ## Conditions
 
@@ -120,7 +118,7 @@ sentence: [
 
 `{key}` is a setting, formatted by its widget: a reference shows as its step and field ("tutor →
 pictures"), long text as its first clause, a select as its option label, a list as "a, b and c".
-`{@name}` is a computed phrase the portal provides: `@outputs`, `@routes`, `@paths`, `@cases`,
+`{@name}` is a computed phrase the editor provides: `@outputs`, `@routes`, `@paths`, `@cases`,
 `@tools`, `@checks`, `@assignments`, `@values`, `@exits`, `@agent`, and for a Component step
 `@component` (its manifest's label) and `@sends` (what each field sends, and to which hosts).
 
@@ -136,7 +134,7 @@ outputs: [
 `path` is read as `{{<step id>.<path>}}`. `type` is `string`, `number`, `boolean`, `list` or
 `any`. `item` names the fields of a list's items (`picture`, `unfinished`). An LLM's named fields,
 a State step's values, a Values step's values, a Loop's counter and a For each step's item come
-from the step's own config and are added by the portal.
+from the step's own config and are added by the editor.
 
 ## Presets
 

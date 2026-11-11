@@ -1,16 +1,17 @@
 # Running VIABLE agents on your own server or cloud
 
-Build an agent or a course on VIABLE's hosted platform, then run it somewhere you control, with your
-own model keys: Cloudflare, AWS, Google Cloud, Firebase, a container, or one machine. It answers your apps
-the way VIABLE answers them: the same address shape, the same request fields, the same results and
-errors. This page says how, and what changes.
+For IT staff and developers who run VIABLE agents and courses on a server they control, with their own model keys. It
+covers Cloudflare, AWS, Google Cloud, Firebase, a container and one machine. A server answers your apps the way the
+hosted platform does: the same address shape, the same request fields, the same results and errors. Steps 1 to 3 start
+from a package downloaded from the VIABLE Developer Platform; with no package, `deploy` writes a server that starts empty
+and is set up in [the console](#models-set-up-in-the-browser). This page says how, and what changes.
 
 Read [deploying.md](deploying.md) too before learners use it: it covers consent, privacy laws, data
 agreements with model providers, and retention.
 
-**Have a coding AI?** Give it the package and
-[the deploying Skill](../skills/deploying-a-viable-course/SKILL.md), and say where it should run.
-It does everything below, and stops to ask you about logins, money and learners' data.
+To use a coding assistant for these steps, give it the package and
+[the deploying Skill](../skills/deploying-a-viable-course/SKILL.md), and tell it where to run. The Skill has it stop and
+ask you before logins, anything that costs money and learners' data flowing somewhere new.
 
 ## The whole path
 
@@ -35,10 +36,10 @@ when the command was given wrongly.
 | **MCP components, once you name them** | yes | if its command is in the image | no | no | if its command is in the image | no |
 | **Longest run** | 300 s here; yours to set | 300 s here; yours to set | 300 s here; no limit of its own while the caller stays connected | 280 s here; 900 s at most | 280 s here; 3600 s at most | 300 s here; 3600 s at most |
 | **Largest package** | 50 MB | 50 MB | 25 MiB | 50 MB | 50 MB | 50 MB |
-| **When the caller leaves a run nobody could find again** (a conversation in progress always finishes and is kept) | it stops | it stops | it stops, by Workers' `request.signal`; under `wrangler dev` a streamed run stopped within 30 s, and a plain one wasn't seen to | it goes on to its end: Lambda doesn't tell the function | it stops | it stops, if the platform closes the connection |
+| **When the caller leaves a run nobody could find again** (a conversation in progress always finishes and is kept) | it stops | it stops | it stops, through Workers' `request.signal` (tested under `wrangler dev`: a streamed run stops, a plain run was not seen to) | it goes on to its end: Lambda doesn't tell the function | it stops | it stops, if the platform closes the connection |
 | **Two at once in one conversation** | one waits | one waits | on two isolates, one can be lost | one can be lost | on two instances, one can be lost | one can be lost |
 | **Needs** | Node 22.9 | Docker | Workers' paid plan | the SAM CLI | gcloud | the Blaze plan |
-| **How far it has been tried** | run for real | run for real under Docker with Colima, on arm64 and as `linux/amd64` under QEMU; not on Docker Desktop or a Linux server | run for real with `wrangler dev --local`; never on Cloudflare | handler invoked with function URL events; never on AWS | its image built and run under Docker; never on Cloud Run | run for real in the Functions emulator, with Firestore stubbed; never on Firebase |
+| **How far it has been tried** | tested | tested in Docker with Colima, on arm64 and linux/amd64; not tested on Docker Desktop or a Linux server | tested with `wrangler dev --local`; not deployed to Cloudflare | handler tested with function URL events; not deployed to AWS | image built and run under Docker; not deployed to Cloud Run | tested in the Functions emulator with Firestore stubbed; not deployed to Firebase |
 
 Everywhere, the same engine, VETTING and How the AI helps run, and [what a model turns on](#models-set-up-in-the-browser)
 is the same: voice, reading aloud, a learner's photos and PDFs, and search by meaning. Websites in a knowledge base
@@ -68,8 +69,8 @@ The zip holds `package.viable.json` and, under `files/`, the files it names:
   addresses of their websites, and how VIABLE searched each;
 - the PDFs its Reading panels open;
 - for each file in another format, such as a PDF or a Word file, the text VIABLE read from it, as a
-  Markdown file (the file's `text_path`). A zip downloaded before VIABLE added these has none:
-  download it again.
+  Markdown file (the file's `text_path`). A package without these text files has none:
+  download it again from the current platform.
 
 It never holds learners, class lists, sections, keys, logs or study data. A Fetch URL step's headers
 are left out. The zip is at most 25 MB; a course with more files has to be downloaded without them.
@@ -180,8 +181,7 @@ it keeps on the volume, and tells Docker its health.
 - **A learner's records.** The image has no `viable-engine` command. `docker exec site node records.js export --data-dir
   /data --out /tmp/records` and `docker exec site node records.js forget <code> --data-dir /data` do what those two
   commands do. `docker cp` can't read a tmpfs, so under `--tmpfs /tmp`, export to `/data/records` and remove it after.
-- **Another platform.** `docker build --platform linux/amd64` builds an image for most servers. From an arm64 Mac, it
-  ran under QEMU.
+- **Another platform.** `docker build --platform linux/amd64` builds an image for most servers; it was tested under QEMU on arm64.
 
 **A model endpoint on the same machine.** In a container, `localhost` is the container, and the server's error says so.
 Use `http://host.docker.internal:<port>/v1`.
@@ -192,9 +192,9 @@ Use `http://host.docker.internal:<port>/v1`.
 | Linux | needs `--add-host=host.docker.internal:host-gateway`; `compose.yaml` has it | isn't reached: have it listen on `0.0.0.0` or the bridge's address |
 | Docker Desktop | answers by itself, Docker's documentation says; not run | not run |
 
-The Colima row was run on a Mac. Of the Linux row, the last column was run inside Colima's Linux VM, calling the bridge's
-gateway, the address `host-gateway` means on Linux. The flag is Docker's documented way, and neither was run on a Linux
-server, where a firewall may have its own say.
+Tested: the Colima row on macOS, and the last Linux cell inside Colima's Linux VM, using the bridge's gateway address that
+`host-gateway` resolves to. The flag follows Docker's documentation. Neither was tested on a Linux server, where a firewall
+may add its own rules.
 
 ### Cloudflare Workers
 
@@ -412,8 +412,7 @@ server can reach, and read what a test says of it, so treat the token as you wou
 there:
 
 - `--model`, `--reviewer-model`, `--speech-model`, `--image-model` and a models file name a role's model.
-- `OPENAI_BASE_URL` and `OPENAI_API_KEY` hold the two roles that have always gone there, Writes replies and Reviews replies,
-  to that address. You can still choose which of its models each uses. A scaffold sets `OPENAI_BASE_URL` only if you give `--endpoint`,
+- `OPENAI_BASE_URL` and `OPENAI_API_KEY` set the address and key for the Writes replies and Reviews replies roles. You can still choose which of its models each uses. A scaffold sets `OPENAI_BASE_URL` only if you give `--endpoint`,
   so with none, you choose every provider in the console.
 - What they say nothing of stays as saved, so hearing or speaking can be on another provider, and that provider never gets
   `OPENAI_API_KEY`.

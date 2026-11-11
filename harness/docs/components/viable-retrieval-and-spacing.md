@@ -2,6 +2,8 @@
 
 <!-- Written from the manifest in src/components/ by npm run components:build; don’t edit by hand. -->
 
+A component the VIABLE Harness carries: what it does, what learner data it receives, its license and the evidence behind it. [Components](../components.md) says what a component is.
+
 Making learning last: asking learners to bring ideas back from memory, coming back to them after a gap, and mixing kinds of problems once each is learned.
 
 | | |
@@ -30,7 +32,7 @@ Wording by VIABLE Lab, CC BY 4.0. The findings belong to the researchers each pi
 
 **What its authors showed.** Among the best replicated findings in the science of learning. Repeated recall beat restudy on delayed tests, even though restudy raised confidence (Roediger & Karpicke, 2006, students reading prose). Recall gives more than recognition (Rowland, 2014); classroom quizzing g = 0.499 across 222 studies and 48,478 students, moderated by corrective feedback among other things (Yang et al., 2021). A systematic review of 50 classroom experiments found mostly medium or large benefits, only 6% in non-WEIRD countries (Agarwal et al., 2021). Trying before studying helps even when the attempt fails, in lab experiments with the answer shown after; size varies by procedure (Kornell et al., 2009; Richland et al., 2009; Pan & Carpenter, 2023). Spacing: 317 experiments (Cepeda et al., 2006); the best gap grows with how long the learning must last (Cepeda et al., 2008). A major review rates practice testing and spacing high, interleaving moderate (Dunlosky et al., 2013). Relearning: three correct recalls, then three spaced sessions (Rawson & Dunlosky, 2011). Interleaving in math: college students (Rohrer & Taylor, 2007); grade 7, d = 0.42 and 0.79 (Rohrer et al., 2015); 54 grade 7 classes, 61% against 38%, d = 0.83 (Rohrer et al., 2020). Across materials g = 0.42, math 0.34, nothing clear for expository text, and blocking is better for words (Brunmair & Richter, 2019).
 
-**What comparisons in the harness showed.** Not yet compared in VIABLE.
+**What comparisons in the harness showed.** Not yet compared with and without it in this harness.
 
 **What nobody has shown yet.** Few of these studies involve a tutor in conversation, and none an AI. Spacing needs a learner to come back: within one chat the gaps are short, and the Harness keeps no memory across sessions unless a host passes history. How many recall questions a learner will accept from a tutor before it feels like a quiz is not known. Interleaving's classroom evidence is almost all math.
 

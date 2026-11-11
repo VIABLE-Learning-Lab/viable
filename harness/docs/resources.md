@@ -2,9 +2,9 @@
 
 > Commands here say `viable-harness`. Until it is on npm, use `npx github:VIABLE-Learning-Lab/viable` in its place: it takes every command.
 
-A list of datasets is what the K-12 AI Infrastructure Program's own platform already is. Here, the next
-step is built: a connector, a small file of code, downloads a pinned version of a public good from its
-makers and turns it into something the Harness runs. A benchmark's records become test cases: each case's
+How a public dataset or benchmark becomes something the Harness runs. A connector, a
+small file of code, downloads a pinned version from its makers and turns it into test cases, a judge, a
+calibration set, a knowledge folder, a context lookup or a measure. A benchmark's records become test cases: each case's
 messages go to your agent, and a judge model checks each reply against the case's rubric. A set of essays
 or replies that people already rated checks your judge model against them.
 

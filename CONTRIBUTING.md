@@ -70,12 +70,9 @@ Checks run on every pull request: the tests on Node 22 and 24, the title and the
 maintainer reviews it (CODEOWNERS), usually within a week, and squash-merges it, so you are the
 author of the commit on `main`.
 
-This repository is also developed inside VIABLE's platform repository, which runs this exact code. A
-maintainer brings your commit into it, under `open/`, keeping you as its author and recording
-which commit here it came from; it goes through that repository's review and tests like any other
-change, and when it is merged there, the next publication recognises it as already here and adds
-nothing. Changes made in the platform repository arrive here as commits whose
-`Viablelab-Api-Commit:` line names the commit they came from.
+This repository is also developed inside the lab's platform repository, which runs this exact code. After a pull request
+is merged here, a maintainer brings its commit into that repository, keeping you as the author. Changes made there arrive
+here as commits whose `Viablelab-Api-Commit:` line names the commit they came from, so the two stay in step.
 
 ## Components
 

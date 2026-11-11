@@ -14,5 +14,5 @@ back for VIABLE's hosted platform: whatever a teacher's setting means is compute
 **The names.** The code is free to fork; the names VIABLE and VETTING are not. A product may say it
 "runs on VIABLE" or "reads VIABLE's formats" when it passes the conformance fixtures.
 
-**Succession.** If the lab can no longer look after the project, the repository and the names go to
-a successor the lab names here, and the last release keeps working with no hosted service.
+**Succession.** If the lab can no longer maintain the project, it will name a successor in this file and transfer the
+repository and the names to them. The last release keeps working with no hosted service.

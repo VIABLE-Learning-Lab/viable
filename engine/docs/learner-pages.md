@@ -1,5 +1,8 @@
 # The pages learners see
 
+This page is for teachers and IT staff running the Engine. It lists the pages learners and teachers open, how learners are
+identified, what is kept and for how long, and what differs from the hosted VIABLE Developer Platform.
+
 `viable-engine serve` and every scaffold from `viable-engine deploy` serve the same pages VIABLE does,
 from the same code: an agent's chat page, the chat button for your website, a course's home and its
 activities (a page to read, questions, writing, a PDF to read, embedded pages, in steps if you want, with the AI beside them where you say).
@@ -23,7 +26,7 @@ It prints where each page opens.
 An agent has a chat page only where its file or package says so (`chat_page`), and not when that says
 `paused`. Pages from a server of your own are named after the course's and the activity's titles.
 
-## What travels from VIABLE
+## What travels from the hosted platform
 
 A package downloaded with its files carries each agent's profile (name, greeting, starters, look) and
 chat page settings (limits, allowed sites), the course and its activities, and a snapshot of each
@@ -49,7 +52,7 @@ Each course says how, on its People tab in the console (the package's `identify`
 | --- | --- |
 | Each browser (`browser`, the default) | Nobody signs in. A browser holds a random ID, and the server gives it a personal code, shown on the home. "Not you?" asks for a code, or starts fresh. The code brings the learner's work back on another computer |
 | Personal codes (`code`) | You add your class to the list, and print a card for each learner. Only a code on the list opens the course, typed with or without its dash, in any case, or from the QR code on the card. A package carries no class list, so a course set this way opens for nobody until you add one, and the server says so when it starts |
-| A typed name or ID (`ask`, with `identify_ask`: `name` or `student_id`) | The same rules as on VIABLE. An entry is the same however it is typed (NFKC, format characters gone, spaces collapsed, any case). It opens a learner only the first time, or on the device already theirs. Anywhere else it takes their personal code, or anyone could type a classmate's name and read their work. Two people with one name are never guessed: they use their codes. With `identify_match` set to `roster`, an entry not on the list is refused; otherwise a new one is shown back to them to check, and joins the course |
+| A typed name or ID (`ask`, with `identify_ask`: `name` or `student_id`) | The same rules as on the hosted platform. An entry is the same however it is typed (NFKC, format characters gone, spaces collapsed, any case). It opens a learner only the first time, or on the device already theirs. Anywhere else it takes their personal code, or anyone could type a classmate's name and read their work. Two people with one name are never guessed: they use their codes. With `identify_match` set to `roster`, an entry not on the list is refused; otherwise a new one is shown back to them to check, and joins the course |
 
 The server's own way, when it has one, wins over the course's:
 
@@ -125,7 +128,7 @@ list. A chat page's visitors are anonymous, so nobody can name one of them to fo
 
 ## What isn't here, and what happens instead
 
-| On VIABLE | Here |
+| On the hosted platform | Here |
 | --- | --- |
 | Voice, reading replies aloud | Offered when a model is set for hearing and for speaking ([Models](self-hosting.md#models-set-up-in-the-browser)). Until then, the microphone isn't offered, and Speech steps pass on. A browser asks for the microphone only on `localhost` or over HTTPS |
 | Pictures and PDFs attached to a message | Offered when the reply model is set and switched on as reading them. Until then, the button isn't offered |
