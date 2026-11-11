@@ -13,7 +13,7 @@
     "./*": "./src/*"
   },
   "bin": {
-    "viable-harness": "./bin/viable-harness.mjs"
+    "viable-harness": "bin/viable-harness.mjs"
   },
   "files": [
     "bin",

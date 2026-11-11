@@ -14,7 +14,7 @@
     "./*": "./engine/src/*"
   },
   "bin": {
-    "viable-engine": "./engine/bin/viable-engine.mjs"
+    "viable-engine": "engine/bin/viable-engine.mjs"
   },
   "files": [
     "engine/bin",
