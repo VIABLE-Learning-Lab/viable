@@ -5,7 +5,7 @@
 You have research: a framework, a list of misconceptions, a classifier, a way to rate replies. A component is how it reaches
 the AIs people are using, with your name on it, without each of them building it in.
 
-To use one that another team published, start at [Using another team's component](#using-another-teams-component).
+To use one that another team published, start at [Using a component from another team](#using-a-component-from-another-team).
 
 ## What you have, and what you do
 
@@ -67,7 +67,7 @@ They go in that activity's settings as they are then, up to 20, with your citati
 settings go, since they travel with the activity: `prepare`, the gateway, the Engine and the VIABLE Developer Platform.
 [How the Harness works](how-it-works.md) says how a turn chooses.
 
-## Using another team's component
+## Using a component from another team
 
 Another lab published guidance you want in your own study or class. They don't host anything for you, and nothing of
 yours goes to them: a component that is data (`"runs": { "kind": "data" }`) is one file of sentences with their sources.
