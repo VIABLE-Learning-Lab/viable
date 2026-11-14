@@ -2,6 +2,23 @@
   "name": "@viable-lab/engine",
   "version": "0.4.0",
   "description": "Run VIABLE yourself: AI tutors, courses, class lists and chat pages on your own server, on any model, with the VIABLE Harness inside.",
+  "keywords": [
+    "ai-tutor",
+    "ai-tutoring",
+    "education",
+    "edtech",
+    "teaching",
+    "classroom",
+    "courses",
+    "self-hosted",
+    "llm",
+    "agents",
+    "chatbot",
+    "openai-compatible",
+    "ollama",
+    "agent-skills",
+    "formative-assessment"
+  ],
   "license": "MIT",
   "author": "Hongming (Chip) Li",
   "type": "module",
@@ -48,6 +65,10 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/VIABLE-Learning-Lab/viable.git"
+  },
+  "homepage": "https://developers.viablelab.org/docs/start/open-kit",
+  "bugs": {
+    "url": "https://github.com/VIABLE-Learning-Lab/viable/issues"
   },
   "publishConfig": {
     "access": "public"

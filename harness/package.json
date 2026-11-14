@@ -2,6 +2,26 @@
   "name": "@viable-lab/harness",
   "version": "0.4.0",
   "description": "What teaching needs, around any AI model or agent: context before the reply, rules, checks and evidence. No dependencies.",
+  "keywords": [
+    "ai-tutor",
+    "ai-tutoring",
+    "education",
+    "edtech",
+    "teaching",
+    "pedagogy",
+    "llm",
+    "agents",
+    "ai-agents",
+    "agent-skills",
+    "mcp",
+    "guardrails",
+    "llm-safety",
+    "vetting",
+    "misconceptions",
+    "formative-assessment",
+    "learning-analytics",
+    "xapi"
+  ],
   "license": "MIT",
   "author": "Hongming (Chip) Li",
   "type": "module",
@@ -36,6 +56,10 @@
     "type": "git",
     "url": "git+https://github.com/VIABLE-Learning-Lab/viable.git",
     "directory": "harness"
+  },
+  "homepage": "https://developers.viablelab.org/docs/harness/overview",
+  "bugs": {
+    "url": "https://github.com/VIABLE-Learning-Lab/viable/issues"
   },
   "publishConfig": {
     "access": "public"

@@ -26,3 +26,9 @@ test('the README’s figures are self-contained SVGs with a description', () => 
     assert.ok(!/<script|<foreignObject|href="http/i.test(svg), `${name} loads or runs nothing`);
   }
 });
+
+test('CITATION.cff names the version both packages carry', () => {
+  const version = (file) => JSON.parse(readFileSync(join(ROOT, file), 'utf8')).version;
+  assert.equal(version('package.json'), version('harness/package.json'));
+  assert.match(readFileSync(join(ROOT, 'CITATION.cff'), 'utf8'), new RegExp(`^version: ${version('package.json').replaceAll('.', '\\.')}$`, 'm'));
+});

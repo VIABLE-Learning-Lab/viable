@@ -114,8 +114,9 @@ well: a connector nobody would use is worse than none.
 
 Maintainers cut releases from `main`. The Harness and the Engine always carry the same version.
 
-1. Set it in `package.json`, `harness/package.json` and the two lines of `package-lock.json` that
-   name the root package, and turn the CHANGELOG's entries into a `## X.Y.Z (date)` section.
+1. Set it in `package.json`, `harness/package.json`, the two lines of `package-lock.json` that
+   name the root package, and `CITATION.cff` (with `date-released`), and turn the CHANGELOG's entries
+   into a `## X.Y.Z (date)` section.
 2. Once that is on `main`, publish a GitHub release with the tag `vX.Y.Z` and that section as its
    notes: `gh release create vX.Y.Z --target main --title X.Y.Z --notes-file notes.md`.
 3. The release workflow (`.github/workflows/release.yml`) runs the tests, checks that the tag names

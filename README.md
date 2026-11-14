@@ -7,11 +7,16 @@
   <a href="LICENSE"><img alt="Code: MIT" src="https://img.shields.io/badge/code-MIT-1f47a8"></a>
   <a href="NOTICE"><img alt="Data: CC BY 4.0" src="https://img.shields.io/badge/data-CC%20BY%204.0-54607a"></a>
   <img alt="Node 22 or later" src="https://img.shields.io/badge/node-22%2B-2e6f4c">
+  <a href="https://www.npmjs.com/package/@viable-lab/harness"><img alt="@viable-lab/harness on npm" src="https://img.shields.io/npm/v/%40viable-lab%2Fharness?label=harness&color=1f47a8"></a>
+  <a href="https://www.npmjs.com/package/@viable-lab/engine"><img alt="@viable-lab/engine on npm" src="https://img.shields.io/npm/v/%40viable-lab%2Fengine?label=engine&color=1f47a8"></a>
 </p>
 
-**The VIABLE Open Kit: tools for AI that teaches the way a teacher wants.** This repository holds its two parts: the VIABLE
-Harness, which puts a teacher's settings around any AI agent, for anyone who builds or runs one for learners; and the VIABLE
-Engine, for a school, a library or a lab that runs AI tutors, courses and class lists on its own server.
+# VIABLE Open Kit
+
+**Open-source tools for AI tutors that teach the way a teacher wants, on any model, MIT licensed.** This repository holds
+its two parts: the VIABLE Harness, which puts a teacher's settings around any AI agent, for anyone who builds or runs one for
+learners; and the VIABLE Engine, for a school, a library or a lab that self-hosts AI tutors, courses and class lists on its own
+server. `npx @viable-lab/engine` shows it working on your computer, with no key and nothing to set up.
 
 Left alone, a model replies generally: it gives the answer, explains too much, and answers everyone alike. What it lacks isn't
 intelligence. It doesn't know the goal, how much help is right today, or what this learner's mistake suggests.
@@ -85,6 +90,19 @@ Running this doesn't make a deployment compliant with COPPA, FERPA or any other 
 
 The same documents, easier to read, with [how it works](https://developers.viablelab.org/docs/how-it-works) to try and a [library](https://developers.viablelab.org/docs/library) of what it knows: [developers.viablelab.org/docs](https://developers.viablelab.org/docs). They are written here, and the site is generated from them.
 
+## Common questions
+
+- **How is this different from a system prompt or a guardrail?** A prompt asks a model to follow a teacher's policy. The Harness
+  decides the step in code before the model replies, then checks the reply. On 60 test conversations with three reply models, a
+  carefully written prompt with a guardrail did the step the policy required on 57 to 73 turns in 100, and the Harness on 83 to 89
+  ([what has been measured](harness/docs/evidence.md)).
+- **Which models does it work with?** Any. The Harness goes around the agent you already have. The Engine takes OpenAI,
+  OpenRouter, Ollama, LM Studio, or any OpenAI-compatible address.
+- **Does learner data leave my server?** On the Engine, everything is kept in your own store, and nothing of a run goes to
+  VIABLE. A learner's message goes to the model endpoint you chose, to get a reply. A learner's name or identifier never does
+  ([deploying.md](engine/docs/deploying.md)).
+- **What is the license?** MIT for the code. The data it carries keeps its own licenses ([NOTICE](NOTICE)).
+
 ## Status
 
 Version 0.4, a preview, on npm as [`@viable-lab/harness`](https://www.npmjs.com/package/@viable-lab/harness) and
@@ -109,4 +127,7 @@ manifest's `cite` says. Code under [MIT](LICENSE). The data it carries stays und
 its own licenses, with the attribution to keep, in [NOTICE](NOTICE). The names VIABLE and VETTING (the reply check the Harness uses):
 [TRADEMARKS.md](TRADEMARKS.md).
 
-Made by [VIABLE Lab](https://viablelab.org).
+VETTING has its own paper to cite:
+[Li, Zhang and Botelho, 2026](https://doi.org/10.1016/j.caeai.2026.100646).
+
+Made by [VIABLE Lab](https://www.viablelab.org).
