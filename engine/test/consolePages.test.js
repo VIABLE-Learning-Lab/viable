@@ -560,13 +560,13 @@ test('a chat page: what turning it on says, its limits, and pausing it', async (
   assert.doesNotMatch(on, new RegExp(KEY));
   assert.equal((await s.handler(new Request(`${BASE}/chat/desk`, { headers: { accept: 'text/html' } }))).status, 200);
   // Limits go through the page's own settings, and a limit is enforced on the very next message.
-  const form = { version: await version(s, 'chat-pages/desk'), daily_limit: 10, visitor_per_minute: 2, visitor_per_day: 1, allowed_sites: '', button_label: 'Ask us', button_side: 'left' };
+  const form = { version: await version(s, 'chat-pages/desk'), daily_limit: 10, visitor_per_minute: 2, visitor_per_day: 1, allowed_sites: '', button_label: 'Ask us', button_side: 'left', button_opens: 'side', button_content: 'icon_text' };
   await s.ok('PUT', 'chat-pages/desk', form);
   assert.equal((await s.visit('/chat/desk/messages', { visitor: VISITOR, message: 'One' })).status, 200);
   const stopped = await s.visit('/chat/desk/messages', { visitor: VISITOR, message: 'Two' });
   assert.equal(stopped.status, 429);
   const config = await (await s.handler(new Request(`${BASE}/chat/desk/config`, { headers: { origin: 'https://any.example.org' } }))).json();
-  assert.deepEqual([config.launcher.label, config.launcher.position], ['Ask us', 'left']);
+  assert.deepEqual([config.launcher.label, config.launcher.position, config.launcher.opens, config.launcher.content, config.launcher.shape], ['Ask us', 'left', 'side', 'icon_text', 'round']);
   for (const [field, value] of [['daily_limit', 3], ['daily_limit', 999999], ['visitor_per_minute', 0], ['visitor_per_day', -1]]) {
     const bad = await s.call('PUT', 'chat-pages/desk', { ...form, version: await version(s, 'chat-pages/desk'), [field]: value });
     assert.equal(bad.status, 400, `${field} ${value}`);

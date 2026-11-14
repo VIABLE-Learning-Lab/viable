@@ -6,6 +6,7 @@ existing files.
 
 ## Unreleased
 
+- **The chat button, styled, and a side panel.** A chat page's `launcher` takes `opens` (`window`, the default, or `side`: a panel beside the page that pushes the page aside with a margin on `<html>`, marks it with `data-viable-chat-open` and `--viable-chat-width` for a site's fixed bars, and opens again on the site's next page in the same tab), `content` (`avatar`, the default, `icon`, `text` or `icon_text`), `shape` (`round` or `rounded`) and `icon` (`chat`, `message`, `sparkles`, `help` or `book`). Settings saved before read back as the button they had. The script tag's `data-opens` overrides `opens` for one site. The button steps aside while the chat is open, its text is white or near-black by contrast with its color, and the console's chat page form offers each choice.
 - **The console's theme, chosen.** The console's account menu has a Theme switch: System (the default, which follows the device as before), Light or Dark. A picked theme applies before the first paint on every console page, signed-out pages too, and is kept as the cookie `viable-theme` on the site's own domain, so a host's front page and its console share it (`engine/src/console/theme.js`).
 
 ## 0.4.0 (2026-11-11)

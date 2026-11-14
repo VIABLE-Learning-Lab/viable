@@ -113,8 +113,12 @@ ${text('daily_limit', 'Messages for the whole page, per day', settings.daily_lim
 ${settings.limits.daily_cost ? `<p class="notice">Its package sets a daily spending cap of ${settings.limits.daily_cost} dollars. This server doesn’t price calls, so that cap isn’t enforced here. The message limits are.</p>` : ''}
 ${text('allowed_sites', 'Sites that may show it', settings.allowed_sites.join('\n'), { rows: 3, placeholder: 'https://guides.example.edu', hint: `One address per line, up to ${CHAT_PAGE_LIMITS.sites}. Only these sites can show the button or put the page in a frame. Empty: any site can. The link itself opens for anyone either way.` })}
 <div class="fields two">
-${text('button_label', 'The button’s label', settings.launcher.label, { maxlength: CHAT_PAGE_LIMITS.launcherLabel, hint: 'Shown when someone points at it, and read by screen readers.' })}
+${choose('button_opens', 'The button opens', settings.launcher.opens, [{ value: 'window', label: 'A window over the page' }, { value: 'side', label: 'A panel beside the page' }], { hint: 'A panel moves the page aside and stays open from page to page.' })}
 ${choose('button_side', 'Which corner', settings.launcher.position, [{ value: 'right', label: 'Bottom right' }, { value: 'left', label: 'Bottom left' }])}
+${choose('button_content', 'The button shows', settings.launcher.content, [{ value: 'avatar', label: 'The agent’s picture' }, { value: 'icon', label: 'An icon' }, { value: 'text', label: 'Its label' }, { value: 'icon_text', label: 'An icon and its label' }])}
+${choose('button_shape', 'Its shape', settings.launcher.shape, [{ value: 'round', label: 'Round' }, { value: 'rounded', label: 'Rounded corners' }])}
+${choose('button_icon', 'Its icon', settings.launcher.icon, [{ value: 'chat', label: 'Speech bubble' }, { value: 'message', label: 'Message' }, { value: 'sparkles', label: 'Sparkles' }, { value: 'help', label: 'Question mark' }, { value: 'book', label: 'Book' }], { hint: 'When it shows an icon, or the agent has no picture.' })}
+${text('button_label', 'The button’s label', settings.launcher.label, { maxlength: CHAT_PAGE_LIMITS.launcherLabel, hint: 'On the button when it shows its label; otherwise shown when someone points at it. Screen readers read it.' })}
 </div>
 <div class="actions"><button class="v-btn is-primary" type="submit">Save</button></div>${say()}
 </form>`;
@@ -187,7 +191,7 @@ async function savePage({ library }, match, body) {
       allowed_sites: linesOf(body.allowed_sites),
       daily_limit: body.daily_limit,
       limits: { ...held.limits, visitor_per_minute: body.visitor_per_minute, visitor_per_day: body.visitor_per_day ?? 0 },
-      launcher: { ...held.launcher, label: clean(body.button_label, CHAT_PAGE_LIMITS.launcherLabel), position: body.button_side }
+      launcher: { ...held.launcher, label: clean(body.button_label, CHAT_PAGE_LIMITS.launcherLabel), position: body.button_side, opens: body.button_opens ?? held.launcher?.opens, content: body.button_content ?? held.launcher?.content, shape: body.button_shape ?? held.launcher?.shape, icon: body.button_icon ?? held.launcher?.icon }
     }, agent.name);
     agent.chat_page = { status: agent.chat_page?.status ?? 'active', settings: ownSettings(settings) };
   }, 'Chat page settings');

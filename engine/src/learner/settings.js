@@ -15,6 +15,8 @@ const DEFAULT_COLOR = '#3b5bdb';
 
 const text = (value, max) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 const pick = (value, allowed, fallback) => (allowed.includes(value) ? value : fallback);
+// The chat button's choices; the first of each is the default.
+export const LAUNCHER = Object.freeze({ opens: ['window', 'side'], content: ['avatar', 'icon', 'text', 'icon_text'], shape: ['round', 'rounded'], icon: ['chat', 'message', 'sparkles', 'help', 'book'] });
 export const CHAT_PAGE_LIMITS = Object.freeze({
   title: 80, tagline: 120, greeting: 600, starters: 4, starter: 120, notice: 400, placeholder: 80, launcherLabel: 40, sites: 20,
   dailyMin: 10, dailyMax: 5000, dailyDefault: 300,
@@ -163,10 +165,17 @@ export function chatPageSettings(input = {}, agentName = 'Assistant', { avatar =
     learners: {
       signals: learners.signals !== false
     },
+    // The chat button the embed script adds to a website, and what it opens: a window above the page
+    // or a panel beside it that pushes the page aside. The button shows the agent's picture (the icon
+    // when it has none), an icon, its label, or both, round or with rounded corners.
     launcher: {
       position: pick(launcher.position, ['right', 'left'], 'right'),
       label: text(launcher.label, CHAT_PAGE_LIMITS.launcherLabel) || 'Chat with us',
-      teaser: launcher.teaser === true
+      teaser: launcher.teaser === true,
+      opens: pick(launcher.opens, LAUNCHER.opens, 'window'),
+      content: pick(launcher.content, LAUNCHER.content, 'avatar'),
+      shape: pick(launcher.shape, LAUNCHER.shape, 'round'),
+      icon: pick(launcher.icon, LAUNCHER.icon, 'chat')
     },
     allowed_sites: sites,
     daily_limit: whole(input.daily_limit, 'daily_limit', CHAT_PAGE_LIMITS.dailyMin, CHAT_PAGE_LIMITS.dailyMax, CHAT_PAGE_LIMITS.dailyDefault),

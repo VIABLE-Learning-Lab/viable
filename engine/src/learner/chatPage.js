@@ -2329,29 +2329,72 @@ const CHAT_SCRIPT = String.raw`(() => {
   if (CONFIG.mode !== 'inline' && !document.getElementById('ws')) input.focus();
 })();`;
 
-// The widget: a chat button (with an optional greeting bubble) that opens the page in a panel, or
-// (data-mode="inline") the page framed where the script tag sits. It reads the page's look first and
-// draws nothing when the chat is paused, turned off, or not allowed on this site. Its styles live in a
-// shadow root so the host page's CSS can't reach them.
+// The widget: a chat button (with an optional greeting bubble) that opens the page in a window above
+// the site or in a panel beside it, or (data-mode="inline") the page framed where the script tag sits.
+// It reads the page's look first and draws nothing when the chat is paused, turned off, or not allowed
+// on this site. Its styles live in a shadow root so the host page's CSS can't reach them.
 const EMBED_SCRIPT = String.raw`(() => {
   const script = document.currentScript;
   if (!script || !script.dataset.agent) return;
   const base = PAGE_ORIGIN;
   const slug = script.dataset.agent;
   const src = base + '/chat/' + encodeURIComponent(slug);
-  // window.__viableChat[slug].open({ ask }) opens the panel, sending a question for the visitor once the
-  // chat is ready; a 'viable-chat:open' event ({ detail: { agent, ask } }) does the same.
+  // window.__viableChat[slug].open({ ask }) opens the chat, sending a question for the visitor once it
+  // is ready; a 'viable-chat:open' event ({ detail: { agent, ask } }) does the same.
   window.__viableChat = window.__viableChat || {};
   if (window.__viableChat[slug]) return;
   window.__viableChat[slug] = true;
+  // A panel beside the page pushes the page aside: a margin on the html element on that side, with
+  // data-viable-chat-open and --viable-chat-width there for the site's own fixed bars. Left open, it
+  // opens again on the site's next page in this tab, the page pushed before the chat's look arrives.
+  const doc = document.documentElement;
+  const OPEN_KEY = 'viable-chat-open:' + slug;
+  const remember = (side) => { try { if (side) sessionStorage.setItem(OPEN_KEY, side); else sessionStorage.removeItem(OPEN_KEY); } catch {} };
+  const leftOpen = (() => { try { return sessionStorage.getItem(OPEN_KEY); } catch { return null; } })();
+  const panelWidth = () => Math.round(Math.min(480, Math.max(360, innerWidth * 0.3)));
+  // Too narrow to keep 640px of page beside it, the panel lies over the page instead.
+  const roomy = () => innerWidth - panelWidth() >= 640;
+  let pushed = null;
+  const push = (side, width) => {
+    if (pushed && (!width || pushed.prop !== 'margin-' + side)) {
+      doc.style.setProperty(pushed.prop, pushed.before);
+      doc.style.removeProperty('--viable-chat-width');
+      doc.removeAttribute('data-viable-chat-open');
+      pushed = null;
+    }
+    if (!width) return;
+    if (!pushed) pushed = { prop: 'margin-' + side, before: doc.style.getPropertyValue('margin-' + side) };
+    doc.style.setProperty(pushed.prop, width + 'px');
+    doc.style.setProperty('--viable-chat-width', width + 'px');
+    doc.setAttribute('data-viable-chat-open', side);
+  };
+  if ((leftOpen === 'right' || leftOpen === 'left') && roomy()) push(leftOpen, panelWidth());
   fetch(src + '/config', { credentials: 'omit' }).then((res) => res.ok ? res.json() : res.json().then((body) => { throw new Error(body && body.error && body.error.message || 'unavailable'); })).then(mount).catch((error) => {
+    push(null, 0);
     if (window.console) console.info('VIABLE chat: not shown (' + error.message + ')');
   });
 
   function mount(cfg) {
+    const look = cfg.launcher || {};
     const color = /^#[0-9a-f]{6}$/i.test(script.dataset.color || '') ? script.dataset.color : cfg.color;
-    const side = (script.dataset.position || cfg.launcher.position) === 'left' ? 'left' : 'right';
-    const label = script.dataset.label || cfg.launcher.label || 'Chat with us';
+    const side = (script.dataset.position || look.position) === 'left' ? 'left' : 'right';
+    const label = script.dataset.label || look.label || 'Chat with us';
+    const beside = (script.dataset.opens || look.opens) === 'side';
+    const content = ['icon', 'text', 'icon_text'].indexOf(look.content) >= 0 ? look.content : 'avatar';
+    const words = content === 'text' || content === 'icon_text';
+    const tall = words ? 48 : 56;
+    const corner = look.shape === 'rounded' ? (words ? '14px' : '18px') : '999px';
+    // The button's text and icon: white or near-black, whichever reads better on its color.
+    const lum = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4))).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+    const ink = 1.05 / (lum(color) + 0.05) >= (lum(color) + 0.05) / 0.0589 ? '#fff' : '#0f172a';
+    const ICONS = {
+      chat: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+      message: '<path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M7 11h10"/><path d="M7 15h6"/><path d="M7 7h8"/>',
+      sparkles: '<path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/>',
+      help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+      book: '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>'
+    };
+    const icon = (size) => '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[look.icon] || ICONS.chat) + '</svg>';
     const frame = (mode) => {
       const f = document.createElement('iframe');
       // The site it's on, for the owner's records.
@@ -2375,6 +2418,9 @@ const EMBED_SCRIPT = String.raw`(() => {
       }
       return f;
     };
+    // A panel left open on this side opens again; anything else gives the page back what was pushed early.
+    const reopen = beside && leftOpen === side && roomy() && script.dataset.mode !== 'inline';
+    if (!reopen) push(null, 0);
     if (script.dataset.mode === 'inline') {
       const box = document.createElement('div');
       box.style.cssText = 'width:100%;border:1px solid rgba(15,23,42,.12);border-radius:16px;overflow:hidden;background:#fff';
@@ -2386,59 +2432,81 @@ const EMBED_SCRIPT = String.raw`(() => {
     const host = document.createElement('div');
     host.setAttribute('data-viable-chat', slug);
     const root = host.attachShadow({ mode: 'open' });
+    const inner = side === 'right' ? 'left' : 'right';
     const css = ':host{all:initial}' +
       '*{box-sizing:border-box}' +
-      '.launcher{position:fixed;bottom:20px;' + side + ':20px;width:58px;height:58px;border:0;border-radius:50%;padding:0;background:' + color + ';color:#fff;cursor:pointer;display:grid;place-items:center;box-shadow:0 10px 30px -8px rgba(15,23,42,.45),0 0 0 1px rgba(15,23,42,.06);z-index:2147483000;transition:transform .2s cubic-bezier(.2,.8,.2,1),box-shadow .2s;overflow:hidden}' +
-      '.launcher:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 14px 34px -8px rgba(15,23,42,.5),0 0 0 1px rgba(15,23,42,.06)}' +
+      '.launcher{position:fixed;bottom:20px;' + side + ':20px;z-index:2147483000;display:flex;align-items:center;justify-content:center;gap:8px;height:' + tall + 'px;' + (words ? 'max-width:min(280px,calc(100vw - 40px));padding:' + (content === 'icon_text' ? '0 20px 0 16px' : '0 20px') : 'width:' + tall + 'px;padding:0') + ';border:0;border-radius:' + corner + ';background:' + color + ';color:' + ink + ';cursor:pointer;font:600 15px/1 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;box-shadow:0 10px 30px -8px rgba(15,23,42,.45),0 0 0 1px rgba(15,23,42,.06);overflow:hidden;transition:transform .2s cubic-bezier(.2,.8,.2,1),box-shadow .2s,opacity .18s,visibility 0s}' +
+      '.launcher:hover{transform:translateY(-2px);box-shadow:0 14px 34px -8px rgba(15,23,42,.5),0 0 0 1px rgba(15,23,42,.06)}' +
       '.launcher:focus-visible{outline:3px solid ' + color + ';outline-offset:3px}' +
-      '.launcher .face,.launcher .x{position:absolute;inset:0;display:grid;place-items:center;transition:opacity .2s,transform .25s cubic-bezier(.2,.8,.2,1)}' +
+      // Open, the chat has its own close button, and the button steps out of its way.
+      '.launcher[aria-expanded=true]{opacity:0;visibility:hidden;transform:scale(.85);transition:opacity .15s,transform .15s,visibility 0s .15s}' +
       '.launcher img{width:100%;height:100%;object-fit:cover;display:block;background:#fff}' +
-      '.launcher .x{opacity:0;transform:rotate(-90deg) scale(.6);background:' + color + '}' +
-      '.launcher[aria-expanded=true] .face{opacity:0;transform:rotate(90deg) scale(.6)}.launcher[aria-expanded=true] .x{opacity:1;transform:none}' +
-      '.panel{position:fixed;bottom:92px;' + side + ':20px;width:400px;height:min(680px,calc(100vh - 120px));border-radius:20px;overflow:hidden;background:#fff;box-shadow:0 30px 70px -18px rgba(15,23,42,.45),0 0 0 1px rgba(15,23,42,.08);z-index:2147483000;opacity:0;visibility:hidden;transform:translateY(12px) scale(.97);transform-origin:bottom ' + side + ';transition:opacity .2s,transform .24s cubic-bezier(.2,.8,.2,1),visibility 0s .24s}' +
+      '.launcher svg{flex:none}.launcher span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '.panel{position:fixed;z-index:2147483000;overflow:hidden;background:#fff;opacity:0;visibility:hidden;transition:opacity .2s,transform .24s cubic-bezier(.2,.8,.2,1),visibility 0s .24s}' +
       '.panel.open{opacity:1;visibility:visible;transform:none;transition:opacity .2s,transform .24s cubic-bezier(.2,.8,.2,1)}' +
-      '.teaser{position:fixed;bottom:90px;' + side + ':20px;max-width:300px;display:flex;gap:10px;align-items:flex-start;padding:12px 34px 12px 12px;border-radius:16px;background:#fff;color:#0f172a;font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;box-shadow:0 18px 40px -14px rgba(15,23,42,.35),0 0 0 1px rgba(15,23,42,.08);z-index:2147483000;cursor:pointer;opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s cubic-bezier(.2,.8,.2,1)}' +
+      (beside
+        ? '.panel{top:0;bottom:0;' + side + ':0;border-' + inner + ':1px solid rgba(15,23,42,.12);transform:translateX(' + (side === 'right' ? '' : '-') + '24px)}.panel.over{box-shadow:0 0 60px -12px rgba(15,23,42,.45)}'
+        : '.panel{bottom:20px;' + side + ':20px;width:400px;height:min(680px,calc(100vh - 40px));border-radius:20px;box-shadow:0 30px 70px -18px rgba(15,23,42,.45),0 0 0 1px rgba(15,23,42,.08);transform:translateY(12px) scale(.97);transform-origin:bottom ' + side + '}') +
+      '.teaser{position:fixed;bottom:' + (tall + 34) + 'px;' + side + ':20px;max-width:300px;display:flex;gap:10px;align-items:flex-start;padding:12px 34px 12px 12px;border-radius:16px;background:#fff;color:#0f172a;font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;box-shadow:0 18px 40px -14px rgba(15,23,42,.35),0 0 0 1px rgba(15,23,42,.08);z-index:2147483000;cursor:pointer;opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s cubic-bezier(.2,.8,.2,1)}' +
       '.teaser.show{opacity:1;transform:none}' +
-      '.teaser .av{flex:none;width:28px;height:28px;border-radius:50%;overflow:hidden;background:' + color + ';color:#fff;display:grid;place-items:center;font-weight:650;font-size:13px}.teaser .av img{width:100%;height:100%;object-fit:cover;background:#fff}' +
+      '.teaser .av{flex:none;width:28px;height:28px;border-radius:50%;overflow:hidden;background:' + color + ';color:' + ink + ';display:grid;place-items:center;font-weight:650;font-size:13px}.teaser .av img{width:100%;height:100%;object-fit:cover;background:#fff}' +
       '.teaser b{display:block;font-weight:650;font-size:13px;margin-bottom:1px}.teaser span{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;color:#334155}' +
       '.teaser button{position:absolute;top:6px;right:6px;width:24px;height:24px;border:0;border-radius:8px;background:transparent;color:#64748b;cursor:pointer;font-size:16px;line-height:1}.teaser button:hover{background:#f1f5f9}' +
-      '@media (max-width:480px){.panel{inset:0;width:100%;height:100%;bottom:0;border-radius:0}.panel.open~.launcher{display:none}}' +
-      '@media (prefers-color-scheme:dark){.panel{background:#101318}.teaser{background:#161a22;color:#eef1f6}.teaser span{color:#cdd3dc}.teaser button:hover{background:#232833}}' +
-      '@media (prefers-reduced-motion:reduce){.panel,.launcher,.teaser,.launcher .face,.launcher .x{transition:none}}';
+      '@media (max-width:480px){.panel{inset:0;width:100% !important;height:100%;border:0;border-radius:0}}' +
+      '@media (prefers-color-scheme:dark){.panel{background:#101318;border-color:rgba(255,255,255,.1)}.teaser{background:#161a22;color:#eef1f6}.teaser span{color:#cdd3dc}.teaser button:hover{background:#232833}}' +
+      '@media (prefers-reduced-motion:reduce){.panel,.launcher,.teaser{transition:none}}';
     if ('adoptedStyleSheets' in root && typeof CSSStyleSheet === 'function') { const sheet = new CSSStyleSheet(); sheet.replaceSync(css); root.adoptedStyleSheets = [sheet]; }
     else { const style = document.createElement('style'); style.textContent = css; root.appendChild(style); }
     const initial = (cfg.title || 'A').trim().charAt(0).toUpperCase();
-    const face = (el) => {
-      if (cfg.avatar_url) {
-        const img = document.createElement('img'); img.src = cfg.avatar_url; img.alt = '';
-        img.onerror = () => { img.remove(); cfg.avatar_url = null; face(el); };
-        el.appendChild(img);
-      }
-      else if (el.classList.contains('av')) el.textContent = initial;
-      else el.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>';
+    // The agent's picture in el; without one, or when it fails to load, fallback().
+    const picture = (el, fallback) => {
+      if (!cfg.avatar_url) { fallback(); return; }
+      const img = document.createElement('img'); img.src = cfg.avatar_url; img.alt = '';
+      img.onerror = () => { img.remove(); fallback(); };
+      el.appendChild(img);
     };
     const panel = document.createElement('div');
-    panel.className = 'panel'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', cfg.title || label);
+    panel.className = 'panel'; panel.setAttribute('role', beside ? 'complementary' : 'dialog'); panel.setAttribute('aria-label', cfg.title || label);
     const button = document.createElement('button');
-    button.className = 'launcher'; button.type = 'button'; button.title = label;
+    button.className = 'launcher'; button.type = 'button';
+    if (!words) button.title = label;
     button.setAttribute('aria-label', label); button.setAttribute('aria-expanded', 'false');
-    const faceEl = document.createElement('span'); faceEl.className = 'face'; face(faceEl);
-    const x = document.createElement('span'); x.className = 'x';
-    x.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
-    button.append(faceEl, x);
+    const face = () => {
+      button.innerHTML = content === 'text' ? '' : icon(words ? 20 : 26);
+      if (words) { const text = document.createElement('span'); text.textContent = label; button.appendChild(text); }
+    };
+    if (content === 'avatar') picture(button, face); else face();
     // The framed chat, kept by reference: a browser extension that adds its own nodes to the page (and
     // to this panel) must not be mistaken for it.
     let open = false, teaser = null, chat = null;
-    const toggle = (value) => {
+    const place = () => {
+      if (!beside) return;
+      panel.style.width = panelWidth() + 'px';
+      panel.classList.toggle('over', !roomy());
+      push(side, open && roomy() ? panelWidth() : 0);
+    };
+    // The page slides aside with the panel, unless the visitor asks for less motion.
+    const glide = () => {
+      if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const before = doc.style.transition;
+      doc.style.transition = 'margin-' + side + ' .24s cubic-bezier(.2,.8,.2,1)';
+      setTimeout(() => { doc.style.transition = before; }, 300);
+    };
+    // quiet: opened again on a new page, without taking the visitor's focus.
+    const toggle = (value, quiet) => {
       open = value;
       if (open && !chat) { chat = frame('widget'); panel.appendChild(chat); }
+      if (beside) { if (!quiet) glide(); place(); remember(open && side); }
       panel.classList.toggle('open', open);
       button.setAttribute('aria-expanded', String(open));
       if (teaser) { teaser.remove(); teaser = null; }
+      if (quiet) return;
       if (open) setTimeout(() => chat.focus(), 60); else button.focus();
     };
     button.addEventListener('click', () => toggle(!open));
-    document.addEventListener('keydown', (e) => { if (open && e.key === 'Escape') toggle(false); });
+    // A window above the page closes with Escape; a panel beside it stays until closed.
+    document.addEventListener('keydown', (e) => { if (open && !beside && e.key === 'Escape') toggle(false); });
+    window.addEventListener('resize', place);
     let ready = false, queued = '';
     const send = (text) => chat.contentWindow.postMessage({ type: 'viable-chat:ask', text }, base);
     window.addEventListener('message', (e) => {
@@ -2460,15 +2528,16 @@ const EMBED_SCRIPT = String.raw`(() => {
       if (!open) toggle(true);
       if (text) { if (ready) send(text); else queued = text; }
     };
-    window.__viableChat[slug] = { open: openWith, close: () => toggle(false) };
+    window.__viableChat[slug] = { open: openWith, close: () => { if (open) toggle(false); } };
     window.addEventListener('viable-chat:open', (e) => { if (!e.detail || !e.detail.agent || e.detail.agent === slug) openWith(e.detail); });
     root.append(panel, button);
+    if (reopen) toggle(true, true);
     const seen = (() => { try { return sessionStorage.getItem('viable-chat-teaser:' + slug); } catch { return '1'; } })();
-    if (cfg.launcher.teaser && cfg.greeting && !seen) {
+    if (look.teaser && cfg.greeting && !seen) {
       setTimeout(() => {
         if (open) return;
         teaser = document.createElement('div'); teaser.className = 'teaser'; teaser.setAttribute('role', 'status');
-        const av = document.createElement('span'); av.className = 'av'; face(av);
+        const av = document.createElement('span'); av.className = 'av'; picture(av, () => { av.textContent = initial; });
         const copy = document.createElement('div');
         const name = document.createElement('b'); name.textContent = cfg.title;
         const text = document.createElement('span'); text.textContent = cfg.greeting.replace(/[*_\x60#>]/g, '').slice(0, 160);

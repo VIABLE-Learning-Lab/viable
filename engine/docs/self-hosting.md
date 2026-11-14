@@ -448,7 +448,9 @@ an activity or another agent uses it. Removing one takes its chat page and what 
 
 **Chat pages.** Anyone with the link can use one, on your keys, up to its daily limit. A new page has 300 messages a day, 8 per
 visitor per minute and 50 per visitor per day, where a visitor is one browser and a day is UTC. A page in a file added in the
-console starts paused. The look is the agent's, shared with the activities that use it. Allowed sites say where the button can
+console starts paused. The look is the agent's, shared with the activities that use it. The button can open a window over the
+page or a panel beside it, which moves the page aside and stays open from page to page; it can show the agent's picture, an icon,
+its label or both. Allowed sites say where the button can
 appear and the page can be framed; the link itself opens for anyone either way. A site on https can load the button only
 from a server on https. A package's daily spending cap isn't enforced here, since this server doesn't price calls, and the
 console doesn't offer one.
