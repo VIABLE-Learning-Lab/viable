@@ -10,6 +10,7 @@ import { COLOR_PICKER_CSS } from './colorPicker.js';
 import { DRAG_ORDER_CSS } from './dragOrder.js';
 import { icon } from './icons.js';
 import { RICH_EDITOR_CSS } from './richEditor.js';
+import { THEME_HEAD_SCRIPT, THEME_SWITCH_CSS, THEME_SWITCH_SCRIPT, themeSwitchHtml } from './theme.js';
 
 const CONSOLE_CSS = `[hidden]{display:none!important}
 h1{font-size:clamp(1.9rem,3.4vw,2.6rem)}
@@ -61,6 +62,7 @@ html{scrollbar-color:var(--public-rule-strong) transparent;scrollbar-width:thin}
 .side .side-account-panel>a:hover,.side .side-account-panel button:hover{background:var(--field-mist);color:var(--public-ink)}
 .side .side-account-panel>a:hover .v-icon,.side .side-account-panel button:hover .v-icon{color:var(--public-text)}
 .side .side-account-panel form{margin:4px 0 0;padding-top:4px;border-top:1px solid var(--public-rule)}
+.side-theme{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 0;padding:6px 2px 2px 8px;border-top:1px solid var(--public-rule);color:var(--public-text)}
 .side .side-account-panel>a.side-credit{align-items:flex-start}
 .side-credit-words{display:grid;flex:1;gap:7px;min-width:0}
 .side-credit-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
@@ -144,8 +146,9 @@ const SPEED_CSS = `html.is-going::before,html.is-working::before{content:"";posi
 .side{view-transition-name:v-side}
 @media (prefers-reduced-motion:no-preference){@view-transition{navigation:auto}::view-transition-old(root),::view-transition-new(root){animation-duration:.14s}}
 @media (prefers-reduced-motion:reduce){html.is-going::before,html.is-working::before{animation:none;transform:scaleX(.9)}}`;
-const SHARED_CSS = `${themeCss()}\n${CONSOLE_CSS}\n${SPEED_CSS}\n${DATE_PICKER_CSS}\n${COLOR_PICKER_CSS}\n${DRAG_ORDER_CSS}\n${RICH_EDITOR_CSS}`;
-const ASSETS = Object.fromEntries([[`base-${hashOf(SHARED_CSS)}.css`, { type: 'text/css; charset=utf-8', body: SHARED_CSS }], [`base-${hashOf(CONSOLE_SCRIPT)}.js`, { type: 'text/javascript; charset=utf-8', body: CONSOLE_SCRIPT }]]);
+const SHARED_CSS = `${themeCss()}\n${CONSOLE_CSS}\n${SPEED_CSS}\n${DATE_PICKER_CSS}\n${COLOR_PICKER_CSS}\n${DRAG_ORDER_CSS}\n${RICH_EDITOR_CSS}\n${THEME_SWITCH_CSS}`;
+const SHARED_JS = `${CONSOLE_SCRIPT}\n${THEME_SWITCH_SCRIPT}`;
+const ASSETS = Object.fromEntries([[`base-${hashOf(SHARED_CSS)}.css`, { type: 'text/css; charset=utf-8', body: SHARED_CSS }], [`base-${hashOf(SHARED_JS)}.js`, { type: 'text/javascript; charset=utf-8', body: SHARED_JS }]]);
 const [SHARED_CSS_FILE, SHARED_JS_FILE] = Object.keys(ASSETS);
 /** A page's own large stylesheet or script as a shared file too, named when the module loads so every copy of the server knows it. */
 export const pageFile = (prefix, kind, body) => { const name = `${prefix}-${hashOf(body)}.${kind}`; ASSETS[name] = { type: kind === 'css' ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8', body }; return name; };
@@ -178,6 +181,7 @@ ${who ? `<p class="side-account-who"><strong>${escapeHtml(label)}</strong>${name
 ${credit ? `<a class="side-credit" href="${escapeHtml(credit.href)}">${icon('gauge', 16)}<span class="side-credit-words"><span class="side-credit-top"><span>AI credit</span><small data-fill="${escapeHtml(credit.fill)}">&nbsp;</small></span><span class="side-meter" hidden><i data-fill="${escapeHtml(credit.fill)}" data-fill-as="meter"></i></span></span></a>` : ''}
 <a href="/console/memory">${icon('memory', 16)}<span>What Ask remembers</span></a>
 ${links.map(external).join('')}
+<div class="side-theme"><span>Theme</span>${themeSwitchHtml()}</div>
 <form method="post" action="${escapeHtml(signOut)}" data-confirm="Sign out of ${escapeHtml(brand)}?" data-yes="Sign out"><button type="submit">${icon('signout', 16)}<span>Sign out</span></button></form>
 </div>
 </details>`;
@@ -186,7 +190,7 @@ ${links.map(external).join('')}
 /**
  * A page of the console. pages: [{ id, title }], the navigation: only what exists. home: where its name leads. The foot is the person: who is
  * signed in (person, their name, else who), and in their menu the AI credit where a host has it (credit: { fill, href }), what Ask remembers, the host's
- * links [{ href, title }], and Sign out. A server of one's own has no account: its foot is the server.
+ * links [{ href, title }], the theme (System, Light or Dark) and Sign out. A server of one's own has no account: its foot is the server.
  */
 export const consolePage = ({ title, pages, current, body, script = '', css = '', cssFile = null, scriptFile = null, links = [], brand = 'VIABLE Engine', signOut = '/teacher/signout?next=console', notice = '', home = null, who = null, person = null, credit = null, courses = [], courseHere = null, coursesMore = 0 }, nonce) => {
   const name = `${markSvg({ size: 28 })}<span class="brand-name"><strong>${escapeHtml(brand.split(' ')[0])}</strong><small>${escapeHtml(brand.split(' ').slice(1).join(' '))}</small></span>`;
@@ -202,6 +206,7 @@ export const consolePage = ({ title, pages, current, body, script = '', css = ''
 <meta name="robots" content="noindex">
 <title>${escapeHtml(title)} · ${escapeHtml(brand)}</title>
 ${faviconTag}
+<script nonce="${nonce}">${THEME_HEAD_SCRIPT}</script>
 <link rel="stylesheet" href="/console/assets/${SHARED_CSS_FILE}">
 ${cssFile ? `<link rel="stylesheet" href="/console/assets/${cssFile}">` : ''}
 ${css ? `<style nonce="${nonce}">${css}</style>` : ''}
@@ -229,5 +234,5 @@ export const missingBody = (message = 'The address may be mistyped, or what was 
 /** A page for when there's no console to stand in: signed out, or something broke. Learners never see this. */
 export const standalonePage = ({ title, heading = title, message = '', action = null, brand = 'VIABLE', home = null }, nonce) => {
   const name = `${markSvg({ size: 30 })}<span class="brand-name"><strong>${escapeHtml(brand.split(' ')[0])}</strong><small>${escapeHtml(brand.split(' ').slice(1).join(' '))}</small></span>`;
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${escapeHtml(title)} · ${escapeHtml(brand)}</title>${faviconTag}<style nonce="${nonce}">${themeCss()}body{display:grid;place-items:center;min-height:100vh;min-height:100dvh;margin:0;padding:24px}main{display:grid;gap:16px;justify-items:start;width:100%;max-width:460px}.brand{display:flex;align-items:center;gap:10px;color:var(--public-ink);line-height:1.2;text-decoration:none}.brand-name{display:grid}.brand-name strong{font-weight:600}.brand-name small{color:var(--muted);font-size:.8125rem}h1{font-size:clamp(1.9rem,6vw,2.4rem);line-height:1.15}p{margin:0}</style></head><body><main>${home ? `<a class="brand" href="${escapeHtml(home)}">${name}</a>` : `<div class="brand">${name}</div>`}<h1>${escapeHtml(heading)}</h1>${message ? `<p class="v-lead">${escapeHtml(message)}</p>` : ''}${action ? `<a class="v-btn is-primary" href="${escapeHtml(action.href)}">${escapeHtml(action.label)}</a>` : ''}</main></body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${escapeHtml(title)} · ${escapeHtml(brand)}</title>${faviconTag}<script nonce="${nonce}">${THEME_HEAD_SCRIPT}</script><style nonce="${nonce}">${themeCss()}body{display:grid;place-items:center;min-height:100vh;min-height:100dvh;margin:0;padding:24px}main{display:grid;gap:16px;justify-items:start;width:100%;max-width:460px}.brand{display:flex;align-items:center;gap:10px;color:var(--public-ink);line-height:1.2;text-decoration:none}.brand-name{display:grid}.brand-name strong{font-weight:600}.brand-name small{color:var(--muted);font-size:.8125rem}h1{font-size:clamp(1.9rem,6vw,2.4rem);line-height:1.15}p{margin:0}</style></head><body><main>${home ? `<a class="brand" href="${escapeHtml(home)}">${name}</a>` : `<div class="brand">${name}</div>`}<h1>${escapeHtml(heading)}</h1>${message ? `<p class="v-lead">${escapeHtml(message)}</p>` : ''}${action ? `<a class="v-btn is-primary" href="${escapeHtml(action.href)}">${escapeHtml(action.label)}</a>` : ''}</main></body></html>`;
 };

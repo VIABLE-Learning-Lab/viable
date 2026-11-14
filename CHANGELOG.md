@@ -4,6 +4,10 @@ Changes that matter to people who build on this. Versions follow semantic versio
 to a format or to what a step's setting means is at least a minor version and says how to move
 existing files.
 
+## Unreleased
+
+- **The console's theme, chosen.** The console's account menu has a Theme switch: System (the default, which follows the device as before), Light or Dark. A picked theme applies before the first paint on every console page, signed-out pages too, and is kept as the cookie `viable-theme` on the site's own domain, so a host's front page and its console share it (`engine/src/console/theme.js`).
+
 ## 0.4.0 (2026-11-11)
 
 - **On npm.** `npm i @viable-lab/harness` installs the Harness alone, with no dependencies, and `npm i @viable-lab/engine` the Engine with the Harness inside it; `npx @viable-lab/harness <command>` and `npx @viable-lab/engine start` run them with nothing installed. Both carry this version and are published from the `v0.4.0` tag by the repository's release workflow, with npm provenance. `npx github:VIABLE-Learning-Lab/viable` still runs `main` as it is.

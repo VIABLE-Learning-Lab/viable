@@ -5,6 +5,7 @@
  */
 import { markSvg, themeCss } from '../../../harness/src/ui/theme.js';
 import { escapeHtml } from '../learner/shell.js';
+import { THEME_HEAD_SCRIPT } from '../console/theme.js';
 
 export const COOKIE = 'viable_teacher';
 // How long a session lasts, whatever a browser keeps: the server checks the time in its value.
@@ -39,10 +40,10 @@ export function teacherSession({ secret, now = () => Date.now(), paths = ['/teac
 export const withCookies = (location, cookies) => new Response(null, { status: 303, headers: [['location', location], ['cache-control', 'no-store'], ...cookies.map((cookie) => ['set-cookie', cookie])] });
 
 // same-origin, not no-referrer: a form's post from a page that sends no referrer says its origin is null, and is refused.
-export const signInHeaders = (nonce) => ({ 'Content-Security-Policy': `default-src 'none'; style-src 'nonce-${nonce}'; font-src data:; img-src data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`, 'X-Robots-Tag': 'noindex', 'Referrer-Policy': 'same-origin', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY' });
+export const signInHeaders = (nonce) => ({ 'Content-Security-Policy': `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; font-src data:; img-src data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`, 'X-Robots-Tag': 'noindex', 'Referrer-Policy': 'same-origin', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY' });
 
 /** The form that asks for the token. It posts to the teacher's page, which goes back where next says. */
-export const signInPage = ({ title, text, message = null, next = null }, nonce) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${escapeHtml(title)}</title><style nonce="${nonce}">${themeCss()}
+export const signInPage = ({ title, text, message = null, next = null }, nonce) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${escapeHtml(title)}</title><script nonce="${nonce}">${THEME_HEAD_SCRIPT}</script><style nonce="${nonce}">${themeCss()}
 body{min-height:100vh;display:grid;place-items:center;padding:24px}
 form{width:100%;max-width:400px;display:grid;gap:14px;padding:clamp(22px,4vw,30px);border-radius:var(--radius);background:var(--surface);box-shadow:var(--public-shadow)}
 .brand{display:flex;align-items:center;gap:10px;color:var(--public-ink);font-weight:600}

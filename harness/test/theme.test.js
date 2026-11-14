@@ -61,12 +61,19 @@ test('light and dark hold the same tokens, and text is readable on every surface
 
 // The developer portal's stylesheet isn't in this repository: point PORTAL_CHECKOUT at a checkout of it to compare.
 const portal = process.env.PORTAL_CHECKOUT;
-test('the tokens keep the names and values of the portal’s stylesheet', { skip: portal ? false : 'PORTAL_CHECKOUT isn’t set' }, () => {
+// What the portal sets dark its own way: one surface for its pages and cards, and code that is dark in both themes.
+const PORTAL_OWN_DARK = ['surface', 'code-bg', 'code-ink', 'code-line'];
+test('the tokens keep the names and values of the portal’s stylesheet, light and dark', { skip: portal ? false : 'PORTAL_CHECKOUT isn’t set' }, () => {
   const css = readFileSync(`${portal}/app/assets/css/main.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-  const theirs = new Map([...css.matchAll(/:root\s*\{([^}]*)\}/g)].flatMap(([, block]) => [...block.matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)].map(([, name, value]) => [name, value.trim()])));
+  const tokensIn = (selector) => new Map([...css.matchAll(selector)].flatMap(([, block]) => [...block.matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)].map(([, name, value]) => [name, value.trim()])));
+  const theirs = tokensIn(/:root(?:\s*,\s*\.theme-light)?\s*\{([^}]*)\}/g);
   for (const [name, value] of Object.entries({ ...TOKENS.light, ...SHARED_TOKENS })) {
     if (theirs.has(name)) assert.equal(value, theirs.get(name), `--${name} has drifted from the portal`);
     else assert.ok(HARNESS_ONLY_TOKENS.includes(name), `--${name} isn’t in the portal: use its name, or list it as the harness’s own`);
+  }
+  const theirsDark = tokensIn(/:root\[data-theme="dark"\]\s*\{([^}]*)\}/g);
+  for (const [name, value] of Object.entries(TOKENS.dark)) {
+    if (theirs.has(name) && !PORTAL_OWN_DARK.includes(name)) assert.equal(theirsDark.get(name), value, `dark --${name} has drifted from the portal`);
   }
 });
 
