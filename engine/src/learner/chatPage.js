@@ -106,7 +106,8 @@ body{margin:0;background:var(--panel);color:var(--ink);font:var(--size)/1.6 var(
 button{font:inherit;color:inherit}
 .app{height:100%;display:flex;min-height:0;position:relative;overflow:hidden}
 .main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0}
-.chats{position:absolute;inset:0 auto 0 0;z-index:5;width:min(300px,86vw);display:flex;flex-direction:column;background:var(--panel);border-right:1px solid var(--line);box-shadow:0 24px 60px -24px rgba(15,23,42,.45);transform:translateX(-104%);transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+/* Closed, the list of chats sits past its own shadow (60px blur less 24px spread), so no band shows at the edge. */
+.chats{position:absolute;inset:0 auto 0 0;z-index:5;width:min(300px,86vw);display:flex;flex-direction:column;background:var(--panel);border-right:1px solid var(--line);box-shadow:0 24px 60px -24px rgba(15,23,42,.45);transform:translateX(calc(-100% - 48px));transition:transform .28s cubic-bezier(.2,.8,.2,1)}
 .chats.open{transform:none}
 .scrim{position:absolute;inset:0;z-index:4;background:rgba(15,23,42,.32);opacity:0;pointer-events:none;transition:opacity .22s}
 .scrim.open{opacity:1;pointer-events:auto}
