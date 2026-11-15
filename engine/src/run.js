@@ -87,13 +87,13 @@ export async function readAgentFile(path) {
  * server's turn adds using, inputContent, stopWhenSilent, briefing (server/runtime.js) and save, which
  * keeps its audio and pictures in place of mediaDir.
  */
-export async function runAgent(doc, { input = '', inputContent = undefined, stopWhenSilent = false, history = [], context = null, pictures = undefined, teaching = null, briefing = null, section = null, agent = null, model = null, speechModel = null, imageModel = null, using = null, save = null, baseUrl, apiKey, fetch, dir = null, zip = null, knowledge = null, mediaDir = null, audioDir = null, memoryDir = null, learner = null, silent = false, models = null, conversation = null, componentRuns = ['http'], allowComponents = [], services = {}, hooks = {} , brief = null } = {}) {
+export async function runAgent(doc, { input = '', inputContent = undefined, stopWhenSilent = false, history = [], context = null, openPages = null, pictures = undefined, teaching = null, briefing = null, section = null, agent = null, model = null, speechModel = null, imageModel = null, using = null, save = null, baseUrl, apiKey, fetch, dir = null, zip = null, knowledge = null, mediaDir = null, audioDir = null, memoryDir = null, learner = null, silent = false, models = null, conversation = null, componentRuns = ['http'], allowComponents = [], services = {}, hooks = {} , brief = null } = {}) {
   pickAgent(doc, agent);
   const isPackage = doc?.format === 'viable.course-package';
   if (memoryDir) checkLearner(learner);
   const folders = knowledge ? await knowledgeFolders(knowledge) : null;
   return runWithServices(doc, {
-    input, inputContent, stopWhenSilent, history, context, pictures, teaching, briefing, section, agent, model, speechModel, imageModel, models, using, conversation, baseUrl, apiKey, fetch, learner, silent, hooks, brief,
+    input, inputContent, stopWhenSilent, history, context, openPages, pictures, teaching, briefing, section, agent, model, speechModel, imageModel, models, using, conversation, baseUrl, apiKey, fetch, learner, silent, hooks, brief,
     save: save ?? mediaFiles(mediaDir ?? audioDir),
     services: {
       ...(isPackage || folders ? { searchKnowledge: packageKnowledge(isPackage ? doc : null, { dir, fetch: publicFetch(fetch), zip, folders }) } : {}),

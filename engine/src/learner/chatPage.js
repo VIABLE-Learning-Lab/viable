@@ -35,6 +35,9 @@ const avatarHtml = (settings, size) => settings.avatar_url
 
 // How long a visitor's silence ends their turn in a hands-free conversation. Learners pause mid-sentence.
 const VOICE_PAUSE_MS = { short: 800, normal: 1300, long: 2000 };
+// A chat page whose theme is Auto (not a course activity, which has its own look) takes the light or dark of the
+// website its chat button is on: ?theme= when it opens, viable-chat:theme after.
+const followsSite = (settings, course) => !course && !['light', 'dark'].includes(settings.theme);
 
 /**
  * A learner's page. workspace: a course activity's panels (none on a chat page). course: { title, url,
@@ -64,6 +67,8 @@ export function renderChatPage({ slug, mode, settings, workspace: panels = null,
     // The moments the activity's teacher chose for the AI to write first (speakUp.js), and nothing else of their settings; and how the page says why it began.
     speaksUp: mode === 'widget' || !course ? null : speaksUp, firstWords: Object.fromEntries(Object.entries(SPEAK_UP).map(([kind, moment]) => [kind, moment.says])),
     maxChars: settings.limits?.message_chars || 4000, showProgress: settings.show_progress !== false, streamReplies: settings.stream_replies !== false, linksInPlace: settings.links_in_place === true, pageContext: settings.page_context === true,
+    // An Auto theme takes the light or dark of the website a chat button is on, where it declares one (the embed tells it).
+    followsSite: followsSite(settings, course),
     // The microphone, when the agent can hear visitors (loadChatPage), and when replies read aloud play.
     voice: Boolean(hears), voiceSeconds: settings.voice?.max_seconds || CHAT_PAGE_LIMITS.voiceSeconds, autoplay: settings.voice?.autoplay || 'spoken',
     // Hands-free conversation, and how long a pause ends the visitor's turn.
@@ -89,7 +94,7 @@ export function renderChatPage({ slug, mode, settings, workspace: panels = null,
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>${escapeHtml(course ? `${course.activity} · ${course.title}` : settings.title)}</title>
+${followsSite(settings, course) ? `<script nonce="${nonce}">try{const t=new URLSearchParams(location.search).get('theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>\n` : ''}<title>${escapeHtml(course ? `${course.activity} · ${course.title}` : settings.title)}</title>
 <style nonce="${nonce}">
 ${palette(settings.color, settings.course_theme)}
 :root{--hl-keyword:#cf222e;--hl-string:#0a3069;--hl-number:#0550ae;--hl-comment:#6e7781;--hl-title:#8250df;--hl-type:#953800;--hl-tag:#116329;--hl-attr:#0550ae;--hl-meta:#57606a;--hl-add:#116329;--hl-add-bg:#dafbe1;--hl-del:#82071e;--hl-del-bg:#ffebe9}
@@ -1297,15 +1302,24 @@ const CHAT_SCRIPT = String.raw`(() => {
     let url; try { url = new URL(String(e.data.url || '')); } catch { return; }
     if (url.origin === SITE) PAGE = { url: url.origin + url.pathname, title: String(e.data.title || '').slice(0, 200) };
   });
-  // links_in_place: in the chat button's panel, a link to that website (a cited page of its own) goes
-  // to the page around the panel, which opens it in place (the widget checks it is on its own site).
-  if (CONFIG.linksInPlace && CONFIG.mode === 'widget' && SITE) document.addEventListener('click', (e) => {
+  // The website's light or dark as it changes ('auto': back to the visitor's device), from the page that framed it.
+  if (CONFIG.followsSite && CONFIG.mode !== 'page') window.addEventListener('message', (e) => {
+    if (e.source !== parent || !e.data || e.data.type !== 'viable-chat:theme') return;
+    if (['light', 'dark', 'auto'].includes(e.data.theme)) document.documentElement.dataset.theme = e.data.theme;
+  });
+  // links_in_place: in the chat button's panel, a link to that website (a cited page of its own), or a page
+  // of it the agent opened (open_page), goes to the page around the panel, which opens it in place (the
+  // widget checks it is on its own site). goTo is null where pages don't open in place; it says whether it went.
+  const goTo = CONFIG.linksInPlace && CONFIG.mode === 'widget' && SITE ? (href) => {
+    let url; try { url = new URL(href); } catch { return false; }
+    if (url.origin !== SITE) return false;
+    parent.postMessage({ type: 'viable-chat:navigate', url: url.href }, '*');
+    return true;
+  } : null;
+  if (goTo) document.addEventListener('click', (e) => {
     const link = e.target instanceof Element ? e.target.closest('a[href]') : null;
     if (!link || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    let url; try { url = new URL(link.href); } catch { return; }
-    if (url.origin !== SITE) return;
-    e.preventDefault();
-    parent.postMessage({ type: 'viable-chat:navigate', url: url.href }, '*');
+    if (goTo(link.href)) e.preventDefault();
   });
 
   // A course activity changed by the teacher since this page opened: what is sent here still counts
@@ -1486,6 +1500,8 @@ const CHAT_SCRIPT = String.raw`(() => {
       // A fallback no review passed isn't a checked answer: the work list doesn't say it was.
       if (data.reply.unchecked) done.querySelector('[data-stage="checking"]')?.remove();
       const el = settle({ role: 'bot', text: data.reply.text, citations: data.reply.citations || [], images: data.reply.images || [], audio: data.reply.audio || [], run_id: data.run_id || null });
+      // The page the agent opened for them, once its reply (which says where) is kept and shown.
+      if (data.reply.open_page && goTo) goTo(data.reply.open_page);
       // The workspace knows the answers, to tell text pasted from them from the visitor's own.
       if (window.VIABLE_WS && window.VIABLE_WS.reply) window.VIABLE_WS.reply(data.reply.text || '');
       if (CONFIG.signals && data.run_id) { touch(); after = { run_id: data.run_id, mark: activeMs[1], read_ms: null, played: turn.spoke ? 1 : 0, copied: 0, links_opened: 0 }; }
@@ -2354,6 +2370,13 @@ const EMBED_SCRIPT = String.raw`(() => {
   const panelWidth = () => Math.round(Math.min(480, Math.max(360, innerWidth * 0.3)));
   // Too narrow to keep 640px of page beside it, the panel lies over the page instead.
   const roomy = () => innerWidth - panelWidth() >= 640;
+  // The site's light or dark, as its html element declares it (CSS color-scheme: light, dark, or both or
+  // neither for "the visitor's device", which is 'auto').
+  const siteTheme = () => {
+    const scheme = String(getComputedStyle(doc).colorScheme || '');
+    const dark = /\bdark\b/.test(scheme), light = /\blight\b/.test(scheme);
+    return dark && !light ? 'dark' : light && !dark ? 'light' : 'auto';
+  };
   let pushed = null;
   const push = (side, width) => {
     if (pushed && (!width || pushed.prop !== 'margin-' + side)) {
@@ -2395,10 +2418,16 @@ const EMBED_SCRIPT = String.raw`(() => {
       book: '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>'
     };
     const icon = (size) => '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[look.icon] || ICONS.chat) + '</svg>';
+    // Light or dark: the chat page's own, where its developer chose one, or else the site's as it changes.
+    const own = cfg.theme === 'light' || cfg.theme === 'dark' ? cfg.theme : null;
+    const sayTheme = (f) => { if (f.contentWindow) f.contentWindow.postMessage({ type: 'viable-chat:theme', theme: siteTheme() }, base); };
     const frame = (mode) => {
       const f = document.createElement('iframe');
-      // The site it's on, for the owner's records.
-      f.src = src + '?mode=' + mode + '&site=' + encodeURIComponent(location.origin);
+      // The site it's on, for the owner's records, and its light or dark for the first paint.
+      const theme = own ? 'auto' : siteTheme();
+      f.src = src + '?mode=' + mode + '&site=' + encodeURIComponent(location.origin) + (theme !== 'auto' ? '&theme=' + theme : '');
+      // Loaded, it hears the site's theme again, in case that changed before it could listen.
+      if (!own) f.addEventListener('load', () => { if (siteTheme() !== 'auto') sayTheme(f); });
       f.title = cfg.title || label;
       // The microphone, for agents that hear visitors, and playing answers read aloud.
       f.setAttribute('allow', 'clipboard-write; microphone; autoplay');
@@ -2433,6 +2462,9 @@ const EMBED_SCRIPT = String.raw`(() => {
     host.setAttribute('data-viable-chat', slug);
     const root = host.attachShadow({ mode: 'open' });
     const inner = side === 'right' ? 'left' : 'right';
+    let shown = own || siteTheme();
+    if (shown !== 'auto') host.dataset.theme = shown;
+    const darkLook = (on) => [' .panel{background:#101318;border-color:rgba(255,255,255,.1)}', ' .teaser{background:#161a22;color:#eef1f6}', ' .teaser span{color:#cdd3dc}', ' .teaser button:hover{background:#232833}'].map((rule) => on + rule).join('');
     const css = ':host{all:initial}' +
       '*{box-sizing:border-box}' +
       '.launcher{position:fixed;bottom:20px;' + side + ':20px;z-index:2147483000;display:flex;align-items:center;justify-content:center;gap:8px;height:' + tall + 'px;' + (words ? 'max-width:min(280px,calc(100vw - 40px));padding:' + (content === 'icon_text' ? '0 20px 0 16px' : '0 20px') : 'width:' + tall + 'px;padding:0') + ';border:0;border-radius:' + corner + ';background:' + color + ';color:' + ink + ';cursor:pointer;font:600 15px/1 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;box-shadow:0 10px 30px -8px rgba(15,23,42,.45),0 0 0 1px rgba(15,23,42,.06);overflow:hidden;transition:transform .2s cubic-bezier(.2,.8,.2,1),box-shadow .2s,opacity .18s,visibility 0s}' +
@@ -2445,7 +2477,7 @@ const EMBED_SCRIPT = String.raw`(() => {
       '.panel{position:fixed;z-index:2147483000;overflow:hidden;background:#fff;opacity:0;visibility:hidden;transition:opacity .2s,transform .24s cubic-bezier(.2,.8,.2,1),visibility 0s .24s}' +
       '.panel.open{opacity:1;visibility:visible;transform:none;transition:opacity .2s,transform .24s cubic-bezier(.2,.8,.2,1)}' +
       (beside
-        ? '.panel{top:0;bottom:0;' + side + ':0;border-' + inner + ':1px solid rgba(15,23,42,.12);transform:translateX(' + (side === 'right' ? '' : '-') + '24px)}.panel.over{box-shadow:0 0 60px -12px rgba(15,23,42,.45)}'
+        ? '.panel{top:0;bottom:0;' + side + ':0;border-' + inner + ':1px solid rgba(15,23,42,.12);transform:translateX(' + (side === 'right' ? '' : '-') + '24px)}'
         : '.panel{bottom:20px;' + side + ':20px;width:400px;height:min(680px,calc(100vh - 40px));border-radius:20px;box-shadow:0 30px 70px -18px rgba(15,23,42,.45),0 0 0 1px rgba(15,23,42,.08);transform:translateY(12px) scale(.97);transform-origin:bottom ' + side + '}') +
       '.teaser{position:fixed;bottom:' + (tall + 34) + 'px;' + side + ':20px;max-width:300px;display:flex;gap:10px;align-items:flex-start;padding:12px 34px 12px 12px;border-radius:16px;background:#fff;color:#0f172a;font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;box-shadow:0 18px 40px -14px rgba(15,23,42,.35),0 0 0 1px rgba(15,23,42,.08);z-index:2147483000;cursor:pointer;opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s cubic-bezier(.2,.8,.2,1)}' +
       '.teaser.show{opacity:1;transform:none}' +
@@ -2453,7 +2485,8 @@ const EMBED_SCRIPT = String.raw`(() => {
       '.teaser b{display:block;font-weight:650;font-size:13px;margin-bottom:1px}.teaser span{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;color:#334155}' +
       '.teaser button{position:absolute;top:6px;right:6px;width:24px;height:24px;border:0;border-radius:8px;background:transparent;color:#64748b;cursor:pointer;font-size:16px;line-height:1}.teaser button:hover{background:#f1f5f9}' +
       '@media (max-width:480px){.panel{inset:0;width:100% !important;height:100%;border:0;border-radius:0}}' +
-      '@media (prefers-color-scheme:dark){.panel{background:#101318;border-color:rgba(255,255,255,.1)}.teaser{background:#161a22;color:#eef1f6}.teaser span{color:#cdd3dc}.teaser button:hover{background:#232833}}' +
+      // Dark where the host says so (data-theme: the chat page's own or the site's), or where it says nothing and the device is dark.
+      darkLook(':host([data-theme=dark])') + '@media (prefers-color-scheme:dark){' + darkLook(':host(:not([data-theme]))') + '}' +
       '@media (prefers-reduced-motion:reduce){.panel,.launcher,.teaser{transition:none}}';
     if ('adoptedStyleSheets' in root && typeof CSSStyleSheet === 'function') { const sheet = new CSSStyleSheet(); sheet.replaceSync(css); root.adoptedStyleSheets = [sheet]; }
     else { const style = document.createElement('style'); style.textContent = css; root.appendChild(style); }
@@ -2482,7 +2515,6 @@ const EMBED_SCRIPT = String.raw`(() => {
     const place = () => {
       if (!beside) return;
       panel.style.width = panelWidth() + 'px';
-      panel.classList.toggle('over', !roomy());
       push(side, open && roomy() ? panelWidth() : 0);
     };
     // The page slides aside with the panel, unless the visitor asks for less motion.
@@ -2507,6 +2539,18 @@ const EMBED_SCRIPT = String.raw`(() => {
     // A window above the page closes with Escape; a panel beside it stays until closed.
     document.addEventListener('keydown', (e) => { if (open && !beside && e.key === 'Escape') toggle(false); });
     window.addEventListener('resize', place);
+    // The site turning light or dark (its html element changes, or the device does): the panel and the chat follow.
+    if (!own) {
+      const retheme = () => {
+        const now = siteTheme();
+        if (now === shown) return;
+        shown = now;
+        if (now === 'auto') host.removeAttribute('data-theme'); else host.dataset.theme = now;
+        if (chat) sayTheme(chat);
+      };
+      new MutationObserver(retheme).observe(doc, { attributes: true });
+      if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retheme);
+    }
     let ready = false, queued = '';
     const send = (text) => chat.contentWindow.postMessage({ type: 'viable-chat:ask', text }, base);
     window.addEventListener('message', (e) => {

@@ -108,7 +108,8 @@ export function embedPage(value, site) {
 export const uncheckedIn = (steps) => (steps || []).some((step) => step?.nodeType === 'vetting' && step?.output?.outcome === 'unverified');
 
 // unchecked: the reply is a fallback no review passed, so the page doesn't say the answer was checked.
-export function chatReply({ output: raw, conversationId, runId, stale = false, transcript = null, heard = false, ownMedia = null, unchecked = false }) {
+// openPage: a page of the website the chat is on that the agent opened for the visitor (its open_page tool).
+export function chatReply({ output: raw, conversationId, runId, stale = false, transcript = null, heard = false, ownMedia = null, unchecked = false, openPage = null }) {
   const output = deliverOutput(raw, 'none');
   const shown = (type, most) => (output.attachments || []).filter((item) => item?.type === type).map((item) => String(item.url || '')).map((url) => (/^https:\/\//i.test(url) ? url : ownMedia && url.startsWith('/media/') ? `${ownMedia}${url}` : null)).filter(Boolean).slice(0, most).map((url) => ({ url }));
   return {
@@ -124,7 +125,8 @@ export function chatReply({ output: raw, conversationId, runId, stale = false, t
       images: shown('image', 4),
       audio: shown('audio', 2),
       ...(output.awaiting_input ? { awaiting_input: true } : {}),
-      ...(unchecked ? { unchecked: true } : {})
+      ...(unchecked ? { unchecked: true } : {}),
+      ...(openPage ? { open_page: openPage } : {})
     }
   };
 }

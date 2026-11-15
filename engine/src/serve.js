@@ -115,7 +115,7 @@ export async function serve(agents, { port = 8080, brief = true, host = '127.0.0
     memory,
     run: async (agent, turn, { hooks, timed }) => runAgent(agent.doc, {
       input: turn.text, inputContent: turn.content, stopWhenSilent: turn.stopWhenSilent === true, briefing: turn.briefing ?? null, save: turn.save ?? null, using: settings ? await settings.resolve() : null,
-      history: turn.history, context: turn.context, teaching: turn.teaching ?? null, section: turn.section ?? null, agent: agent.ref, dir: agent.dir, zip: agent.zip,
+      history: turn.history, context: turn.context, openPages: turn.openPages ?? null, teaching: turn.teaching ?? null, section: turn.section ?? null, agent: agent.ref, dir: agent.dir, zip: agent.zip,
       model, speechModel, imageModel, models, mediaDir, silent: silent || turn.silent === true, baseUrl, apiKey, fetch: timed(fetch), conversation: turn.conversation ?? null,
       learner: memory ? turn.user : null, componentRuns, allowComponents, brief,
       services: { httpFetch: timed(outward), ...(agent.searchKnowledge ? { searchKnowledge: agent.searchKnowledge } : {}), ...(memory ? { memory } : {}) },

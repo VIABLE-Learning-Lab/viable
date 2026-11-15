@@ -679,13 +679,13 @@ export function learnerRoutes({ assets = null, classCode = null, links = OWN_LIN
           }
           const content = attached.length || (spoken && stepHears) ? [...(said ? [{ type: 'text', text: said }] : []), ...attached, ...(spoken && stepHears ? [{ type: 'file', file: { filename: spoken.filename, mime_type: spoken.type, file_data: spoken.data } }] : [])] : undefined;
           const note = attached.length ? `[Attached: ${attached.map((part) => part.file?.filename || 'a picture').join(', ')}]` : null;
-          ({ result, conversationId } = await ctx.runInConversation(page.agent, { text: said, content, note, stopWhenSilent: Boolean(spoken), save, briefing: page.kind === 'activity' ? teaching : null, event: first, section, history: [], context: where ? { ...context_, page: where } : context_, teaching: page.kind === 'activity' ? false : teaching || false, silent: !can.speech, user, mode: 'server', conversationId: earlier?.id ?? null }, trace ? watchHooks(trace, hooks) : hooks, store));
+          ({ result, conversationId } = await ctx.runInConversation(page.agent, { text: said, content, note, stopWhenSilent: Boolean(spoken), save, briefing: page.kind === 'activity' ? teaching : null, event: first, section, history: [], context: where ? { ...context_, page: where } : context_, openPages: page.kind !== 'activity' && settings.links_in_place === true ? site : null, teaching: page.kind === 'activity' ? false : teaching || false, silent: !can.speech, user, mode: 'server', conversationId: earlier?.id ?? null }, trace ? watchHooks(trace, hooks) : hooks, store));
         } catch (error) {
           ctx.log({ at: new Date().toISOString(), request_id: context.requestId, page: page.slug, run_id: null, code: error?.code || 'agent_run_failed', duration_ms: now() - begun });
           trace?.({ kind: 'failed', message: String(error?.message || error) });
           throw error?.code === 'nothing_heard' ? error : Object.assign(error, { fromRun: true });
         }
-        const reply = chatReply({ output: result.output, conversationId, runId, transcript: heard ?? result.transcript, heard: Boolean(spoken), ownMedia: url.origin, unchecked: uncheckedIn(result.steps) });
+        const reply = chatReply({ output: result.output, conversationId, runId, transcript: heard ?? result.transcript, heard: Boolean(spoken), ownMedia: url.origin, unchecked: uncheckedIn(result.steps), openPage: result.openPage });
         // An agent with no Speech step of its own: a reply to a spoken message is read aloud, or every reply where the page says so. A reply is never lost for it.
         if (can.speech && !chatPageVoice(graph).replies && reply.reply.text && (spoken || settings.voice.autoplay === 'always')) {
           const clip = await readReply(can.using, reply.reply.text, { save, fetch: modelFetch }).catch((error) => { console.error(`A reply wasn't read aloud: ${error?.message || error}`); return null; });

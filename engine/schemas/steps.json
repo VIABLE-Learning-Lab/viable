@@ -507,6 +507,7 @@
         "Give clear instructions and only the tools it needs. Each tool call is one more model call; Most tool calls bounds the loop.",
         "The final answer is {{stepId.content}}; {{stepId.tool_calls}} lists what it did. Tools run with the same limits as the matching steps.",
         "Knowledge and agents must belong to this agent’s project. Memory needs a user identifier (user) or a server conversation.",
+        "In a chat button on a website whose chat page opens that site’s links in place, it also gets open_page: a visitor who asks to go to a page of that site is taken there once the reply is shown.",
         "Your own tools: name one under Tools you draw, say when to call it, and connect its handle to the steps that do the work (an Image, HTTP, Component, Knowledge or LLM step, or several), with the last one connected back to this step. Those steps read what the model passed as {{tool.input}}, and the model gets the last step’s result. You decide what a tool can do; the model decides when it is needed.",
         "A run lasts 60 seconds unless the agent’s run limits allow more (up to 120); background jobs get 5 minutes. Near the limit the agent answers with what it has. For careful reading (complete lists, comparisons), a model with reasoning helps more than extra calls."
       ],

@@ -137,6 +137,10 @@ export async function runAgentGraph(env, graph, options = {}) {
     requestId: options.requestId || null,
     context: options.context ?? null,
     traceContext: options.traceContext ?? options.context ?? null,
+    // The website (an origin) whose pages the Agent step's open_page tool may take the visitor to, from a
+    // chat button's panel that opens that site's links in place; and the page it chose.
+    openPages: options.openPages || null,
+    opened: null,
     messages: Array.isArray(options.history) ? options.history.map((message) => ({ ...message, content: withoutAudio(message?.content) })) : [],
     // A server-kept conversation's running summary and where the loaded messages start in it
     // (null for caller-sent history), for the Input step's "summarize" history.
@@ -297,6 +301,8 @@ export async function runAgentGraph(env, graph, options = {}) {
     archivedOutput: ctx.archivedResult || { text: '', attachments: [] },
     // How the Reply step lists sources for clients that show only text; channels apply it.
     sourceStyle: ctx.sourceStyle || 'none',
+    // The page of openPages the agent asked to open for the visitor, for the chat page to go to after the reply.
+    ...(ctx.opened ? { openPage: ctx.opened } : {}),
     ...(ctx.historySummaryChanged ? { historySummary: ctx.historySummary } : {}),
     // Kept with the message in history, so later turns know what was said.
     transcript: ctx.heard,
@@ -1335,7 +1341,9 @@ const HANDLERS = {
   // Autonomous tool loop: the model chooses tools until it gives a final answer.
   async agent(node, ctx, env, services, hooks, budgets, step) {
     const cfg = node.config || {};
-    const tools = allowedByTeacher([...buildAgentTools(cfg.tools || {}, services, ctx), ...drawnTools(node, ctx)], ctx.scope());
+    // A tool the builder drew keeps its name over open_page, the one built-in tool name not reserved for the step.
+    const drawn = drawnTools(node, ctx);
+    const tools = allowedByTeacher([...buildAgentTools(cfg.tools || {}, services, ctx).filter((tool) => !drawn.some((own) => own.name === tool.name)), ...drawn], ctx.scope());
     // An upper limit on tool calls, not a target: the model answers when it has enough.
     const maxTools = clampInt(cfg.max_turns, 1, MAX_AGENT_TOOL_CALLS, 5);
     // gpt-oss models call tools only through native function calling: asked for JSON, they stop
@@ -2176,6 +2184,21 @@ function buildAgentTools(cfg, services, ctx) {
         }
       });
     }
+  }
+  // A chat button's panel on a website that lets links to its own pages open in place: the agent can take
+  // the visitor to one, as a link they clicked would. The page goes there once the reply is shown.
+  if (ctx.openPages) {
+    tools.push({
+      name: 'open_page', parameters: { url: 'string' },
+      description: `Take the visitor to a page of ${ctx.openPages}, the website this chat is on, once your reply is shown. Use it when they ask to go to, open or see a page there, and say in your reply where they are going. Link to pages anywhere else instead.`,
+      run: async ({ url }) => {
+        let page = null;
+        try { page = new URL(String(url || ''), ctx.openPages); } catch { /* not an address */ }
+        if (page?.origin !== ctx.openPages) return `Not opened: only pages of ${ctx.openPages} open here. Link to it instead.`;
+        ctx.opened = page.href;
+        return `${page.href} opens for the visitor after your reply.`;
+      }
+    });
   }
   return tools;
 }

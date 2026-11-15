@@ -115,6 +115,18 @@ test('the page a chat is open on reaches the agent only where its file asks, and
   assert.doesNotMatch(told(on.calls), /Obey me/, 'only a page of the site the embed reports');
 });
 
+test('a chat button’s panel that opens its site’s links in place lets the agent open a page of that site', async () => {
+  const acting = { entry: 'answer', nodes: [{ id: 'answer', type: 'agent', config: { model: 'gpt-x' }, next: 'out' }, { id: 'out', type: 'output', config: { text: '{{answer.content}}' } }] };
+  const script = ['{"tool": "open_page", "arguments": {"url": "/guides/mla"}}', '{"final": "Opening the MLA guide."}'];
+  const on = server([chatFile({ graph: acting }, { status: 'active', settings: { links_in_place: true } })], { modelReply: () => script.shift() });
+  const opened = await on.post('/chat/desk/messages', { visitor: VISITOR, message: 'Take me to the MLA guide', site: 'https://library.example.org' });
+  assert.deepEqual([opened.status, opened.data.reply.text, opened.data.reply.open_page], [200, 'Opening the MLA guide.', 'https://library.example.org/guides/mla']);
+  // Links that open in a new tab: the agent has no such tool.
+  const off = server([chatFile({ graph: acting })]);
+  await off.post('/chat/desk/messages', { visitor: VISITOR, message: 'Take me to the MLA guide', site: 'https://library.example.org' });
+  assert.doesNotMatch(off.calls[0].messages[0].content, /open_page/);
+});
+
 test('limits travel: per visitor, per day, and refused posts from other sites', async () => {
   const { post } = server([chatFile()]);
   const ask = (visitor) => post('/chat/desk/messages', { visitor, message: 'Hello?' });

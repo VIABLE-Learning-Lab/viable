@@ -61,3 +61,31 @@ test('a drawn tool is checked when the graph is saved', () => {
   onward.nodes[1] = { ...onward.nodes[1], next: 'out' };
   assert.match(errors(onward).join('\n'), /its steps reach "out", the step after the agent/);
 });
+
+test('in a chat button’s panel on a site that opens its own pages in place, the agent can open one of them; other sites stay links', async () => {
+  const plain = { entry: 'think', nodes: [{ id: 'think', type: 'agent', config: { model: 'm' }, next: 'out' }, { id: 'out', type: 'output', config: { text: '{{think.content}}' } }] };
+  const replies = ['{"tool": "open_page", "arguments": {"url": "https://elsewhere.example/x"}}', '{"tool": "open_page", "arguments": {"url": "/docs/examples#start"}}', '{"final": "Opening the examples."}'];
+  const asked = [];
+  const result = await runAgent(plain, { input: 'Open the examples page', openPages: 'https://docs.example.org', fetch: async (url, init) => { asked.push(JSON.parse(init.body)); return chat(replies.shift()); } });
+  assert.match(asked[0].messages[0].content, /- open_page\(\{"url":"string"\}\): Take the visitor to a page of https:\/\/docs\.example\.org, the website this chat is on/);
+  assert.match(asked[1].messages.at(-1).content, /Not opened: only pages of https:\/\/docs\.example\.org open here/);
+  assert.equal(result.output.text, 'Opening the examples.');
+  assert.equal(result.openPage, 'https://docs.example.org/docs/examples#start', 'an address on the site, the last one asked for');
+
+  // Anywhere else there is no such tool, and nothing to open.
+  const elsewhere = [];
+  const other = await runAgent(plain, { input: 'Open the examples page', fetch: async (url, init) => { elsewhere.push(JSON.parse(init.body)); return chat('Here is the link.'); } });
+  assert.match(elsewhere[0].messages[0].content, /No tools are available\./);
+  assert.equal(other.openPage, undefined);
+
+  // A tool the builder drew by that name keeps it.
+  const own = { entry: 'think', nodes: [
+    { id: 'think', type: 'agent', config: { model: 'm', tools: { steps: [{ name: 'open_page', description: 'Open a chapter of the class reader. input: its title.' }] } }, branches: { open_page: 'lookup' }, next: 'out' },
+    { id: 'lookup', type: 'transform', config: { output: { opened: '{{tool.input}}' } }, next: 'think' },
+    { id: 'out', type: 'output', config: { text: '{{think.content}}' } }
+  ] };
+  const theirs = [];
+  await runAgent(own, { input: 'hi', openPages: 'https://docs.example.org', fetch: async (url, init) => { theirs.push(JSON.parse(init.body)); return chat('Hello.'); } });
+  assert.equal(theirs[0].messages[0].content.match(/- open_page\(/g).length, 1);
+  assert.match(theirs[0].messages[0].content, /- open_page\(\{"input":"string"\}\): Open a chapter of the class reader/);
+});

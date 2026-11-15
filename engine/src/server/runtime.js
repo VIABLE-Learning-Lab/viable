@@ -358,7 +358,7 @@ const httpComponents = (fetch) => (manifest, payload, options) => callOut(manife
  * teaching settings of a turn whose context already holds them (a page's), for a brief when a model
  * reads the moment.
  */
-export async function runWithServices(doc, { input = '', inputContent = undefined, stopWhenSilent = false, history = [], context = null, pictures = undefined, teaching = null, briefing = null, section = null, agent = null, model = null, speechModel = null, imageModel = null, models = null, using = null, conversation = null, baseUrl, apiKey, fetch, save = dataUrls, learner = null, silent = false, services = {}, hooks = {}, brief = null, event = null } = {}) {
+export async function runWithServices(doc, { input = '', inputContent = undefined, stopWhenSilent = false, history = [], context = null, openPages = null, pictures = undefined, teaching = null, briefing = null, section = null, agent = null, model = null, speechModel = null, imageModel = null, models = null, using = null, conversation = null, baseUrl, apiKey, fetch, save = dataUrls, learner = null, silent = false, services = {}, hooks = {}, brief = null, event = null } = {}) {
   const picked = pickAgent(doc, agent);
   const isPackage = doc?.format === 'viable.course-package';
   // With nothing set, a learner's message goes nowhere, rather than to a default address.
@@ -404,6 +404,7 @@ export async function runWithServices(doc, { input = '', inputContent = undefine
       history,
       pictures,
       context: made && !settings && runContext?.teaching_view ? { ...runContext, teaching_view: made.text } : runContext,
+      openPages,
       budgets: budgetsOf(graph),
       // Memory's subject; the engine never sends it to a model.
       memorySubject: learner,
@@ -442,7 +443,7 @@ export function createRuntime({ fetch = (...args) => globalThis.fetch(...args), 
     async run(agent, turn, { hooks = {}, timed = (base) => base } = {}) {
       const search = searchOf(agent);
       return runWithServices(agent.doc, {
-        ...endpoint, input: turn.text, history: turn.history, context: turn.context, teaching: turn.teaching ?? null, section: turn.section ?? null,
+        ...endpoint, input: turn.text, history: turn.history, context: turn.context, openPages: turn.openPages ?? null, teaching: turn.teaching ?? null, section: turn.section ?? null,
         inputContent: turn.content, stopWhenSilent: turn.stopWhenSilent === true, briefing: turn.briefing ?? null, event: turn.event ?? null, using: settings ? await settings.resolve() : null, ...(turn.save ? { save: turn.save } : {}),
         conversation: turn.conversation ?? null, agent: agent.ref, fetch: timed(fetch), learner: memory ? turn.user : null, hooks, brief, ...(turn.silent ? { silent: true } : {}),
         services: { ...(search ? { searchKnowledge: search } : {}), ...(memory ? { memory } : {}), ...services, httpFetch: timed(services.httpFetch ?? ((...args) => globalThis.fetch(...args))) }

@@ -152,7 +152,8 @@ export function chatPageSettings(input = {}, agentName = 'Assistant', { avatar =
     show_progress: input.show_progress !== false,
     stream_replies: input.stream_replies !== false,
     // In the chat button's panel on a website, links to that website open there in place, instead of a
-    // new tab (a docs site's assistant citing its own pages). Off unless the developer turns it on.
+    // new tab (a docs site's assistant citing its own pages), and Agent steps get open_page to take the
+    // visitor to one when they ask. Off unless the developer turns it on.
     links_in_place: input.links_in_place === true,
     // An embed tells the agent which page of the website the visitor has the chat open on (its address
     // without ? or #, and its title), as context.page. Off unless the developer turns it on: a site's
