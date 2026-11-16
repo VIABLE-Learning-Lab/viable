@@ -177,10 +177,15 @@ async function changeCard(here, spec, { thread, id, state }) {
 }
 
 // A file that read as a list of names: it stays off the model until a person says it isn't one.
-const notAListCard = (_here, spec, { thread, id }) => (spec.allowed
-  ? card(`“${spec.name}” isn’t a list`, `<p class="v-note">You said so, so the AI can read it. Say what to do with it.</p>${say()}`, { id: `list-${id}`, className: 'is-settled' })
-  : card(`“${spec.name}” looks like a list of names`, `<p class="v-note">So the AI didn’t read it: names never reach a model. A class list goes on a course’s People page.</p>
-<div class="actions"><button class="v-btn is-small" type="button" data-api="POST ask/${esc(thread)}/read-anyway/${esc(spec.material)}">It isn’t a list: let the AI read it</button></div>${say()}`, { id: `list-${id}` }));
+// A file that may list learners' names, and the teacher's way to say it doesn't. Where a host keeps the answer with the file, the
+// card shows it from there: said once, it holds in every conversation.
+async function notAListCard(here, spec, { thread, id }) {
+  const allowed = spec.allowed || (here.materials?.get ? (await here.materials.get(spec.material).catch(() => null))?.names === 'not_a_list' : false);
+  return allowed
+    ? card(`“${spec.name}” isn’t a list`, `<p class="v-note">You said so, so Ask can read it, here and in any other conversation.</p>${say()}`, { id: `list-${id}`, className: 'is-settled' })
+    : card(`“${spec.name}” may list learners’ names`, `<p class="v-note">So Ask didn’t read it: names never reach a model. A class list goes on a course’s People page.</p>
+<div class="actions"><button class="v-btn is-small" type="button" data-api="POST ask/${esc(thread)}/read-anyway/${esc(spec.material)}">It isn’t a list: let Ask read it</button></div>${say()}`, { id: `list-${id}` });
+}
 
 const toolsCard = (here) => card('Other tools for your teaching', `<ul class="ask-rows">${(here.otherTools || []).map((tool) => `<li><div><a href="${esc(tool.url)}" target="_blank" rel="noopener"><strong>${esc(tool.name)}</strong></a><small>${esc(tool.summary)}</small></div></li>`).join('')}</ul>`);
 

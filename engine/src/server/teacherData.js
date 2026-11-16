@@ -87,21 +87,82 @@ export function storeRecords(store) {
 }
 
 const TEMPORARY_MS = 86_400_000;
-/** Where Ask keeps its conversations. A thread holds no learner's name: a class list never goes in one. */
-export function storeThreads(store) {
+const LIVE_RUNS = new Set(['queued', 'running']);
+/**
+ * Where Ask keeps its conversations. A thread holds no learner's name: a class list never goes in one. Each has at most one run at a
+ * time (console/ask.js "A message's run"): its state is kept apart from the thread, which the run writes, and so is its log, what
+ * a page watching it reads. One process serves a store, so a thread's run changes go one at a time here.
+ */
+export function storeThreads(store, { now = () => Date.now() } = {}) {
   if (!store) return null;
   const key = (id) => `ask/threads/${id}`;
+  const runKey = (id) => `ask/runs/${id}`;
+  const logKey = (id) => `ask/run-logs/${id}`;
+  const at = () => new Date(now()).toISOString();
+  const queues = new Map();
+  const oneAtATime = (id, work) => {
+    const next = (queues.get(id) || Promise.resolve()).then(work, work);
+    queues.set(id, next.catch(() => {}));
+    return next;
+  };
+  const changeRun = (id, change) => oneAtATime(id, async () => {
+    const run = await store.get(runKey(id));
+    const next = change(run);
+    if (!next) return null;
+    await store.put(runKey(id), next);
+    return next;
+  });
   return {
-    get: (id) => store.get(key(id)),
-    put: (thread) => store.put(key(thread.id), thread),
-    remove: (id) => store.delete(key(id)),
+    async get(id) {
+      const thread = await store.get(key(id));
+      if (!thread) return null;
+      const run = await store.get(runKey(id));
+      return run ? { ...thread, run } : thread;
+    },
+    put: ({ run: _run, ...thread }) => store.put(key(thread.id), thread),
+    async remove(id) { await store.delete(key(id)); await store.delete(runKey(id)); await store.delete(logKey(id)); },
+    /** A new run, unless one is going and was seen alive since staleBefore. Its log starts empty. */
+    async claimRun(id, run, { staleBefore }) {
+      const taken = await changeRun(id, (held) => (held && LIVE_RUNS.has(held.state) && (held.beat_at || held.started_at) >= staleBefore ? null : { id: run, state: 'queued', started_at: at(), beat_at: at(), attempt: 0, stop_at: null }));
+      if (taken) await store.put(logKey(id), { run, events: [] });
+      return Boolean(taken);
+    },
+    /** The run, for its runner: waiting to be taken, or taken by one that stopped showing it was alive (a second attempt). */
+    takeRun: (id, run, { staleBefore }) => changeRun(id, (held) => {
+      if (held?.id !== run || !(held.state === 'queued' || (held.state === 'running' && held.beat_at < staleBefore))) return null;
+      return { ...held, state: 'running', beat_at: at(), attempt: held.state === 'running' ? held.attempt + 1 : held.attempt };
+    }),
+    beatRun: (id, run) => changeRun(id, (held) => (held?.id === run && held.state === 'running' ? { ...held, beat_at: at() } : null)),
+    async endRun(id, run, state, ending = null, { onlyLive = false } = {}) {
+      return Boolean(await changeRun(id, (held) => (held?.id === run && (!onlyLive || LIVE_RUNS.has(held.state)) ? { ...held, state, ending, ended_at: at() } : null)));
+    },
+    stopRun: (id) => changeRun(id, (held) => (held && LIVE_RUNS.has(held.state) ? { ...held, stop_at: at() } : null)),
+    // When the teacher last had it in front of them: a run that ended since is new to them.
+    markSeen: (id) => changeRun(id, (held) => (held ? { ...held, seen_at: at() } : null)),
+    stopAsked: async (id, run) => { const held = await store.get(runKey(id)); return Boolean(held?.id === run && held.stop_at); },
+    addEvents: (id, run, events) => oneAtATime(`log:${id}`, async () => {
+      const held = await store.get(logKey(id));
+      await store.put(logKey(id), { run, events: [...(held?.run === run ? held.events : []), ...events] });
+    }),
+    async eventsAfter(id, run, after) {
+      const held = await store.get(logKey(id));
+      return held?.run === run ? held.events.filter((event) => event.seq > after) : [];
+    },
     keepCheckpoint: (body) => store.put(`ask/checkpoints/${body.id}`, body),
     checkpoint: (id) => store.get(`ask/checkpoints/${id}`),
     /** The latest first: { id, title, updated_at }. A conversation that isn't remembered is never here, and goes a day after it was last used. */
     async list() {
       const held = (await Promise.all((await store.list('ask/threads/')).slice(-60).map((name) => store.get(name)))).filter(Boolean);
-      for (const thread of held) if (thread.temporary && Date.now() - Date.parse(thread.updated_at) > TEMPORARY_MS) await store.delete(key(thread.id));
-      return held.filter((thread) => !thread.temporary).slice(-40).map(({ id, title, updated_at }) => ({ id, title, updated_at })).sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
+      for (const thread of held) if (thread.temporary && Date.now() - Date.parse(thread.updated_at) > TEMPORARY_MS) { await store.delete(key(thread.id)); await store.delete(runKey(thread.id)); await store.delete(logKey(thread.id)); }
+      const listed = held.filter((thread) => !thread.temporary).sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at))).slice(0, 40);
+      // Whether each is working now, or ended since it was last opened.
+      const lately = new Date(now() - 300_000).toISOString();
+      return Promise.all(listed.map(async ({ id, title, updated_at }) => {
+        const run = await store.get(runKey(id));
+        const working = Boolean(run && LIVE_RUNS.has(run.state) && (run.beat_at || '') >= lately);
+        const unseen = Boolean(!working && run?.ended_at && (!run.seen_at || run.seen_at < run.ended_at));
+        return { id, title, updated_at, ...(working ? { working } : unseen ? { unseen } : {}) };
+      }));
     },
     /** Earlier conversations whose words meet the query, the best first (memory.js searchConversations), from the latest 200. */
     async search(query, { limit } = {}) {

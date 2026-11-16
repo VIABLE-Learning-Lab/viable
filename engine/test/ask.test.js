@@ -351,21 +351,28 @@ test('with no model it says so and sends nothing, a model’s failure is said, a
   const again = await server(following([SETUP[0], busy(), 'Made it.']));
   const went = await again.ask('Fractions');
   assert.ok(went.some((event) => event.name === 'said' && /Made it/.test(event.data.html)), 'one failure is tried again');
-  // Busy twice, it says so, and what was made stays.
-  const s = await server(following([SETUP[0], busy(), busy()]));
+  // Busy three times, it says so, and how to go on, and what was made stays.
+  const s = await server(following([SETUP[0], busy(), busy(), busy()]));
   const events = await s.ask('Fractions');
-  assert.ok(events.some((event) => event.name === 'said' && event.data.failed));
-  assert.equal(events.at(-1).name, 'done');
+  const failed = events.find((event) => event.name === 'said' && event.data.failed);
+  assert.match(failed.data.html, /didn’t answer, even after a few tries[\s\S]*data-say-this="Go on\."[\s\S]*Continue/);
+  assert.deepEqual([events.at(-1).name, events.at(-1).data.state], ['done', 'failed']);
   await s.ok('GET', 'courses/fractions-period-2/download');
-  const thread = await s.store.get(`ask/threads/${threadOf(events)}`);
-  assert.equal(thread.running_at, null, 'a failure doesn’t hold the conversation');
+  const id = threadOf(events);
+  assert.equal((await s.store.get(`ask/runs/${id}`)).state, 'failed', 'a failure doesn’t hold the conversation');
+  assert.match(await s.page(`ask/${id}`), /data-say-this="Go on\."/, 'the page drawn again still offers to go on');
+  // A model that refuses the request isn't asked again: it would refuse again.
+  const refusing = await server(following([() => new Response(JSON.stringify({ error: { message: 'Invalid parameter: messages with role tool must answer a call.' } }), { status: 400 })]));
+  const refused = await refusing.ask('Fractions');
+  assert.equal(refusing.sent.length, 1);
+  assert.match(refused.find((event) => event.name === 'said').data.html, /went wrong on our side/);
 });
 
 test('a long run stops at its limit, an unknown tool is refused, a stop is heard, and a second message waits its turn', async () => {
   const loop = await server(() => [call('list_courses', {})]);
   const events = await loop.ask('Keep going');
   assert.ok(events.some((event) => event.name === 'said' && /as much as I can do in one go[\s\S]*Say go on/.test(event.data.html)), 'a run out of steps says so, and how to go on');
-  assert.ok(loop.sent.length <= 40);
+  assert.ok(loop.sent.length <= 60);
   assert.equal(loop.sent.at(-1).tool_choice, 'none', 'its last step has nothing to call');
   assert.equal(loop.sent.at(-2).tool_choice, 'auto');
 
@@ -373,17 +380,18 @@ test('a long run stops at its limit, an unknown tool is refused, a stop is heard
   await unknown.ask('Delete everything');
   assert.match(unknown.sent.at(-1).messages.at(-1).content, /no such thing to do/);
 
-  const s = await server(['Hello.']);
+  const s = await server(['Hello.', 'Hello again.']);
   const first = await s.ask('Hi');
   const thread = threadOf(first);
-  const held = await s.store.get(`ask/threads/${thread}`);
-  await s.store.put(`ask/threads/${thread}`, { ...held, running_at: new Date().toISOString() });
+  // A run still going holds the conversation; one nothing has shown alive for a while is said to have stopped, and frees it.
+  await s.store.put(`ask/runs/${thread}`, { id: 'run_000000000000000000000001', state: 'running', started_at: new Date().toISOString(), beat_at: new Date().toISOString(), attempt: 0 });
   assert.equal((await s.api('POST', 'ask', { message: 'Again', thread })).status, 409);
-  await s.store.put(`ask/threads/${thread}`, { ...held, running_at: new Date(Date.now() - 600000).toISOString() });
-  assert.equal((await s.api('POST', 'ask', { message: 'Again', thread })).status, 200, 'one that never finished doesn’t hold it for ever');
-
-  await s.ok('POST', `ask/${thread}/stop`, {});
-  assert.equal((await s.store.get(`ask/threads/${thread}`)).stop, true);
+  await s.store.put(`ask/runs/${thread}`, { id: 'run_000000000000000000000001', state: 'running', started_at: new Date(Date.now() - 600000).toISOString(), beat_at: new Date(Date.now() - 600000).toISOString(), attempt: 0 });
+  const after = await s.api('POST', 'ask', { message: 'Again', thread });
+  assert.equal(after.status, 200, 'one that never finished doesn’t hold it for ever');
+  await after.text();
+  const shown = (await s.store.get(`ask/threads/${thread}`)).shown;
+  assert.ok(shown.some((item) => item.kind === 'said' && /stopped partway/.test(item.text)), 'the one that stopped is said to have');
 });
 
 test('Ask can’t be reached without signing in, or from another site', async () => {
@@ -561,12 +569,12 @@ test('a host’s standards search names its source when the host gives one', asy
 });
 
 test('one round of a model’s steps has a limit, and the ones past it are told to wait', async () => {
-  const many = Array.from({ length: 12 }, (_, index) => call('list_courses', {}, `call_${index}`));
+  const many = Array.from({ length: 20 }, (_, index) => call('list_courses', {}, `call_${index}`));
   const { ask, sent } = await server([many, 'Done.']);
   await ask('Look around');
   const tools = sent[1].messages.filter((message) => message.role === 'tool');
-  assert.equal(tools.length, 12, 'each is answered, or the conversation is broken');
-  assert.equal(tools.filter((message) => /At most 8 at a time/.test(message.content)).length, 4);
+  assert.equal(tools.length, 20, 'each is answered, or the conversation is broken');
+  assert.equal(tools.filter((message) => /At most 16 at a time/.test(message.content)).length, 4);
 });
 
 test('reading as a class list: lists are, sentences aren’t', () => {
@@ -653,6 +661,23 @@ test('a list of names reads as one however a spreadsheet wrote it', () => {
   const padding = Array.from({ length: 40 }, (_, at) => `This is a sentence about fractions number ${at}, and it goes on a little.`).join('\n');
   assert.ok(holdsClassList(`${padding}\nAda Lovelace, 92\nGrace Hopper, 88\nKatherine Johnson, 95\nMary Jackson, 91\nDorothy Vaughan, 90\nChristine Darden, 89\n${padding}`), 'a list inside a long file');
   assert.ok(!holdsClassList(padding), 'prose isn’t');
+});
+
+test('what teachers bring isn’t read as a class list: a paper’s authors, a deck’s titles, a syllabus, its references', () => {
+  const prose = Array.from({ length: 30 }, (_, at) => `This is a sentence about learning analytics number ${at}, and it goes on a little.`).join('\n');
+  const papers = [
+    `Tracing What Learners Know\nAlex Rivera\nJordan Okafor\nPriya Nair\nTomas Lindqvist\nMei Tanaka\nSamuel Osei\nLaura Becker\nNorthfield University\n${prose}\nReferences\nRivera, A., & Okafor, J. (2022).\nNair, P.\nLindqvist, T.\nTanaka, M.\nOsei, S.\nBecker, L.\nMorgan, C.`,
+    `Fairness in Educational Prediction\nRenée F. Castillo\nLakeside University\nHana Lim\nLakeside University\nrenee@example.org\nhana@example.org\n${prose}`,
+    `Evaluating and Comparing Models\nAgenda\nBaselines\nNaive Bayes\nSupport Vector Machines\nFeature Selection\nCross Validation\nNeural Networks\nModel Evaluation\nAlgorithmic Bias\nKnowledge Tracing\n${prose}`,
+    `EDU 6600 Learning Analytics Concepts\nInstructor: Dana Whitfield\nOffice Hours: Tuesday 2-4\nTeaching Assistant: Omar Haddad\nCourse Description\nAbstract\nIntroduction\nRelated Work\nMethods\nResults\nDiscussion\nConclusion\n${prose}`
+  ];
+  for (const text of papers) assert.ok(!holdsClassList(text), text.split('\n')[0]);
+  const rosters = [
+    `${prose}\nPeriod 2\nAna Lopez\nBen Carter\nChen Wei\nDara Singh\nEli Moore\nFatima Khan\nGrace Hopper\nHugo Silva\n${prose}`,
+    `${prose}\nAna Lopez ana@school.org\nBen Carter ben@school.org\nChen Wei chen@school.org\nDara Singh dara@school.org\n${prose}`,
+    `${prose}\n王小明\n李华\n张伟\n刘洋\n陈静\n杨帆\n赵磊\n黄丽\n${prose}`
+  ];
+  for (const text of rosters) assert.ok(holdsClassList(text), text.split('\n')[30]);
 });
 
 test('Stop stops, whatever the run saves meanwhile, and a card waits until the run is over', async () => {

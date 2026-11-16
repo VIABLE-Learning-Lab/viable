@@ -73,27 +73,59 @@ export function looksLikeClassList(message) {
   if (lines.length === 2) return names.length === 2 && names.every((name) => name.includes(' ') || WIDE.test(name));
   return names.length >= 2 && names.length / lines.length >= 0.6;
 }
-// A file can be long and hold a list in one part of it, and a passage found in it can be that part.
+// A file can be long and hold a list in one part of it. A long file is a syllabus, a deck of slides or a paper as often as a class
+// list, and those have lines that read as names too: a paper's authors and their universities, a deck's short titles, a syllabus's
+// headings. So in one, a line counts as a person's name only with two to four words, none of them a word that titles and places are
+// made of; a list is eight of those in a row (four with marks or addresses beside them), outside a paper's references, or a table
+// with a column of names, or many addresses. Missing
+// a short list in a long file is the cost; what was found is asked of the teacher once, and kept with the file (materials).
+const NOT_NAMES = new Set(('university college school institute institution department dept faculty laboratory lab center centre academy inc ltd llc press journal proceedings conference '
+  + 'abstract introduction background method methods results discussion conclusion conclusions references bibliography acknowledgements acknowledgments appendix contents chapter section figure table '
+  + 'module unit week lesson overview summary agenda objectives objective goals syllabus schedule grading assignment assignments readings reading course class semester term quiz exam '
+  + 'learning teaching education educational student students analytics model models data analysis evaluation evaluating review theory research study studies network networks neural deep '
+  + 'machine machines support vector feature features selection cross validation naive bayes regression classification clustering bias fairness algorithm algorithmic tracing knowledge '
+  + 'mining prediction predictive statistics statistical probability science sciences mathematics math history english biology chemistry physics language languages social public health '
+  + 'new old first second third final part key main general basic advanced introductory applied special topics case cases example examples practice question questions answer answers '
+  + 'and the of for in on with to by from a an or vs').split(' '));
+const NOT_NAME_ENDINGS = /(?:tion|sion|ment|ness|ics|ism|ology|ysis|ities)$/;
+const REFERENCES = /^(?:\d+\.?\s*)?(?:references|bibliography|works cited|literature cited|sources|literatur|références|referencias|参考文献|參考文獻)$/i;
+function nameInLongText(line) {
+  const name = readsAsName(line);
+  if (!name) return false;
+  const words = name.split(/\s+/);
+  if (WIDE.test(name)) return true;
+  return words.length >= 2 && words.length <= 4 && words.every((word) => !NOT_NAMES.has(word.toLowerCase().replace(/[.'’-]+$/, '')) && !NOT_NAME_ENDINGS.test(word.toLowerCase()));
+}
 export function holdsClassList(text) {
-  const lines = String(text).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  if (lines.length <= 30) return looksLikeClassList(lines.join('\n'));
+  const all = String(text).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (all.length <= 30) return looksLikeClassList(all.join('\n'));
+  // A paper's references are names of authors, not of learners.
+  const end = all.findIndex((line) => REFERENCES.test(line));
+  const lines = end >= 0 ? all.slice(0, end) : all;
   if (tableHoldsNames(lines)) return true;
-  if (lines.filter((line) => EMAIL.test(line)).length >= 3) return true;
-  // Five in a row is a list. A deck of short titles can read as one too, which costs a click to say it isn't.
+  if (lines.filter((line) => EMAIL.test(line)).length >= 10) return true;
+  // Names with a mark, an address or an ID number beside them are a list sooner: four in a row.
   let inARow = 0;
+  let marked = 0;
   for (const line of lines) {
-    inARow = readsAsName(line) ? inARow + 1 : 0;
-    if (inARow >= 5) return true;
+    const named = nameInLongText(line);
+    inARow = named ? inARow + 1 : 0;
+    marked = named && (MARKS_AFTER.test(line) || EMAIL.test(line) || /\b\d{4,}\b/.test(line)) ? marked + 1 : 0;
+    if (inARow >= 8 || marked >= 4) return true;
   }
   return false;
 }
-// What the teacher said isn't a list goes through; anything else that reads as one stays off a model.
+// What the teacher said isn't a list goes through; anything else that reads as one stays off a model. A host that keeps the check
+// with the file (names: suspect, clear or not_a_list) is asked it; otherwise the words are read here.
 async function notAList(here, id) {
   if (here.thread?.read_anyway?.includes(id)) return null;
-  const words = await here.materials.words(id);
-  return holdsClassList(words) ? await here.materials.get(id) : null;
+  const file = await here.materials.get(id);
+  if (file.names) return file.names === 'suspect' ? file : null;
+  return holdsClassList(await here.materials.words(id)) ? file : null;
 }
-const LIST_WORDS = 'This looks like a list of learners’ names, so it wasn’t read. Tell the teacher so: a class list goes on a course’s People page. If it isn’t one, read it with read_material, whose card lets the teacher say so.';
+const LIST_WORDS = 'It may be a list of learners’ names, so it wasn’t read. The teacher has a card here to say it isn’t one. Tell them in a sentence, without saying it is a list, and go on with the rest.';
+// Refused with the teacher's way to let it through, wherever the file was asked for: what they read, and what the model is told.
+const listRefused = (file) => Object.assign(refused(`“${clip(file.name, 60)}” may list learners’ names, so it wasn’t read. If it doesn’t, say so on its card.`, LIST_WORDS), { cards: [{ kind: 'not-a-list', material: file.id, name: file.name }] });
 
 const READ_CHARS = 24000;
 const MOST_SEARCHES = 5;
@@ -206,7 +238,8 @@ async function readingsOf(here, steps) {
     if (step.shows !== 'reading' || !step.material) continue;
     const id = String(step.material);
     if (!here.materials) throw refused('A reading needs its PDF, and PDFs are added on its page here.');
-    if (await notAList(here, id)) throw refused(LIST_WORDS);
+    const listed = await notAList(here, id);
+    if (listed) throw listRefused(listed);
     held.set(id, await here.materials.forReading(id));
   }
   return held;
@@ -747,7 +780,8 @@ export const ASK_TOOLS = [
     async run(here, args, call) {
       const stepped = Array.isArray(args.steps) && args.steps.length > 0;
       if (here.simple && !stepped && args.kind === 'reading' && !(args.material && here.materials)) throw refused('A reading needs its PDF. Ask the teacher to add it here with the + button, then use its id as material. Make anything else they asked for.');
-      if (args.kind === 'reading' && args.material && here.materials && await notAList(here, String(args.material))) throw refused(LIST_WORDS);
+      const listed = args.kind === 'reading' && args.material && here.materials ? await notAList(here, String(args.material)) : null;
+      if (listed) throw listRefused(listed);
       if (args.url !== undefined) givenAddress(here, args.url);
       const reading = args.kind === 'reading' && args.material && here.materials ? await here.materials.forReading(String(args.material)) : null;
       for (const step of args.steps || []) if (step.url !== undefined) givenAddress(here, step.url);
@@ -866,7 +900,8 @@ export const ASK_TOOLS = [
       if (args.url !== undefined) givenAddress(here, args.url);
       const { code, doc } = await courseAt(here.library, args.course);
       const { activity } = activityIn(doc, args.activity);
-      if (args.material && here.materials && await notAList(here, String(args.material))) throw refused(LIST_WORDS);
+      const listed = args.material && here.materials ? await notAList(here, String(args.material)) : null;
+      if (listed) throw listRefused(listed);
       for (const step of args.steps || []) if (step.url !== undefined) givenAddress(here, step.url);
       const reading = args.material && here.materials ? await here.materials.forReading(String(args.material)) : null;
       const readings = await readingsOf(here, args.steps);
@@ -959,7 +994,7 @@ export const ASK_TOOLS = [
       const id = String(args.material);
       // A list of names reads as a list here too, and goes to no model unless the teacher says it isn't one.
       const listed = await notAList(here, id);
-      if (listed) return { done: `Didn’t read “${clip(listed.name, 60)}”: it looks like a list of names`, cards: [{ kind: 'not-a-list', material: id, name: listed.name }], forModel: { error: LIST_WORDS } };
+      if (listed) return { done: `Didn’t read “${clip(listed.name, 60)}”: it may list learners’ names`, cards: [{ kind: 'not-a-list', material: id, name: listed.name }], forModel: { error: LIST_WORDS } };
       const read = await here.materials.read(id, { from: Number.isInteger(args.from) ? args.from : 0 });
       return { done: `Read “${clip(read.name, 60)}”`, forModel: read };
     }
@@ -969,8 +1004,18 @@ export const ASK_TOOLS = [
     description: 'Finds the passages about something in the materials the teacher added, for a long one you don’t need to read whole.',
     parameters: { type: 'object', required: ['words'], properties: { words: string('A few words.') } },
     async run(here, args) {
-      const found = (await here.materials.search(clean(args.words, 200), here.thread?.files?.length ? here.thread.files : null)).filter((item) => here.thread?.read_anyway?.includes(item.material) || !holdsClassList(item.says));
-      return { done: found.length ? `Found ${found.length} passage${found.length === 1 ? '' : 's'}` : 'Found nothing on that', forModel: found };
+      // A file that may be a list stays out, said with the teacher's card to let it in: never dropped without a word.
+      const checked = new Map();
+      const passages = [];
+      const left = new Map();
+      for (const item of await here.materials.search(clean(args.words, 200), here.thread?.files?.length ? here.thread.files : null)) {
+        if (!checked.has(item.material)) checked.set(item.material, await notAList(here, item.material).catch(() => null));
+        const listed = checked.get(item.material);
+        if (listed) left.set(listed.id, listed); else passages.push(item);
+      }
+      const cards = [...left.values()].map((file) => ({ kind: 'not-a-list', material: file.id, name: file.name }));
+      const done = passages.length ? `Found ${passages.length} passage${passages.length === 1 ? '' : 's'}` : 'Found nothing on that';
+      return left.size ? { done, cards, forModel: { passages, left_out: [...left.values()].map((file) => file.name), note: LIST_WORDS } } : { done, forModel: passages };
     }
   },
   {
@@ -1031,7 +1076,7 @@ export const ASK_TOOLS = [
       if (!ids.length) throw refused('Say which materials.');
       const files = await Promise.all(ids.map((id) => here.materials.get(id)));
       if (files.some((file) => file.status !== 'ready')) throw refused('One of them isn’t ready to read yet.');
-      for (const id of ids) if (await notAList(here, id)) throw refused(LIST_WORDS);
+      for (const id of ids) { const listed = await notAList(here, id); if (listed) throw listRefused(listed); }
       const quick = args.quick === true || /^quick/i.test((doc.agents || []).find((agent) => agent.ref === activity.agent_ref)?.name || '');
       const words = [`The AI searches: ${files.map((file) => file.name).join(', ')}`, 'It can tell learners what it finds, so leave out answer keys and tests'];
       // The course's tutor is one agent: another activity using it would find these too.

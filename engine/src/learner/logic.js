@@ -320,7 +320,7 @@ export function progressHooks(onProgress, { detailed = false } = {}) {
 export const SSE_HEADERS = Object.freeze({ 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' });
 const KEEP_ALIVE_MS = 15000;
 
-/** A stream to write events to: { readable, write, event, close }. A reader who leaves stops only the writing. */
+/** A stream to write events to: { readable, write, isOpen, event, close }. A reader who leaves stops only the writing. */
 export function sseStream() {
   const encoder = new TextEncoder();
   const { readable, writable } = new TransformStream();
@@ -329,6 +329,7 @@ export function sseStream() {
   const write = (text) => (open ? writer.write(encoder.encode(text)).catch(() => { open = false; }) : Promise.resolve());
   return {
     readable, write,
+    isOpen: () => open,
     event: (name, data) => write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`),
     close: async () => { if (open) await writer.close().catch(() => {}); }
   };

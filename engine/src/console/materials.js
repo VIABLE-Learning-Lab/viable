@@ -205,6 +205,8 @@ export const materialPages = [
       ['GET', /^materials\/([\w-]+)$/, async ({ materials }, match) => materials.get(match[1])],
       ['DELETE', /^materials\/([\w-]+)$/, async ({ materials }, match) => { await materials.remove(match[1]); return { go: '/console/materials' }; }],
       ['POST', /^materials\/([\w-]+)\/retry$/, async ({ materials }, match) => { await materials.retry(match[1]); return {}; }],
+      // The teacher's word that a file that read as a list of names isn't one: kept with the file, for every conversation.
+      ['POST', /^materials\/([\w-]+)\/not-a-list$/, async ({ materials }, match) => { if (!materials.notAList) throw Object.assign(new Error('Not here.'), { status: 404, code: 'not_found' }); await materials.notAList(match[1]); return { names: 'not_a_list' }; }],
       // The original opens from where files are kept, never from these pages' own address, so nothing in it runs here.
       ['GET', /^materials\/([\w-]+)\/file$/, async ({ materials }, match) => new Response(null, { status: 302, headers: { location: await materials.link(match[1]), 'cache-control': 'no-store' } })]
     ]

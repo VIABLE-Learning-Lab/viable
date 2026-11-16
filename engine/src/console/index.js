@@ -9,7 +9,7 @@ import { hearRecording, onRole } from '../server/runtime.js';
 import { storeClasses, storeRecords, storeMemory, storeThreads } from '../server/teacherData.js';
 import { consoleHeaders, consolePage, missingBody, standalonePage, consoleAsset } from './layout.js';
 import { activityPages } from './activity.js';
-import { askPages } from './ask.js';
+import { askPages, runQueued } from './ask.js';
 import { agentPages } from './agentPages.js';
 import { chatPages } from './chatPages.js';
 import { coursePages } from './course.js';
@@ -29,24 +29,47 @@ const answer = (status, body) => new Response(JSON.stringify(body), { status, he
 const refusal = (status, code, message) => answer(status, { error: { message, code } });
 const nonceOf = () => crypto.randomUUID().replace(/-/g, '');
 
+// How much a model reads at once, from its provider's own list where that says (VIABLE's API does, as context_window), kept an hour
+// in windows, one server's.
+async function windowOf(windows, { baseUrl, apiKey, fetch: reach }, model) {
+  const key = `${baseUrl}|${model}`;
+  const held = windows.get(key);
+  if (held && Date.now() - held.at < 3_600_000) return held.value;
+  let value = null;
+  try {
+    const response = await reach(`${String(baseUrl).replace(/\/+$/, '')}/models`, { headers: apiKey ? { authorization: `Bearer ${apiKey}` } : {}, signal: AbortSignal.timeout(5000) });
+    const listed = await response.json();
+    const found = [...(Array.isArray(listed?.data) ? listed.data : []), ...(Array.isArray(listed?.available_models) ? listed.available_models : [])].find((item) => item?.id === model);
+    value = Number(found?.context_window ?? found?.context_length ?? found?.max_context_length) || null;
+  } catch { /* unknown: Ask counts as for a smaller window */ }
+  windows.set(key, { value, at: Date.now() });
+  return value;
+}
+
 // Ask's model on a server of one's own: the role set for it, or whichever writes replies.
-const serverAskModel = (settings, fetch, store) => ({
+const serverAskModel = (settings, fetch, store, windows = new Map()) => ({
   missing: store ? 'Ask needs a model.' : 'Ask needs somewhere to keep a conversation: start this server with a data folder.',
   setUp: store ? '/console/models' : null,
   async ready() { const { roles } = await settings.resolve(); return Boolean(store && (roles.assistant ?? roles.reply)?.model); },
   async hears() { return Boolean((await settings.resolve()).roles.hearing); },
+  async window() {
+    const { roles } = await settings.resolve();
+    const role = roles.assistant ?? roles.reply;
+    return role?.model ? windowOf(windows, onRole(role, fetch), role.model) : null;
+  },
   async hear({ bytes, type }) {
     const data = btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(''));
     return hearRecording(await settings.resolve(), { type, filename: `recording.${type.split('/')[1] || 'webm'}`, data: `data:${type};base64,${data}` }, { fetch });
   },
-  // choice: none on a message's last step, when it only says what it did and what is left.
-  async chat({ messages, tools, choice = 'auto' }) {
+  // choice: none on a message's last step, when it only says what it did and what is left. signal: a stop the teacher asked for.
+  // upstream: what the provider answered, which says whether asking again could help (ask.js failureKind).
+  async chat({ messages, tools, choice = 'auto', signal }) {
     const { roles } = await settings.resolve();
     const role = roles.assistant ?? roles.reply;
     const { baseUrl, apiKey, fetch: reach } = onRole(role, fetch);
-    const response = await reach(`${String(baseUrl).replace(/\/+$/, '')}/chat/completions`, { method: 'POST', headers: { 'content-type': 'application/json', ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}) }, body: JSON.stringify({ model: role.model, messages, ...(tools?.length ? { tools, tool_choice: choice } : {}), temperature: 0.2 }) });
+    const response = await reach(`${String(baseUrl).replace(/\/+$/, '')}/chat/completions`, { method: 'POST', signal, headers: { 'content-type': 'application/json', ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}) }, body: JSON.stringify({ model: role.model, messages, ...(tools?.length ? { tools, tool_choice: choice } : {}), temperature: 0.2 }) });
     const data = await response.json().catch(() => null);
-    if (!response.ok || !data?.choices?.[0]?.message) throw Object.assign(new Error(`The model (${role.model}) answered ${response.status}${data?.error?.message ? `: ${data.error.message}` : ''}.`), { status: 502, code: 'model_failed' });
+    if (!response.ok || !data?.choices?.[0]?.message) throw Object.assign(new Error(`The model (${role.model}) answered ${response.status}${data?.error?.message ? `: ${data.error.message}` : ''}.`), { status: 502, code: 'model_failed', upstream: response.ok ? 502 : response.status });
     return { content: data.choices[0].message.content, calls: data.choices[0].message.tool_calls };
   }
 });
@@ -73,12 +96,13 @@ const SIDE_COURSES = 6;
  */
 export function consoleApp({ tools, pages = PAGES, readBody, readJson, brand, signOut, links, notice, origin = null, home = null, who = null, person = null, credit = null }) {
   const place = (url) => origin || url.origin;
-  async function api(path, request, url) {
+  // context: what the host knows of this request, such as work that may outlive its answer (waitUntil).
+  async function api(path, request, url, context = null) {
     if (!['GET', 'HEAD'].includes(request.method) && !fromHere(request, url)) return refusal(403, 'origin_not_allowed', 'Open the console to change this.');
     const route = pages.flatMap((page) => page.api ?? []).find(([method, pattern]) => method === request.method && pattern.test(path));
     if (!route) return refusal(404, 'not_found', 'Not found.');
     try {
-      const here = { ...tools, url, origin: place(url), request };
+      const here = { ...tools, url, origin: place(url), request, ...(context?.waitUntil && !tools.keepAlive ? { keepAlive: context.waitUntil } : {}) };
       // A route with a size takes a file's bytes, up to that; any other, JSON.
       const size = route[3]?.bytes;
       const body = request.method === 'GET' ? null : size ? await readBody(request, size).catch((error) => { throw error.code === 'agent_input_too_large' ? Object.assign(new Error(`A file here can be at most ${Math.round(size / 1048576)} MB.`), { status: 413, code: 'file_too_large' }) : error; }) : await readJson(request);
@@ -109,19 +133,29 @@ export function consoleApp({ tools, pages = PAGES, readBody, readJson, brand, si
     if (open && !shown.includes(open)) shown.splice(Math.min(shown.length, SIDE_COURSES - 1), 1, open);
     return { courses: shown, courseHere: open ? { code: open.code, tabPath: tab?.tabPath || '' } : null, coursesMore: Math.max(0, all.length - shown.length) };
   }
-  async function renderPage(rest, request, url) {
+  async function renderPage(rest, request, url, context = null) {
     const page = pages.find((item) => (item.match ? item.match.test(rest) : rest === item.id));
     const nonce = nonceOf();
     const missing = (message) => new Response(consolePage({ title: 'Page not found', pages, current: null, brand, signOut, links, home, who, person, credit, body: missingBody(message) }, nonce), { status: 404, headers: consoleHeaders(nonce) });
     if (!page) return missing();
     let made;
-    try { made = await page.render({ ...tools, url, origin: place(url), request }, page.match?.exec(rest)); } catch (error) {
+    try { made = await page.render({ ...tools, url, origin: place(url), request, ...(context?.waitUntil && !tools.keepAlive ? { keepAlive: context.waitUntil } : {}) }, page.match?.exec(rest)); } catch (error) {
       if (error?.status !== 404) throw error;
       return missing(error.message);
     }
     return new Response(consolePage({ title: made.title || page.title, pages, current: page.section || page.id, brand, signOut, links, notice, home, who, person, credit, ...(await coursesBeside(rest)), ...made }, nonce), { status: 200, headers: consoleHeaders(nonce) });
   }
   return { api, renderPage };
+}
+
+/**
+ * A message's Ask run, for a host that runs it apart from any request (a queue): tools as a page's request would have them, origin
+ * where learners reach pages. It runs only if it takes the run, and always ends (console/ask.js runQueued).
+ */
+export async function askJob({ tools, origin = null, job }) {
+  const thread = await tools.threads.get(job.thread);
+  const url = new URL(thread?.asked?.url || thread?.asked?.origin || origin || 'http://localhost/');
+  return runQueued({ ...tools, url, origin: origin || thread?.asked?.origin || url.origin, request: null }, job, () => PAGES);
 }
 
 /**
@@ -142,7 +176,7 @@ export function consoleRoutes({ settings = null, library = null, teacherToken = 
 
     const { api, renderPage } = consoleApp({ tools, readBody: ctx.readBody, readJson: ctx.readJson });
 
-    return async (request, url) => {
+    return async (request, url, context) => {
       const path = url.pathname;
       // A server with nothing to serve yet starts here, to be set up.
       if (request.method === 'GET' && path === '/' && !ctx.served.size) return Response.redirect(new URL('/console', url), 302);
@@ -162,11 +196,11 @@ export function consoleRoutes({ settings = null, library = null, teacherToken = 
         const nonce = nonceOf();
         return new Response(signInPage({ title: 'Sign in', text: 'Enter this server’s token to open its console.', next: 'console' }, nonce), { status: request.headers.get('accept')?.includes('text/html') ? 200 : 401, headers: { 'content-type': 'text/html; charset=utf-8', ...signInHeaders(nonce) } });
       }
-      if (wanted !== null) return api(wanted, request, url);
+      if (wanted !== null) return api(wanted, request, url, context);
       if (!['GET', 'HEAD'].includes(request.method)) return null;
       // With a model, the conversation is the front door; before one is set, the courses page says how.
       if (path === '/console' || path === '/console/') return Response.redirect(new URL(`/console/${await tools.askModel?.ready() ? 'ask' : 'courses'}`, url), 302);
-      return renderPage(path.slice('/console/'.length).replace(/\/$/, ''), request, url);
+      return renderPage(path.slice('/console/'.length).replace(/\/$/, ''), request, url, context);
     };
   };
 }

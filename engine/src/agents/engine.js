@@ -27,6 +27,7 @@ import { agentVettingControls, reasoningBudget, REVIEW_TOKENS, thinkingBudget, v
 import { teacherNote } from '../../../harness/src/utils/teaching.js';
 import { instructionsBelow, replyChecks, reviewLine } from '../../../harness/src/policy.js';
 import { answerStream, citationOf, finalizeCitations, normalizeCitationMarks, SOURCE_STYLES, stripModelSourceList } from './citations.js';
+import { estimateTokens, messageText, messageTokens, usableWindow, withSummary } from './context.js';
 import { describePictures, loadPictureMemory, pictureScope, rememberPictures, resolvePictureSource } from './pictures.js';
 
 export const DEFAULT_BUDGETS = Object.freeze({
@@ -1484,8 +1485,6 @@ function contextWindowOf(models, model, provider) {
   }
 }
 
-/** What a model's window leaves for the request after room for its answer and reasoning. */
-const usableWindow = (window) => window - Math.min(32000, Math.floor(window / 4));
 
 /**
  * Model steps whose text reaches the reader as written: an llm (without structured output) or agent
@@ -1577,15 +1576,8 @@ export function historyBudget(graph, models) {
   return Math.max(4000, Math.min(Math.floor(usableWindow(window) * 0.5), MAX_HISTORY_TOKENS));
 }
 
-/** A conservative token estimate: about 4 characters a token, one per CJK character. */
-export function estimateTokens(text) {
-  const value = String(text ?? '');
-  let wide = 0;
-  for (const char of value) if (char.charCodeAt(0) > 0x2e7f) wide += 1;
-  return Math.ceil((value.length - wide) / 4) + wide;
-}
-
-const messageTokens = (message) => estimateTokens(messageText(message?.content)) + 4;
+// The token count other modules read here.
+export { estimateTokens };
 
 async function foldConversation(node, ctx, env, services, hooks, graph) {
   if (ctx.historyStart == null) return null;
@@ -1772,22 +1764,6 @@ function clearOldToolResults(transcript) {
   const old = results.slice(0, -2);
   for (const message of old) message.content = `${message.content.slice(0, message.content.indexOf(':'))}: [cleared to fit the model's context window; call the tool again if you need it]`;
   return old.length;
-}
-
-function messageText(content) {
-  if (typeof content === 'string') return content;
-  if (!Array.isArray(content)) return JSON.stringify(content ?? '');
-  return content.map((part) => (part?.type === 'text' || part?.type === 'input_text' ? part.text : `[${part?.type || 'attachment'}]`)).join(' ');
-}
-
-/** The summary leads the first remaining message, which keeps roles alternating for every provider. */
-function withSummary(messages, text) {
-  if (!text) return messages;
-  const lead = `Earlier in this conversation (summary):\n${text}\n\n---\n\n`;
-  if (!messages.length) return [{ role: 'user', content: lead.trim() }];
-  const [first, ...rest] = messages;
-  const content = Array.isArray(first.content) ? [{ type: 'text', text: lead }, ...first.content] : `${lead}${first.content ?? ''}`;
-  return [{ ...first, content }, ...rest];
 }
 
 // Why a picture wasn't drawn, as a short code the graph can branch on and pictures.js can say in words.
