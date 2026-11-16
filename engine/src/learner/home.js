@@ -3,7 +3,7 @@
  * them, then their activities (renderHome), one page of HTML. Pure: the host answers its endpoints
  * (…/home, …/join, …/section; the host's routes, such as server/learner.js here).
  */
-import { BASE_CSS, escapeHtml, palette, scriptJson } from './shell.js';
+import { BASE_CSS, escapeHtml, linkPreview, palette, scriptJson } from './shell.js';
 import { themeOf } from './themes.js';
 
 // What learners are told is kept, by the course's data level (as the activity pages say; nothing
@@ -122,9 +122,10 @@ function infoCard(info) {
  * says when it asks who they are ({ title, text, label, code, email, autocomplete }): the host decides
  * what it takes. reenter: "Not you?" asks for a code, and offers to start fresh. tellsCode: the home says the
  * code a learner can come back with. badge: a line beside
- * the course's name. host: { slots: { beforeConversation, sheet } }, each { css, html, note, script } of
- * the host's own, trusted: its html goes in a place of its own before the course, its note beside what
- * the page says is kept, and its script may set window.VIABLE_SLOTS.
+ * the course's name. host: { slots: { beforeConversation, sheet }, share }. Each slot is { css, html, note,
+ * script } of the host's own, trusted: its html goes in a place of its own before the course, its note
+ * beside what the page says is kept, and its script may set window.VIABLE_SLOTS. share.course: the card
+ * (an image URL) a link to the course shows where it is shared.
  */
 export function renderHome({ course, how, ask = {}, query = '', visitorKey = 'viable-chat:visitor', preview = false, badge = null, reenter = false, tellsCode = false, host = {} }, nonce) {
   const copy = ask;
@@ -139,6 +140,7 @@ export function renderHome({ course, how, ask = {}, query = '', visitorKey = 'vi
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>${escapeHtml(course.title)}</title>
+${linkPreview(course.title, course.description, host.share?.course)}
 <style nonce="${nonce}">${palette(color, theme)}${BASE_CSS}${before.css || ''}${sheet.css || ''}${HOME_CSS}${themeOf(theme).home}</style>
 </head>
 <body>

@@ -4,7 +4,7 @@
  * a website includes for the chat button (embedScript). Pure functions: what serves them and answers
  * their endpoints is the host's (server/learner.js here).
  */
-import { BASE_CSS, escapeHtml, palette, scriptJson } from './shell.js';
+import { BASE_CSS, escapeHtml, linkPreview, palette, scriptJson } from './shell.js';
 import { SPEAK_UP } from '../../../harness/src/speakUp.js';
 import { CHAT_PAGE_LIMITS } from './settings.js';
 import { themeOf } from './themes.js';
@@ -50,7 +50,8 @@ const followsSite = (settings, course) => !course && !['light', 'dark'].includes
  * codes ({ asks, waits }: its own error codes meaning "the host asks first" and "not open yet"),
  * links ({ poweredBy: { label, href } }) and slots: { beforeConversation, sheet, beside }, each { css,
  * html, script } of the host's own, trusted, whose script may set window.VIABLE_SLOTS; beside stands
- * next to the whole page, and hears run.trace events as viable:trace. Nothing here names a feature the
+ * next to the whole page, and hears run.trace events as viable:trace. share ({ chat, course }: image
+ * URLs) is the card a link to the page shows where it is shared. Nothing here names a feature the
  * core doesn't ship.
  */
 export function renderChatPage({ slug, mode, settings, workspace: panels = null, opening = null, course = null, how = null, sets = new Map(), speaksUp = null, host = {} }, nonce) {
@@ -95,6 +96,7 @@ export function renderChatPage({ slug, mode, settings, workspace: panels = null,
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 ${followsSite(settings, course) ? `<script nonce="${nonce}">try{const t=new URLSearchParams(location.search).get('theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>\n` : ''}<title>${escapeHtml(course ? `${course.activity} · ${course.title}` : settings.title)}</title>
+${linkPreview(course ? `${course.activity} · ${course.title}` : settings.title, course ? '' : settings.tagline || settings.greeting, course ? host.share?.course : host.share?.chat)}
 <style nonce="${nonce}">
 ${palette(settings.color, settings.course_theme)}
 :root{--hl-keyword:#cf222e;--hl-string:#0a3069;--hl-number:#0550ae;--hl-comment:#6e7781;--hl-title:#8250df;--hl-type:#953800;--hl-tag:#116329;--hl-attr:#0550ae;--hl-meta:#57606a;--hl-add:#116329;--hl-add-bg:#dafbe1;--hl-del:#82071e;--hl-del-bg:#ffebe9}

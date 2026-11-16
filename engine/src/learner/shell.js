@@ -30,6 +30,23 @@ button,input,select,textarea{font:inherit;color:inherit}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 `;
 
+/**
+ * What a link to a learner page shows where it is shared (Open Graph and X cards): the page's own name
+ * and line, which anyone who opens it reads anyway, and the host's card for that kind of page when it
+ * has one (an image URL, 1200 by 630). Search engines still leave the page out (noindex).
+ */
+export function linkPreview(title, line = '', image = null) {
+  // A greeting is Markdown: its markers go, its text stays.
+  const words = String(line || '').replace(/\*\*|__|`/g, '').replace(/^[ \t]*[#>]+[ \t]*/gm, '').replace(/\s+/g, ' ').trim();
+  const said = words.length > 300 ? `${words.slice(0, 299).trimEnd()}…` : words;
+  return [
+    '<meta property="og:type" content="website">',
+    `<meta property="og:title" content="${escapeHtml(title)}">`,
+    said ? `<meta name="description" content="${escapeHtml(said)}">\n<meta property="og:description" content="${escapeHtml(said)}">` : '',
+    image ? `<meta property="og:image" content="${escapeHtml(image)}">\n<meta property="og:image:width" content="1200">\n<meta property="og:image:height" content="630">\n<meta name="twitter:card" content="summary_large_image">` : '<meta name="twitter:card" content="summary">'
+  ].filter(Boolean).join('\n');
+}
+
 /** The headers every learner page is served with; frames: the sites its embedded activities come from. */
 export const pageHeaders = (nonce, { ancestors = '*', frames = '', media = false } = {}) => ({
   'Content-Security-Policy': `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; img-src 'self' https: data: blob:;${media ? " media-src 'self' https: blob:;" : ''} frame-src 'self'${frames ? ` ${frames}` : ''}; base-uri 'none'; form-action 'none'; frame-ancestors ${ancestors}`,

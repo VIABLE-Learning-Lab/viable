@@ -55,6 +55,25 @@ test('with an empty host a page names no host and offers no feature', () => {
   assert.ok(!/Start fresh/.test(home));
   assert.ok(!NO_HOSTNAME.test(embedScript('https://school.example')));
   assert.ok(!NO_HOSTNAME.test(unavailablePage({ title: 't', message: 'm' })));
+  // Shared, a link shows the page's own name and line, and no card the host didn't give.
+  assert.match(html, /<meta property="og:title" content="Desk">/);
+  assert.match(home, /<meta property="og:description" content="About it">/);
+  assert.ok(!/og:image/.test(html + home));
+  assert.match(home, /<meta name="twitter:card" content="summary">/);
+});
+
+test('a link to a page shows the card its host gives, for its kind of page', () => {
+  const share = { chat: 'https://cards.example/chat.png', course: 'https://cards.example/course.png' };
+  const chat = renderChatPage({ slug: 'desk', mode: 'page', settings: settings({ tagline: '', greeting: 'Ask **me** <anything>' }), host: { share } }, 'n');
+  assert.match(chat, /<meta property="og:image" content="https:\/\/cards\.example\/chat\.png">/);
+  assert.match(chat, /<meta property="og:description" content="Ask me &lt;anything&gt;">/);
+  assert.match(chat, /<meta name="twitter:card" content="summary_large_image">/);
+  const activity = renderChatPage({ slug: 'desk', mode: 'page', settings: settings(), course: { title: 'Course', activity: 'Read', url: '/course/c' }, host: { share } }, 'n');
+  assert.match(activity, /<meta property="og:title" content="Read · Course">/);
+  assert.match(activity, /course\.png/);
+  const home = renderHome({ course: { ...course, description: 'x'.repeat(400) }, how: { identify: 'code' }, ask: { title: 'Enter your code', text: 'x', label: 'Code' }, host: { share } }, 'n');
+  assert.match(home, /course\.png/);
+  assert.match(home, /content="x{299}…"/);
 });
 
 test('what a host provides shows, and its links and slots stay in their places', () => {
