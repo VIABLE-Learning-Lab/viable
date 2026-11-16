@@ -87,10 +87,13 @@ test('a message goes on when its page leaves, and a page that comes back sees wh
 });
 
 test('a long message keeps the teacher’s words and every call’s answer in each request, and all of it is kept', async () => {
-  // 50 steps of calls: a hundred messages in one message, past where the old window of 80 cut.
-  const s = await server((_body, at) => (at < 50 ? [call('list_courses', {}, `call_${at}`)] : 'Looked everywhere.'));
+  // 70 steps of calls, each a different one: 140 messages in one message, past where the old window of 80 cut and the old
+  // limit of steps stopped. Nothing stops work that is going somewhere.
+  const s = await server((_body, at) => (at < 70 ? [call('read_course', { course: `course-${at}` }, `call_${at}`)] : 'Looked everywhere.'));
   const events = frames(await (await s.api('POST', 'ask', { message: 'Look at everything I have, step by step.' })).text());
-  assert.equal(events.at(-1).name, 'done');
+  assert.deepEqual([events.at(-1).name, events.at(-1).data.state], ['done', 'done']);
+  assert.ok(events.some((event) => event.name === 'said' && /Looked everywhere/.test(event.data.html)), 'it finished: no limit of steps stopped it');
+  assert.equal(s.sent.length, 71);
   for (const request of s.sent) {
     const messages = request.messages.slice(1);
     assert.equal(messages[0].role, 'user', 'it starts with the teacher');
@@ -102,7 +105,7 @@ test('a long message keeps the teacher’s words and every call’s answer in ea
     }
   }
   const thread = await s.store.get(`ask/threads/${events[0].data.id}`);
-  assert.ok(thread.messages.length > 100, 'nothing of it is thrown away');
+  assert.ok(thread.messages.length > 140, 'nothing of it is thrown away');
   // The next message still has the first one's words.
   const next = frames(await (await s.api('POST', 'ask', { message: 'Now the next thing.', thread: events[0].data.id })).text());
   assert.equal(next.at(-1).name, 'done');
@@ -119,7 +122,7 @@ test('a conversation past its budget clears older reads first, then folds into a
     if (/^You hand over a conversation/.test(body.messages[0].content)) { handovers.push(body); return 'The teacher asked: “Read this page about fractions, every part of it.” Done so far: read most of it.'; }
     const reads = body.messages.filter((message) => message.role === 'tool').length;
     if (reads >= 30) return 'Read it all.';
-    return new Response(JSON.stringify({ choices: [{ message: { role: 'assistant', content: thinking, tool_calls: [call('read_link', { url, from: (reads % 4) * 24000 })] }, finish_reason: 'tool_calls' }] }), { headers: { 'content-type': 'application/json' } });
+    return new Response(JSON.stringify({ choices: [{ message: { role: 'assistant', content: thinking, tool_calls: [call('read_link', { url, from: (reads % 4) * 24000 + Math.floor(reads / 4) })] }, finish_reason: 'tool_calls' }] }), { headers: { 'content-type': 'application/json' } });
   }, { pages: { [url]: () => new Response(long, { headers: { 'content-type': 'text/html' } }) } });
   const events = frames(await (await s.api('POST', 'ask', { message: `Read this page about fractions, every part of it: ${url}` })).text());
   assert.equal(events.at(-1).name, 'done');

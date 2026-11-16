@@ -133,6 +133,8 @@ export function storeThreads(store, { now = () => Date.now() } = {}) {
       return { ...held, state: 'running', beat_at: at(), attempt: held.state === 'running' ? held.attempt + 1 : held.attempt };
     }),
     beatRun: (id, run) => changeRun(id, (held) => (held?.id === run && held.state === 'running' ? { ...held, beat_at: at() } : null)),
+    /** Handed on by its runner, to be taken by the next as the same attempt. */
+    continueRun: (id, run) => changeRun(id, (held) => (held?.id === run && held.state === 'running' ? { ...held, state: 'queued', beat_at: at() } : null)),
     async endRun(id, run, state, ending = null, { onlyLive = false } = {}) {
       return Boolean(await changeRun(id, (held) => (held?.id === run && (!onlyLive || LIVE_RUNS.has(held.state)) ? { ...held, state, ending, ended_at: at() } : null)));
     },

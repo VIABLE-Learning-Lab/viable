@@ -369,10 +369,14 @@ test('with no model it says so and sends nothing, a model’s failure is said, a
 });
 
 test('a long run stops at its limit, an unknown tool is refused, a stop is heard, and a second message waits its turn', async () => {
+  // The same thing asked for again and again: twice it runs, then it is told it answered already, and a run going round in
+  // circles stops with what is left said, and Continue.
   const loop = await server(() => [call('list_courses', {})]);
   const events = await loop.ask('Keep going');
-  assert.ok(events.some((event) => event.name === 'said' && /as much as I can do in one go[\s\S]*Say go on/.test(event.data.html)), 'a run out of steps says so, and how to go on');
-  assert.ok(loop.sent.length <= 60);
+  assert.ok(events.some((event) => event.name === 'said' && /going round in circles[\s\S]*Continue/.test(event.data.html)), 'a run going round in circles says so, and how to go on');
+  assert.equal(events.at(-1).data.state, 'paused');
+  assert.ok(loop.sent.length <= 6, `it stops soon (${loop.sent.length})`);
+  assert.match(JSON.stringify(loop.sent.at(-2).messages.at(-1)), /asked for exactly this twice already/);
   assert.equal(loop.sent.at(-1).tool_choice, 'none', 'its last step has nothing to call');
   assert.equal(loop.sent.at(-2).tool_choice, 'auto');
 
